@@ -1,0 +1,32 @@
+# Python
+.venv/
+env/
+venv/
+*.pyc
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+.vscode/
+.idea/
+build/
+dist/
+*.egg-info/
+
+# Environment variables
+.env
+
+# Streamlit
+.streamlit/
+
+# Docker
+docker-compose.override.yml
+
+# Logs and temporary files
+*.log
+tmp/
+temp/
+
+# OS-specific
+.DS_Store
+Thumbs.db

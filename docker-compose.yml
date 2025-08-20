@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  app:
+    build: 
+      context: .
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8501:8501"
+    environment:
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
+      - LLM_API_KEY=${LLM_API_KEY}
+      - EMBEDDING_API_KEY=${EMBEDDING_API_KEY}
+      - DATABASE_URL=${SUPABASE_URL}  # Use Supabase for everything
+    volumes:
+      - ./config:/app/config
+      - ./data:/app/data
+
+
+
+  searxng:
+    image: searxng/searxng
+    ports:
+      - "8080:8080"
+    environment:
+      - SEARXNG_SECRET=searxng_secret_key
+    volumes:
+      - ./config/searxng:/etc/searxng
+
+volumes:

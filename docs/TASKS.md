@@ -71,7 +71,7 @@ This document outlines the specific implementation tasks for building the MVP of
 ## Phase 5: Streamlit UI
 
 ### Basic Streamlit Interface
-- [X] Create chat interface in `streamlit_ui.py`
+- [X] Create chat interface in `src/ui/streamlit_app.py` (and `streamlit_ui_simple.py`, `streamlit_ui_streaming.py`)
 - [X] Add session management
 - [X] Display chat history
 - [X] Create simple styling and layout

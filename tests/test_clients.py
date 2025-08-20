@@ -5,20 +5,51 @@ from unittest.mock import patch, MagicMock
 # Import the functions to test
 import sys
 import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from clients import get_agent_clients, get_mem0_client
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'src'))
+from clients.llm import get_llm_client
+from clients.database import get_supabase_client
+from clients.memory import get_mem0_client
 
 
-class TestGetAgentClients:
-    @patch('clients.AsyncOpenAI')
-    @patch('clients.Client')
-    @patch('clients.os.getenv')
-    def test_get_agent_clients(self, mock_getenv, mock_client, mock_async_openai):
+class TestGetLlmClient:
+    @patch('clients.llm.AsyncOpenAI')
+    @patch('clients.llm.os.getenv')
+    def test_get_llm_client(self, mock_getenv, mock_async_openai):
         # Configure mock environment variables
         def getenv_side_effect(key, default=None):
             env_vars = {
                 'EMBEDDING_BASE_URL': 'https://test-api.openai.com/v1',
                 'EMBEDDING_API_KEY': 'test-api-key',
+            }
+            return env_vars.get(key, default)
+        
+        mock_getenv.side_effect = getenv_side_effect
+        
+        # Create mock instances
+        mock_embedding_client = MagicMock()
+        
+        # Configure mocks to return our mock instances
+        mock_async_openai.return_value = mock_embedding_client
+        
+        # Call the function
+        embedding_client = get_llm_client()
+        
+        # Assert the function returns the expected values
+        assert embedding_client == mock_embedding_client
+        
+        # Assert AsyncOpenAI was called with the correct parameters
+        mock_async_openai.assert_called_once_with(
+            base_url='https://test-api.openai.com/v1',
+            api_key='test-api-key'
+        )
+
+class TestGetSupabaseClient:
+    @patch('clients.database.Client')
+    @patch('clients.database.os.getenv')
+    def test_get_supabase_client(self, mock_getenv, mock_client):
+        # Configure mock environment variables
+        def getenv_side_effect(key, default=None):
+            env_vars = {
                 'SUPABASE_URL': 'https://test-supabase-url.com',
                 'SUPABASE_SERVICE_KEY': 'test-supabase-key'
             }
@@ -27,25 +58,16 @@ class TestGetAgentClients:
         mock_getenv.side_effect = getenv_side_effect
         
         # Create mock instances
-        mock_embedding_client = MagicMock()
         mock_supabase_client = MagicMock()
         
         # Configure mocks to return our mock instances
-        mock_async_openai.return_value = mock_embedding_client
         mock_client.return_value = mock_supabase_client
         
         # Call the function
-        embedding_client, supabase = get_agent_clients()
+        supabase = get_supabase_client()
         
         # Assert the function returns the expected values
-        assert embedding_client == mock_embedding_client
         assert supabase == mock_supabase_client
-        
-        # Assert AsyncOpenAI was called with the correct parameters
-        mock_async_openai.assert_called_once_with(
-            base_url='https://test-api.openai.com/v1',
-            api_key='test-api-key'
-        )
         
         # Assert Client was called with the correct parameters
         mock_client.assert_called_once_with(
@@ -55,8 +77,8 @@ class TestGetAgentClients:
 
 
 class TestGetMem0Client:
-    @patch('clients.Memory')
-    @patch('clients.os')
+    @patch('clients.memory.Memory')
+    @patch('clients.memory.os')
     def test_get_mem0_client_with_openai(self, mock_os, mock_memory):
         # Configure mock environment variables
         mock_os.getenv.side_effect = lambda key, default=None: {
@@ -118,8 +140,8 @@ class TestGetMem0Client:
         # Assert environment variables were set correctly
         mock_os.environ.__setitem__.assert_any_call("OPENAI_API_KEY", "test-llm-api-key")
     
-    @patch('clients.Memory')
-    @patch('clients.os')
+    @patch('clients.memory.Memory')
+    @patch('clients.memory.os')
     def test_get_mem0_client_with_ollama(self, mock_os, mock_memory):
         # Configure mock environment variables
         mock_os.getenv.side_effect = lambda key, default=None: {
@@ -182,8 +204,8 @@ class TestGetMem0Client:
         actual_config = mock_memory.from_config.call_args[0][0]
         assert actual_config == expected_config
     
-    @patch('clients.Memory')
-    @patch('clients.os')
+    @patch('clients.memory.Memory')
+    @patch('clients.memory.os')
     def test_get_mem0_client_with_openrouter(self, mock_os, mock_memory):
         # Configure mock environment variables
         mock_os.getenv.side_effect = lambda key, default=None: {
