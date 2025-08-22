@@ -1,102 +1,77 @@
-# AI Agent Mastery Project Tasks
+# Remaining Tasks
 
-This document outlines the specific implementation tasks for building the MVP of our AI Agent Mastery agent based on Pydantic AI described in the PLANNING.md file. Tasks are organized by development phase and component.
+This document tracks the remaining tasks for the AI Agent project. Completed tasks have been moved to `CHANGELOG.md`.
 
-## Phase 1: Core RAG Pipeline
+## Testing & Quality Assurance
 
-### RAG Pipeline - Common
-- [X] Implement text chunking
-- [X] Develop embedding generation function
-- [X] Create vector database operations
-- [X] Write unit tests for common components
-- [X] Support various file types (PDF, Docs, Sheets)
+### Agent Core Testing
+- [ ] Write comprehensive unit tests for agent core functionality
+- [ ] Test multi-provider LLM integration
+- [ ] Test conversation history and memory integration
 
-### RAG Pipeline - Google Drive Integration
-- [X] Implement Google Drive connector
-- [X] Create document processor for Drive files
-- [X] Watch for files being created, updated, and deleted
-- [X] Write unit tests
+### Integration Testing
+- [ ] Implement integration tests for RAG pipeline
+- [ ] Test database operations end-to-end
+- [ ] Test tool integration with agent
+- [ ] Test memory system integration
 
-### RAG Pipeline - Local Files
-- [X] Implement local file connector
-- [X] Watch for files being created, updated, and deleted
-- [X] Write unit tests
+### End-to-End Testing
+- [ ] Create end-to-end tests for complete user workflows
+- [ ] Test Streamlit UI functionality
+- [ ] Test error handling and edge cases
 
-### Database Setup
-- [X] Set up Supabase client configuration
-- [X] Create document metadata table
-- [X] Create document rows table for tabular data
-- [X] Set up pgvector extension
-- [X] Create documents table with vector support
-- [X] Create similarity search function
+## Documentation & Examples
 
-## Phase 2: Agent Implementation
+### Usage Documentation
+- [ ] Create comprehensive usage examples
+- [ ] Document tool usage patterns
+- [ ] Create troubleshooting guide
+- [ ] Add performance optimization guide
 
-### Agent Core
-- [X] Implement base agent in `agent.py`
-- [X] Create prompt templates in `prompt.py`
-- [X] Implement LLM integration with various providers
-- [X] Add support for optional local models
-- [X] Create environment variable configuration
-- [X] Implement conversation history
-- [ ] Write unit tests (in later module)
+### API Documentation
+- [ ] Document agent API endpoints
+- [ ] Create tool development guide
+- [ ] Document configuration options
 
-## Phase 3: Memory System
+## Production Readiness
 
-### Memory Implementation
-- [X] Create session management
-- [X] Implement memory extraction from conversations
-- [X] Create memory vector storage
-- [X] Implement memory retrieval system
-- [X] Add memory deduplication mechanism
-- [X] Write unit tests for memory system
+### Environment Validation
+- [ ] Verify all environment variables are properly configured
+- [ ] Test database connectivity and schema setup
+- [ ] Validate API key configurations
+- [ ] Test service integrations (Brave, OpenAI, etc.)
 
-## Phase 4: Agent Tools
+### Performance & Monitoring
+- [ ] Add performance monitoring and logging
+- [ ] Implement rate limiting for API calls
+- [ ] Add health check endpoints
+- [ ] Optimize vector search performance
 
-### Document Tools
-- [X] Implement document listing tool
-- [X] Create document content retrieval tool
-- [X] Implement SQL query tool for tabular data
+### Security & Compliance
+- [ ] Security audit of code execution sandbox
+- [ ] Review SQL injection protections
+- [ ] Audit API key handling and storage
+- [ ] Review data privacy and retention policies
 
-### Web Tools
-- [X] Implement web search with Brave API
-- [X] Create web content summarizer
-- [X] Implement image analysis with OpenAI
+## Future Enhancements
 
-### Utility Tools
-- [X] Implement image analysis tool
-- [X] Implement code execution tool
-- [X] Write tests for each tool
+### Advanced Frontend
+- [ ] React-based UI
+- [ ] Enhanced visualizations
+- [ ] Better file management interface
+- [ ] Real-time collaboration features
 
-## Phase 5: Streamlit UI
+### Containerization & Deployment
+- [ ] Docker setup optimization
+- [ ] Production deployment configuration
+- [ ] CI/CD pipeline setup
+- [ ] Kubernetes deployment manifests
 
-### Basic Streamlit Interface
-- [X] Create chat interface in `src/ui/streamlit_app.py` (and `streamlit_ui_simple.py`, `streamlit_ui_streaming.py`)
-- [X] Add session management
-- [X] Display chat history
-- [X] Create simple styling and layout
-
-### Integration
-- [X] Connect UI to agent
-- [X] Implement error handling
-- [X] Add loading indicators
-
-## Project Setup
-
-### Environment Configuration
-- [X] Create `.env.example` with all required variables
-- [X] Implement configuration loading
-- [X] Create environment validation
-
-### Documentation
-- [X] Complete README.md with setup instructions
-- [ ] Create usage examples
-
-### Testing
-- [X] Set up pytest configuration
-- [X] Create test fixtures
-- [ ] Implement integration tests (in later module)
-- [ ] Create end-to-end tests (in later module)
+### Additional Data Sources
+- [ ] Support for more document types
+- [ ] Additional API integrations
+- [ ] Real-time data source connections
+- [ ] Custom data connector framework
 
 ## Future Enhancements (For Later Phases)
 
