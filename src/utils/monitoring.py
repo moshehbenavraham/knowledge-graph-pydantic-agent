@@ -257,7 +257,7 @@ class PerformanceMonitor:
 monitor = PerformanceMonitor()
 
 
-def track_performance(tool_name: str = None, endpoint: str = None):
+def track_performance(tool_name: Optional[str] = None, endpoint: Optional[str] = None):
     """Decorator to track function performance."""
 
     def decorator(func: Callable) -> Callable:

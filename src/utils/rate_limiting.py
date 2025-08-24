@@ -209,12 +209,12 @@ class RateLimitMiddleware:
 
         if not allowed:
             if info["type"] == "user_limit":
-                raise RateLimitExceeded(
+                raise RateLimitExceededError(
                     f"User rate limit exceeded. Tier: {info['tier']}, "
                     f"retry after {info.get('retry_after', 60)} seconds"
                 )
-            elif info["type"] == "api_limit":
-                raise RateLimitExceeded(
+            if info["type"] == "api_limit":
+                raise RateLimitExceededError(
                     f"API rate limit exceeded for {info['service']}. "
                     f"Retry after {info.get('retry_after', 60)} seconds"
                 )
@@ -231,7 +231,7 @@ class RateLimitMiddleware:
         return {"user": user_stats, "apis": api_stats, "timestamp": datetime.utcnow().isoformat()}
 
 
-class RateLimitExceeded(Exception):
+class RateLimitExceededError(Exception):
     """Exception raised when rate limit is exceeded."""
 
     pass

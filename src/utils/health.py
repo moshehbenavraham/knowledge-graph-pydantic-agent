@@ -203,7 +203,7 @@ class HealthChecker:
                 # Clean up test memory
                 try:
                     client.delete(result["id"])
-                except:
+                except Exception:  # noqa: S110
                     pass  # Ignore cleanup errors
 
                 return ComponentHealth(

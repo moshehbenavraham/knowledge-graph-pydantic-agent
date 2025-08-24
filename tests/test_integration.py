@@ -624,9 +624,7 @@ class TestErrorRecoveryIntegration:
 
         # This would timeout in a real scenario with proper timeout handling
         # For testing, we'll simulate the timeout
-        mock_embedding_client.embeddings.create.side_effect = TimeoutError(
-            "Operation timed out"
-        )
+        mock_embedding_client.embeddings.create.side_effect = TimeoutError("Operation timed out")
 
         with pytest.raises(asyncio.TimeoutError, match="Operation timed out"):
             await retrieve_relevant_documents_tool(
