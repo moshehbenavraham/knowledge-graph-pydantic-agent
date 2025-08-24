@@ -210,9 +210,7 @@ async def add_message(
         return result["id"]
 
 
-async def get_session_messages(
-    session_id: str, limit: int | None = None
-) -> list[dict[str, Any]]:
+async def get_session_messages(session_id: str, limit: int | None = None) -> list[dict[str, Any]]:
     """
     Get messages for a session.
 
