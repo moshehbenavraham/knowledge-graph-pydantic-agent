@@ -1,8 +1,8 @@
-# Luminari AI Agent - Technical Product Requirements Document
+# Base Agent - Technical Product Requirements Document
 
-**Document Version:** 1.0  
-**Last Updated:** August 20, 2025  
-**Document Type:** Technical Requirements Specification  
+**Document Version:** 1.1
+**Last Updated:** August 24, 2025
+**Document Type:** Technical Requirements Specification
 **Target Audience:** Engineering Team, Technical Architects, DevOps Engineers
 
 ---
@@ -29,7 +29,7 @@
 
 ### Technical Description
 
-The Luminari AI Agent is a production-ready, enterprise-grade AI assistant platform built on a microservices architecture. The system provides intelligent automation capabilities through a multi-modal AI agent that can process text, images, and code while maintaining persistent memory and context across sessions.
+The Base Agent is a production-ready AI assistant platform built on a modular architecture. The system provides intelligent automation capabilities through a multi-modal AI agent that can process text, images, and code while maintaining persistent memory and context across sessions.
 
 ### Key Technical Capabilities
 
@@ -45,14 +45,11 @@ The Luminari AI Agent is a production-ready, enterprise-grade AI assistant platf
 | Component | Technology | Version |
 |-----------|------------|---------|
 | **Runtime** | Python | 3.11+ |
-| **AI Framework** | Pydantic AI | 0.0.10+ |
-| **Web Framework** | FastAPI | 0.104+ |
-| **UI Framework** | Streamlit | 1.29+ |
-| **Database** | PostgreSQL | 15+ |
+| **AI Framework** | Pydantic AI | ≥0.0.10 |
+| **Web Framework** | Streamlit | ≥1.29.0 |
+| **Database** | Supabase (PostgreSQL) | Latest |
 | **Vector DB** | pgvector | Latest |
-| **Cache** | Redis | 7+ |
 | **Container** | Docker | Latest |
-| **Orchestration** | Kubernetes | 1.28+ |
 
 ---
 
@@ -103,11 +100,8 @@ The Luminari AI Agent is a production-ready, enterprise-grade AI assistant platf
 ### Project Structure
 
 ```
-luminari-ai-agent/
+base_agent/
 ├── config/                     # Configuration files
-│   ├── environments/           # Environment-specific configs
-│   ├── security/              # Security configurations
-│   └── monitoring/            # Monitoring configurations
 ├── sql/                        # Database schemas and migrations
 ├── src/                        # Main source code
 │   ├── agent/                  # Agent core
@@ -127,32 +121,19 @@ luminari-ai-agent/
 │   ├── rag_pipeline/           # RAG Pipeline
 │   │   ├── common/             # Common functionality
 │   │   │   ├── db_handler.py   # Vector DB operations
-│   │   │   ├── text_processor.py # Text preprocessing
-│   │   │   └── embeddings.py   # Embedding generation
+│   │   │   └── text_processor.py # Text preprocessing
 │   │   ├── sources/            # Data source integrations
 │   │   │   ├── google_drive.py # Google Drive integration
 │   │   │   └── local_files.py  # Local file processing
 │   │   └── pipeline.py         # Main orchestrator
 │   ├── ui/                     # User interfaces
 │   │   ├── streamlit_app.py    # Main Streamlit UI
-│   │   ├── admin_dashboard.py  # Admin interface
-│   │   └── components/         # Reusable UI components
-│   ├── api/                    # REST API endpoints
-│   │   ├── routes/             # API route definitions
-│   │   ├── middleware/         # API middleware
-│   │   └── schemas/            # Request/response schemas
-│   ├── security/               # Security implementations
-│   │   ├── auth.py             # Authentication
-│   │   ├── authorization.py    # Authorization
-│   │   └── encryption.py       # Data encryption
+│   │   ├── streamlit_ui_simple.py # Simple UI variant
+│   │   └── streamlit_ui_streaming.py # Streaming UI variant
 │   └── utils/                  # Utilities
-│       ├── logging.py          # Structured logging
-│       ├── monitoring.py       # Performance monitoring
-│       └── config.py           # Configuration management
 ├── tests/                      # Comprehensive test suite
 ├── docker/                     # Container configurations
-├── monitoring/                 # Monitoring configurations
-└── scripts/                    # Automation scripts
+└── supabase/                   # Supabase configuration
 ```
 
 ---
@@ -732,7 +713,7 @@ postgresql:
     database: "luminari_db"
     connection_pool: 20
     timeout: 30
-  
+
   vector_db:
     host: "localhost"
     port: 5433
@@ -762,7 +743,7 @@ communication_patterns:
   synchronous: "HTTP/REST for immediate responses"
   asynchronous: "Message queues for background tasks"
   real_time: "WebSockets for streaming"
-  
+
 message_broker:
   type: "Redis Pub/Sub"
   topics:
@@ -796,13 +777,13 @@ roles:
       - "users.manage"
       - "documents.manage_all"
       - "memory.manage_all"
-  
+
   user:
     permissions:
       - "documents.manage_own"
       - "memory.manage_own"
       - "agent.interact"
-  
+
   readonly:
     permissions:
       - "documents.read_own"
@@ -959,8 +940,8 @@ database_config = {
 
 ### Unit Testing
 
-**Framework:** pytest with pytest-asyncio  
-**Coverage Target:** >90%  
+**Framework:** pytest with pytest-asyncio
+**Coverage Target:** >90%
 **Test Categories:**
 - Agent core functionality
 - Tool implementations
@@ -986,8 +967,8 @@ async def test_agent_query_processing():
 
 ### Integration Testing
 
-**Framework:** pytest with testcontainers  
-**Coverage Target:** >80%  
+**Framework:** pytest with testcontainers
+**Coverage Target:** >80%
 **Test Categories:**
 - Database operations with real PostgreSQL
 - LLM provider integrations (mocked)
@@ -1007,7 +988,7 @@ services:
       POSTGRES_PASSWORD: test
     tmpfs:
       - /var/lib/postgresql/data
-  
+
   test-redis:
     image: redis:7
     tmpfs:
@@ -1016,8 +997,8 @@ services:
 
 ### End-to-End Testing
 
-**Framework:** Selenium with pytest  
-**Coverage Target:** >70%  
+**Framework:** Selenium with pytest
+**Coverage Target:** >70%
 **Test Scenarios:**
 - Complete user workflows
 - Multi-tool interactions
@@ -1173,7 +1154,7 @@ spec:
 # main.tf
 resource "aws_ecs_cluster" "luminari_cluster" {
   name = "luminari-agent"
-  
+
   setting {
     name  = "containerInsights"
     value = "enabled"
@@ -1185,7 +1166,7 @@ resource "aws_ecs_service" "agent_service" {
   cluster         = aws_ecs_cluster.luminari_cluster.id
   task_definition = aws_ecs_task_definition.agent_task.arn
   desired_count   = 3
-  
+
   load_balancer {
     target_group_arn = aws_lb_target_group.agent_tg.arn
     container_name   = "luminari-agent"
@@ -1387,7 +1368,7 @@ async def health_check():
 async def readiness_check():
     """Comprehensive readiness check"""
     checks = {}
-    
+
     # Database check
     try:
         db = get_db()
@@ -1395,7 +1376,7 @@ async def readiness_check():
         checks["database"] = "healthy"
     except Exception as e:
         checks["database"] = f"unhealthy: {str(e)}"
-    
+
     # Redis check
     try:
         r = redis.Redis.from_url(settings.redis_url)
@@ -1403,7 +1384,7 @@ async def readiness_check():
         checks["redis"] = "healthy"
     except Exception as e:
         checks["redis"] = f"unhealthy: {str(e)}"
-    
+
     # LLM provider check
     try:
         llm_client = get_llm_client()
@@ -1411,15 +1392,15 @@ async def readiness_check():
         checks["llm"] = "healthy"
     except Exception as e:
         checks["llm"] = f"unhealthy: {str(e)}"
-    
+
     # Overall status
     overall_status = "healthy" if all(
         status == "healthy" for status in checks.values()
     ) else "unhealthy"
-    
+
     if overall_status == "unhealthy":
         raise HTTPException(status_code=503, detail=checks)
-    
+
     return {"status": overall_status, "checks": checks}
 ```
 

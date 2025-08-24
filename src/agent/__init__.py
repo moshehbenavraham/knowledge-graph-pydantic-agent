@@ -1,6 +1,6 @@
 """AI Agent module."""
 
-from .agent import LuminariAgent
-from .base import BaseAgent, AgentResponse
+from .agent import AgentDeps, agent
+from .base import AgentResponse, BaseAgent
 
-__all__ = ["LuminariAgent", "BaseAgent", "AgentResponse"]
+__all__ = ["AgentResponse", "BaseAgent", "agent", "AgentDeps"]

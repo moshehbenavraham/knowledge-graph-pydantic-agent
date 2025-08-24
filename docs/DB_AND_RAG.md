@@ -1,6 +1,6 @@
 # Database & RAG System Documentation
 
-This document provides comprehensive documentation for the Luminari AI Agent's database architecture and RAG (Retrieval-Augmented Generation) system.
+This document provides comprehensive documentation for the Base Agent's database architecture and RAG (Retrieval-Augmented Generation) system.
 
 ## 🏗️ Architecture Overview
 
@@ -14,7 +14,7 @@ graph TB
     B --> E[Document Rows<br/>Structured Data]
     B --> F[Mem0 Memories<br/>Long-term Memory]
     B --> G[User Data<br/>Authentication]
-    
+
     H[Tools] --> B
     I[RAG Pipeline] --> B
     J[Memory System] --> B
@@ -28,17 +28,12 @@ graph TB
 Stores chunked document content with vector embeddings for RAG.
 
 ```sql
-CREATE TABLE documents (
-    id BIGSERIAL PRIMARY KEY,
-    content TEXT NOT NULL,
-    embedding VECTOR(1536),  -- pgvector for OpenAI embeddings
-    metadata JSONB,
-    source TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+CREATE TABLE IF NOT EXISTS documents (
+  id bigserial primary key,
+  content text, -- corresponds to Document.pageContent
+  metadata jsonb, -- corresponds to Document.metadata
+  embedding vector(1536) -- 1536 works for OpenAI embeddings, change if needed like 768 for nomic-embed-text (Ollama)
 );
-
--- Index for vector similarity search
-CREATE INDEX ON documents USING ivfflat (embedding vector_cosine_ops);
 ```
 
 **Metadata Structure:**
@@ -59,14 +54,12 @@ CREATE INDEX ON documents USING ivfflat (embedding vector_cosine_ops);
 Stores high-level information about uploaded documents.
 
 ```sql
-CREATE TABLE document_metadata (
+CREATE TABLE IF NOT EXISTS document_metadata (
     id TEXT PRIMARY KEY,
-    title TEXT NOT NULL,
+    title TEXT,
     url TEXT,
-    schema JSONB,  -- For structured data files
-    file_type TEXT,
-    upload_date TIMESTAMPTZ DEFAULT NOW(),
-    status TEXT DEFAULT 'processed'
+    created_at TIMESTAMP DEFAULT NOW(),
+    schema TEXT
 );
 ```
 
@@ -74,16 +67,11 @@ CREATE TABLE document_metadata (
 Stores structured data from spreadsheets and databases.
 
 ```sql
-CREATE TABLE document_rows (
-    id BIGSERIAL PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS document_rows (
+    id SERIAL PRIMARY KEY,
     dataset_id TEXT REFERENCES document_metadata(id),
-    row_data JSONB NOT NULL,  -- Flexible schema per file
-    row_index INTEGER,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    row_data JSONB  -- Store the actual row data
 );
-
--- Index for efficient querying of row data
-CREATE INDEX ON document_rows USING GIN (row_data);
 ```
 
 #### 4. `mem0_memories`
@@ -105,59 +93,58 @@ CREATE TABLE mem0_memories (
 
 #### Vector Search Function
 ```sql
-CREATE OR REPLACE FUNCTION match_documents(
-    query_embedding VECTOR(1536),
-    match_count INT DEFAULT 5,
-    filter JSONB DEFAULT '{}'
+CREATE OR REPLACE FUNCTION match_documents (
+  query_embedding vector(1536), -- 1536 works for OpenAI embeddings, change if needed like 768 for nomic-embed-text (Ollama)
+  match_count int default null,
+  filter jsonb DEFAULT '{}'
+) returns table (
+  id bigint,
+  content text,
+  metadata jsonb,
+  similarity float
 )
-RETURNS TABLE (
-    id BIGINT,
-    content TEXT,
-    metadata JSONB,
-    similarity FLOAT
-)
-LANGUAGE plpgsql
-AS $$
-BEGIN
-    RETURN QUERY
-    SELECT 
-        documents.id,
-        documents.content,
-        documents.metadata,
-        1 - (documents.embedding <=> query_embedding) AS similarity
-    FROM documents
-    WHERE (filter = '{}' OR documents.metadata @> filter)
-    ORDER BY documents.embedding <=> query_embedding
-    LIMIT match_count;
-END;
+language plpgsql
+as $$
+#variable_conflict use_column
+begin
+  return query
+  select
+    id,
+    content,
+    metadata,
+    1 - (documents.embedding <=> query_embedding) as similarity
+  from documents
+  where metadata @> filter
+  order by documents.embedding <=> query_embedding
+  limit match_count;
+end;
 $$;
 ```
 
 #### SQL Execution Function
 ```sql
-CREATE OR REPLACE FUNCTION execute_custom_sql(sql_query TEXT)
+CREATE OR REPLACE FUNCTION execute_custom_sql(sql_query text)
 RETURNS JSONB
 LANGUAGE plpgsql
-SECURITY DEFINER
+SECURITY DEFINER -- This makes the function run with the privileges of the creator
 AS $$
 DECLARE
-    result JSONB;
+  result JSONB;
 BEGIN
-    -- Security: Only allow SELECT statements
-    IF sql_query !~* '^\s*SELECT' THEN
-        RETURN jsonb_build_object('error', 'Only SELECT statements are allowed');
-    END IF;
-    
-    -- Execute the query and return results as JSONB
-    EXECUTE 'SELECT array_to_json(array_agg(row_to_json(t))) FROM (' || sql_query || ') t'
-    INTO result;
-    
-    RETURN COALESCE(result, '[]'::jsonb);
+  -- Execute the SQL and capture the result
+  EXECUTE 'SELECT jsonb_agg(t) FROM (' || sql_query || ') t' INTO result;
+  RETURN COALESCE(result, '[]'::jsonb);
 EXCEPTION
-    WHEN OTHERS THEN
-        RETURN jsonb_build_object('error', SQLERRM);
+  WHEN OTHERS THEN
+    RETURN jsonb_build_object(
+      'error', SQLERRM,
+      'detail', SQLSTATE
+    );
 END;
 $$;
+
+-- By default, revoke execute permission from public and authenticated users
+REVOKE EXECUTE ON FUNCTION execute_custom_sql(text) FROM PUBLIC, authenticated;
 ```
 
 ## 🔧 RAG System Implementation
@@ -175,74 +162,73 @@ $$;
 #### 1. Document Retrieval
 ```python
 async def retrieve_relevant_documents_tool(
-    supabase: Client, 
-    embedding_client: AsyncOpenAI, 
-    user_query: str
+    supabase: Client, embedding_client: AsyncOpenAI, user_query: str
 ) -> str:
-    """Retrieve relevant document chunks using vector similarity."""
-    
-    # Generate query embedding
+    """Retrieve relevant document chunks with RAG - returns top 4 chunks."""
+
+    # Get the embedding for the query
     query_embedding = await get_embedding(user_query, embedding_client)
-    
-    # Search for similar documents
+
+    # Query Supabase for relevant documents
     result = supabase.rpc(
-        'match_documents',
-        {
-            'query_embedding': query_embedding,
-            'match_count': 4
-        }
+        "match_documents", {"query_embedding": query_embedding, "match_count": 4}
     ).execute()
-    
-    return format_search_results(result.data)
+
+    if not result.data:
+        return "No relevant documents found."
+
+    # Format the results with metadata
+    formatted_chunks = []
+    for doc in result.data:
+        chunk_text = f"""
+# Document ID: {doc['metadata'].get('file_id', 'unknown')}
+# Document Title: {doc['metadata'].get('file_title', 'unknown')}
+# Document URL: {doc['metadata'].get('file_url', 'unknown')}
+
+{doc['content']}
+"""
+        formatted_chunks.append(chunk_text)
+
+    return "\n\n---\n\n".join(formatted_chunks)
 ```
 
 #### 2. Document Listing
 ```python
-async def list_documents_tool(supabase: Client) -> List[str]:
+async def list_documents_tool(supabase: Client) -> list[str]:
     """List all available documents with metadata."""
-    
-    result = supabase.from_('document_metadata') \
-        .select('id, title, schema, url') \
-        .execute()
-    
-    return result.data
+
+    # Query Supabase for unique documents
+    result = supabase.from_("document_metadata").select("id, title, schema, url").execute()
+    return str(result.data)
 ```
 
 #### 3. Full Document Content
 ```python
-async def get_document_content_tool(
-    supabase: Client, 
-    document_id: str
-) -> str:
-    """Retrieve complete document content by combining chunks."""
-    
-    result = supabase.from_('documents') \
-        .select('content, metadata') \
-        .eq('metadata->>file_id', document_id) \
-        .order('id') \
-        .execute()
-    
-    return combine_document_chunks(result.data)
-```
+async def get_document_content_tool(supabase: Client, document_id: str) -> str:
+    """Retrieve complete document content by combining chunks (20,000 char limit)."""
 
-#### 4. SQL Query Execution
-```python
-async def execute_sql_query_tool(
-    supabase: Client, 
-    sql_query: str
-) -> str:
-    """Execute read-only SQL queries on structured data."""
-    
-    # Security validation
-    if not is_read_only_query(sql_query):
-        return "Error: Only SELECT statements allowed"
-    
-    result = supabase.rpc(
-        'execute_custom_sql',
-        {"sql_query": sql_query}
-    ).execute()
-    
-    return format_sql_results(result.data)
+    # Query Supabase for all chunks for this document
+    result = (
+        supabase.from_("documents")
+        .select("id, content, metadata")
+        .eq("metadata->>file_id", document_id)
+        .order("id")
+        .execute()
+    )
+
+    if not result.data:
+        return f"No content found for document: {document_id}"
+
+    # Format the document with its title and all chunks
+    document_title = result.data[0]["metadata"]["file_title"].split(" - ")[0]
+    formatted_content = [f"# {document_title}\n"]
+
+    # Add each chunk's content
+    for chunk in result.data:
+        formatted_content.append(chunk["content"])
+
+    # Join everything together but limit to 20,000 characters
+    return "\n\n".join(formatted_content)[:20000]
 ```
 
 ## 🧠 Memory System (Mem0 Integration)
@@ -250,18 +236,19 @@ async def execute_sql_query_tool(
 ### Configuration
 ```python
 def get_mem0_config():
+    """Memory configuration using environment variables."""
     return {
         "llm": {
-            "provider": "openai",
+            "provider": os.getenv("LLM_PROVIDER", "openai"),
             "config": {
-                "model": "gpt-4o-mini",
+                "model": os.getenv("LLM_CHOICE", "gpt-4o-mini"),
                 "temperature": 0.2
             }
         },
         "embedder": {
-            "provider": "openai", 
+            "provider": os.getenv("EMBEDDING_PROVIDER", "openai"),
             "config": {
-                "model": "text-embedding-3-small",
+                "model": os.getenv("EMBEDDING_MODEL_CHOICE", "text-embedding-3-small"),
                 "embedding_dims": 1536
             }
         },
@@ -349,7 +336,7 @@ make run-ui
 1. **Index Configuration**
    ```sql
    -- Tune ivfflat index for your data size
-   CREATE INDEX ON documents 
+   CREATE INDEX ON documents
    USING ivfflat (embedding vector_cosine_ops)
    WITH (lists = 100);  -- Adjust based on document count
    ```
@@ -369,9 +356,10 @@ make run-ui
 
 ### Embedding Strategy
 
-- **Chunk Size**: 500-1500 characters for optimal balance
-- **Overlap**: 100-200 characters between chunks
-- **Batch Processing**: Generate embeddings in batches of 100
+- **Chunk Size**: 400 characters (configurable via text processing config)
+- **Overlap**: 0 characters (configurable via text processing config)
+- **Model**: Configurable via EMBEDDING_MODEL_CHOICE (default: text-embedding-3-small)
+- **Processing**: Individual embeddings per chunk
 
 ### Memory Management
 
@@ -384,8 +372,8 @@ make run-ui
 ### Query Performance
 ```sql
 -- Check slow queries
-SELECT query, mean_exec_time, calls 
-FROM pg_stat_statements 
+SELECT query, mean_exec_time, calls
+FROM pg_stat_statements
 WHERE mean_exec_time > 1000
 ORDER BY mean_exec_time DESC;
 ```
@@ -393,10 +381,10 @@ ORDER BY mean_exec_time DESC;
 ### Vector Search Analytics
 ```sql
 -- Analyze search patterns
-SELECT 
+SELECT
     metadata->>'file_type' as file_type,
     COUNT(*) as search_hits
-FROM documents 
+FROM documents
 WHERE created_at > NOW() - INTERVAL '7 days'
 GROUP BY metadata->>'file_type';
 ```
@@ -404,11 +392,11 @@ GROUP BY metadata->>'file_type';
 ### Memory Usage
 ```sql
 -- Check memory system usage
-SELECT 
+SELECT
     user_id,
     COUNT(*) as memory_count,
     MAX(created_at) as last_memory
-FROM mem0_memories 
+FROM mem0_memories
 GROUP BY user_id
 ORDER BY memory_count DESC;
 ```
@@ -442,5 +430,5 @@ ORDER BY memory_count DESC;
 
 ---
 
-*Last Updated: August 20, 2025*
+*Last Updated: August 24, 2025*
 *For questions or issues, please refer to the project repository or create an issue.*

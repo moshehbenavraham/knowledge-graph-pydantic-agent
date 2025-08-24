@@ -1,8 +1,28 @@
-# AI Agent with Pydantic AI Framework
+# Base Agent - Production-Ready AI Assistant
 
 Production-ready AI agent implementation using Pydantic AI with comprehensive tooling for document retrieval, memory management, web search, image analysis, and code execution. Supports multiple LLM providers and embedding models with flexible deployment options.
 
-## Core Features
+## 🚀 Quick Start
+
+```bash
+# Clone and setup
+git clone <repository-url>
+cd base_agent
+
+# Install dependencies
+make setup
+
+# Configure environment
+cp .env.example .env
+# Edit .env with your credentials
+
+# Run the application
+make run-ui
+```
+
+Access the web interface at **http://localhost:8501**
+
+## 🎯 Core Features
 
 ### Agent Capabilities
 - **Document Retrieval (RAG)**: Vector similarity search with 4-document context window using pgvector
@@ -13,10 +33,408 @@ Production-ready AI agent implementation using Pydantic AI with comprehensive to
 - **SQL Query Execution**: Read-only database queries with security validation
 
 ### Technical Stack
-- **Framework**: Pydantic AI 0.0.53 with async support
+- **Framework**: Pydantic AI ≥0.0.10 with async support
 - **Vector Database**: Supabase with pgvector extension
-- **Memory Store**: mem0ai 0.1.102 with PostgreSQL backend
+- **Memory Store**: mem0ai ≥0.0.10 with PostgreSQL backend
 - **Embedding Models**: OpenAI text-embedding-3-small (1536d) or Ollama nomic-embed-text (768d)
 - **LLM Support**: OpenAI GPT models, OpenRouter providers, Ollama local models
-- **UI Framework**: Streamlit 1.44.1
-- **Security**: RestrictedPython 8.0 for safe code execution
+- **UI Framework**: Streamlit ≥1.29.0
+- **Security**: Custom sandboxed environment for safe code execution
+
+## 📋 Requirements
+
+- **Python**: 3.11 or higher
+- **Database**: Supabase project with pgvector extension enabled
+- **Memory**: 4GB+ RAM for local LLM deployment (if using Ollama)
+
+## 🛠️ Installation
+
+### Method 1: Standard Installation
+
+1. **Clone Repository**
+   ```bash
+   git clone <repository-url>
+   cd base_agent
+   ```
+
+2. **Install Dependencies**
+   ```bash
+   make setup
+   ```
+
+3. **Configure Environment**
+   ```bash
+   cp .env.example .env
+   ```
+
+   Edit `.env` with your service credentials:
+   ```bash
+   # Required: Supabase credentials
+   SUPABASE_URL=https://your-project.supabase.co
+   SUPABASE_SERVICE_KEY=your_service_role_key
+
+   # Required: LLM API key
+   LLM_API_KEY=your_openai_api_key
+
+   # Required: Embedding API key
+   EMBEDDING_API_KEY=your_openai_api_key
+   ```
+
+4. **Database Setup**
+   - Create a Supabase project at [supabase.com](https://supabase.com)
+   - Enable the `pgvector` extension in Database → Extensions
+   - Run SQL scripts in order:
+     - [`sql/documents.sql`](sql/documents.sql)
+     - [`sql/document_metadata.sql`](sql/document_metadata.sql)
+     - [`sql/document_rows.sql`](sql/document_rows.sql)
+     - [`sql/execute_sql_rpc.sql`](sql/execute_sql_rpc.sql)
+
+5. **Run Application**
+   ```bash
+   make run-ui
+   ```
+
+### Method 2: Docker Deployment
+
+```bash
+# Build and run with Docker Compose
+make docker-build
+make docker-run
+
+# Access at http://localhost:8501
+```
+
+Docker services include:
+- **App**: Streamlit UI on port 8501
+- **SearXNG**: Web search engine on port 8080
+
+## ⚙️ Configuration
+
+### LLM Providers
+
+**OpenAI (Default):**
+```bash
+LLM_PROVIDER=openai
+LLM_BASE_URL=https://api.openai.com/v1
+LLM_API_KEY=sk-your-api-key
+LLM_CHOICE=gpt-4o-mini
+```
+
+**Local Ollama:**
+```bash
+LLM_PROVIDER=ollama
+LLM_BASE_URL=http://localhost:11434
+LLM_CHOICE=llama3.1
+
+# For Ollama embeddings, update SQL scripts:
+# Change vector(1536) to vector(768) in sql/*.sql files
+EMBEDDING_PROVIDER=ollama
+EMBEDDING_MODEL_CHOICE=nomic-embed-text
+```
+
+**OpenRouter:**
+```bash
+LLM_PROVIDER=openrouter
+LLM_BASE_URL=https://openrouter.ai/api/v1
+LLM_API_KEY=your-openrouter-key
+LLM_CHOICE=anthropic/claude-3-sonnet
+```
+
+### Feature Flags
+
+```bash
+ENABLE_CODE_EXECUTION=false      # Enable/disable code execution tool
+ENABLE_WEB_SEARCH=true          # Enable/disable web search
+ENABLE_IMAGE_ANALYSIS=true      # Enable/disable image analysis
+ENABLE_LONG_TERM_MEMORY=true    # Enable/disable persistent memory
+ENABLE_RAG=true                 # Enable/disable RAG functionality
+```
+
+### Search Providers
+
+```bash
+# Primary: Brave Search (recommended)
+BRAVE_API_KEY=your_brave_api_key
+
+# Fallback: Self-hosted SearXNG
+SEARXNG_BASE_URL=http://localhost:8080
+```
+
+## 🔧 Usage
+
+### Web Interface
+
+1. **Start the agent:**
+   ```bash
+   make run-ui
+   # or
+   streamlit run src/ui/streamlit_app.py
+   ```
+
+2. **Access:** http://localhost:8501
+
+3. **Features:**
+   - Real-time chat interface
+   - File upload for document processing
+   - Conversation history with persistent memory
+   - Tool execution visibility and feedback
+
+### Document Processing
+
+**Supported Formats:**
+- **Text**: `.txt`, `.md`, `.py`, `.js`, `.html`, `.css`
+- **Documents**: `.pdf`, `.docx`
+- **Spreadsheets**: `.csv`, `.xlsx` (structured data extraction)
+- **Images**: `.jpg`, `.png`, `.gif` (vision analysis)
+
+**Run RAG Pipeline:**
+```bash
+make run-rag
+# or
+python -m src.rag_pipeline.pipeline
+```
+
+### Available Tools
+
+- **`retrieve_relevant_documents`**: Vector similarity search
+- **`list_documents`**: Enumerate available documents
+- **`get_document_content`**: Retrieve full document content
+- **`execute_sql_query`**: Query structured data
+- **`web_search`**: Internet search via Brave/SearXNG
+- **`image_analysis`**: Vision model image analysis
+- **`execute_code`**: Sandboxed Python execution
+
+## 🧰 Development
+
+### Available Commands
+
+```bash
+# Setup and dependencies
+make setup              # Install dependencies and pre-commit hooks
+make clean              # Clean Python cache files
+
+# Code quality
+make format             # Format code with Black and Ruff
+make lint               # Run linting checks
+make test               # Run test suite
+make test-coverage      # Run tests with coverage
+make security           # Run security scans
+
+# Running services
+make run-ui             # Start Streamlit UI
+make run-rag            # Run document processing pipeline
+make dev                # Development mode with auto-reload
+
+# Docker
+make docker-build       # Build Docker images
+make docker-run         # Start Docker services
+make docker-stop        # Stop Docker services
+```
+
+### Code Quality Tools
+
+- **Linting**: Ruff with comprehensive rule set
+- **Formatting**: Black with 100-character line length
+- **Type Checking**: MyPy for static analysis
+- **Security**: Bandit, Safety, pip-audit
+- **Testing**: Pytest with async support and coverage
+- **Pre-commit**: Automated code quality checks
+
+## 📁 Project Structure
+
+```
+base_agent/
+├── src/                        # Core application code
+│   ├── __init__.py            # Package initialization
+│   ├── __main__.py            # Main entry point
+│   ├── agent/                  # Agent implementation
+│   │   ├── __init__.py        # Package initialization
+│   │   ├── agent.py            # Main Pydantic AI agent
+│   │   ├── base.py             # Base agent class
+│   │   └── prompt.py           # System prompts
+│   ├── clients/                # External service clients
+│   │   ├── __init__.py        # Package initialization with exports
+│   │   ├── database.py         # Supabase client
+│   │   ├── embedding.py        # Embedding client factory
+│   │   ├── llm.py              # LLM client factory
+│   │   └── memory.py           # Memory client (mem0)
+│   ├── tools/                  # Agent tools
+│   │   ├── __init__.py        # Package initialization with exports
+│   │   ├── rag.py              # Document retrieval tools
+│   │   ├── web_search.py       # Web search integration
+│   │   ├── image_analysis.py   # Image analysis tools
+│   │   ├── code_execution.py   # Code execution tools
+│   │   └── sql_query.py        # SQL query tools
+│   ├── rag_pipeline/           # Document processing
+│   │   ├── __init__.py        # Package initialization
+│   │   ├── common/             # Shared utilities
+│   │   │   ├── __init__.py    # Package initialization
+│   │   │   ├── db_handler.py   # Database operations
+│   │   │   └── text_processor.py # Text preprocessing
+│   │   ├── sources/            # Data source integrations
+│   │   │   ├── __init__.py    # Package initialization
+│   │   │   ├── google_drive.py # Google Drive integration
+│   │   │   └── local_files.py  # Local file processing
+│   │   └── pipeline.py         # Main orchestrator
+│   ├── ui/                     # Web interfaces
+│   │   ├── __init__.py        # Package initialization
+│   │   ├── README.md          # UI documentation
+│   │   ├── requirements.txt   # UI-specific requirements
+│   │   ├── streamlit_app.py    # Main Streamlit UI
+│   │   ├── streamlit_ui_simple.py     # Simple variant
+│   │   └── streamlit_ui_streaming.py  # Streaming variant
+│   └── utils/                  # Utility modules
+│       └── __init__.py        # Package initialization
+├── sql/                        # Database schemas
+│   ├── documents.sql          # Vector document storage
+│   ├── document_metadata.sql  # Document metadata table
+│   ├── document_rows.sql      # Tabular data storage
+│   └── execute_sql_rpc.sql    # Secure SQL execution function
+├── tests/                      # Test suite
+│   ├── __init__.py            # Package initialization
+│   ├── conftest.py            # Test configuration
+│   ├── test_*.py              # Individual test modules
+│   └── rag_pipeline/          # RAG pipeline tests
+├── docs/                       # Documentation
+├── config/                     # Configuration files
+├── docker/                     # Container configuration
+│   └── Dockerfile            # Container build instructions
+└── supabase/                   # Supabase configuration
+    ├── .gitignore            # Supabase gitignore
+    ├── config.toml           # Supabase config
+    └── .temp/                # Temporary files
+```
+
+## 🔍 Advanced Features
+
+### Code Execution Options
+
+**Option 1: Built-in Sandbox (Default)**
+- Uses RestrictedPython with whitelisted modules
+- No file system or network access
+- Core Python libraries included
+
+**Option 2: MCP Code Execution Server**
+1. Install Deno: https://deno.land/
+2. Run MCP server:
+   ```bash
+   deno run -N -R=node_modules -W=node_modules --node-modules-dir=auto jsr:@pydantic/mcp-run-python sse
+   ```
+3. Enable in `src/agent/agent.py` (see comments)
+
+### Google Drive Integration
+
+1. **Setup Google Cloud Project**
+   - Enable Drive API
+   - Create OAuth 2.0 credentials
+
+2. **Configure Environment**
+   ```bash
+   GOOGLE_DRIVE_FOLDER_ID=your_folder_id
+   GOOGLE_DRIVE_CREDENTIALS_PATH=config/google_credentials.json
+   ```
+
+3. **Features**
+   - Automatic document monitoring
+   - OAuth 2.0 authentication
+   - Binary file support
+
+## 🧠 Memory System
+
+The agent uses **mem0** for persistent memory:
+- **Session Memory**: Temporary conversation context
+- **Long-term Memory**: Persistent across sessions
+- **User Isolation**: Separate memory per user
+- **Deduplication**: Automatic similar memory removal
+
+## 🛡️ Security
+
+- **Sandboxed Execution**: RestrictedPython for code execution
+- **SQL Injection Protection**: Parameterized queries and validation
+- **API Key Security**: Environment variable storage
+- **Read-only Database**: SQL queries restricted to SELECT operations
+
+## 📊 Monitoring
+
+The agent includes comprehensive logging and error handling:
+- **Structured Logging**: JSON format with context
+- **Error Tracking**: Detailed error messages and stack traces
+- **Performance Metrics**: Response times and resource usage
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**Import Errors:**
+```bash
+make clean
+make setup
+```
+
+**Database Connection:**
+- Verify `SUPABASE_URL` and `SUPABASE_SERVICE_KEY`
+- Ensure pgvector extension is enabled
+- Check SQL scripts execution
+
+**Docker Issues:**
+```bash
+make docker-stop
+docker system prune -f
+make docker-build
+make docker-run
+```
+
+**Memory Issues:**
+- Check mem0 configuration
+- Verify database connectivity
+- Review memory retention settings
+
+## 📚 Documentation
+
+- **[Architecture](docs/ARCHITECTURE.md)**: System design and structure
+- **[Installation](docs/INSTALL.md)**: Detailed setup instructions
+- **[Configuration](docs/CONFIGURATION.md)**: Environment and settings
+- **[Usage](docs/USAGE.md)**: User guides and examples
+- **[Database & RAG](docs/DB_AND_RAG.md)**: Database setup and RAG system
+- **[PRD](docs/PRD.md)**: Product requirements and specifications
+- **[Tasks](docs/TASKS.md)**: Development tasks and progress
+
+## 🤝 Contributing
+
+1. **Fork the repository**
+2. **Create a feature branch**: `git checkout -b feature/new-feature`
+3. **Install development dependencies**: `make setup`
+4. **Make changes and test**: `make check`
+5. **Commit changes**: `git commit -m "feat: add new feature"`
+6. **Push branch**: `git push origin feature/new-feature`
+7. **Create Pull Request**
+
+### Development Workflow
+
+- **Code Style**: Black + Ruff formatting
+- **Testing**: Pytest with >75% coverage requirement
+- **Security**: Bandit security scanning
+- **Pre-commit**: Automated quality checks
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- **[Pydantic AI](https://github.com/pydantic/pydantic-ai)**: Core agent framework
+- **[Supabase](https://supabase.com)**: Database and vector storage
+- **[mem0](https://mem0.ai)**: Memory management system
+- **[Streamlit](https://streamlit.io)**: Web interface framework
+
+## 📧 Support
+
+For questions, issues, or contributions:
+- **Issues**: Create a GitHub issue
+- **Discussions**: Use GitHub Discussions
+- **Documentation**: Check the `docs/` directory
+
+---
+
+**Version**: 0.1.0
+**Last Updated**: December 2024

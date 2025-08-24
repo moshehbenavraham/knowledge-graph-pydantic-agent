@@ -9,7 +9,7 @@
 | `LLM_BASE_URL` | URL | Service endpoint (e.g., `https://api.openai.com/v1`) |
 | `LLM_API_KEY` | String | Authentication key |
 | `LLM_CHOICE` | Model name | Model identifier (e.g., `gpt-4o-mini`) |
-| `VISION_LLM_CHOICE` | Model name | Vision-capable model for image analysis |
+| `VISION_LLM_CHOICE` | Model name | Vision-capable model for image analysis (e.g., `gpt-4o-mini`) |
 
 ### Embedding Provider Settings
 | Variable | Options | Description |
@@ -22,15 +22,43 @@
 ### Database Configuration
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `DATABASE_URL` | Supabase connection for mem0 (same as SUPABASE_URL) | `https://xxx.supabase.co` |
 | `SUPABASE_URL` | Supabase project URL | `https://xxx.supabase.co` |
 | `SUPABASE_SERVICE_KEY` | Supabase service role key | `eyJ...` |
+| `DATABASE_URL` | Supabase connection for mem0 (same as SUPABASE_URL) | `https://xxx.supabase.co` |
 
 ### Search Provider Settings
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `BRAVE_API_KEY` | Brave Search API key | None (uses SearXNG) |
 | `SEARXNG_BASE_URL` | SearXNG instance URL | `http://localhost:8080` |
+
+### Agent Settings
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `AGENT_NAME` | Agent display name | `Luminari` |
+| `AGENT_TEMPERATURE` | LLM temperature setting | `0.7` |
+
+### Feature Flags
+| Variable | Options | Description |
+|----------|---------|-------------|
+| `ENABLE_CODE_EXECUTION` | `true`, `false` | Enable/disable code execution tool (default: `false`) |
+| `ENABLE_WEB_SEARCH` | `true`, `false` | Enable/disable web search functionality |
+| `ENABLE_IMAGE_ANALYSIS` | `true`, `false` | Enable/disable image analysis |
+| `ENABLE_LONG_TERM_MEMORY` | `true`, `false` | Enable/disable persistent memory |
+| `ENABLE_RAG` | `true`, `false` | Enable/disable RAG functionality |
+
+### Optional Integrations
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `GOOGLE_DRIVE_FOLDER_ID` | Google Drive folder ID for document sync | No |
+| `GOOGLE_DRIVE_CREDENTIALS_PATH` | Path to Google credentials JSON | No |
+
+### Additional Environment Variables
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `AGENT_NAME` | Display name for the agent | `Luminari` |
+| `AGENT_TEMPERATURE` | LLM temperature setting (0.0-1.0) | `0.7` |
+| `VISION_LLM_CHOICE` | Vision model for image analysis | Same as `LLM_CHOICE` |
 
 ## Database Schema Setup
 

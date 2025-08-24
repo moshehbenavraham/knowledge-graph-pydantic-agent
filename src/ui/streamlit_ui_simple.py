@@ -1,14 +1,14 @@
-from pydantic_ai import Agent
-from httpx import AsyncClient
-import streamlit as st
 import asyncio
-import sys
 import os
 
-from src.agent.agent import agent, AgentDeps
+import streamlit as st
+from httpx import AsyncClient
 
 # Import all the message part classes from Pydantic AI
-from pydantic_ai.messages import ModelRequest, ModelResponse, PartDeltaEvent, PartStartEvent, TextPartDelta
+from pydantic_ai.messages import ModelRequest, ModelResponse
+
+from src.agent.agent import AgentDeps, agent
+
 
 def display_message_part(part):
     """
@@ -17,23 +17,26 @@ def display_message_part(part):
     tool calls, tool returns, etc.
     """
     # User messages
-    if part.part_kind == 'user-prompt' and part.content:
+    if part.part_kind == "user-prompt" and part.content:
         with st.chat_message("user"):
             st.markdown(part.content)
     # AI messages
-    elif part.part_kind == 'text' and part.content:
+    elif part.part_kind == "text" and part.content:
         with st.chat_message("assistant"):
-            st.markdown(part.content)             
+            st.markdown(part.content)
+
 
 async def run_agent(user_input):
     async with AsyncClient() as http_client:
         agent_deps = AgentDeps(
             http_client=http_client,
             brave_api_key=os.getenv("BRAVE_API_KEY", ""),
-            searxng_base_url=os.getenv("SEARXNG_BASE_URL", "")
-        )   
+            searxng_base_url=os.getenv("SEARXNG_BASE_URL", ""),
+        )
 
-        result = await agent.run(user_input, deps=agent_deps, message_history=st.session_state.messages)        
+        result = await agent.run(
+            user_input, deps=agent_deps, message_history=st.session_state.messages
+        )
 
     # Add the new messages to the chat history (including tool calls and responses)
     st.session_state.messages.extend(result.new_messages())
@@ -47,9 +50,10 @@ async def run_agent(user_input):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+
 async def main():
     st.title("Pydantic AI Agent")
-    
+
     # Initialize chat history in session state if not present
     if "messages" not in st.session_state:
         st.session_state.messages = []
@@ -58,7 +62,7 @@ async def main():
     # Each message is either a ModelRequest or ModelResponse.
     # We iterate over their parts to decide how to display them.
     for msg in st.session_state.messages:
-        if isinstance(msg, ModelRequest) or isinstance(msg, ModelResponse):
+        if isinstance(msg, ModelRequest | ModelResponse):
             for part in msg.parts:
                 display_message_part(part)
 

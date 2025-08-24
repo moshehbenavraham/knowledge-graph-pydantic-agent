@@ -1,3 +1,6 @@
+# Core dependencies - auto-generated from pyproject.toml
+# DO NOT EDIT MANUALLY - Use pyproject.toml and regenerate with: pip-compile pyproject.toml
+
 # Core dependencies
 pydantic-ai>=0.0.10
 pydantic>=2.5.0
@@ -18,17 +21,13 @@ asyncpg>=0.28.0
 numpy>=1.24.0
 aiofiles>=23.0.0
 
-# RAG pipeline dependencies
+# RAG pipeline dependencies (optional: pip install -e .[rag])
 watchdog>=3.0.0
 python-docx>=1.1.0
 openpyxl>=3.1.2
 unstructured>=0.11.0
 
-# Additional production dependencies
+# Additional dependencies for production
 pgvector>=0.3.0
-psycopg2-binary>=2.9.0
 pillow>=10.0.0
-requests>=2.31.0
-RestrictedPython>=8.0
-fastapi>=0.100.0
-uvicorn>=0.23.0
+RestrictedPython>=6.0

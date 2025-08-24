@@ -1,10 +1,8 @@
-import pytest
 import sys
-import os
-from unittest.mock import patch, MagicMock, AsyncMock, call
+from pathlib import Path
 
 # Add src directory to path to import the tools module
-sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'src'))
+sys.path.append(str(Path(__file__).parent.parent.resolve() / "src"))
 from tools.code_execution import execute_safe_code_tool
 
 
@@ -17,7 +15,7 @@ result = 2 + 2
 print(f"2 + 2 = {result}")
 """
         result = execute_safe_code_tool(code)
-        
+
         # Verify the output
         assert "Hello, World!" in result
         assert "2 + 2 = 4" in result
@@ -34,7 +32,7 @@ print(json.dumps({"key": "value"}))
 print(f"Current year: {datetime.datetime.now().year}")
 """
         result = execute_safe_code_tool(code)
-        
+
         # Verify the output contains results from allowed modules
         assert "Pi is approximately 3.14" in result
         assert '{"key": "value"}' in result
@@ -56,7 +54,7 @@ else:
     print("subprocess module is not available")
 """
         result = execute_safe_code_tool(code)
-        
+
         # Verify the output shows the modules aren't available
         assert "os module is not available" in result
         assert "subprocess module is not available" in result
@@ -71,7 +69,7 @@ x = 1 / 0  # Division by zero
 print("This won't be reached")
 """
         result = execute_safe_code_tool(code)
-        
+
         # Verify the output shows the exception
         assert "Error executing code: division by zero" in result
 
@@ -96,7 +94,7 @@ print(f"Doubled: {doubled}")
 print(f"Factorial of 5: {factorial(5)}")
 """
         result = execute_safe_code_tool(code)
-        
+
         # Verify the output shows complex operations worked
         assert "Squares: [0, 1, 4, 9, 16]" in result
         assert "Doubled: [0, 2, 8, 18, 32]" in result

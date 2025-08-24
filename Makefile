@@ -22,6 +22,11 @@ lint:
 	ruff check src/ tests/
 	black --check src/ tests/
 
+security:
+	bandit -r src/
+	safety check
+	pip-audit
+
 # Running Services
 run-ui:
 	streamlit run src/ui/streamlit_app.py
@@ -63,4 +68,4 @@ clean:
 install-dev:
 	python -m pip install -e .[dev]
 
-.PHONY: setup check format test test-coverage lint run-ui run-rag run-mcp dev docker-build docker-run docker-stop db-setup db-migrate clean install-dev
+.PHONY: setup check format test test-coverage lint security run-ui run-rag run-mcp dev docker-build docker-run docker-stop db-setup db-migrate clean install-dev

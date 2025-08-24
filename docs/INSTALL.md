@@ -5,23 +5,53 @@
 - Supabase project with pgvector extension enabled
 - 4GB+ RAM for local LLM deployment (if using Ollama)
 
-## Deployment Options
+## Quick Start
 
-### Docker Desktop Installation (Ubuntu)
-Docker Desktop is required for local Supabase deployment.
+1. **Clone and Setup Environment**
+   ```bash
+   git clone <repository-url>
+   cd base_agent
 
-1.  **Download Docker Desktop:**
-    Download the `.deb` package for Ubuntu from the official Docker Desktop website: [https://docs.docker.com/desktop/install/ubuntu/](https://docs.docker.com/desktop/install/ubuntu/)
+   # Install dependencies with development tools
+   make setup
 
-2.  **Install Docker Desktop:**
-    Open your terminal and navigate to the directory where you downloaded the `.deb` package. Then run:
-    ```bash
-    sudo apt-get install ./docker-desktop-amd64.deb
-    ```
-    Follow any on-screen prompts to complete the installation.
+   # This runs: python -m pip install -e .[dev] && pre-commit install
+   ```
 
-3.  **Start Docker Desktop:**
-    After installation, launch Docker Desktop from your applications menu. Ensure it is running before attempting to start local Supabase services.
+2. **Configure Environment Variables**
+   ```bash
+   # Copy example configuration
+   cp .env.example .env
+
+   # Edit .env with your service credentials
+   # Required: SUPABASE_URL, SUPABASE_SERVICE_KEY, LLM_API_KEY, EMBEDDING_API_KEY
+   ```
+
+3. **Database Setup**
+   ```bash
+   # Using Makefile helper (informational only)
+   make db-setup
+   ```
+
+   **Manual Supabase Setup:**
+   - Go to [Supabase](https://supabase.com/) and create a new project
+   - Enable the `pgvector` extension in Database → Extensions
+   - Get your project URL and service role key from Project Settings → API
+   - Update `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` in your `.env` file
+   - Run the SQL scripts in order:
+     1. [`sql/documents.sql`](../sql/documents.sql)
+     2. [`sql/document_metadata.sql`](../sql/document_metadata.sql)
+     3. [`sql/document_rows.sql`](../sql/document_rows.sql)
+     4. [`sql/execute_sql_rpc.sql`](../sql/execute_sql_rpc.sql)
+
+4. **Run the Application**
+   ```bash
+   # Start Streamlit UI
+   make run-ui
+
+   # Or run in development mode with auto-reload
+   make dev
+   ```
 
 ## Deployment Options
 
@@ -29,90 +59,113 @@ Docker Desktop is required for local Supabase deployment.
 **Required Services:**
 - Supabase project with pgvector enabled
 - OpenAI API key or OpenRouter account
-- Brave Search API key (optional: use SearXNG instead)
+- Brave Search API key (optional: uses SearXNG fallback)
 
-### Local Deployment
+### Local Deployment with Ollama
 **Required Software:**
-- [Local AI Package](https://github.com/coleam00/local-ai-packaged) (all-in-one)
-  - OR manually: Ollama + SearXNG
+- [Ollama](https://ollama.ai/) for local LLM
+- [SearXNG](https://github.com/searxng/searxng) for web search
 - Supabase project (cloud database)
-- Deno (for MCP code execution server)
 
-### Hybrid Deployment
-- Cloud LLM (OpenAI/OpenRouter) + Supabase database
-- Local LLM (Ollama) + Supabase database
+### Docker Deployment
 
-## Quick Start
+**Prerequisites:**
+- Docker and Docker Compose installed
 
-1. **Install Agent Dependencies**
+**Build and Run:**
+```bash
+# Build the Docker images
+make docker-build
+
+# Start all services (app + SearXNG)
+make docker-run
+
+# Stop services
+make docker-stop
+```
+
+**Docker Services:**
+- **App**: Streamlit UI on port 8501
+- **SearXNG**: Web search engine on port 8080
+
+## Development Setup
+
+### Available Make Commands
+
+**Core Development:**
+```bash
+make setup          # Install dependencies and pre-commit hooks
+make format          # Format code with Black and Ruff
+make lint           # Check code style and types
+make test           # Run test suite
+make test-coverage  # Run tests with coverage report
+make security       # Run security scans (Bandit, Safety, pip-audit)
+make check          # Run all checks (lint, type, test)
+```
+
+**Running Services:**
+```bash
+make run-ui         # Start Streamlit UI
+make run-rag        # Run RAG pipeline
+make dev            # Development mode with auto-reload
+```
+
+**Docker Commands:**
+```bash
+make docker-build   # Build Docker images
+make docker-run     # Start Docker services
+make docker-stop    # Stop Docker services
+```
+
+### Optional: MCP Code Execution Server
+
+For enhanced code execution capabilities:
+
+1. **Install Deno:**
    ```bash
-   make setup
+   # macOS/Linux
+   curl -fsSL https://deno.land/x/install/install.sh | sh
+
+   # Windows
+   iwr https://deno.land/x/install/install.ps1 -useb | iex
    ```
 
-2. **Install RAG Pipeline Dependencies**
+2. **Start MCP Server:**
    ```bash
-   cd RAG_Pipeline
-   python -m venv .venv
-   # Windows: .venv\Scripts\activate
-   # Unix: source .venv/bin/activate
-   pip install -r requirements.txt
+   deno run -N -R=node_modules -W=node_modules --node-modules-dir=auto jsr:@pydantic/mcp-run-python sse
    ```
 
-3. **Configure Environment**
-   ```bash
-   # Copy example configuration
-   cp .env.example .env
-   # Edit .env with your service credentials
-   ```
+3. **Enable in Agent:**
+   Uncomment the MCP configuration lines in [`src/agent/agent.py`](../src/agent/agent.py:56)
 
-4. **Supabase Setup**
-   To use the database features, you need a Supabase project.
-   - Go to [Supabase](https://supabase.com/) and create a new project.
-   - Once your project is created, navigate to "Database" -> "Extensions" and enable the `pgvector` extension.
-   - Obtain your project's URL and `service_role` key from "Project Settings" -> "API".
-   - Update the `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` in your `.env` file with these credentials.
-   - Run the SQL scripts located in the `sql/` directory to set up the necessary tables:
-     ```bash
-     # Example for running SQL scripts (replace with actual method, e.g., Supabase SQL Editor)
-     # You can copy and paste the content of each .sql file into the Supabase SQL Editor and run them.
-     # Files to run: documents.sql, document_metadata.sql, document_rows.sql
-     ```
+## Troubleshooting
 
-4b. **Local Supabase Deployment (Ubuntu)**
-    If you prefer to run Supabase locally, follow these steps:
+### Common Issues
 
-    **Install Supabase CLI:**
-    ```bash
-    sudo snap install supabase --channel=v1
-    ```
+**Import Errors:**
+```bash
+# Reinstall in development mode
+make clean
+make setup
+```
 
-    **Start Local Supabase Services:**
-    Navigate to your project root directory and run:
-    ```bash
-    supabase init
-    supabase start
-    ```
-    This will start all Supabase services (PostgreSQL, Auth, Storage, etc.) locally using Docker.
+**Database Connection Issues:**
+- Verify `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` in `.env`
+- Ensure pgvector extension is enabled in Supabase
+- Check that all SQL scripts have been executed
 
-    **Get Local Supabase Credentials:**
-    After `supabase start` completes, it will output the `API URL` and `anon key`. Use these values to update `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` in your `.env` file.
+**Docker Issues:**
+```bash
+# Reset Docker environment
+make docker-stop
+docker system prune -f
+make docker-build
+make docker-run
+```
 
-    **Run SQL Scripts on Local Supabase:**
-    You can run the SQL migration scripts using the Supabase CLI:
-    ```bash
-    supabase db diff --local > migrations/<timestamp>_initial_schema.sql
-    supabase db push
-    ```
-    Alternatively, you can connect to your local PostgreSQL database (usually `postgresql://postgres:postgres@localhost:54322/postgres`) using a client like `psql` or `DBeaver` and execute the SQL files from the `sql/` directory manually.
-
-4c. **Database Setup (using Makefile)**
-    The `Makefile` includes a placeholder command for database setup. This command currently serves as a reminder to configure your Supabase project manually.
-    ```bash
-    make db-setup
-    ```
-    Follow the instructions in step 4 or 4b to set up your Supabase project and run the SQL scripts.
-
-5. **Run the Streamlit UI**
-   ```bash
-   make run-ui
-   ```
+**Pre-commit Issues:**
+```bash
+# Reinstall pre-commit hooks
+pre-commit uninstall
+pre-commit install
+```
