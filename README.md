@@ -219,6 +219,7 @@ make lint               # Run linting checks
 make test               # Run test suite
 make test-coverage      # Run tests with coverage
 make security           # Run security scans
+make check              # Run all checks (lint, test, security)
 
 # Running services
 make run-ui             # Start Streamlit UI
@@ -229,6 +230,9 @@ make dev                # Development mode with auto-reload
 make docker-build       # Build Docker images
 make docker-run         # Start Docker services
 make docker-stop        # Stop Docker services
+
+# Database (Informational)
+make db-setup           # Show Supabase setup instructions
 ```
 
 ### Code Quality Tools

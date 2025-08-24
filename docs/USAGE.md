@@ -29,11 +29,14 @@ SUPABASE_SERVICE_KEY=your_service_role_key
 
 **Execution:**
 ```bash
-# Run RAG pipeline
+# Run RAG pipeline for local files
 make run-rag
 
-# Or run directly
-python -m src.rag_pipeline.pipeline
+# Or run directly with source specification
+python -m src.rag_pipeline.pipeline --source local --interval 60
+
+# For Google Drive integration
+python -m src.rag_pipeline.pipeline --source google_drive --interval 60
 ```
 
 **Processing Settings (configurable in code):**
@@ -101,15 +104,30 @@ streamlit run src/ui/streamlit_app.py
 
 ### Code Execution Options
 
-#### Option 1: Built-in Custom Sandboxed Execution (Default)
-Uses custom safe execution environment with whitelisted modules:
-- Core Python libraries (math, datetime, json, etc.)
-- Optional: numpy, pandas, scipy (if installed)
-- No file system or network access
-- Enabled by default in [`src/agent/agent.py`](../src/agent/agent.py:187)
+#### Built-in Custom Sandboxed Execution (Default)
 
-#### Option 2: MCP Code Execution Server (Optional)
-Enhanced code execution via Pydantic AI MCP integration:
+The agent uses a custom safe execution environment implemented in [`src/tools/code_execution.py`](../src/tools/code_execution.py):
+
+**Whitelisted Modules:**
+- Core Python libraries: `math`, `datetime`, `json`, `csv`, `re`, `statistics`, etc.
+- Data structures: `collections`, `itertools`, `functools`, `heapq`, `bisect`
+- Optional packages (if installed): `numpy`, `pandas`, `scipy`
+
+**Security Features:**
+- No file system access (except temp/io)
+- No network access
+- Restricted import system
+- Safe built-ins only
+- Custom print function for output capture
+
+**Configuration:**
+- Enabled by default in [`src/agent/agent.py`](../src/agent/agent.py) (lines 187-201)
+- Uses `execute_safe_code_tool` from [`src/tools/code_execution.py`](../src/tools/code_execution.py)
+- Can be disabled via `ENABLE_CODE_EXECUTION=false` in `.env`
+
+#### Alternative: MCP Code Execution Server (Optional)
+
+For enhanced capabilities, you can use the MCP (Model Context Protocol) server:
 
 **Setup:**
 1. Install Deno: https://deno.land/
@@ -117,44 +135,74 @@ Enhanced code execution via Pydantic AI MCP integration:
    ```bash
    deno run -N -R=node_modules -W=node_modules --node-modules-dir=auto jsr:@pydantic/mcp-run-python sse
    ```
-3. Enable in [`src/agent/agent.py`](../src/agent/agent.py):
-   ```python
-   # Add MCP server configuration (see agent.py comments for details)
-   # Comment out the built-in execute_code tool (lines 187-201)
-   ```
+3. Configure MCP in [`src/agent/agent.py`](../src/agent/agent.py) (see comments in the file)
+4. Comment out the built-in `execute_code` tool
 
 **Benefits:**
 - More powerful execution environment
 - Better resource management
-- Enhanced security features
+- Enhanced security isolation
 
 ## Agent Tools Reference
 
 ### Document Retrieval Tools
-- **`retrieve_relevant_documents`**: Vector similarity search, returns top 4 most relevant chunks with metadata
-- **`list_documents`**: Enumerate all available documents with metadata from `document_metadata` table
-- **`get_document_content`**: Retrieve full document content by combining chunks (20,000 character limit)
-- **`execute_sql_query`**: Execute read-only SQL queries on structured data in `document_rows` table
+
+#### `retrieve_relevant_documents`
+- **Function**: Vector similarity search using pgvector
+- **Returns**: Top 4 most relevant document chunks with metadata
+- **Implementation**: [`src/tools/rag.py:retrieve_relevant_documents_tool`](../src/tools/rag.py)
+- **Usage**: Automatic context retrieval for user queries
+
+#### `list_documents`
+- **Function**: Enumerate all available documents
+- **Returns**: List of documents from `document_metadata` table with schemas
+- **Implementation**: [`src/tools/rag.py:list_documents_tool`](../src/tools/rag.py)
+- **Usage**: Discover available documents and their IDs
+
+#### `get_document_content`
+- **Function**: Retrieve full document content by combining chunks
+- **Returns**: Complete document text (limited to 20,000 characters)
+- **Implementation**: [`src/tools/rag.py:get_document_content_tool`](../src/tools/rag.py)
+- **Usage**: Access entire document content when needed
+
+#### `execute_sql_query`
+- **Function**: Execute read-only SQL queries on structured data
+- **Returns**: Query results in JSON format
+- **Implementation**: [`src/tools/sql_query.py:execute_sql_query_tool`](../src/tools/sql_query.py)
+- **Usage**: Query CSV/Excel data stored in `document_rows` table
 
 ### External Service Tools
-- **`web_search`**: Internet search via Brave API (primary) or SearXNG (fallback)
-  - Brave API: Returns summarized results
-  - SearXNG: Returns top search results with snippets
-- **`image_analysis`**: Vision model analysis of images stored in the knowledge base
-  - Uses configurable vision model (default: `gpt-4o-mini`)
-  - Analyzes images based on provided queries
+
+#### `web_search`
+- **Function**: Internet search with dual provider support
+- **Primary**: Brave Search API (summarized results)
+- **Fallback**: SearXNG (detailed result listings)
+- **Implementation**: [`src/tools/web_search.py:web_search_tool`](../src/tools/web_search.py)
+- **Configuration**: `BRAVE_API_KEY` and `SEARXNG_BASE_URL`
+
+#### `image_analysis`
+- **Function**: Vision model analysis of stored images
+- **Model**: Configurable via `VISION_LLM_CHOICE` (default: `gpt-4o-mini`)
+- **Implementation**: [`src/tools/image_analysis.py:image_analysis_tool`](../src/tools/image_analysis.py)
+- **Usage**: Analyze images based on user queries
 
 ### Code Execution Tool
-- **`execute_code`**: Sandboxed Python execution with RestrictedPython
-  - Whitelisted modules only
-  - No file system or network access
-  - Results returned via print statements
+
+#### `execute_code`
+- **Function**: Sandboxed Python code execution
+- **Security**: Custom whitelist-based execution environment
+- **Implementation**: [`src/tools/code_execution.py:execute_safe_code_tool`](../src/tools/code_execution.py)
+- **Output**: Results captured via custom print function
+- **Libraries**: Core Python + optional numpy/pandas/scipy
 
 ### Memory Management
-- **Automatic conversation memory** via mem0 integration
-- **Persistent across sessions** with Supabase backend
-- **User-isolated memory** with deduplication
-- **Configurable via environment variables**
+
+#### Long-term Memory (mem0)
+- **Integration**: Automatic conversation memory via mem0
+- **Backend**: Supabase with vector similarity
+- **Features**: User-isolated, deduplicated, persistent across sessions
+- **Configuration**: [`src/clients/memory.py`](../src/clients/memory.py)
+- **Control**: `ENABLE_LONG_TERM_MEMORY` environment variable
 
 ## Configuration Examples
 

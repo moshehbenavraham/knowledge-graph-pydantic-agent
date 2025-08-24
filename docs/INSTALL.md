@@ -1,9 +1,10 @@
 # Installation
 
 ## System Requirements
-- Python 3.11 or higher
-- Supabase project with pgvector extension enabled
-- 4GB+ RAM for local LLM deployment (if using Ollama)
+- **Python**: 3.11 or higher
+- **Database**: Supabase project with pgvector extension enabled
+- **Memory**: 4GB+ RAM for local LLM deployment (if using Ollama)
+- **OS**: Windows, macOS, or Linux
 
 ## Quick Start
 
@@ -28,21 +29,22 @@
    ```
 
 3. **Database Setup**
-   ```bash
-   # Using Makefile helper (informational only)
-   make db-setup
-   ```
 
-   **Manual Supabase Setup:**
+   **Supabase Setup (Required):**
    - Go to [Supabase](https://supabase.com/) and create a new project
    - Enable the `pgvector` extension in Database → Extensions
    - Get your project URL and service role key from Project Settings → API
    - Update `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` in your `.env` file
-   - Run the SQL scripts in order:
-     1. [`sql/documents.sql`](../sql/documents.sql)
-     2. [`sql/document_metadata.sql`](../sql/document_metadata.sql)
-     3. [`sql/document_rows.sql`](../sql/document_rows.sql)
-     4. [`sql/execute_sql_rpc.sql`](../sql/execute_sql_rpc.sql)
+   - **Execute SQL scripts in order** in the Supabase SQL Editor:
+     1. [`sql/documents.sql`](../sql/documents.sql) - Vector storage with search function
+     2. [`sql/document_metadata.sql`](../sql/document_metadata.sql) - Document metadata
+     3. [`sql/document_rows.sql`](../sql/document_rows.sql) - Structured data storage
+     4. [`sql/execute_sql_rpc.sql`](../sql/execute_sql_rpc.sql) - Secure SQL execution
+
+   ```bash
+   # Database setup helper (informational only)
+   make db-setup
+   ```
 
 4. **Run the Application**
    ```bash
@@ -51,6 +53,8 @@
 
    # Or run in development mode with auto-reload
    make dev
+
+   # Access the web interface at http://localhost:8501
    ```
 
 ## Deployment Options
@@ -117,9 +121,9 @@ make docker-run     # Start Docker services
 make docker-stop    # Stop Docker services
 ```
 
-### Optional: MCP Code Execution Server
+### Optional: Enhanced Code Execution with MCP
 
-For enhanced code execution capabilities:
+For enhanced code execution capabilities beyond the built-in sandbox:
 
 1. **Install Deno:**
    ```bash
@@ -135,8 +139,10 @@ For enhanced code execution capabilities:
    deno run -N -R=node_modules -W=node_modules --node-modules-dir=auto jsr:@pydantic/mcp-run-python sse
    ```
 
-3. **Enable in Agent:**
-   Uncomment the MCP configuration lines in [`src/agent/agent.py`](../src/agent/agent.py:56)
+3. **Configure Agent:**
+   - Edit [`src/agent/agent.py`](../src/agent/agent.py)
+   - Add MCP server configuration (see comments in the file)
+   - Comment out the built-in `execute_code` tool (lines 187-201)
 
 ## Troubleshooting
 
@@ -144,15 +150,28 @@ For enhanced code execution capabilities:
 
 **Import Errors:**
 ```bash
-# Reinstall in development mode
+# Clean and reinstall dependencies
 make clean
 make setup
+
+# If issues persist, reinstall in development mode
+python -m pip install -e .[dev]
 ```
 
 **Database Connection Issues:**
 - Verify `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` in `.env`
-- Ensure pgvector extension is enabled in Supabase
-- Check that all SQL scripts have been executed
+- Ensure pgvector extension is enabled: `CREATE EXTENSION IF NOT EXISTS vector;`
+- Check that all 4 SQL scripts have been executed in order
+- Verify service role key permissions in Supabase dashboard
+
+**Environment Variable Issues:**
+```bash
+# Verify environment file exists
+ls -la .env
+
+# Check required variables are set
+grep -E "SUPABASE_URL|LLM_API_KEY|EMBEDDING_API_KEY" .env
+```
 
 **Docker Issues:**
 ```bash
@@ -163,9 +182,27 @@ make docker-build
 make docker-run
 ```
 
+**Dependency Issues:**
+```bash
+# Update pip and reinstall
+python -m pip install --upgrade pip
+make clean
+make setup
+```
+
 **Pre-commit Issues:**
 ```bash
 # Reinstall pre-commit hooks
 pre-commit uninstall
 pre-commit install
+
+# Or skip pre-commit for testing
+git commit --no-verify
 ```
+
+### Getting Help
+
+- Check the [Configuration Guide](CONFIGURATION.md) for environment setup
+- Review [Usage Documentation](USAGE.md) for feature usage
+- See [Architecture Documentation](ARCHITECTURE.md) for system overview
+- Check existing [GitHub Issues](https://github.com/your-repo/issues) for known problems

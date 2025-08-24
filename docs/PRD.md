@@ -1,7 +1,7 @@
 # Base Agent - Technical Product Requirements Document
 
 **Document Version:** 1.1
-**Last Updated:** August 24, 2025
+**Last Updated:** December 2024
 **Document Type:** Technical Requirements Specification
 **Target Audience:** Engineering Team, Technical Architects, DevOps Engineers
 
@@ -29,7 +29,7 @@
 
 ### Technical Description
 
-The Base Agent is a production-ready AI assistant platform built on a modular architecture. The system provides intelligent automation capabilities through a multi-modal AI agent that can process text, images, and code while maintaining persistent memory and context across sessions.
+The Base Agent is a production-ready AI assistant platform built on a modular architecture using Pydantic AI. The system provides intelligent automation capabilities through a multi-modal AI agent that can process text, images, and code while maintaining persistent memory and context across sessions.
 
 ### Key Technical Capabilities
 
@@ -101,39 +101,57 @@ The Base Agent is a production-ready AI assistant platform built on a modular ar
 
 ```
 base_agent/
-├── config/                     # Configuration files
-├── sql/                        # Database schemas and migrations
 ├── src/                        # Main source code
-│   ├── agent/                  # Agent core
-│   │   ├── base.py             # Base agent class
-│   │   ├── agent.py            # Main Pydantic AI agent
-│   │   └── prompt.py           # System prompts
-│   ├── clients/                # External service clients
-│   │   ├── llm.py              # LLM client configuration
-│   │   ├── database.py         # Database connections
-│   │   └── memory.py           # Long-term memory client
-│   ├── tools/                  # Agent tools
-│   │   ├── rag.py              # RAG tools
-│   │   ├── web_search.py       # Web search tools
-│   │   ├── image_analysis.py   # Vision tools
-│   │   ├── code_execution.py   # Code execution tools
-│   │   └── sql_query.py        # SQL query tools
-│   ├── rag_pipeline/           # RAG Pipeline
-│   │   ├── common/             # Common functionality
-│   │   │   ├── db_handler.py   # Vector DB operations
+│   ├── __init__.py            # Package initialization
+│   ├── __main__.py            # Main entry point
+│   ├── agent/                 # Agent core
+│   │   ├── __init__.py        # Package initialization
+│   │   ├── agent.py           # Main Pydantic AI agent
+│   │   ├── base.py            # Base agent class
+│   │   └── prompt.py          # System prompts
+│   ├── clients/               # External service clients
+│   │   ├── __init__.py        # Package initialization with exports
+│   │   ├── database.py        # Supabase client
+│   │   ├── embedding.py       # Embedding client factory
+│   │   ├── llm.py             # LLM client configuration
+│   │   └── memory.py          # Long-term memory client (mem0)
+│   ├── tools/                 # Agent tools
+│   │   ├── __init__.py        # Package initialization with exports
+│   │   ├── rag.py             # RAG tools
+│   │   ├── web_search.py      # Web search tools
+│   │   ├── image_analysis.py  # Vision tools
+│   │   ├── code_execution.py  # Code execution tools
+│   │   └── sql_query.py       # SQL query tools
+│   ├── rag_pipeline/          # RAG Pipeline
+│   │   ├── __init__.py        # Package initialization
+│   │   ├── common/            # Common functionality
+│   │   │   ├── __init__.py    # Package initialization
+│   │   │   ├── db_handler.py  # Vector DB operations
 │   │   │   └── text_processor.py # Text preprocessing
-│   │   ├── sources/            # Data source integrations
+│   │   ├── sources/           # Data source integrations
+│   │   │   ├── __init__.py    # Package initialization
 │   │   │   ├── google_drive.py # Google Drive integration
-│   │   │   └── local_files.py  # Local file processing
-│   │   └── pipeline.py         # Main orchestrator
-│   ├── ui/                     # User interfaces
-│   │   ├── streamlit_app.py    # Main Streamlit UI
+│   │   │   └── local_files.py # Local file processing
+│   │   └── pipeline.py        # Main orchestrator
+│   ├── ui/                    # User interfaces
+│   │   ├── __init__.py        # Package initialization
+│   │   ├── README.md          # UI documentation
+│   │   ├── requirements.txt   # UI-specific requirements
+│   │   ├── streamlit_app.py   # Main Streamlit UI
 │   │   ├── streamlit_ui_simple.py # Simple UI variant
 │   │   └── streamlit_ui_streaming.py # Streaming UI variant
-│   └── utils/                  # Utilities
-├── tests/                      # Comprehensive test suite
-├── docker/                     # Container configurations
-└── supabase/                   # Supabase configuration
+│   └── utils/                 # Utilities
+│       └── __init__.py        # Package initialization
+├── sql/                       # Database schemas and migrations
+├── tests/                     # Comprehensive test suite
+├── docs/                      # Documentation
+├── config/                    # Configuration files
+├── docker/                    # Container configurations
+│   └── Dockerfile            # Container build instructions
+└── supabase/                  # Supabase configuration
+    ├── .gitignore            # Supabase gitignore
+    ├── config.toml           # Supabase config
+    └── .temp/                # Temporary files
 ```
 
 ---
@@ -1534,4 +1552,4 @@ Closes #123
 
 ---
 
-This technical PRD provides comprehensive specifications for implementing the Luminari AI Agent system. The document focuses on technical architecture, implementation details, and engineering requirements while maintaining clarity for both development teams and technical stakeholders.
+This technical PRD provides comprehensive specifications for implementing the Base Agent system. The document focuses on technical architecture, implementation details, and engineering requirements while maintaining clarity for both development teams and technical stakeholders.

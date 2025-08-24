@@ -166,30 +166,34 @@ async def retrieve_relevant_documents_tool(
 ) -> str:
     """Retrieve relevant document chunks with RAG - returns top 4 chunks."""
 
-    # Get the embedding for the query
-    query_embedding = await get_embedding(user_query, embedding_client)
+    try:
+        # Get the embedding for the query
+        query_embedding = await get_embedding(user_query, embedding_client)
 
-    # Query Supabase for relevant documents
-    result = supabase.rpc(
-        "match_documents", {"query_embedding": query_embedding, "match_count": 4}
-    ).execute()
+        # Query Supabase for relevant documents
+        result = supabase.rpc(
+            "match_documents", {"query_embedding": query_embedding, "match_count": 4}
+        ).execute()
 
-    if not result.data:
-        return "No relevant documents found."
+        if not result.data:
+            return "No relevant documents found."
 
-    # Format the results with metadata
-    formatted_chunks = []
-    for doc in result.data:
-        chunk_text = f"""
+        # Format the results with metadata
+        formatted_chunks = []
+        for doc in result.data:
+            chunk_text = f"""
 # Document ID: {doc['metadata'].get('file_id', 'unknown')}
 # Document Title: {doc['metadata'].get('file_title', 'unknown')}
 # Document URL: {doc['metadata'].get('file_url', 'unknown')}
 
 {doc['content']}
 """
-        formatted_chunks.append(chunk_text)
+            formatted_chunks.append(chunk_text)
 
-    return "\n\n---\n\n".join(formatted_chunks)
+        return "\n\n---\n\n".join(formatted_chunks)
+
+    except Exception as e:
+        return f"Error retrieving documents: {str(e)}"
 ```
 
 #### 2. Document Listing
@@ -197,9 +201,22 @@ async def retrieve_relevant_documents_tool(
 async def list_documents_tool(supabase: Client) -> list[str]:
     """List all available documents with metadata."""
 
-    # Query Supabase for unique documents
-    result = supabase.from_("document_metadata").select("id, title, schema, url").execute()
-    return str(result.data)
+    try:
+        # Query Supabase for unique documents
+        result = supabase.from_("document_metadata").select("id, title, schema, url").execute()
+
+        # Format the data as a list of strings
+        documents = []
+        for doc in result.data:
+            doc_str = f"ID: {doc['id']}, Title: {doc['title']}, URL: {doc.get('url', 'N/A')}"
+            if doc.get("schema"):
+                doc_str += f", Schema: {doc['schema']}"
+            documents.append(doc_str)
+
+        return documents
+
+    except Exception as e:
+        return [f"Error retrieving documents: {str(e)}"]
 ```
 
 #### 3. Full Document Content
@@ -207,28 +224,32 @@ async def list_documents_tool(supabase: Client) -> list[str]:
 async def get_document_content_tool(supabase: Client, document_id: str) -> str:
     """Retrieve complete document content by combining chunks (20,000 char limit)."""
 
-    # Query Supabase for all chunks for this document
-    result = (
-        supabase.from_("documents")
-        .select("id, content, metadata")
-        .eq("metadata->>file_id", document_id)
-        .order("id")
-        .execute()
-    )
+    try:
+        # Query Supabase for all chunks for this document
+        result = (
+            supabase.from_("documents")
+            .select("id, content, metadata")
+            .eq("metadata->>file_id", document_id)
+            .order("id")
+            .execute()
+        )
 
-    if not result.data:
-        return f"No content found for document: {document_id}"
+        if not result.data:
+            return f"No content found for document: {document_id}"
 
-    # Format the document with its title and all chunks
-    document_title = result.data[0]["metadata"]["file_title"].split(" - ")[0]
-    formatted_content = [f"# {document_title}\n"]
+        # Format the document with its title and all chunks
+        document_title = result.data[0]["metadata"]["file_title"].split(" - ")[0]
+        formatted_content = [f"# {document_title}\n"]
 
-    # Add each chunk's content
-    for chunk in result.data:
-        formatted_content.append(chunk["content"])
+        # Add each chunk's content
+        for chunk in result.data:
+            formatted_content.append(chunk["content"])
 
-    # Join everything together but limit to 20,000 characters
-    return "\n\n".join(formatted_content)[:20000]
+        # Join everything together but limit to 20,000 characters
+        return "\n\n".join(formatted_content)[:20000]
+
+    except Exception as e:
+        return f"Error retrieving document content: {str(e)}"
 ```
 
 ## 🧠 Memory System (Mem0 Integration)
@@ -356,10 +377,12 @@ make run-ui
 
 ### Embedding Strategy
 
-- **Chunk Size**: 400 characters (configurable via text processing config)
-- **Overlap**: 0 characters (configurable via text processing config)
-- **Model**: Configurable via EMBEDDING_MODEL_CHOICE (default: text-embedding-3-small)
-- **Processing**: Individual embeddings per chunk
+- **Chunk Size**: 400 characters (configurable in text processing)
+- **Overlap**: 0 characters (configurable in text processing)
+- **Model**: Configurable via `EMBEDDING_MODEL_CHOICE` (default: `text-embedding-3-small`)
+- **Dimensions**: 1536 for OpenAI, 768 for Ollama models
+- **Processing**: Individual embeddings per chunk with async generation
+- **Fallback**: Zero vector on embedding failures
 
 ### Memory Management
 
@@ -430,5 +453,5 @@ ORDER BY memory_count DESC;
 
 ---
 
-*Last Updated: August 24, 2025*
+*Last Updated: December 2024*
 *For questions or issues, please refer to the project repository or create an issue.*
