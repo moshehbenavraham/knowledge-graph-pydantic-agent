@@ -138,9 +138,7 @@ class TestCompleteUserWorkflows:
             mock_run.__aiter__ = lambda self: mock_stream_generator()
 
             # Execute the workflow
-            response_parts = []
-            async for part in run_agent_with_streaming(user_query):
-                response_parts.append(part)
+            response_parts = [part async for part in run_agent_with_streaming(user_query)]
 
             # Verify workflow execution
             full_response = "".join(response_parts)
@@ -536,21 +534,20 @@ class TestEdgeCaseWorkflows:
         """Test handling of concurrent user sessions."""
         # Mock multiple concurrent sessions
         sessions = []
-        for i in range(5):
+        for _ in range(5):
             session_mock = MagicMock()
             session_mock.messages = []
             sessions.append(session_mock)
 
         # Simulate concurrent execution
         async def simulate_session(session_id):
-            with patch("streamlit.session_state", sessions[session_id]):
-                with patch.object(agent, "run") as mock_agent_run:
-                    mock_result = MagicMock()
-                    mock_result.output = f"Response for session {session_id}"
-                    mock_result.new_messages.return_value = []
-                    mock_agent_run.return_value = mock_result
+            with patch("streamlit.session_state", sessions[session_id]), patch.object(agent, "run") as mock_agent_run:
+                mock_result = MagicMock()
+                mock_result.output = f"Response for session {session_id}"
+                mock_result.new_messages.return_value = []
+                mock_agent_run.return_value = mock_result
 
-                    return await run_agent(f"Query from session {session_id}")
+                return await run_agent(f"Query from session {session_id}")
 
         # Execute concurrent sessions
         tasks = [simulate_session(i) for i in range(5)]
@@ -652,9 +649,7 @@ class TestPerformanceWorkflows:
                 yield f"token_{i} "
 
         # Collect streaming tokens
-        tokens = []
-        async for token in rapid_stream():
-            tokens.append(token)
+        tokens = [token async for token in rapid_stream()]
 
         # Should handle rapid streaming
         assert len(tokens) == 100

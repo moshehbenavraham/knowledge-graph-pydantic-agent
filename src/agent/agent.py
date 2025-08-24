@@ -9,6 +9,7 @@ from prompt import AGENT_SYSTEM_PROMPT
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.providers.openai import OpenAIProvider
+from supabase.client import Client
 from tools import (
     execute_safe_code_tool,
     execute_sql_query_tool,
@@ -18,8 +19,6 @@ from tools import (
     retrieve_relevant_documents_tool,
     web_search_tool,
 )
-
-from supabase.client import Client
 
 # Load environment variables from what we have set for our agent
 project_root = Path(__file__).resolve().parent.parent

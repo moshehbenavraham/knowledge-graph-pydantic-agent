@@ -1,7 +1,7 @@
 from httpx import AsyncClient
 
-from ..utils.monitoring import logger, track_performance
-from ..utils.rate_limiting import rate_limit
+from src.utils.monitoring import logger, track_performance
+from src.utils.rate_limiting import rate_limit
 
 
 @track_performance(tool_name="brave_web_search")

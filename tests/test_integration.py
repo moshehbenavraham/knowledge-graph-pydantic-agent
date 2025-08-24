@@ -207,6 +207,7 @@ class TestDatabaseOperationsIntegration:
 
         # Verify the query was passed to RPC (protection happens server-side)
         mock_supabase_client.rpc.assert_called_once_with("execute_sql", {"query": malicious_query})
+        assert "safe" in result
 
 
 class TestToolIntegration:
@@ -463,7 +464,6 @@ class TestPerformanceIntegration:
         # Mock components
         mock_supabase = MagicMock()
         mock_embedding_client = AsyncMock()
-        mock_http_client = AsyncMock()
 
         # Setup mocks for concurrent execution
         mock_supabase.rpc.return_value.execute.return_value.data = [{"result": "success"}]
@@ -546,7 +546,6 @@ class TestErrorRecoveryIntegration:
     async def test_database_failover_scenarios(self):
         """Test database failover and recovery scenarios."""
         mock_supabase = MagicMock()
-        mock_embedding_client = AsyncMock()
 
         # Simulate database connection failure then recovery
         mock_supabase.rpc.side_effect = [
