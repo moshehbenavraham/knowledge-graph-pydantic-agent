@@ -1,6 +1,11 @@
 from httpx import AsyncClient
 
+from ..utils.monitoring import logger, track_performance
+from ..utils.rate_limiting import rate_limit
 
+
+@track_performance(tool_name="brave_web_search")
+@rate_limit(service="brave")
 async def brave_web_search(query: str, http_client: AsyncClient, brave_api_key: str) -> str:
     """
     Helper function for web_search_tool - searches the web with the Brave API
@@ -35,6 +40,7 @@ async def brave_web_search(query: str, http_client: AsyncClient, brave_api_key: 
     return "\n".join(results) if results else "No results found for the query."
 
 
+@track_performance(tool_name="searxng_web_search")
 async def searxng_web_search(query: str, http_client: AsyncClient, searxng_base_url: str) -> str:
     """
     Helper function for web_search_tool - searches the web with SearXNG
@@ -66,6 +72,7 @@ async def searxng_web_search(query: str, http_client: AsyncClient, searxng_base_
     return results if results else "No results found for the query."
 
 
+@track_performance(tool_name="web_search_tool")
 async def web_search_tool(
     query: str, http_client: AsyncClient, brave_api_key: str, searxng_base_url: str
 ) -> str:
@@ -83,10 +90,19 @@ async def web_search_tool(
         For Brave, this is a single paragraph.
         For SearXNG, this is a list of the top search results including the most relevant snippet from the page.
     """
+    logger.info("Starting web search", query=query, has_brave_key=bool(brave_api_key))
+
     try:
         if brave_api_key:
-            return await brave_web_search(query, http_client, brave_api_key)
-        return await searxng_web_search(query, http_client, searxng_base_url)
+            logger.debug("Using Brave search", query=query)
+            result = await brave_web_search(query, http_client, brave_api_key)
+        else:
+            logger.debug("Using SearXNG search", query=query, searxng_url=searxng_base_url)
+            result = await searxng_web_search(query, http_client, searxng_base_url)
+
+        logger.info("Web search completed successfully", query=query, result_length=len(result))
+        return result
+
     except Exception as e:
-        print(f"Exception during websearch: {e}")
-        return str(e)
+        logger.error("Web search failed", query=query, error=str(e), error_type=type(e).__name__)
+        return f"Web search failed: {e!s}"

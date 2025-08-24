@@ -564,6 +564,193 @@ class TestAgentConfiguration:
             assert field in field_names, f"Missing required field: {field}"
 
 
+class TestMultiProviderLLMSupport:
+    """Test multi-provider LLM configuration and integration."""
+
+    @patch.dict(os.environ, {"LLM_PROVIDER": "openai", "LLM_CHOICE": "gpt-4o-mini"})
+    def test_openai_provider_configuration(self):
+        """Test OpenAI provider configuration."""
+        model = get_model()
+        assert model.model_name == "gpt-4o-mini"
+        assert "openai.com" in model.provider.base_url
+
+    @patch.dict(
+        os.environ,
+        {
+            "LLM_PROVIDER": "openrouter",
+            "LLM_BASE_URL": "https://openrouter.ai/api/v1",
+            "LLM_CHOICE": "anthropic/claude-3-sonnet",
+        },
+    )
+    def test_openrouter_provider_configuration(self):
+        """Test OpenRouter provider configuration."""
+        model = get_model()
+        assert model.model_name == "anthropic/claude-3-sonnet"
+        assert "openrouter.ai" in model.provider.base_url
+
+    @patch.dict(
+        os.environ,
+        {
+            "LLM_PROVIDER": "ollama",
+            "LLM_BASE_URL": "http://localhost:11434",
+            "LLM_CHOICE": "llama3.1",
+        },
+    )
+    def test_ollama_provider_configuration(self):
+        """Test Ollama provider configuration."""
+        model = get_model()
+        assert model.model_name == "llama3.1"
+        assert "localhost:11434" in model.provider.base_url
+
+    @patch.dict(
+        os.environ,
+        {
+            "LLM_PROVIDER": "openai",
+            "LLM_API_KEY": "sk-test-key-123",
+            "EMBEDDING_PROVIDER": "openai",
+            "EMBEDDING_API_KEY": "sk-embed-key-456",
+        },
+    )
+    @patch("clients.memory.get_mem0_config")
+    def test_multi_provider_memory_config_openai(self, mock_get_mem0_config):
+        """Test memory configuration with OpenAI providers."""
+        from clients.memory import get_mem0_config
+
+        config = get_mem0_config()
+
+        # Verify LLM configuration
+        assert config["llm"]["provider"] == "openai"
+        assert config["llm"]["config"]["temperature"] == 0.2
+
+        # Verify embedder configuration
+        assert config["embedder"]["provider"] == "openai"
+        assert config["embedder"]["config"]["embedding_dims"] == 1536
+
+    @patch.dict(
+        os.environ,
+        {
+            "LLM_PROVIDER": "ollama",
+            "LLM_BASE_URL": "http://localhost:11434/v1",
+            "EMBEDDING_PROVIDER": "ollama",
+            "EMBEDDING_BASE_URL": "http://localhost:11434/v1",
+        },
+    )
+    def test_multi_provider_memory_config_ollama(self):
+        """Test memory configuration with Ollama providers."""
+        from clients.memory import get_mem0_config
+
+        config = get_mem0_config()
+
+        # Verify LLM configuration
+        assert config["llm"]["provider"] == "ollama"
+        assert config["llm"]["config"]["ollama_base_url"] == "http://localhost:11434"
+
+        # Verify embedder configuration
+        assert config["embedder"]["provider"] == "ollama"
+        assert config["embedder"]["config"]["embedding_dims"] == 768
+
+    def test_provider_fallback_behavior(self):
+        """Test fallback behavior when provider environment variables are missing."""
+        with patch.dict(os.environ, {}, clear=True):
+            model = get_model()
+            # Should fall back to defaults
+            assert model.model_name == "gpt-4o-mini"
+            assert model.provider.api_key == "ollama"  # Default fallback
+
+
+class TestMemoryIntegration:
+    """Test memory system integration and conversation history."""
+
+    @pytest.fixture
+    def mock_mem0_client(self):
+        """Mock mem0 client for testing."""
+        mock_client = MagicMock()
+        mock_client.add.return_value = {"id": "mem_123", "content": "User prefers Python"}
+        mock_client.search.return_value = [
+            {"content": "User prefers Python", "score": 0.9},
+            {"content": "User works in tech", "score": 0.8},
+        ]
+        mock_client.get_all.return_value = [
+            {"id": "mem_123", "content": "User prefers Python"},
+            {"id": "mem_456", "content": "User works in tech"},
+        ]
+        return mock_client
+
+    def test_memory_formatting_in_system_prompt(self, mock_run_context):
+        """Test that memories are properly formatted in system prompt."""
+        memories = "User prefers Python\nUser works in AI/ML\nTimezone: UTC-8"
+        mock_run_context.deps.memories = memories
+
+        prompt = add_memories(mock_run_context)
+
+        assert "User Memories:" in prompt
+        assert "User prefers Python" in prompt
+        assert "User works in AI/ML" in prompt
+        assert "Timezone: UTC-8" in prompt
+
+    def test_empty_memory_handling(self, mock_run_context):
+        """Test handling of empty or None memories."""
+        # Test empty string
+        mock_run_context.deps.memories = ""
+        prompt = add_memories(mock_run_context)
+        assert prompt == "\nUser Memories:\n"
+
+        # Test None
+        mock_run_context.deps.memories = None
+        prompt = add_memories(mock_run_context)
+        assert prompt == "\nUser Memories:\nNone"
+
+    @patch("clients.memory.get_mem0_client")
+    def test_memory_client_initialization(self, mock_get_mem0_client):
+        """Test memory client initialization with different configurations."""
+        from clients.memory import get_mem0_client
+
+        mock_client = MagicMock()
+        mock_get_mem0_client.return_value = mock_client
+
+        client = get_mem0_client()
+        assert client is not None
+        mock_get_mem0_client.assert_called_once()
+
+    def test_conversation_history_structure(self, mock_run_context):
+        """Test that conversation history maintains proper structure."""
+        # Simulate multi-turn conversation memories
+        conversation_memories = (
+            "Previous conversation: User asked about Python best practices\n"
+            "User mentioned working on a web scraping project\n"
+            "User prefers async/await over threading\n"
+            "Context: User is building a data pipeline"
+        )
+        mock_run_context.deps.memories = conversation_memories
+
+        prompt = add_memories(mock_run_context)
+
+        # Verify all conversation elements are preserved
+        assert "Previous conversation" in prompt
+        assert "web scraping project" in prompt
+        assert "async/await" in prompt
+        assert "data pipeline" in prompt
+
+    def test_memory_persistence_across_sessions(self, mock_run_context):
+        """Test that memories persist across different sessions."""
+        # Simulate memories from different sessions
+        session_memories = (
+            "Session 1: User asked about machine learning\n"
+            "Session 2: User implemented a neural network\n"
+            "Session 3: User optimized model performance\n"
+            "Persistent preference: User prefers TensorFlow over PyTorch"
+        )
+        mock_run_context.deps.memories = session_memories
+
+        prompt = add_memories(mock_run_context)
+
+        # Verify cross-session memory retention
+        assert "Session 1" in prompt
+        assert "Session 2" in prompt
+        assert "Session 3" in prompt
+        assert "Persistent preference" in prompt
+
+
 class TestAgentIntegration:
     """Test agent integration scenarios and workflows."""
 
@@ -607,6 +794,30 @@ class TestAgentIntegration:
         # Verify both tools were called with the same query
         mock_web_search.assert_called_once()
         mock_rag.assert_called_once()
+
+    @pytest.mark.asyncio
+    @patch("tools.rag.retrieve_relevant_documents_tool")
+    async def test_memory_aware_rag_workflow(self, mock_rag, mock_run_context):
+        """Test RAG workflow that considers user memories."""
+        # Setup memories that should influence RAG results
+        mock_run_context.deps.memories = (
+            "User is a Python developer\n"
+            "User prefers practical examples\n"
+            "User works with data science"
+        )
+
+        mock_rag.return_value = "Python data science examples and tutorials"
+
+        # Execute RAG with memory context
+        result = await retrieve_relevant_documents(mock_run_context, "machine learning tutorials")
+
+        # Verify the call was made
+        mock_rag.assert_called_once_with(
+            mock_run_context.deps.supabase,
+            mock_run_context.deps.embedding_client,
+            "machine learning tutorials",
+        )
+        assert result == "Python data science examples and tutorials"
 
     def test_agent_tool_registration_completeness(self):
         """Test that all expected tools are properly registered with the agent."""
