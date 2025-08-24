@@ -1,7 +1,7 @@
 import os
 import sys
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import ANY, AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -112,8 +112,6 @@ class TestDocumentTools:
 
         # Verify embedding was requested with the right parameters
         # Use ANY for the client parameter since we can't directly compare AsyncMock instances
-        from unittest.mock import ANY
-
         mock_get_embedding.assert_called_once_with("test query", ANY)
 
         # Verify Supabase RPC was called correctly

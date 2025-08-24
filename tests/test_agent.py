@@ -1,10 +1,16 @@
+import asyncio
+import dataclasses
 import os
 import sys
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from httpx import AsyncClient
+from openai import AsyncOpenAI
 from pydantic_ai import Agent, RunContext
+
+from supabase.client import Client
 
 # Mock environment variables before importing modules that use them
 TEST_ENV_VARS = {
@@ -387,8 +393,6 @@ class TestAgentErrorHandling:
     @patch("tools.web_search.web_search_tool")
     async def test_tool_timeout_handling(self, mock_web_search_tool, mock_run_context):
         """Test handling of tool timeouts."""
-        import asyncio
-
         mock_web_search_tool.side_effect = TimeoutError("Request timed out")
 
         with pytest.raises(asyncio.TimeoutError):
@@ -419,11 +423,6 @@ class TestAgentErrorHandling:
     def test_agent_deps_validation(self):
         """Test AgentDeps field validation."""
         # Test that AgentDeps can be created with proper types
-        from httpx import AsyncClient
-        from openai import AsyncOpenAI
-
-        from supabase import Client
-
         # Mock the required types
         mock_supabase = MagicMock(spec=Client)
         mock_embedding_client = MagicMock(spec=AsyncOpenAI)
@@ -549,8 +548,6 @@ class TestAgentConfiguration:
         assert agent.deps_type == AgentDeps
 
         # Verify AgentDeps has all required fields
-        import dataclasses
-
         assert dataclasses.is_dataclass(AgentDeps)
 
         field_names = [field.name for field in dataclasses.fields(AgentDeps)]

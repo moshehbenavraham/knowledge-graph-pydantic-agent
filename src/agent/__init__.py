@@ -3,4 +3,4 @@
 from .agent import AgentDeps, agent
 from .base import AgentResponse, BaseAgent
 
-__all__ = ["AgentResponse", "BaseAgent", "agent", "AgentDeps"]
+__all__ = ["AgentDeps", "AgentResponse", "BaseAgent", "agent"]

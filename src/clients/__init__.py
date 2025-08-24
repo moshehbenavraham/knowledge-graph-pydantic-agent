@@ -8,8 +8,8 @@ from .memory import get_mem0_client, get_mem0_client_async
 __all__ = [
     "get_embedding_client",
     "get_llm_client",
-    "get_model",
     "get_mem0_client",
     "get_mem0_client_async",
+    "get_model",
     "get_supabase_client",
 ]

@@ -1,7 +1,7 @@
 import os
 import sys
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import ANY, AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -149,8 +149,6 @@ class TestWebSearchTools:
 
         # Verify Brave search was called with the right parameters
         # Use ANY for the client parameter since we can't directly compare AsyncMock instances
-        from unittest.mock import ANY
-
         mock_brave_search.assert_called_once_with("test query", ANY, "brave-api-key")
         assert result == "Brave search results"
 
@@ -168,8 +166,6 @@ class TestWebSearchTools:
 
         # Verify SearXNG search was called with the right parameters
         # Use ANY for the client parameter since we can't directly compare AsyncMock instances
-        from unittest.mock import ANY
-
         mock_searxng_search.assert_called_once_with(
             "test query", ANY, "https://searxng.example.com"
         )
