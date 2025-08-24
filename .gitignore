@@ -30,3 +30,6 @@ temp/
 # OS-specific
 .DS_Store
 Thumbs.db
+
+# Testing Environment
+test_env/
