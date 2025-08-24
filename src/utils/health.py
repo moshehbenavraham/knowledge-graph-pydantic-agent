@@ -64,14 +64,13 @@ class HealthChecker:
                     last_check=datetime.utcnow(),
                     details={"connection": "ok", "query_time": response_time},
                 )
-            else:
-                return ComponentHealth(
-                    name="database",
-                    status="degraded",
-                    response_time=response_time,
-                    last_check=datetime.utcnow(),
-                    error="Empty response from database",
-                )
+            return ComponentHealth(
+                name="database",
+                status="degraded",
+                response_time=response_time,
+                last_check=datetime.utcnow(),
+                error="Empty response from database",
+            )
 
         except Exception as e:
             response_time = time.time() - start_time
@@ -96,7 +95,7 @@ class HealthChecker:
 
             # Simple test request
             response = await client.chat.completions.create(
-                model=os.getenv("LLM_CHOICE", "gpt-4o-mini"),
+                model=os.getenv("LLM_CHOICE", "gpt-5-mini"),
                 messages=[{"role": "user", "content": "Health check"}],
                 max_tokens=5,
             )
@@ -114,14 +113,13 @@ class HealthChecker:
                         "tokens_used": response.usage.total_tokens if response.usage else 0,
                     },
                 )
-            else:
-                return ComponentHealth(
-                    name="llm",
-                    status="degraded",
-                    response_time=response_time,
-                    last_check=datetime.utcnow(),
-                    error="Empty response from LLM",
-                )
+            return ComponentHealth(
+                name="llm",
+                status="degraded",
+                response_time=response_time,
+                last_check=datetime.utcnow(),
+                error="Empty response from LLM",
+            )
 
         except Exception as e:
             response_time = time.time() - start_time
@@ -163,14 +161,13 @@ class HealthChecker:
                         "embedding_dim": len(response.data[0].embedding),
                     },
                 )
-            else:
-                return ComponentHealth(
-                    name="embedding",
-                    status="degraded",
-                    response_time=response_time,
-                    last_check=datetime.utcnow(),
-                    error="Empty response from embedding service",
-                )
+            return ComponentHealth(
+                name="embedding",
+                status="degraded",
+                response_time=response_time,
+                last_check=datetime.utcnow(),
+                error="Empty response from embedding service",
+            )
 
         except Exception as e:
             response_time = time.time() - start_time
@@ -203,7 +200,7 @@ class HealthChecker:
                 # Clean up test memory
                 try:
                     client.delete(result["id"])
-                except Exception:  # noqa: S110
+                except Exception:
                     pass  # Ignore cleanup errors
 
                 return ComponentHealth(
@@ -213,14 +210,13 @@ class HealthChecker:
                     last_check=datetime.utcnow(),
                     details={"test_memory_id": result["id"]},
                 )
-            else:
-                return ComponentHealth(
-                    name="memory",
-                    status="degraded",
-                    response_time=response_time,
-                    last_check=datetime.utcnow(),
-                    error="Failed to create test memory",
-                )
+            return ComponentHealth(
+                name="memory",
+                status="degraded",
+                response_time=response_time,
+                last_check=datetime.utcnow(),
+                error="Failed to create test memory",
+            )
 
         except Exception as e:
             response_time = time.time() - start_time
@@ -262,14 +258,13 @@ class HealthChecker:
                             last_check=datetime.utcnow(),
                             details={"provider": "brave", "status_code": response.status_code},
                         )
-                    else:
-                        return ComponentHealth(
-                            name="web_search",
-                            status="degraded",
-                            response_time=response_time,
-                            last_check=datetime.utcnow(),
-                            error=f"Brave API returned status {response.status_code}",
-                        )
+                    return ComponentHealth(
+                        name="web_search",
+                        status="degraded",
+                        response_time=response_time,
+                        last_check=datetime.utcnow(),
+                        error=f"Brave API returned status {response.status_code}",
+                    )
 
             elif searxng_url:
                 # Test SearXNG
@@ -290,14 +285,13 @@ class HealthChecker:
                             last_check=datetime.utcnow(),
                             details={"provider": "searxng", "status_code": response.status_code},
                         )
-                    else:
-                        return ComponentHealth(
-                            name="web_search",
-                            status="degraded",
-                            response_time=response_time,
-                            last_check=datetime.utcnow(),
-                            error=f"SearXNG returned status {response.status_code}",
-                        )
+                    return ComponentHealth(
+                        name="web_search",
+                        status="degraded",
+                        response_time=response_time,
+                        last_check=datetime.utcnow(),
+                        error=f"SearXNG returned status {response.status_code}",
+                    )
             else:
                 return ComponentHealth(
                     name="web_search",

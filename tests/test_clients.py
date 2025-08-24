@@ -16,8 +16,8 @@ class TestGetLlmClient:
         # Configure mock environment variables
         def getenv_side_effect(key, default=None):
             env_vars = {
-                "EMBEDDING_BASE_URL": "https://test-api.openai.com/v1",
-                "EMBEDDING_API_KEY": "test-api-key",
+                "LLM_BASE_URL": "https://test-api.openai.com/v1",
+                "LLM_API_KEY": "test-api-key",
             }
             return env_vars.get(key, default)
 
@@ -42,9 +42,9 @@ class TestGetLlmClient:
 
 
 class TestGetSupabaseClient:
-    @patch("clients.database.Client")
+    @patch("clients.database.create_client")
     @patch("clients.database.os.getenv")
-    def test_get_supabase_client(self, mock_getenv, mock_client):
+    def test_get_supabase_client(self, mock_getenv, mock_create_client):
         # Configure mock environment variables
         def getenv_side_effect(key, default=None):
             env_vars = {
@@ -59,7 +59,7 @@ class TestGetSupabaseClient:
         mock_supabase_client = MagicMock()
 
         # Configure mocks to return our mock instances
-        mock_client.return_value = mock_supabase_client
+        mock_create_client.return_value = mock_supabase_client
 
         # Call the function
         supabase = get_supabase_client()
@@ -67,8 +67,10 @@ class TestGetSupabaseClient:
         # Assert the function returns the expected values
         assert supabase == mock_supabase_client
 
-        # Assert Client was called with the correct parameters
-        mock_client.assert_called_once_with("https://test-supabase-url.com", "test-supabase-key")
+        # Assert create_client was called with the correct parameters
+        mock_create_client.assert_called_once_with(
+            "https://test-supabase-url.com", "test-supabase-key"
+        )
 
 
 class TestGetMem0Client:

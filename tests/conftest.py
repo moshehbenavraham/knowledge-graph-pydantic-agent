@@ -1,6 +1,32 @@
+import os
 from unittest.mock import MagicMock
 
 import pytest
+from dotenv import load_dotenv
+
+# Load test environment variables
+load_dotenv(".env.test")
+
+
+# Set required environment variables for tests if not already set
+def setup_test_environment():
+    """Ensure all required environment variables are set for testing."""
+    required_vars = {
+        "SUPABASE_URL": "https://test.supabase.co",
+        "SUPABASE_KEY": "test_key_for_testing_only",
+        "SUPABASE_SERVICE_KEY": "test_service_key_for_testing_only",
+        "OPENAI_API_KEY": "test_openai_key",
+        "LOG_LEVEL": "DEBUG",
+        "ENVIRONMENT": "test",
+    }
+
+    for var, default_value in required_vars.items():
+        if not os.getenv(var):
+            os.environ[var] = default_value
+
+
+# Setup test environment
+setup_test_environment()
 
 # Configure pytest-asyncio as the default async plugin
 pytest_plugins = ["pytest_asyncio"]

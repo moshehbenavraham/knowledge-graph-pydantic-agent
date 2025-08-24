@@ -1,92 +1,194 @@
-# Streamlit UI for Pydantic AI Agent
+# Luminari AI Agent - Streamlit UI
 
-This directory contains Streamlit-based user interfaces for the Pydantic AI web search agent. There are two versions available:
+This directory contains the Streamlit-based user interface for the Luminari AI Agent, providing an interactive chat experience with advanced AI capabilities including RAG, memory, web search, and multi-tool functionality.
 
-1. `streamlit_ui_simple.py` - A basic implementation that displays complete responses
-2. `streamlit_ui_streaming.py` - An enhanced version that streams tokens in real-time
+## Available UI Components
 
-Both UIs provide a chat interface to interact with the Pydantic AI agent, which can search the web using either Brave Search API or SearXNG based on your environment configuration.
+- `streamlit_app.py` - Main production-ready Streamlit application
+- `streamlit_ui_simple.py` - Basic implementation for development/testing
+- `streamlit_ui_streaming.py` - Enhanced version with real-time streaming
+- `requirements.txt` - UI-specific dependencies
+
+## Features
+
+- **Interactive Chat Interface** - Clean, modern chat experience
+- **Multi-LLM Support** - Works with OpenAI, Anthropic, Ollama, and other providers
+- **RAG Integration** - Document search and retrieval capabilities
+- **Long-term Memory** - Persistent conversation memory using Mem0
+- **Web Search** - Integration with Brave Search API and SearXNG
+- **Code Execution** - Safe code execution in sandboxed environments
+- **Image Analysis** - Vision capabilities for image understanding
+- **Real-time Streaming** - Token-by-token response streaming
 
 ## Prerequisites
 
 - Python 3.11+
-- Streamlit
-- Pydantic AI
-- Access to either Brave Search API or SearXNG
+- Supabase account and project
+- LLM API access (OpenAI, Anthropic, etc.)
+- Optional: Brave Search API key
 
-## Setup Instructions
+## Quick Start
 
-### 1. Set up the virtual environment
+### 1. Install the Project
 
 ```bash
-# Navigate to the Streamlit_UI directory
-cd extras/Streamlit_UI
+# From the project root directory
+cd /path/to/luminari-ai-agent
 
-# Create a virtual environment
-python -m venv venv
+# Install with development dependencies
+make setup
 
-# Activate the virtual environment
-# On Windows:
-venv\Scripts\activate
-# On macOS/Linux:
-# source venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
+# Or manually:
+pip install -e .[dev]
 ```
 
-### 2. Configure Environment Variables
+### 2. Environment Configuration
 
-Create a `.env` file in the project root directory (`base_agent/`) with the following variables:
+Copy and configure the environment variables:
 
+```bash
+cp .env.example .env
 ```
-# Set this to either openai, openrouter, or ollama
+
+Edit `.env` with your configuration:
+
+```env
+# ===== SUPABASE (Primary Database) =====
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_KEY=your_supabase_service_role_key
+
+# ===== LLM CONFIGURATION =====
 LLM_PROVIDER=openai
-
-# Base URL for the OpenAI compatible instance
 LLM_BASE_URL=https://api.openai.com/v1
-
-# API key for OpenAI or OpenRouter (no need to set for Ollama)
 LLM_API_KEY=your_api_key_here
-
-# The LLM you want to use for the agents
 LLM_CHOICE=gpt-4o-mini
 
-# Set your Brave API key if using Brave for agent web search (leave empty if using SearXNG)
-BRAVE_API_KEY=your_brave_api_key_here
+# ===== EMBEDDING CONFIGURATION =====
+EMBEDDING_PROVIDER=openai
+EMBEDDING_API_KEY=your_api_key_here
+EMBEDDING_MODEL_CHOICE=text-embedding-3-small
 
-# Set the SearXNG endpoint if using SearXNG for agent web search (leave empty if using Brave)
-SEARXNG_BASE_URL=http://your-searxng-instance.com
+# ===== WEB SEARCH (Optional) =====
+BRAVE_API_KEY=your_brave_api_key
+SEARXNG_BASE_URL=http://localhost:8080
+
+# ===== FEATURE FLAGS =====
+ENABLE_WEB_SEARCH=true
+ENABLE_IMAGE_ANALYSIS=true
+ENABLE_LONG_TERM_MEMORY=true
+ENABLE_RAG=true
 ```
 
-**Note:** You must set either `BRAVE_API_KEY` or `SEARXNG_BASE_URL` for the web search functionality to work. If both are set, the agent will prioritize using Brave Search.
+### 3. Database Setup
 
-### 3. Running the Streamlit UI
+The application uses Supabase as the primary database. Make sure to:
 
-Make sure your virtual environment is activated, then run one of the following commands:
+1. Create a Supabase project
+2. Set up the required tables (see `sql/` directory)
+3. Configure your environment variables
+
+### 4. Running the UI
 
 ```bash
-# Run the simple UI (no streaming)
-streamlit run streamlit_ui_simple.py
+# Using Make (recommended)
+make run-ui
 
-# OR run the streaming UI
-streamlit run streamlit_ui_streaming.py
+# Or directly with Streamlit
+streamlit run src/ui/streamlit_app.py
+
+# For development with auto-reload
+make dev
 ```
 
-The Streamlit app will start and open in your default web browser, typically at http://localhost:8501.
+The application will be available at http://localhost:8501
 
-## UI Features
+## Development
 
-### Simple UI (`streamlit_ui_simple.py`)
+### Local Development Setup
 
-- Basic chat interface
-- Displays complete responses after processing
-- Shows user and assistant messages
-- Maintains conversation history during the session
+```bash
+# Install development dependencies
+make setup
 
-### Streaming UI (`streamlit_ui_streaming.py`)
+# Run with hot reload
+make dev
 
-- Enhanced chat interface with real-time streaming
-- Shows tokens as they are generated
-- Provides a more interactive experience
-- Maintains conversation history during the session
+# Run tests
+make test
+
+# Run linting and formatting
+make check
+make format
+```
+
+### Docker Development
+
+```bash
+# Build and run with Docker Compose
+make docker-build
+make docker-run
+
+# Stop services
+make docker-stop
+```
+
+## UI Architecture
+
+### Main Components
+
+- **Chat Interface** - Streamlit-based conversational UI
+- **Agent Integration** - Connects to the core Pydantic AI agent
+- **Memory Management** - Handles conversation persistence
+- **Tool Integration** - Access to web search, RAG, code execution
+- **Streaming Support** - Real-time response rendering
+
+### File Structure
+
+```
+src/ui/
+├── streamlit_app.py          # Main production UI
+├── streamlit_ui_simple.py    # Simple chat interface
+├── streamlit_ui_streaming.py # Streaming chat interface
+├── requirements.txt          # UI-specific dependencies
+└── README.md                # This file
+```
+
+## Configuration Options
+
+The UI respects all agent configuration from the main `.env` file:
+
+- **LLM Provider Settings** - Choose your preferred AI provider
+- **Memory Configuration** - Enable/disable long-term memory
+- **Tool Availability** - Control which tools are accessible
+- **Search Configuration** - Web search provider settings
+- **Vision Settings** - Image analysis capabilities
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Import Errors** - Ensure you've installed the package: `pip install -e .`
+2. **Database Connection** - Verify Supabase credentials and network access
+3. **LLM API Issues** - Check API keys and rate limits
+4. **Missing Tools** - Verify feature flags in `.env`
+
+### Debug Mode
+
+Enable debug logging by setting:
+
+```env
+DEBUG=true
+LOG_LEVEL=DEBUG
+```
+
+## Production Deployment
+
+For production deployment, consider:
+
+1. **Environment Variables** - Use proper secrets management
+2. **Database** - Ensure Supabase is properly configured for production
+3. **Scaling** - Consider using Docker and container orchestration
+4. **Monitoring** - Enable metrics and health checks
+5. **Security** - Review and configure authentication if needed
+
+See the main project documentation for detailed deployment instructions.

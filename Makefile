@@ -23,6 +23,7 @@ lint:
 	black --check src/ tests/
 
 security:
+	pip install -e .[security]
 	bandit -r src/
 	safety check
 	pip-audit
@@ -65,7 +66,14 @@ clean:
 	find . -type f -name "*.pyo" -delete
 	find . -type d -name "*.egg-info" -exec rm -rf {} +
 
+clean-all: clean
+	rm -rf .coverage htmlcov/ .pytest_cache/ .mypy_cache/ .ruff_cache/
+	rm -rf build/ dist/
+
+requirements:
+	pip-compile pyproject.toml --output-file requirements.txt --resolver=backtracking
+
 install-dev:
 	python -m pip install -e .[dev]
 
-.PHONY: setup check format test test-coverage lint security run-ui run-rag run-mcp dev docker-build docker-run docker-stop db-setup db-migrate clean install-dev
+.PHONY: setup check format test test-coverage lint security run-ui run-rag run-mcp dev docker-build docker-run docker-stop db-setup db-migrate clean clean-all requirements install-dev

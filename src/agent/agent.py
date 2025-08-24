@@ -1,16 +1,12 @@
-import os
 from dataclasses import dataclass
 from pathlib import Path
 
 from dotenv import load_dotenv
 from httpx import AsyncClient
 from openai import AsyncOpenAI
-from prompt import AGENT_SYSTEM_PROMPT
 from pydantic_ai import Agent, RunContext
-from pydantic_ai.models.openai import OpenAIModel
-from pydantic_ai.providers.openai import OpenAIProvider
-from supabase.client import Client
-from tools import (
+
+from src.tools import (
     execute_safe_code_tool,
     execute_sql_query_tool,
     get_document_content_tool,
@@ -19,6 +15,9 @@ from tools import (
     retrieve_relevant_documents_tool,
     web_search_tool,
 )
+from supabase.client import Client
+
+from .prompt import AGENT_SYSTEM_PROMPT
 
 # Load environment variables from what we have set for our agent
 project_root = Path(__file__).resolve().parent.parent
@@ -27,12 +26,7 @@ load_dotenv(dotenv_path, override=True)
 
 
 # ========== Helper function to get model configuration ==========
-def get_model():
-    llm = os.getenv("LLM_CHOICE") or "gpt-4o-mini"
-    base_url = os.getenv("LLM_BASE_URL") or "https://api.openai.com/v1"
-    api_key = os.getenv("LLM_API_KEY") or "ollama"
-
-    return OpenAIModel(llm, provider=OpenAIProvider(base_url=base_url, api_key=api_key))
+from src.clients.llm import get_model
 
 
 # ========== Pydantic AI Agent ==========

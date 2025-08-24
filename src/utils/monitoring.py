@@ -10,7 +10,13 @@ from contextlib import asynccontextmanager, contextmanager
 from typing import Any
 
 import structlog
-from prometheus_client import Counter, Gauge, Histogram, start_http_server
+from prometheus_client import (
+    REGISTRY,
+    Counter,
+    Gauge,
+    Histogram,
+    start_http_server,
+)
 
 
 # Configure structured logging
@@ -46,52 +52,91 @@ def configure_logging():
 logger = configure_logging()
 
 
+def _get_or_create_metric(
+    metric_class, name, description, labelnames=None, buckets=None, registry=REGISTRY
+):
+    """Get existing metric or create new one to avoid duplicates."""
+    try:
+        # Try to get existing metric
+        for collector in list(registry._collector_to_names.keys()):
+            if hasattr(collector, "_name") and collector._name == name:
+                return collector
+    except:
+        pass
+
+    # Create new metric
+    kwargs = {"name": name, "documentation": description, "registry": registry}
+    if labelnames:
+        kwargs["labelnames"] = labelnames
+    if buckets and metric_class == Histogram:
+        kwargs["buckets"] = buckets
+
+    return metric_class(**kwargs)
+
+
 # Prometheus metrics
-REQUEST_COUNT = Counter(
-    "luminari_requests_total", "Total requests", ["method", "endpoint", "status", "user_id"]
+REQUEST_COUNT = _get_or_create_metric(
+    Counter,
+    "luminari_requests_total",
+    "Total requests",
+    ["method", "endpoint", "status", "user_id"],
 )
 
-REQUEST_DURATION = Histogram(
+REQUEST_DURATION = _get_or_create_metric(
+    Histogram,
     "luminari_request_duration_seconds",
     "Request duration in seconds",
     ["method", "endpoint", "user_id"],
     buckets=[0.1, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0],
 )
 
-TOOL_EXECUTION_COUNT = Counter(
-    "luminari_tool_executions_total", "Total tool executions", ["tool_name", "status", "user_id"]
+TOOL_EXECUTION_COUNT = _get_or_create_metric(
+    Counter,
+    "luminari_tool_executions_total",
+    "Total tool executions",
+    ["tool_name", "status", "user_id"],
 )
 
-TOOL_EXECUTION_DURATION = Histogram(
+TOOL_EXECUTION_DURATION = _get_or_create_metric(
+    Histogram,
     "luminari_tool_execution_duration_seconds",
     "Tool execution duration in seconds",
     ["tool_name", "user_id"],
     buckets=[0.1, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0],
 )
 
-LLM_TOKEN_COUNT = Counter(
+LLM_TOKEN_COUNT = _get_or_create_metric(
+    Counter,
     "luminari_llm_tokens_total",
     "Total LLM tokens used",
-    ["model", "type", "user_id"],  # type: input/output
+    ["model", "type", "user_id"]  # type: input/output
 )
 
-DATABASE_QUERY_COUNT = Counter(
-    "luminari_database_queries_total", "Total database queries", ["operation", "table", "status"]
+DATABASE_QUERY_COUNT = _get_or_create_metric(
+    Counter,
+    "luminari_database_queries_total",
+    "Total database queries",
+    ["operation", "table", "status"],
 )
 
-DATABASE_QUERY_DURATION = Histogram(
+DATABASE_QUERY_DURATION = _get_or_create_metric(
+    Histogram,
     "luminari_database_query_duration_seconds",
     "Database query duration in seconds",
     ["operation", "table"],
     buckets=[0.01, 0.05, 0.1, 0.5, 1.0, 2.5, 5.0],
 )
 
-MEMORY_USAGE = Gauge("luminari_memory_usage_bytes", "Current memory usage in bytes")
+MEMORY_USAGE = _get_or_create_metric(
+    Gauge, "luminari_memory_usage_bytes", "Current memory usage in bytes"
+)
 
-ACTIVE_SESSIONS = Gauge("luminari_active_sessions", "Number of active user sessions")
+ACTIVE_SESSIONS = _get_or_create_metric(
+    Gauge, "luminari_active_sessions", "Number of active user sessions"
+)
 
-ERROR_COUNT = Counter(
-    "luminari_errors_total", "Total errors", ["error_type", "component", "severity"]
+ERROR_COUNT = _get_or_create_metric(
+    Counter, "luminari_errors_total", "Total errors", ["error_type", "component", "severity"]
 )
 
 
@@ -257,7 +302,7 @@ class PerformanceMonitor:
 monitor = PerformanceMonitor()
 
 
-def track_performance(tool_name: Optional[str] = None, endpoint: Optional[str] = None):
+def track_performance(tool_name: str | None = None, endpoint: str | None = None):
     """Decorator to track function performance."""
 
     def decorator(func: Callable) -> Callable:

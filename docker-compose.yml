@@ -8,24 +8,114 @@ services:
     ports:
       - "8501:8501"
     environment:
+      # ===== SUPABASE =====
       - SUPABASE_URL=${SUPABASE_URL}
       - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
+      - DATABASE_URL=${SUPABASE_URL}
+
+      # ===== LLM CONFIGURATION =====
+      - LLM_PROVIDER=${LLM_PROVIDER:-openai}
+      - LLM_BASE_URL=${LLM_BASE_URL}
       - LLM_API_KEY=${LLM_API_KEY}
-      - EMBEDDING_API_KEY=${EMBEDDING_API_KEY}
-      - DATABASE_URL=${SUPABASE_URL}  # Use Supabase for everything
+      - LLM_CHOICE=${LLM_CHOICE:-gpt-4o-mini}
+
+      # ===== EMBEDDING CONFIGURATION =====
+      - EMBEDDING_PROVIDER=${EMBEDDING_PROVIDER:-openai}
+      - EMBEDDING_BASE_URL=${EMBEDDING_BASE_URL}
+      - EMBEDDING_API_KEY=${EMBEDDING_API_KEY:-${LLM_API_KEY}}
+      - EMBEDDING_MODEL_CHOICE=${EMBEDDING_MODEL_CHOICE:-text-embedding-3-small}
+
+      # ===== WEB SEARCH =====
+      - BRAVE_API_KEY=${BRAVE_API_KEY}
+      - SEARXNG_BASE_URL=${SEARXNG_BASE_URL:-http://searxng:8080}
+
+      # ===== AGENT SETTINGS =====
+      - AGENT_NAME=${AGENT_NAME:-Luminari}
+      - AGENT_TEMPERATURE=${AGENT_TEMPERATURE:-0.7}
+
+      # ===== FEATURE FLAGS =====
+      - ENABLE_CODE_EXECUTION=${ENABLE_CODE_EXECUTION:-false}
+      - ENABLE_WEB_SEARCH=${ENABLE_WEB_SEARCH:-true}
+      - ENABLE_IMAGE_ANALYSIS=${ENABLE_IMAGE_ANALYSIS:-true}
+      - ENABLE_LONG_TERM_MEMORY=${ENABLE_LONG_TERM_MEMORY:-true}
+      - ENABLE_RAG=${ENABLE_RAG:-true}
+
+      # ===== VISION MODEL =====
+      - VISION_LLM_CHOICE=${VISION_LLM_CHOICE:-gpt-4o-mini}
+
+      # ===== LOGGING =====
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+      - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
+
+      # ===== MONITORING =====
+      - ENABLE_METRICS=${ENABLE_METRICS:-true}
+      - METRICS_PORT=${METRICS_PORT:-8000}
+      - HEALTH_CHECK_INTERVAL=${HEALTH_CHECK_INTERVAL:-30}
+
+      # ===== PERFORMANCE =====
+      - MAX_CONCURRENT_REQUESTS=${MAX_CONCURRENT_REQUESTS:-10}
+      - REQUEST_TIMEOUT=${REQUEST_TIMEOUT:-300}
+      - RATE_LIMIT_PER_MINUTE=${RATE_LIMIT_PER_MINUTE:-60}
+
     volumes:
-      - ./config:/app/config
-      - ./data:/app/data
+      - ./config:/app/config:ro
+      - app_data:/app/data
+      - app_logs:/app/logs
 
+    depends_on:
+      - searxng
 
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   searxng:
-    image: searxng/searxng
+    image: searxng/searxng:latest
     ports:
       - "8080:8080"
     environment:
-      - SEARXNG_SECRET=searxng_secret_key
+      - SEARXNG_SECRET=${SEARXNG_SECRET:-searxng_secret_key_change_this}
+      - SEARXNG_HOSTNAME=searxng
+      - SEARXNG_BASE_URL=http://searxng:8080/
     volumes:
-      - ./config/searxng:/etc/searxng
+      - searxng_data:/etc/searxng
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Optional: Redis for caching and session storage
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 volumes:
+  app_data:
+  app_logs:
+  searxng_data:
+  redis_data:
+
+networks:
+  default:
+    name: luminari-network
