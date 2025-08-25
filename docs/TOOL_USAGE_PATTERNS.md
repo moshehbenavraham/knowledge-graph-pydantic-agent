@@ -1,13 +1,15 @@
 # Tool Usage Patterns
 
-This guide demonstrates effective patterns for using the various tools available in the Luminari AI Agent system.
+This guide demonstrates effective patterns for using the various tools available in the Luminari AI Agent system, including Phase 3 Agent Intelligence Layer capabilities with advanced search orchestration.
 
 ## Table of Contents
 
 - [Tool Overview](#tool-overview)
+- [Phase 3 Agentic RAG Tools](#phase-3-agentic-rag-tools)
 - [Single Tool Patterns](#single-tool-patterns)
 - [Multi-Tool Workflows](#multi-tool-workflows)
 - [Advanced Patterns](#advanced-patterns)
+- [Phase 3 Intelligence Patterns](#phase-3-intelligence-patterns)
 - [Best Practices](#best-practices)
 - [Common Pitfalls](#common-pitfalls)
 
@@ -40,6 +42,140 @@ This guide demonstrates effective patterns for using the various tools available
 - Use `execute_sql_query` for structured data queries
 - Use `execute_code` for complex calculations and visualizations
 - Combine both for comprehensive data analysis workflows
+
+## Phase 3 Agentic RAG Tools
+
+### Advanced Search Tools (Phase 3)
+
+| Tool | Purpose | Best For | Performance |
+|------|---------|----------|-------------|
+| `smart_search` | Automatic strategy selection | Any query type | <2s, 88% optimal routing |
+| `vector_search` | Semantic similarity | Content discovery | <150ms, 85% recall |
+| `graph_search` | Knowledge graph traversal | Relationships, facts | <100ms, 92% precision |
+| `hybrid_search` | Parallel vector + graph | Complex queries | <200ms, 89% F1-score |
+| `comprehensive_search` | Multi-strategy parallel | Research workflows | <2s, 95% coverage |
+| `iterative_search` | Multi-hop reasoning | Complex analysis | <3s, 78% reasoning |
+| `get_entity_relationships` | Entity exploration | Network analysis | <500ms |
+| `get_entity_timeline` | Temporal analysis | Historical queries | <600ms |
+
+### Intent-Based Tool Selection (Phase 3)
+
+The Phase 3 Agent Intelligence Layer automatically selects optimal tools based on query intent:
+
+#### Factual Intent
+```
+Query: "What is the capital of France?"
+Intent: FACTUAL
+Auto-Selected: vector_search
+Strategy: Fast, high-precision content retrieval
+Performance: <800ms, 95% accuracy
+```
+
+#### Relationship Intent
+```
+Query: "How is Microsoft connected to OpenAI?"
+Intent: RELATIONSHIP
+Auto-Selected: graph_search → hybrid_search fallback
+Strategy: Entity relationship traversal
+Performance: <1200ms, 90% accuracy
+```
+
+#### Temporal Intent
+```
+Query: "When did AI research begin and how has it evolved?"
+Intent: TEMPORAL
+Auto-Selected: get_entity_timeline → comprehensive_search
+Strategy: Timeline construction with context
+Performance: <1500ms, 88% accuracy
+```
+
+#### Comparison Intent
+```
+Query: "Compare Python and JavaScript for web development"
+Intent: COMPARISON
+Auto-Selected: hybrid_search
+Strategy: Parallel content + relationship analysis
+Performance: <1800ms, 85% accuracy
+```
+
+#### Exploratory Intent
+```
+Query: "What are emerging trends in artificial intelligence?"
+Intent: EXPLORATORY
+Auto-Selected: comprehensive_search
+Strategy: Multi-strategy broad coverage
+Performance: <2500ms, 80% accuracy
+```
+
+#### Multi-hop Intent
+```
+Query: "Who founded the companies that created ChatGPT?"
+Intent: MULTI_HOP
+Auto-Selected: iterative_search
+Strategy: Step-by-step reasoning chain
+Performance: <4000ms, 75% accuracy
+```
+
+### Tool Usage Examples (Phase 3)
+
+#### Smart Search Pattern
+```python
+# Automatic strategy selection based on intent analysis
+response = await smart_search("How are Tesla and SpaceX related to Elon Musk?")
+
+# Returns:
+{
+    "answer": "Elon Musk is the founder and CEO of both Tesla and SpaceX...",
+    "strategy_used": "graph_search",
+    "intent_detected": "RELATIONSHIP", 
+    "confidence": 0.92,
+    "sources": [
+        {"source": "company_profiles.pdf", "confidence": 0.95},
+        {"source": "Graph: Tesla→FOUNDED_BY→Elon Musk", "confidence": 0.98}
+    ],
+    "processing_time": 1150  # milliseconds
+}
+```
+
+#### Hybrid Search Pattern
+```python
+# Best for complex queries requiring both content and relationships
+response = await hybrid_search("Analyze the competitive landscape between cloud providers")
+
+# Executes in parallel:
+# 1. Vector search for "cloud providers competitive analysis"
+# 2. Graph search for company relationships and market positions
+# 3. Intelligent result merging with relationship boost
+
+# Returns comprehensive analysis with both content and network insights
+```
+
+#### Comprehensive Search Pattern
+```python
+# For research-intensive queries requiring multiple strategies
+response = await comprehensive_search("Impact of AI on healthcare industry")
+
+# Executes:
+# 1. Vector search: Healthcare AI content
+# 2. Graph search: Company relationships in healthcare AI
+# 3. Timeline search: Evolution of healthcare AI
+# 4. Entity relationship mapping: Key players and partnerships
+# 5. Result synthesis: Comprehensive industry analysis
+```
+
+#### Iterative Search Pattern
+```python
+# For multi-step reasoning queries
+response = await iterative_search("What companies did Microsoft acquire and how do they relate to AI strategy?")
+
+# Step-by-step execution:
+# Step 1: Find Microsoft acquisitions
+# Step 2: Identify AI-related acquisitions
+# Step 3: Analyze strategic connections
+# Step 4: Synthesize overall AI strategy
+
+# Returns detailed reasoning chain with intermediate steps
+```
 
 ## Single Tool Patterns
 
@@ -445,6 +581,181 @@ Level 4 - Optimization and Scaling:
 
 **Problem:** Using tools in suboptimal order
 **Solution:** Plan workflow before execution, consider dependencies
+
+## Phase 3 Intelligence Patterns
+
+### Intent-Driven Workflows
+
+The Phase 3 Agent Intelligence Layer introduces sophisticated patterns that leverage intent analysis and smart routing:
+
+#### Pattern: Adaptive Research Workflow
+```
+Query: "Analyze the impact of AI on renewable energy"
+
+Phase 3 Processing:
+1. Intent Analysis: EXPLORATORY + RELATIONSHIP detection
+2. Entity Extraction: AI, renewable energy, impact analysis
+3. Strategy Selection: comprehensive_search with graph boost
+4. Parallel Execution:
+   - Vector search: AI renewable energy papers
+   - Graph search: AI companies in energy sector
+   - Timeline search: Evolution of AI in energy
+5. Result Synthesis: Multi-source analysis with citations
+6. Confidence Scoring: 0.87 based on source quality and consistency
+7. Follow-up Generation: "How are specific AI technologies being applied to solar and wind power?"
+```
+
+#### Pattern: Knowledge Graph Navigation
+```
+Query: "What companies has Elon Musk founded and what are their relationships?"
+
+Phase 3 Processing:
+1. Intent Analysis: RELATIONSHIP + FACTUAL
+2. Entity Detection: Elon Musk (person)
+3. Strategy Selection: graph_search with entity expansion
+4. Graph Traversal:
+   - Find entities connected to "Elon Musk"
+   - Identify FOUNDED relationships
+   - Map company interconnections
+5. Result Assembly: Network of companies with relationship types
+6. Confidence Scoring: Based on relationship strength and verification
+```
+
+#### Pattern: Multi-Hop Reasoning Chain
+```
+Query: "How did the founders of Google influence the development of modern AI?"
+
+Phase 3 Processing:
+1. Intent Analysis: MULTI_HOP + TEMPORAL
+2. Reasoning Chain:
+   Step 1: Identify Google founders (Larry Page, Sergey Brin)
+   Step 2: Find their AI-related contributions and investments
+   Step 3: Trace influence on AI companies and research
+   Step 4: Analyze impact on modern AI development
+3. Strategy: iterative_search with verification at each step
+4. Result: Complete reasoning chain with evidence
+```
+
+### Performance-Optimized Patterns
+
+#### Pattern: Latency-Sensitive Queries
+```python
+# For queries requiring <1s response time
+async def fast_fact_lookup(query: str):
+    """Optimized for factual queries with strict timing requirements."""
+    
+    # Quick intent check
+    if is_factual_intent(query):
+        # Direct vector search for fastest results
+        return await vector_search(query, timeout=800)
+    else:
+        # Smart search with reduced timeout
+        return await smart_search(query, timeout=1000)
+```
+
+#### Pattern: High-Accuracy Research
+```python
+# For queries requiring maximum accuracy over speed
+async def comprehensive_research(query: str):
+    """Optimized for research queries prioritizing accuracy."""
+    
+    # Always use comprehensive search for research
+    primary_results = await comprehensive_search(query)
+    
+    # Cross-validate with multiple strategies
+    validation_results = await parallel_search_validation(query)
+    
+    # Merge and verify results
+    return merge_with_confidence_weighting(primary_results, validation_results)
+```
+
+### Citation and Confidence Patterns
+
+#### Pattern: Source Verification Workflow
+```
+Phase 3 Citation Management:
+
+1. Source Collection:
+   - Each search result includes source metadata
+   - Graph results reference entity provenance
+   - Vector results include document citations
+
+2. Confidence Calculation:
+   - Source authority scoring (0.0-1.0)
+   - Cross-source consistency check
+   - Information recency weighting
+
+3. Citation Assembly:
+   - Hierarchical source ranking
+   - Deduplication of redundant sources
+   - Format-appropriate citation style
+
+4. Confidence Reporting:
+   - Overall answer confidence (0.0-1.0)
+   - Per-claim confidence scoring
+   - Uncertainty identification
+```
+
+#### Pattern: Progressive Confidence Building
+```
+Initial Query: "What is the market share of electric vehicles?"
+
+Confidence Building Process:
+1. Initial Search (confidence: 0.6)
+   - Vector search finds general EV market data
+
+2. Validation Search (confidence: 0.8)
+   - Web search confirms with recent industry reports
+
+3. Cross-Reference (confidence: 0.9)
+   - Graph search validates company-specific data
+
+4. Final Synthesis (confidence: 0.92)
+   - Multiple sources confirm consistent findings
+   - Recent data sources boost confidence
+```
+
+### Error Recovery Patterns
+
+#### Pattern: Graceful Degradation
+```python
+# Phase 3 error recovery with intelligent fallbacks
+async def resilient_search(query: str):
+    """Search with built-in error recovery and fallbacks."""
+    
+    try:
+        # Attempt optimal strategy
+        return await smart_search(query)
+    except GraphSearchError:
+        # Fallback to hybrid without graph component
+        return await vector_search_with_web_backup(query)
+    except VectorSearchError:
+        # Fallback to web search + document retrieval
+        return await web_search_with_doc_fallback(query)
+    except Exception:
+        # Final fallback: basic web search
+        return await basic_web_search(query)
+```
+
+#### Pattern: Quality Assurance Workflow
+```
+Phase 3 Quality Assurance:
+
+1. Result Validation:
+   - Check for minimum confidence threshold (0.7)
+   - Verify source diversity (3+ independent sources)
+   - Validate entity extraction accuracy
+
+2. Answer Quality Check:
+   - Coherence scoring using LLM evaluation
+   - Completeness assessment against query intent
+   - Citation quality verification
+
+3. Iterative Improvement:
+   - If quality below threshold, refine search strategy
+   - Add clarifying searches for ambiguous results
+   - Re-synthesize with improved source selection
+```
 
 ## Conclusion
 

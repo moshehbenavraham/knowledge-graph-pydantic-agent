@@ -1,10 +1,11 @@
 # Troubleshooting Guide
 
-This guide helps you diagnose and resolve common issues with the Luminari AI Agent system.
+This guide helps you diagnose and resolve common issues with the Luminari AI Agent system, including Phase 3 Agent Intelligence Layer components.
 
 ## Table of Contents
 
 - [Quick Diagnostics](#quick-diagnostics)
+- [Phase 3 Specific Issues](#phase-3-specific-issues)
 - [Installation Issues](#installation-issues)
 - [Configuration Problems](#configuration-problems)
 - [Runtime Errors](#runtime-errors)
@@ -12,6 +13,7 @@ This guide helps you diagnose and resolve common issues with the Luminari AI Age
 - [Database Problems](#database-problems)
 - [API Integration Issues](#api-integration-issues)
 - [Memory System Issues](#memory-system-issues)
+- [Agentic RAG Issues](#agentic-rag-issues)
 - [Docker Issues](#docker-issues)
 - [Monitoring and Debugging](#monitoring-and-debugging)
 
@@ -43,7 +45,403 @@ which python
 pip list | grep -E "(streamlit|pydantic-ai|supabase)"
 
 # Check environment variables
-env | grep -E "(SUPABASE|LLM|EMBEDDING)"
+env | grep -E "(SUPABASE|LLM|EMBEDDING|NEO4J)"
+```
+
+## Phase 3 Specific Issues
+
+### Intent Analysis Problems
+
+#### 1. Poor Intent Classification Accuracy
+
+**Error:** Intent classification below 90% accuracy threshold
+
+**Diagnosis:**
+```python
+# Test intent analysis directly
+from src.agentic_rag.agent.intent_analyzer import IntentAnalyzer
+
+analyzer = IntentAnalyzer()
+test_queries = [
+    "What is the capital of France?",
+    "How is Microsoft related to OpenAI?", 
+    "When did AI research begin?",
+    "Compare Python and JavaScript",
+    "What are emerging AI trends?"
+]
+
+for query in test_queries:
+    result = await analyzer.analyze(query)
+    print(f"Query: {query}")
+    print(f"Intent: {result.primary_intent}")
+    print(f"Confidence: {result.confidence}")
+    print("---")
+```
+
+**Solution:**
+```bash
+# Check intent analysis configuration
+export INTENT_ANALYSIS_TIMEOUT=2.0
+export CONFIDENCE_THRESHOLD=0.7
+
+# Update intent patterns if needed
+# Review src/agentic_rag/agent/intent_analyzer.py
+
+# Retrain or adjust intent scoring weights
+```
+
+#### 2. Entity Extraction Failures
+
+**Error:** `Entity extraction returned empty results`
+
+**Diagnosis:**
+```python
+# Test entity extraction
+query = "What is the relationship between Microsoft and OpenAI in 2023?"
+result = await analyzer.analyze(query)
+
+print(f"Entities found: {len(result.entities)}")
+for entity in result.entities:
+    print(f"  {entity.name} ({entity.type})")
+    
+print(f"Temporal context: {result.temporal_context}")
+```
+
+**Solution:**
+```bash
+# Check entity extraction model
+export EXTRACTION_MODEL=gpt-4o-mini
+
+# Verify entity patterns in configuration
+# Update entity type mappings if needed
+```
+
+### Search Strategy Issues
+
+#### 1. Poor Search Strategy Selection
+
+**Error:** Suboptimal search strategy chosen (below 88% accuracy)
+
+**Diagnosis:**
+```python
+# Test search routing
+from src.agentic_rag.agent.router import SearchRouter
+
+router = SearchRouter()
+test_cases = [
+    ("What is machine learning?", "vector_search"),
+    ("How is Tesla related to SpaceX?", "graph_search"), 
+    ("Compare AI frameworks", "hybrid_search"),
+    ("AI trends in healthcare", "comprehensive_search")
+]
+
+for query, expected_strategy in test_cases:
+    intent_result = await analyzer.analyze(query)
+    selected_strategy = await router.route_query(query, intent_result)
+    
+    print(f"Query: {query}")
+    print(f"Expected: {expected_strategy}")
+    print(f"Selected: {selected_strategy}")
+    print(f"Match: {expected_strategy == selected_strategy}")
+    print("---")
+```
+
+**Solution:**
+```python
+# Adjust routing thresholds in configuration
+ROUTING_CONFIG = {
+    "complexity_threshold": 0.8,
+    "relationship_confidence": 0.85,
+    "temporal_confidence": 0.8,
+    "comparison_confidence": 0.85
+}
+
+# Review routing logic in src/agentic_rag/agent/router.py
+```
+
+#### 2. Search Performance Below Targets
+
+**Error:** Search latency exceeds performance targets
+
+**Diagnosis:**
+```python
+# Performance test individual search strategies
+import time
+from src.agentic_rag.agent.tools import vector_search, graph_search, hybrid_search
+
+async def test_search_performance():
+    query = "artificial intelligence applications"
+    
+    # Vector search target: <150ms
+    start = time.time()
+    vector_result = await vector_search(query)
+    vector_time = (time.time() - start) * 1000
+    print(f"Vector search: {vector_time:.2f}ms (target: <150ms)")
+    
+    # Graph search target: <500ms  
+    start = time.time()
+    graph_result = await graph_search(query)
+    graph_time = (time.time() - start) * 1000
+    print(f"Graph search: {graph_time:.2f}ms (target: <500ms)")
+    
+    # Hybrid search target: <300ms
+    start = time.time()
+    hybrid_result = await hybrid_search(query)
+    hybrid_time = (time.time() - start) * 1000
+    print(f"Hybrid search: {hybrid_time:.2f}ms (target: <300ms)")
+
+await test_search_performance()
+```
+
+**Solution:**
+```bash
+# Optimize database indexes
+# Check pgvector index configuration
+# Verify Neo4j indexes for entities and relationships
+
+# Adjust timeout settings
+export VECTOR_SEARCH_TIMEOUT=2.0
+export GRAPH_SEARCH_TIMEOUT=3.0
+
+# Enable caching
+export ENABLE_CACHING=true
+export GRAPH_CACHE_SIZE=500
+export EMBEDDING_CACHE_SIZE=1000
+```
+
+### Knowledge Graph Integration Issues
+
+#### 1. Neo4j Connection Problems
+
+**Error:** `Neo4j connection failed` or `Database not available`
+
+**Diagnosis:**
+```bash
+# Test Neo4j connectivity
+curl http://localhost:7474/
+curl -u neo4j:password http://localhost:7474/db/data/
+
+# Test from Python
+python -c "
+from neo4j import GraphDatabase
+driver = GraphDatabase.driver('bolt://localhost:7687', 
+                             auth=('neo4j', 'password'))
+with driver.session() as session:
+    result = session.run('RETURN 1 as test')
+    print('Neo4j connection OK:', result.single()['test'])
+driver.close()
+"
+```
+
+**Solution:**
+```bash
+# Start Neo4j if not running
+docker run -d --name neo4j \
+  -p 7474:7474 -p 7687:7687 \
+  -e NEO4J_AUTH=neo4j/password \
+  neo4j:latest
+
+# Verify environment variables
+export NEO4J_URI=bolt://localhost:7687
+export NEO4J_USER=neo4j
+export NEO4J_PASSWORD=password
+
+# Initialize knowledge graph
+python -m EXAMPLE_agentic-rag-knowledge-graph.agent.graph_utils init
+```
+
+#### 2. Knowledge Extraction Issues
+
+**Error:** `Entity extraction failed` or `Relationship mapping error`
+
+**Diagnosis:**
+```python
+# Test knowledge extraction pipeline
+from src.agentic_rag.ingestion.knowledge_extractor import KnowledgeExtractor
+
+extractor = KnowledgeExtractor()
+test_text = "Microsoft invested $10 billion in OpenAI in 2023."
+
+entities = await extractor.extract_entities(test_text)
+relationships = await extractor.extract_relationships(test_text)
+facts = await extractor.extract_facts(test_text)
+
+print(f"Entities: {len(entities)}")
+print(f"Relationships: {len(relationships)}") 
+print(f"Facts: {len(facts)}")
+
+# Verify each extraction
+for entity in entities:
+    print(f"Entity: {entity.name} ({entity.type})")
+```
+
+**Solution:**
+```bash
+# Check extraction model configuration
+export EXTRACTION_MODEL=gpt-4o-mini
+export MAX_ENTITIES_PER_CHUNK=10
+export MAX_FACT_LENGTH=500
+
+# Verify Graphiti integration
+pip install --upgrade graphiti-ai
+
+# Check extraction prompts and update if needed
+```
+
+### Response Generation Issues
+
+#### 1. Missing Citations
+
+**Error:** Response lacks required source citations (below 100% target)
+
+**Diagnosis:**
+```python
+# Test response generation
+from src.agentic_rag.agent.response_generator import ResponseGenerator
+
+generator = ResponseGenerator()
+query = "What is machine learning?"
+mock_results = [
+    {"content": "ML is a subset of AI", "source": "ai_guide.pdf", "confidence": 0.9}
+]
+
+response = await generator.generate_response(query, mock_results)
+
+print(f"Answer: {response.answer}")
+print(f"Sources: {len(response.sources)}")
+print(f"Citations included: {len(response.sources) > 0}")
+
+for source in response.sources:
+    print(f"  - {source.get('source', 'NO SOURCE')}")
+```
+
+**Solution:**
+```python
+# Update response generation to enforce citations
+# Check src/agentic_rag/agent/response_generator.py
+
+# Ensure all search results include source metadata
+# Verify citation extraction logic
+```
+
+#### 2. Poor Confidence Scoring
+
+**Error:** Confidence scores not in expected 0.0-1.0 range or inaccurate
+
+**Diagnosis:**
+```python
+# Test confidence calculation
+response = await generator.generate_response(query, mock_results)
+
+print(f"Confidence: {response.confidence}")
+print(f"Type: {type(response.confidence)}")
+print(f"In range [0,1]: {0.0 <= response.confidence <= 1.0}")
+
+# Test with multiple source qualities
+low_quality = [{"content": "basic info", "confidence": 0.3}]
+high_quality = [{"content": "detailed info", "confidence": 0.95}]
+
+low_response = await generator.generate_response(query, low_quality)
+high_response = await generator.generate_response(query, high_quality)
+
+print(f"Low quality confidence: {low_response.confidence}")
+print(f"High quality confidence: {high_response.confidence}")
+```
+
+**Solution:**
+```python
+# Review confidence calculation algorithm
+# Adjust confidence weighting factors
+# Ensure proper source quality assessment
+```
+
+## Agentic RAG Issues
+
+### Dual Database Sync Problems
+
+#### 1. Content Duplication in Neo4j
+
+**Error:** Content found in Neo4j (violates zero duplication principle)
+
+**Diagnosis:**
+```cypher
+// Check for content in Neo4j nodes
+MATCH (n)
+WHERE EXISTS(n.content) AND length(n.content) > 100
+RETURN count(n) as nodes_with_content, 
+       avg(length(n.content)) as avg_content_length
+```
+
+**Solution:**
+```cypher
+// Remove content from Neo4j nodes  
+MATCH (n)
+WHERE EXISTS(n.content)
+REMOVE n.content
+```
+
+#### 2. Reference ID Mismatches
+
+**Error:** Chunk references in Neo4j don't match PostgreSQL IDs
+
+**Diagnosis:**
+```python
+# Verify reference integrity
+from src.agentic_rag.storage.postgres_store import PostgresStore
+from src.agentic_rag.storage.neo4j_store import Neo4jStore
+
+postgres_store = PostgresStore()
+neo4j_store = Neo4jStore()
+
+# Get sample chunk IDs from PostgreSQL
+pg_chunk_ids = await postgres_store.get_chunk_ids(limit=10)
+
+# Check if they exist in Neo4j references
+for chunk_id in pg_chunk_ids:
+    neo4j_refs = await neo4j_store.get_chunk_references(chunk_id)
+    print(f"Chunk {chunk_id}: {len(neo4j_refs)} Neo4j references")
+```
+
+**Solution:**
+```python
+# Rebuild reference integrity
+await neo4j_store.rebuild_chunk_references()
+
+# Verify storage efficiency
+efficiency = await calculate_storage_efficiency()
+print(f"Storage efficiency: {efficiency:.1%} (target: >99%)")
+```
+
+### Search Result Merging Issues
+
+#### 1. Poor Hybrid Search Results
+
+**Error:** Hybrid search performs worse than individual strategies
+
+**Diagnosis:**
+```python
+# Compare individual vs hybrid results
+vector_results = await vector_search(query)
+graph_results = await graph_search(query) 
+hybrid_results = await hybrid_search(query)
+
+print(f"Vector results: {len(vector_results.results)}")
+print(f"Graph results: {len(graph_results.results)}")
+print(f"Hybrid results: {len(hybrid_results.results)}")
+print(f"Hybrid quality: {hybrid_results.quality_score}")
+```
+
+**Solution:**
+```python
+# Adjust result merging weights
+MERGE_CONFIG = {
+    "vector_weight": 0.6,
+    "graph_weight": 0.4, 
+    "boost_factor": 0.2,
+    "diversity_threshold": 0.8
+}
+
+# Review merging algorithm in tools.py
 ```
 
 ## Installation Issues

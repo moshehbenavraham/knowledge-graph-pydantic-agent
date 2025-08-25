@@ -15,9 +15,27 @@
       "Bash(black:*)",
       "Bash(git rm:*)",
       "Bash(xxd:*)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "Bash(mkdir:*)",
+      "Bash(if [[ \"$OSTYPE\" == \"darwin\"* ]])",
+      "Bash(then)",
+      "Bash(elif [[ \"$OSTYPE\" == \"msys\" ]])",
+      "Bash([[ \"$OSTYPE\" == \"cygwin\" ]])",
+      "Bash([[ \"$OSTYPE\" == \"win32\" ]])",
+      "Bash(CONFIG_PATH=\"$APPDATA/Claude/claude_desktop_config.json\")",
+      "Bash(else)",
+      "Bash(CONFIG_PATH=\"$HOME/.config/Claude/claude_desktop_config.json\")",
+      "Bash(fi)",
+      "Bash(echo \"Config path: $CONFIG_PATH\")",
+      "Bash(ls:*)",
+      "Bash(npx:*)",
+      "mcp__visioncraft__vision-query"
     ],
     "deny": [],
     "ask": []
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "visioncraft"
+  ]
 }

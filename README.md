@@ -1,6 +1,6 @@
-# Base Agent - Production-Ready AI Assistant
+# Base Agent - Production-Ready AI Assistant with Agentic RAG
 
-Production-ready AI agent implementation using Pydantic AI with comprehensive tooling for document retrieval, memory management, web search, image analysis, and code execution. Supports multiple LLM providers and embedding models with flexible deployment options.
+Advanced AI agent implementation using Pydantic AI with **Agentic RAG (Retrieval-Augmented Generation)** system that combines PostgreSQL/Supabase for content storage with Neo4j knowledge graphs for intelligent search and reasoning. Features comprehensive tooling for document retrieval, memory management, web search, image analysis, and code execution with support for multiple LLM providers.
 
 ## 🚀 Quick Start
 
@@ -25,7 +25,11 @@ Access the web interface at **http://localhost:8501**
 ## 🎯 Core Features
 
 ### Agent Capabilities
-- **Document Retrieval (RAG)**: Vector similarity search with 4-document context window using pgvector
+- **Agentic RAG System**: Advanced knowledge-graph enhanced retrieval with intelligent query routing
+  - Vector search for semantic similarity (PostgreSQL/pgvector)
+  - Graph search for relationships and facts (Neo4j/Graphiti)
+  - Hybrid search combining both approaches
+  - Intent-based search strategy selection
 - **Long-term Memory**: Persistent conversation memory via mem0 with PostgreSQL backend
 - **Web Search**: Internet search via Brave API or self-hosted SearXNG
 - **Image Analysis**: Vision model integration for image content analysis
@@ -34,17 +38,23 @@ Access the web interface at **http://localhost:8501**
 
 ### Technical Stack
 - **Framework**: Pydantic AI ≥0.0.10 with async support
-- **Vector Database**: Supabase with pgvector extension
+- **Vector Database**: Supabase with pgvector extension (content storage)
+- **Knowledge Graph**: Neo4j with Graphiti (entity relationships and facts)
 - **Memory Store**: mem0ai ≥0.0.10 with PostgreSQL backend
-- **Embedding Models**: OpenAI text-embedding-3-small (1536d) or Ollama nomic-embed-text (768d)
-- **LLM Support**: OpenAI GPT models, OpenRouter providers, Ollama local models
-- **UI Framework**: Streamlit ≥1.29.0
+- **Embedding Models**: 
+  - OpenAI text-embedding-3-small (1536d)
+  - Ollama nomic-embed-text (768d)
+  - Support for multiple embedding models
+- **LLM Support**: OpenAI GPT models, Anthropic Claude, OpenRouter providers, Google Gemini, Ollama local models
+- **UI Framework**: Streamlit ≥1.29.0 + FastAPI for API endpoints
 - **Security**: Custom sandboxed environment for safe code execution
 
 ## 📋 Requirements
 
 - **Python**: 3.11 or higher
-- **Database**: Supabase project with pgvector extension enabled
+- **Database**: 
+  - Supabase project with pgvector extension enabled (content storage)
+  - Neo4j 5.0+ instance (knowledge graph) - local or cloud
 - **Memory**: 4GB+ RAM for local LLM deployment (if using Ollama)
 
 ## 🛠️ Installation
@@ -81,6 +91,8 @@ Access the web interface at **http://localhost:8501**
    ```
 
 4. **Database Setup**
+   
+   **PostgreSQL/Supabase (Content Storage):**
    - Create a Supabase project at [supabase.com](https://supabase.com)
    - Enable the `pgvector` extension in Database → Extensions
    - Run SQL scripts in order:
@@ -88,6 +100,23 @@ Access the web interface at **http://localhost:8501**
      - [`sql/document_metadata.sql`](sql/document_metadata.sql)
      - [`sql/document_rows.sql`](sql/document_rows.sql)
      - [`sql/execute_sql_rpc.sql`](sql/execute_sql_rpc.sql)
+     - [`sql/agentic_rag/schema.sql`](sql/agentic_rag/schema.sql) (for Agentic RAG)
+   
+   **Neo4j (Knowledge Graph):**
+   ```bash
+   # Option A: Docker deployment
+   docker run -d \
+     --name neo4j \
+     -p 7474:7474 -p 7687:7687 \
+     -e NEO4J_AUTH=neo4j/password \
+     neo4j:latest
+   
+   # Option B: Neo4j Aura cloud
+   # Create instance at https://neo4j.com/cloud/aura/
+   
+   # Initialize knowledge graph
+   python -m EXAMPLE_agentic-rag-knowledge-graph.agent.graph_utils init
+   ```
 
 5. **Run Application**
    ```bash
@@ -109,6 +138,24 @@ Docker services include:
 - **SearXNG**: Web search engine on port 8080
 
 ## ⚙️ Configuration
+
+### Agentic RAG Configuration
+
+```bash
+# Neo4j Configuration
+NEO4J_URI=bolt://localhost:7687
+NEO4J_USER=neo4j
+NEO4J_PASSWORD=your-password
+
+# Agentic RAG Settings
+ENABLE_GRAPH=true              # Enable knowledge graph features
+ENABLE_CACHING=true            # Enable result caching
+PARALLEL_SEARCH=true           # Enable parallel search execution
+CHUNK_SIZE=1000               # Document chunk size
+CHUNK_OVERLAP=200             # Chunk overlap for context
+MAX_ENTITIES_PER_CHUNK=10     # Entity extraction limit
+MAX_FACT_LENGTH=500           # Maximum fact description length
+```
 
 ### LLM Providers
 
@@ -159,6 +206,53 @@ BRAVE_API_KEY=your_brave_api_key
 # Fallback: Self-hosted SearXNG
 SEARXNG_BASE_URL=http://localhost:8080
 ```
+
+## 🤖 Agentic RAG System
+
+The Agentic RAG system enhances traditional RAG with intelligent search routing and knowledge graph capabilities:
+
+### Architecture Overview
+- **PostgreSQL/Supabase**: Stores full document content and embeddings
+- **Neo4j/Graphiti**: Stores extracted entities, relationships, and temporal facts
+- **Zero Duplication**: Neo4j only stores knowledge references, not content
+- **Intelligent Routing**: Automatically selects optimal search strategy based on query intent
+
+### Search Strategies
+
+1. **Vector Search**: For semantic similarity and content discovery
+   - Uses pgvector for embedding-based search
+   - Returns actual document chunks
+   - Best for: General questions, content retrieval
+
+2. **Graph Search**: For relationships and fact-finding
+   - Queries Neo4j knowledge graph
+   - Returns entities, relationships, and facts
+   - Best for: Relationship queries, temporal questions
+
+3. **Hybrid Search**: Combines both approaches
+   - Parallel execution with intelligent merging
+   - Graph context boosts relevant vector results
+   - Best for: Complex queries requiring both content and relationships
+
+### Running Agentic RAG
+
+```bash
+# Start the API server
+python -m EXAMPLE_agentic-rag-knowledge-graph.agent.api
+
+# Or use the CLI
+python -m EXAMPLE_agentic-rag-knowledge-graph.cli chat "Your question here"
+
+# Ingest documents
+python -m EXAMPLE_agentic-rag-knowledge-graph.cli ingest path/to/documents
+```
+
+### API Endpoints
+
+- `POST /ingest` - Ingest documents with knowledge extraction
+- `POST /chat` - Chat with the agent
+- `GET /search/{mode}` - Direct search (vector/graph/hybrid)
+- `POST /chat/stream` - Streaming chat responses
 
 ## 🔧 Usage
 
@@ -289,17 +383,46 @@ base_agent/
 │   │   └── streamlit_ui_streaming.py  # Streaming variant
 │   └── utils/                  # Utility modules
 │       └── __init__.py        # Package initialization
+├── EXAMPLE_agentic-rag-knowledge-graph/  # Agentic RAG implementation
+│   ├── agent/                  # Agentic RAG agent
+│   │   ├── agent.py           # Pydantic AI agent with tools
+│   │   ├── api.py             # FastAPI endpoints
+│   │   ├── db_utils.py        # PostgreSQL operations
+│   │   ├── graph_utils.py     # Neo4j/Graphiti operations
+│   │   ├── models.py          # Data models
+│   │   ├── prompts.py         # System prompts
+│   │   ├── providers.py       # LLM providers
+│   │   └── tools.py           # Search tools
+│   ├── ingestion/             # Document ingestion pipeline
+│   │   ├── chunker.py         # Semantic chunking
+│   │   ├── embedder.py        # Embedding generation
+│   │   ├── graph_builder.py   # Knowledge extraction
+│   │   └── ingest.py          # Pipeline orchestrator
+│   ├── sql/                   # Database schemas
+│   │   └── schema.sql         # Agentic RAG tables
+│   ├── tests/                 # Test suite
+│   └── cli.py                 # Command-line interface
 ├── sql/                        # Database schemas
 │   ├── documents.sql          # Vector document storage
 │   ├── document_metadata.sql  # Document metadata table
 │   ├── document_rows.sql      # Tabular data storage
-│   └── execute_sql_rpc.sql    # Secure SQL execution function
+│   ├── execute_sql_rpc.sql    # Secure SQL execution function
+│   └── agentic_rag/           # Agentic RAG schemas
+│       └── schema.sql         # Enhanced PostgreSQL schema
 ├── tests/                      # Test suite
 │   ├── __init__.py            # Package initialization
 │   ├── conftest.py            # Test configuration
 │   ├── test_*.py              # Individual test modules
 │   └── rag_pipeline/          # RAG pipeline tests
 ├── docs/                       # Documentation
+│   ├── ARCHITECTURE.md        # System architecture
+│   ├── CONFIGURATION.md       # Configuration guide
+│   ├── DB_AND_RAG.md         # Database and RAG details
+│   ├── INSTALL.md            # Installation guide
+│   ├── USAGE.md              # Usage instructions
+│   └── projects_ongoing/      # Project tracking
+│       ├── AGENTIC_RAG_HIGH_LEVEL.md  # High-level design
+│       └── AGENTIC_RAG_PHASE_*.md     # Implementation phases
 ├── config/                     # Configuration files
 ├── docker/                     # Container configuration
 │   └── Dockerfile            # Container build instructions
@@ -440,5 +563,6 @@ For questions, issues, or contributions:
 
 ---
 
-**Version**: 0.1.0
+**Version**: 0.7.0
 **Last Updated**: December 2024
+**Key Feature**: Phase 3 Complete - Agent Intelligence Layer with Intent Analysis

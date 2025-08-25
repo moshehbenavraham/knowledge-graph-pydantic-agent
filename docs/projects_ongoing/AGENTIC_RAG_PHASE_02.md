@@ -561,68 +561,27 @@ class ResultRanker:
 
 ## Testing Strategy
 
-### Unit Tests
+### Testing
 
-```python
-# tests/test_ingestion/test_chunker.py
-class TestChunker:
-    async def test_semantic_chunking(self):
-        """Test semantic boundary detection."""
+Tests are consolidated in `tests/test_rag.py` which includes:
 
-    async def test_simple_chunking_fallback(self):
-        """Test fallback to rule-based chunking."""
+- **Unit Tests**:
+  - Semantic and simple chunking strategies
+  - Entity and knowledge extraction
+  - Vector and graph search performance
+  - Confidence scoring and ranking
 
-    async def test_chunk_overlap(self):
-        """Verify overlap is maintained."""
+- **Integration Tests**:
+  - End-to-end document ingestion pipeline
+  - Dual-write consistency between PostgreSQL and Neo4j
+  - Error recovery and resilience
+  - Batch processing capabilities
 
-    async def test_size_constraints(self):
-        """Test min/max size enforcement."""
-
-# tests/test_ingestion/test_knowledge_extractor.py
-class TestKnowledgeExtractor:
-    async def test_entity_extraction(self):
-        """Test entity name and type extraction."""
-
-    async def test_no_content_duplication(self):
-        """Verify no content is stored in entities."""
-
-    async def test_fact_length_limit(self):
-        """Test 500 char limit on facts."""
-
-    async def test_confidence_scoring(self):
-        """Test confidence calculations."""
-
-# tests/test_search/test_performance.py
-class TestSearchPerformance:
-    async def test_vector_search_latency(self):
-        """Verify <200ms latency for vector search."""
-
-    async def test_graph_search_latency(self):
-        """Verify <500ms latency for graph search."""
-
-    async def test_hybrid_search_latency(self):
-        """Verify <300ms average for hybrid."""
-
-    async def test_concurrent_searches(self):
-        """Test performance under load."""
-```
-
-### Integration Tests
-
-```python
-class TestEndToEndIngestion:
-    async def test_complete_pipeline(self):
-        """Test full document ingestion flow."""
-
-    async def test_dual_write_consistency(self):
-        """Verify PostgreSQL and Neo4j stay in sync."""
-
-    async def test_error_recovery(self):
-        """Test pipeline recovery from failures."""
-
-    async def test_batch_ingestion(self):
-        """Test multiple document processing."""
-```
+- **Performance Tests**:
+  - Vector search latency (<200ms target)
+  - Graph search latency (<500ms target)
+  - Hybrid search latency (<300ms average)
+  - Concurrent search capacity
 
 ## Configuration
 

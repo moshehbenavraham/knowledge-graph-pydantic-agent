@@ -16,6 +16,11 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import StreamingResponse
+from pydantic_ai.messages import (
+    PartDeltaEvent,
+    PartStartEvent,
+    TextPartDelta,
+)
 
 from .agent import AgentDependencies, rag_agent
 from .db_utils import (
@@ -56,7 +61,7 @@ logger = logging.getLogger(__name__)
 # Application configuration
 APP_ENV = os.getenv("APP_ENV", "development")
 APP_HOST = os.getenv("APP_HOST", "0.0.0.0")
-APP_PORT = int(os.getenv("APP_PORT", 8000))
+APP_PORT = int(os.getenv("APP_PORT", "8000"))
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
 # Configure logging
@@ -200,8 +205,6 @@ def extract_tool_calls(result) -> list[ToolCall]:
                                 if isinstance(part.args, str):
                                     # Args is a JSON string, parse it
                                     try:
-                                        import json
-
                                         tool_args = json.loads(part.args)
                                         logger.debug(f"Parsed args from JSON string: {tool_args}")
                                     except json.JSONDecodeError as e:
@@ -216,7 +219,7 @@ def extract_tool_calls(result) -> list[ToolCall]:
                                 try:
                                     tool_args = part.args_as_dict()
                                     logger.debug(f"Got args from args_as_dict(): {tool_args}")
-                                except:
+                                except Exception:
                                     pass
 
                             # Get tool call ID
@@ -357,7 +360,7 @@ async def health_check():
 
     except Exception as e:
         logger.error(f"Health check failed: {e}")
-        raise HTTPException(status_code=500, detail="Health check failed")
+        raise HTTPException(status_code=500, detail="Health check failed") from e
 
 
 @app.post("/chat", response_model=ChatResponse)
@@ -381,7 +384,7 @@ async def chat(request: ChatRequest):
 
     except Exception as e:
         logger.error(f"Chat endpoint failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.post("/chat/stream")
@@ -427,12 +430,6 @@ async def chat_stream(request: ChatRequest):
                             # Stream tokens from the model
                             async with node.stream(run.ctx) as request_stream:
                                 async for event in request_stream:
-                                    from pydantic_ai.messages import (
-                                        PartDeltaEvent,
-                                        PartStartEvent,
-                                        TextPartDelta,
-                                    )
-
                                     if (
                                         isinstance(event, PartStartEvent)
                                         and event.part.part_kind == "text"
@@ -491,7 +488,7 @@ async def chat_stream(request: ChatRequest):
 
     except Exception as e:
         logger.error(f"Streaming chat failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.post("/search/vector")
@@ -515,7 +512,7 @@ async def search_vector(request: SearchRequest):
 
     except Exception as e:
         logger.error(f"Vector search failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.post("/search/graph")
@@ -539,7 +536,7 @@ async def search_graph(request: SearchRequest):
 
     except Exception as e:
         logger.error(f"Graph search failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.post("/search/hybrid")
@@ -563,7 +560,7 @@ async def search_hybrid(request: SearchRequest):
 
     except Exception as e:
         logger.error(f"Hybrid search failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.get("/documents")
@@ -577,7 +574,7 @@ async def list_documents_endpoint(limit: int = 20, offset: int = 0):
 
     except Exception as e:
         logger.error(f"Document listing failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.get("/sessions/{session_id}")
@@ -594,7 +591,7 @@ async def get_session_info(session_id: str):
         raise
     except Exception as e:
         logger.error(f"Session retrieval failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 # Exception handlers

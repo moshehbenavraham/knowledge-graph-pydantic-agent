@@ -1,10 +1,21 @@
 # Installation
 
 ## System Requirements
+
+### Phase 3 Ready: Agent Intelligence Layer
+The system now includes the complete Phase 3 Agent Intelligence Layer with advanced intent analysis and intelligent search orchestration.
+
+### Hardware Requirements
 - **Python**: 3.11 or higher
-- **Database**: Supabase project with pgvector extension enabled
-- **Memory**: 4GB+ RAM for local LLM deployment (if using Ollama)
+- **Memory**: 4GB+ RAM (8GB+ recommended for optimal performance)
+- **Storage**: 2GB+ free space for dependencies
+- **Network**: Internet connection for LLM providers and web search
 - **OS**: Windows, macOS, or Linux
+
+### Database Requirements
+- **PostgreSQL/Supabase**: Primary storage with pgvector extension (required)
+- **Neo4j 5.0+**: Knowledge graph for Agentic RAG (required for Phase 3 features)
+- **Vector Dimensions**: 1536 (OpenAI) or 768 (Ollama) embeddings support
 
 ## Quick Start
 
@@ -30,7 +41,7 @@
 
 3. **Database Setup**
 
-   **Supabase Setup (Required):**
+   **PostgreSQL/Supabase Setup (Required):**
    - Go to [Supabase](https://supabase.com/) and create a new project
    - Enable the `pgvector` extension in Database → Extensions
    - Get your project URL and service role key from Project Settings → API
@@ -40,6 +51,38 @@
      2. [`sql/document_metadata.sql`](../sql/document_metadata.sql) - Document metadata
      3. [`sql/document_rows.sql`](../sql/document_rows.sql) - Structured data storage
      4. [`sql/execute_sql_rpc.sql`](../sql/execute_sql_rpc.sql) - Secure SQL execution
+     5. [`sql/agentic_rag/schema.sql`](../sql/agentic_rag/schema.sql) - Agentic RAG tables (optional)
+
+   **Neo4j Setup (For Agentic RAG - Optional):**
+   ```bash
+   # Option A: Local Docker deployment
+   docker run -d \
+     --name neo4j \
+     -p 7474:7474 -p 7687:7687 \
+     -e NEO4J_AUTH=neo4j/password \
+     neo4j:latest
+
+   # Option B: Neo4j Aura cloud
+   # Create instance at https://neo4j.com/cloud/aura/
+   # Copy connection details to .env
+
+   # Initialize knowledge graph
+   python -m EXAMPLE_agentic-rag-knowledge-graph.agent.graph_utils init
+   ```
+
+   **Environment Variables for Agentic RAG:**
+   ```bash
+   # Neo4j configuration
+   NEO4J_URI=bolt://localhost:7687
+   NEO4J_USER=neo4j
+   NEO4J_PASSWORD=your-password
+
+   # Agentic RAG settings
+   ENABLE_GRAPH=true
+   PARALLEL_SEARCH=true
+   CHUNK_SIZE=1000
+   MAX_ENTITIES_PER_CHUNK=10
+   ```
 
    ```bash
    # Database setup helper (informational only)
@@ -48,13 +91,23 @@
 
 4. **Run the Application**
    ```bash
-   # Start Streamlit UI
+   # Start Streamlit UI (includes Phase 3 features)
    make run-ui
 
    # Or run in development mode with auto-reload
    make dev
 
    # Access the web interface at http://localhost:8501
+
+   # For Agentic RAG API server (Phase 3)
+   python -m EXAMPLE_agentic-rag-knowledge-graph.agent.api
+   # API available at http://localhost:8000 with intent analysis
+
+   # For Agentic RAG CLI with smart search
+   python -m EXAMPLE_agentic-rag-knowledge-graph.cli chat "Your question"
+   
+   # Test Phase 3 features
+   python -m EXAMPLE_agentic-rag-knowledge-graph.cli chat "How is Microsoft related to OpenAI?"
    ```
 
 ## Deployment Options
@@ -62,7 +115,8 @@
 ### Cloud Deployment
 **Required Services:**
 - Supabase project with pgvector enabled
-- OpenAI API key or OpenRouter account
+- Neo4j Aura instance (for Agentic RAG)
+- OpenAI API key or alternative LLM provider
 - Brave Search API key (optional: uses SearXNG fallback)
 
 ### Local Deployment with Ollama
@@ -70,6 +124,29 @@
 - [Ollama](https://ollama.ai/) for local LLM
 - [SearXNG](https://github.com/searxng/searxng) for web search
 - Supabase project (cloud database)
+- Neo4j Docker container (for Agentic RAG)
+
+**Ollama Setup for Agentic RAG (Phase 3):**
+```bash
+# Install required models
+ollama pull llama3.1
+ollama pull nomic-embed-text
+
+# Update .env for Phase 3
+LLM_PROVIDER=ollama
+LLM_BASE_URL=http://localhost:11434
+LLM_CHOICE=llama3.1
+EMBEDDING_PROVIDER=ollama
+EMBEDDING_MODEL_CHOICE=nomic-embed-text
+
+# Phase 3 specific settings
+ENABLE_INTENT_ANALYSIS=true
+ENABLE_SMART_ROUTING=true
+EXTRACTION_MODEL=llama3.1
+
+# Important: Change vector dimensions in SQL from 1536 to 768
+# This affects: documents.sql, chunks table, and hybrid search functions
+```
 
 ### Docker Deployment
 
@@ -200,9 +277,45 @@ pre-commit install
 git commit --no-verify
 ```
 
+### Verifying Phase 3 Installation
+
+After installation, verify that all Phase 3 features are working:
+
+```bash
+# Test intent analysis and smart search
+python -c "
+from EXAMPLE_agentic_rag_knowledge_graph.agent import AgenticRAGAgent
+import asyncio
+
+async def test():
+    agent = AgenticRAGAgent()
+    response = await agent.chat('How are companies using AI?')
+    print(f'Intent: {response.intent}')
+    print(f'Strategy: {response.search_strategy}')
+    print(f'Confidence: {response.confidence}')
+
+asyncio.run(test())
+"
+
+# Expected output should show:
+# Intent: EXPLORATORY or FACTUAL
+# Strategy: COMPREHENSIVE or HYBRID  
+# Confidence: 0.7-0.9
+```
+
+**Phase 3 Feature Checklist:**
+- ✅ Intent analysis working (8 intent types)
+- ✅ Smart search routing operational
+- ✅ Confidence scoring enabled
+- ✅ Citation management active
+- ✅ Response generation with follow-ups
+- ✅ Entity and relationship extraction
+- ✅ Temporal fact processing
+
 ### Getting Help
 
 - Check the [Configuration Guide](CONFIGURATION.md) for environment setup
 - Review [Usage Documentation](USAGE.md) for feature usage
 - See [Architecture Documentation](ARCHITECTURE.md) for system overview
+- View [Examples](EXAMPLES.md) for Phase 3 usage patterns
 - Check existing [GitHub Issues](https://github.com/your-repo/issues) for known problems
