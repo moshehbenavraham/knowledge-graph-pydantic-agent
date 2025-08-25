@@ -8,7 +8,14 @@
       "Bash(streamlit run:*)",
       "Bash(curl:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(pre-commit:*)",
+      "Bash(mypy:*)",
+      "Bash(ruff check:*)",
+      "Bash(black:*)",
+      "Bash(git rm:*)",
+      "Bash(xxd:*)",
+      "Bash(sed:*)"
     ],
     "deny": [],
     "ask": []
