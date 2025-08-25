@@ -3,6 +3,7 @@ Comprehensive tests for Phase 1 database infrastructure.
 """
 
 import asyncio
+import os
 import time
 from datetime import datetime, timedelta
 from uuid import uuid4
@@ -116,15 +117,14 @@ class TestDatabaseInfrastructure:
         )
 
         # Insert 1000 chunks with random embeddings (reduced from 10000 for faster testing)
-        chunks_data = []
-        for i in range(1000):
-            chunks_data.append(
-                {
-                    "content": f"Chunk content {i}",
-                    "embedding_1536": np.random.rand(1536).tolist(),
-                    "metadata": {},
-                }
-            )
+        chunks_data = [
+            {
+                "content": f"Chunk content {i}",
+                "embedding_1536": np.random.rand(1536).tolist(),
+                "metadata": {},
+            }
+            for i in range(1000)
+        ]
 
         # Batch insert
         batch_size = 100
@@ -139,7 +139,7 @@ class TestDatabaseInfrastructure:
         for _ in range(5):  # Run 5 times to get average
             start_time = time.perf_counter()
 
-            results = await pg_store.search_similar(embedding=query_embedding, limit=10)
+            await pg_store.search_similar(embedding=query_embedding, limit=10)
 
             elapsed_ms = (time.perf_counter() - start_time) * 1000
             search_times.append(elapsed_ms)
@@ -161,25 +161,23 @@ class TestDatabaseInfrastructure:
         chunk_id = str(uuid4())
 
         # Create 100 entities (reduced from 1000 for faster testing)
-        entities = []
-        for i in range(100):
-            entities.append(
-                {"name": f"Entity {i}", "type": ["company", "person", "technology"][i % 3]}
-            )
+        entities = [
+            {"name": f"Entity {i}", "type": ["company", "person", "technology"][i % 3]}
+            for i in range(100)
+        ]
 
         entity_ids = await neo4j_store.add_entities(entities, chunk_id)
 
         # Create some relationships
-        relationships = []
-        for i in range(0, min(20, len(entity_ids) - 1)):
-            relationships.append(
-                {
-                    "entity1_id": entity_ids[i],
-                    "entity2_id": entity_ids[i + 1],
-                    "type": "RELATED_TO",
-                    "confidence": 0.8,
-                }
-            )
+        relationships = [
+            {
+                "entity1_id": entity_ids[i],
+                "entity2_id": entity_ids[i + 1],
+                "type": "RELATED_TO",
+                "confidence": 0.8,
+            }
+            for i in range(0, min(20, len(entity_ids) - 1))
+        ]
 
         await neo4j_store.add_relationships(relationships, chunk_id)
 
@@ -296,7 +294,7 @@ class TestDatabaseInfrastructure:
             connection_manager.pg_pool = None
 
             # Attempt connections that will fail
-            for i in range(3):
+            for _i in range(3):
                 with pytest.raises(Exception):
                     async with connection_manager.get_pg_connection() as conn:
                         pass
@@ -376,7 +374,7 @@ class TestDatabaseInfrastructure:
         chunk_ids = await pg_store.store_chunks(doc_id, chunks)
 
         # Extract and store knowledge in Neo4j
-        knowledge = await graphiti_client.extract_and_store_knowledge(
+        await graphiti_client.extract_and_store_knowledge(
             text=large_content[:1000], chunk_id=str(chunk_ids[0]), document_id=str(doc_id)
         )
 
@@ -458,8 +456,6 @@ async def connection_manager():
 @pytest.fixture
 async def test_database_url():
     """Provide test database URL."""
-    import os
-
     return os.getenv(
         "DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/agentic_rag_test"
     )

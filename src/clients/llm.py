@@ -22,7 +22,7 @@ def get_llm_client():
 def get_model():
     """Get the configured model for the agent."""
     provider = os.getenv("LLM_PROVIDER", "openai").lower()
-    llm = os.getenv("LLM_CHOICE", "gpt-5-mini")
+    llm = os.getenv("LLM_CHOICE", "gpt-4o-mini")
     api_key = os.getenv("LLM_API_KEY", "ollama")
 
     if provider == "anthropic":

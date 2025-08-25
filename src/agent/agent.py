@@ -6,6 +6,7 @@ from httpx import AsyncClient
 from openai import AsyncOpenAI
 from pydantic_ai import Agent, RunContext
 
+from src.clients.llm import get_model
 from src.tools import (
     execute_safe_code_tool,
     execute_sql_query_tool,
@@ -23,10 +24,6 @@ from .prompt import AGENT_SYSTEM_PROMPT
 project_root = Path(__file__).resolve().parent.parent
 dotenv_path = project_root / ".env"
 load_dotenv(dotenv_path, override=True)
-
-
-# ========== Helper function to get model configuration ==========
-from src.clients.llm import get_model
 
 
 # ========== Pydantic AI Agent ==========
