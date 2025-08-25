@@ -48,18 +48,17 @@ class RateLimiter:
                     "reset_time": now + self.window_seconds,
                     "requests_in_window": len(user_requests),
                 }
-            else:
-                ERROR_COUNT.labels(
-                    error_type="RateLimitExceeded", component="rate_limiter", severity="warning"
-                ).inc()
+            ERROR_COUNT.labels(
+                error_type="RateLimitExceeded", component="rate_limiter", severity="warning"
+            ).inc()
 
-                return False, {
-                    "allowed": False,
-                    "remaining_tokens": 0,
-                    "reset_time": now + self.window_seconds,
-                    "requests_in_window": len(user_requests),
-                    "retry_after": self.window_seconds / self.max_requests,
-                }
+            return False, {
+                "allowed": False,
+                "remaining_tokens": 0,
+                "reset_time": now + self.window_seconds,
+                "requests_in_window": len(user_requests),
+                "retry_after": self.window_seconds / self.max_requests,
+            }
 
     def get_stats(self, user_id: str) -> dict:
         """Get current rate limiting stats for user."""

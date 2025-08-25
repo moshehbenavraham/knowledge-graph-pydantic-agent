@@ -110,6 +110,7 @@ class EmbeddingGenerator:
                 if attempt == self.max_retries - 1:
                     raise
                 await asyncio.sleep(self.retry_delay)
+        return None
 
     async def generate_embeddings_batch(self, texts: list[str]) -> list[list[float]]:
         """
@@ -162,6 +163,7 @@ class EmbeddingGenerator:
                 if attempt == self.max_retries - 1:
                     return await self._process_individually(processed_texts)
                 await asyncio.sleep(self.retry_delay)
+        return None
 
     async def _process_individually(self, texts: list[str]) -> list[list[float]]:
         """

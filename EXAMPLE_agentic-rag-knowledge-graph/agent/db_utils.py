@@ -7,11 +7,13 @@ import logging
 import os
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import asyncpg
-from asyncpg.pool import Pool
 from dotenv import load_dotenv
+
+if TYPE_CHECKING:
+    from asyncpg.pool import Pool
 
 # Load environment variables
 load_dotenv()

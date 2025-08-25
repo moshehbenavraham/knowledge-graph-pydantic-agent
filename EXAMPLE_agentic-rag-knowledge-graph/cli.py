@@ -129,69 +129,69 @@ class AgenticRAGCLI:
         }
 
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
+            async with (
+                aiohttp.ClientSession() as session,
+                session.post(
                     f"{self.base_url}/chat/stream",
                     json=request_data,
                     headers={"Content-Type": "application/json"},
-                ) as response:
+                ) as response,
+            ):
 
-                    if response.status != 200:
-                        error_text = await response.text()
-                        print(
-                            f"{Colors.RED}✗ API Error ({response.status}): {error_text}{Colors.END}"
-                        )
-                        return
+                if response.status != 200:
+                    error_text = await response.text()
+                    print(f"{Colors.RED}✗ API Error ({response.status}): {error_text}{Colors.END}")
+                    return
 
-                    print(f"\n{Colors.BOLD}🤖 Assistant:{Colors.END}")
+                print(f"\n{Colors.BOLD}🤖 Assistant:{Colors.END}")
 
-                    tools_used = []
-                    full_response = ""
+                tools_used = []
+                full_response = ""
 
-                    async for line in response.content:
-                        line = line.decode("utf-8").strip()
+                async for line in response.content:
+                    line = line.decode("utf-8").strip()
 
-                        if line.startswith("data: "):
-                            try:
-                                data = json.loads(line[6:])  # Remove 'data: ' prefix
+                    if line.startswith("data: "):
+                        try:
+                            data = json.loads(line[6:])  # Remove 'data: ' prefix
 
-                                if data.get("type") == "session":
-                                    # Store session ID for future requests
-                                    self.session_id = data.get("session_id")
+                            if data.get("type") == "session":
+                                # Store session ID for future requests
+                                self.session_id = data.get("session_id")
 
-                                elif data.get("type") == "text":
-                                    # Stream text content
-                                    content = data.get("content", "")
-                                    print(content, end="", flush=True)
-                                    full_response += content
+                            elif data.get("type") == "text":
+                                # Stream text content
+                                content = data.get("content", "")
+                                print(content, end="", flush=True)
+                                full_response += content
 
-                                elif data.get("type") == "tools":
-                                    # Store tools used information
-                                    tools_used = data.get("tools", [])
+                            elif data.get("type") == "tools":
+                                # Store tools used information
+                                tools_used = data.get("tools", [])
 
-                                elif data.get("type") == "end":
-                                    # End of stream
-                                    break
+                            elif data.get("type") == "end":
+                                # End of stream
+                                break
 
-                                elif data.get("type") == "error":
-                                    # Handle errors
-                                    error_content = data.get("content", "Unknown error")
-                                    print(f"\n{Colors.RED}Error: {error_content}{Colors.END}")
-                                    return
+                            elif data.get("type") == "error":
+                                # Handle errors
+                                error_content = data.get("content", "Unknown error")
+                                print(f"\n{Colors.RED}Error: {error_content}{Colors.END}")
+                                return
 
-                            except json.JSONDecodeError:
-                                # Skip malformed JSON
-                                continue
+                        except json.JSONDecodeError:
+                            # Skip malformed JSON
+                            continue
 
-                    # Print newline after response
-                    print()
+                # Print newline after response
+                print()
 
-                    # Display tools used
-                    if tools_used:
-                        print(f"\n{self.format_tools_used(tools_used)}")
+                # Display tools used
+                if tools_used:
+                    print(f"\n{self.format_tools_used(tools_used)}")
 
-                    # Print separator
-                    print(f"{Colors.BLUE}{'─' * 60}{Colors.END}")
+                # Print separator
+                print(f"{Colors.BLUE}{'─' * 60}{Colors.END}")
 
         except aiohttp.ClientError as e:
             print(f"{Colors.RED}✗ Connection error: {e}{Colors.END}")

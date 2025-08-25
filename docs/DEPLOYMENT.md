@@ -14,7 +14,7 @@ This guide covers deploying the Base Agent AI assistant in various environments.
 
 ### Required Services
 - **Supabase Project**: Vector database for RAG (free tier available)
-- **API Keys**: 
+- **API Keys**:
   - Anthropic API key (for Claude models)
   - OpenAI API key (for embeddings)
   - Optional: Brave Search API key
@@ -397,7 +397,7 @@ docker-compose -f docker-compose.green.yml down
 
 1. **Import Errors**
    - Solution: Ensure running with `python -m streamlit run`
-   
+
 2. **Slow Performance (WSL2)**
    - Solution: Move to WSL native filesystem
 

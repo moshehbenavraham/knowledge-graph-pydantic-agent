@@ -52,8 +52,9 @@ with patch.dict(os.environ, TEST_ENV_VARS):
     sys.path.append(str(Path(__file__).parent.parent.resolve() / "src"))
 
     # Import components for E2E testing
-    from agent.agent import agent
     from pydantic_ai.messages import ModelRequest, ModelResponse
+
+    from agent.agent import agent
     from ui.streamlit_app import display_message_part, get_agent_deps, run_agent_with_streaming
     from ui.streamlit_ui_simple import run_agent
 
@@ -541,7 +542,10 @@ class TestEdgeCaseWorkflows:
 
         # Simulate concurrent execution
         async def simulate_session(session_id):
-            with patch("streamlit.session_state", sessions[session_id]), patch.object(agent, "run") as mock_agent_run:
+            with (
+                patch("streamlit.session_state", sessions[session_id]),
+                patch.object(agent, "run") as mock_agent_run,
+            ):
                 mock_result = MagicMock()
                 mock_result.output = f"Response for session {session_id}"
                 mock_result.new_messages.return_value = []

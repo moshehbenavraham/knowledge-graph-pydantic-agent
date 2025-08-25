@@ -109,7 +109,7 @@ LLM_TOKEN_COUNT = _get_or_create_metric(
     Counter,
     "luminari_llm_tokens_total",
     "Total LLM tokens used",
-    ["model", "type", "user_id"],  # type: input/output
+    ["model", "type", "user_id"],
 )
 
 DATABASE_QUERY_COUNT = _get_or_create_metric(
