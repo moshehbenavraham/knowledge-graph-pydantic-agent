@@ -1,9 +1,10 @@
 # Usage Examples
 
-This document provides comprehensive examples of how to use the Luminari AI Agent system effectively.
+This document provides comprehensive examples of how to use the Luminari AI Agent system effectively, including the advanced Agentic RAG capabilities with Phase 3 Agent Intelligence Layer.
 
 ## Table of Contents
 
+- [Agentic RAG Examples (Phase 3)](#agentic-rag-examples-phase-3)
 - [Basic Usage](#basic-usage)
 - [Research Workflows](#research-workflows)
 - [Document Analysis](#document-analysis)
@@ -11,6 +12,241 @@ This document provides comprehensive examples of how to use the Luminari AI Agen
 - [Data Analysis](#data-analysis)
 - [Multi-Tool Workflows](#multi-tool-workflows)
 - [Advanced Features](#advanced-features)
+
+## Agentic RAG Examples (Phase 3)
+
+The Phase 3 Agent Intelligence Layer provides advanced query understanding and intelligent search orchestration. Here are examples showcasing the 8 intent types and smart routing capabilities.
+
+### Intent-Based Search Examples
+
+#### 1. Factual Intent
+**Query:** "What is the capital of France?"
+**Intent Detected:** FACTUAL
+**Strategy Selected:** Vector Search
+**Response:** "The capital of France is Paris. [Confidence: 0.98] [Sources: geography_facts.pdf]"
+
+#### 2. Relationship Intent  
+**Query:** "How is Microsoft connected to OpenAI?"
+**Intent Detected:** RELATIONSHIP
+**Strategy Selected:** Graph Search
+**Response:** 
+```
+Microsoft has several connections to OpenAI:
+
+1. **Investment Partnership**: Microsoft invested $10 billion in OpenAI in 2023
+2. **Technology Integration**: OpenAI's models are integrated into Microsoft products like Office 365
+3. **Azure Partnership**: OpenAI runs its infrastructure on Microsoft Azure
+4. **Strategic Alliance**: Long-term partnership for AI development
+
+[Confidence: 0.92] [Sources: tech_partnerships.pdf, Graph: Microsoft→INVESTED_IN→OpenAI]
+```
+
+#### 3. Temporal Intent
+**Query:** "When did the AI revolution begin and how has it evolved?"
+**Intent Detected:** TEMPORAL  
+**Strategy Selected:** Graph Search + Timeline
+**Response:**
+```
+AI Revolution Timeline:
+
+• 1956: Dartmouth Conference - Birth of AI as a field
+• 1980s: Expert Systems boom
+• 1997: Deep Blue defeats world chess champion
+• 2012: AlexNet breakthrough in deep learning
+• 2017: Transformer architecture introduced
+• 2020: GPT-3 demonstrates large language model capabilities
+• 2022: ChatGPT launches, bringing AI to mainstream
+• 2023: GPT-4 and multimodal AI systems
+
+[Confidence: 0.89] [Sources: ai_history.pdf, Timeline graph analysis]
+```
+
+#### 4. Comparison Intent
+**Query:** "Compare Python and JavaScript for web development"
+**Intent Detected:** COMPARISON
+**Strategy Selected:** Hybrid Search
+**Response:**
+```
+Python vs JavaScript for Web Development:
+
+**Python:**
+✓ Excellent for backend with Django/Flask
+✓ Great data processing capabilities
+✓ Clean, readable syntax
+✗ Not native for frontend
+✗ Slower execution than compiled languages
+
+**JavaScript:**
+✓ Full-stack capability (frontend + Node.js backend)
+✓ Huge ecosystem and community
+✓ Fast development cycle
+✗ Type safety challenges (solved by TypeScript)
+✗ Callback complexity
+
+**Recommendation:** Use JavaScript for full-stack web apps, Python for data-heavy backend applications.
+
+[Confidence: 0.85] [Sources: programming_guide.pdf, web_dev_best_practices.md]
+```
+
+#### 5. Exploratory Intent
+**Query:** "What are the emerging trends in artificial intelligence?"
+**Intent Detected:** EXPLORATORY
+**Strategy Selected:** Comprehensive Search
+**Response:**
+```
+Emerging AI Trends (2024):
+
+🔬 **Technical Advances:**
+- Multimodal AI (text, image, video, audio)
+- Smaller, more efficient models (edge AI)
+- Retrieval-Augmented Generation (RAG)
+- Agent-based AI systems
+
+🏢 **Industry Applications:**
+- AI-powered drug discovery
+- Autonomous vehicle improvements
+- AI in cybersecurity
+- Personalized education platforms
+
+⚡ **Infrastructure:**
+- Specialized AI chips (beyond GPUs)
+- Federated learning systems
+- AI model optimization techniques
+
+[Confidence: 0.78] [Sources: Web search, ai_trends_2024.pdf, tech_reports/]
+```
+
+### Smart Search Tool Examples
+
+#### Using `smart_search`
+```python
+# Automatically selects optimal strategy based on intent
+query = "What companies has Microsoft acquired recently?"
+result = await smart_search(query)
+
+# Intent: FACTUAL + TEMPORAL
+# Strategy Selected: Hybrid Search
+# Combines vector search for "Microsoft acquisitions" with 
+# graph search for recent acquisition relationships
+```
+
+#### Using `comprehensive_search`
+```python
+# For complex queries requiring multiple strategies
+query = "Analyze the competitive landscape between cloud providers and their AI offerings"
+result = await comprehensive_search(query)
+
+# Executes:
+# 1. Vector search for cloud provider information
+# 2. Graph search for competitive relationships  
+# 3. Timeline analysis for AI offering evolution
+# 4. Entity relationship mapping
+# 5. Intelligent result merging
+```
+
+#### Using `iterative_search`
+```python
+# For multi-hop reasoning queries
+query = "Who are the key researchers behind transformer architecture and what companies do they work for now?"
+result = await iterative_search(query)
+
+# Step 1: Find transformer research papers
+# Step 2: Extract researcher names
+# Step 3: Find current company affiliations
+# Step 4: Cross-reference and verify
+```
+
+### Advanced API Examples
+
+#### Using the FastAPI Server
+```bash
+# Start the Agentic RAG API
+python -m EXAMPLE_agentic-rag-knowledge-graph.agent.api
+
+# Chat with intent analysis
+curl -X POST http://localhost:8000/chat \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "How are Tesla and SpaceX related to Elon Musk?",
+    "session_id": "user123"
+  }'
+
+# Response includes:
+# - Intent analysis results
+# - Selected search strategy  
+# - Confidence scores
+# - Source citations
+# - Follow-up questions
+```
+
+#### Direct Search API
+```bash
+# Vector search
+curl "http://localhost:8000/search/vector?q=machine%20learning%20algorithms&limit=5"
+
+# Graph search  
+curl "http://localhost:8000/search/graph?q=Microsoft%20OpenAI%20relationship&limit=3"
+
+# Hybrid search
+curl "http://localhost:8000/search/hybrid?q=AI%20startup%20funding%20trends&limit=8"
+```
+
+#### Python SDK Usage
+```python
+from EXAMPLE_agentic_rag_knowledge_graph.agent import AgenticRAGAgent
+
+# Initialize agent
+agent = AgenticRAGAgent()
+
+# Chat with full intelligence layer
+response = await agent.chat(
+    "What are the latest developments in quantum computing and who are the key players?"
+)
+
+print(f"Answer: {response.answer}")
+print(f"Intent: {response.intent}")  
+print(f"Strategy: {response.search_strategy}")
+print(f"Confidence: {response.confidence}")
+print(f"Sources: {response.sources}")
+print(f"Follow-ups: {response.follow_up_questions}")
+```
+
+### Document Ingestion Examples
+
+#### Batch Document Processing
+```bash
+# Ingest multiple documents with knowledge extraction
+python -m EXAMPLE_agentic-rag-knowledge-graph.cli ingest \
+  path/to/documents \
+  --chunk-size 1000 \
+  --extract-entities \
+  --extract-relationships
+
+# Output:
+# Processed: 15 documents
+# Created: 1,247 chunks  
+# Extracted: 342 entities, 158 relationships, 89 temporal facts
+# Storage: 18MB PostgreSQL, 85KB Neo4j (99.5% savings)
+```
+
+#### Real-time Processing
+```python
+# Stream processing for real-time updates
+from EXAMPLE_agentic_rag_knowledge_graph.ingestion import IngestionPipeline
+
+pipeline = IngestionPipeline()
+
+# Process document with full knowledge extraction
+result = await pipeline.ingest_document(
+    content="Tesla announced a new AI chip for autonomous driving...",
+    title="Tesla AI Chip Announcement",  
+    source="tech_news_2024.pdf"
+)
+
+print(f"Entities: {result.entities_count}")
+print(f"Facts: {result.facts_count}")  
+print(f"Processing time: {result.processing_time}ms")
+```
 
 ## Basic Usage
 
