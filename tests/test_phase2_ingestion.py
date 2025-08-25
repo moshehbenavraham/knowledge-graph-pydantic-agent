@@ -23,7 +23,10 @@ from src.agentic_rag.ingestion import (
     SemanticChunker,
     SimpleChunker,
 )
+from src.agentic_rag.ingestion.embedder import EmbeddingCache, EmbeddingConfig
 from src.agentic_rag.ingestion.knowledge_extractor import EntityType, RelationshipType
+from src.agentic_rag.ingestion.pipeline import IngestionResult
+from src.agentic_rag.search import VectorSearch
 
 
 class TestChunker:
@@ -94,8 +97,6 @@ class TestEmbedding:
 
     def test_embedding_cache(self):
         """Test embedding cache functionality."""
-        from src.agentic_rag.ingestion.embedder import EmbeddingCache
-
         cache = EmbeddingCache(max_size=2)
 
         # Test set and get
@@ -114,8 +115,6 @@ class TestEmbedding:
     @pytest.mark.asyncio
     async def test_embedding_generation_with_cache(self):
         """Test embedding generation with caching."""
-        from src.agentic_rag.ingestion.embedder import EmbeddingConfig
-
         config = EmbeddingConfig(
             provider="openai",
             model="text-embedding-3-small",
@@ -227,8 +226,6 @@ class TestIngestionPipeline:
     @pytest.mark.asyncio
     async def test_ingestion_result(self):
         """Test ingestion result object."""
-        from src.agentic_rag.ingestion.pipeline import IngestionResult
-
         result = IngestionResult(
             document_id=UUID("12345678-1234-5678-1234-567812345678"),
             title="Test Doc",
@@ -265,52 +262,53 @@ class TestIngestionPipeline:
         pipeline.pg_store.store_document.return_value = UUID("12345678-1234-5678-1234-567812345678")
         pipeline.pg_store.store_chunks.return_value = [UUID("87654321-4321-8765-4321-876543218765")]
 
-        with patch.object(pipeline, "_chunk_document") as mock_chunk:
-            with patch.object(pipeline, "_generate_embeddings") as mock_embed:
-                with patch.object(pipeline, "_extract_knowledge") as mock_extract:
+        with (
+            patch.object(pipeline, "_chunk_document") as mock_chunk,
+            patch.object(pipeline, "_generate_embeddings") as mock_embed,
+            patch.object(pipeline, "_extract_knowledge") as mock_extract,
+        ):
+            # Setup mocks
+            mock_chunk.return_value = [
+                DocumentChunk(
+                    content="Test content", index=0, start_char=0, end_char=12, metadata={}
+                )
+            ]
 
-                    # Setup mocks
-                    mock_chunk.return_value = [
-                        DocumentChunk(
-                            content="Test content", index=0, start_char=0, end_char=12, metadata={}
-                        )
-                    ]
+            mock_embed.return_value = mock_chunk.return_value
 
-                    mock_embed.return_value = mock_chunk.return_value
+            mock_extract.return_value = [
+                {
+                    "entities": [Entity(name="TestEntity", type=EntityType.COMPANY)],
+                    "facts": [Fact(text="Brief fact", confidence=0.8)],
+                    "relationships": [],
+                    "chunk_id": "87654321-4321-8765-4321-876543218765",
+                }
+            ]
 
-                    mock_extract.return_value = [
-                        {
-                            "entities": [Entity(name="TestEntity", type=EntityType.COMPANY)],
-                            "facts": [Fact(text="Brief fact", confidence=0.8)],
-                            "relationships": [],
-                            "chunk_id": "87654321-4321-8765-4321-876543218765",
-                        }
-                    ]
+            # Run ingestion
+            await pipeline.ingest_document(
+                content="Test document content", title="Test", source="test.md"
+            )
 
-                    # Run ingestion
-                    result = await pipeline.ingest_document(
-                        content="Test document content", title="Test", source="test.md"
-                    )
+            # Verify PostgreSQL gets full content
+            pipeline.pg_store.store_document.assert_called_once()
+            call_args = pipeline.pg_store.store_document.call_args
+            assert "Test document content" in call_args[0]  # Full content stored
 
-                    # Verify PostgreSQL gets full content
-                    pipeline.pg_store.store_document.assert_called_once()
-                    call_args = pipeline.pg_store.store_document.call_args
-                    assert "Test document content" in call_args[0]  # Full content stored
+            # Verify Neo4j only gets entity names and brief facts
+            if pipeline.neo4j_store.create_entity.called:
+                entity_calls = pipeline.neo4j_store.create_entity.call_args_list
+                for call in entity_calls:
+                    # Should only have name, not content
+                    assert "name" in call[1]
+                    assert len(call[1]["name"]) <= 100
 
-                    # Verify Neo4j only gets entity names and brief facts
-                    if pipeline.neo4j_store.create_entity.called:
-                        entity_calls = pipeline.neo4j_store.create_entity.call_args_list
-                        for call in entity_calls:
-                            # Should only have name, not content
-                            assert "name" in call[1]
-                            assert len(call[1]["name"]) <= 100
-
-                    # Verify facts are limited
-                    if pipeline.graphiti_client.add_episode.called:
-                        episode_calls = pipeline.graphiti_client.add_episode.call_args_list
-                        for call in episode_calls:
-                            content_arg = call[1]["content"]
-                            assert len(content_arg) <= 500  # Fact length limit
+            # Verify facts are limited
+            if pipeline.graphiti_client.add_episode.called:
+                episode_calls = pipeline.graphiti_client.add_episode.call_args_list
+                for call in episode_calls:
+                    content_arg = call[1]["content"]
+                    assert len(content_arg) <= 500  # Fact length limit
 
 
 class TestSearchPerformance:
@@ -319,8 +317,6 @@ class TestSearchPerformance:
     @pytest.mark.asyncio
     async def test_vector_search_latency(self):
         """Verify vector search meets <200ms target."""
-        from src.agentic_rag.search import VectorSearch
-
         search = VectorSearch()
 
         # Mock the database query
@@ -340,8 +336,6 @@ class TestSearchPerformance:
     @pytest.mark.asyncio
     async def test_caching_improves_performance(self):
         """Test that caching improves search performance."""
-        from src.agentic_rag.search import VectorSearch
-
         search = VectorSearch()
 
         with patch.object(search, "_search_vectors") as mock_search:

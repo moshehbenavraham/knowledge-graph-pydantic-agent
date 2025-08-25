@@ -29,7 +29,10 @@
       "Bash(echo \"Config path: $CONFIG_PATH\")",
       "Bash(ls:*)",
       "Bash(npx:*)",
-      "mcp__visioncraft__vision-query"
+      "mcp__visioncraft__vision-query",
+      "Bash(git gc:*)",
+      "Bash(git fsck:*)",
+      "Bash(git verify-pack:*)"
     ],
     "deny": [],
     "ask": []

@@ -24,6 +24,7 @@ from src.agentic_rag.search import (
     VectorSearch,
 )
 from src.agentic_rag.search.graph_search import GraphEntity, GraphFact, GraphRelationship
+from src.agentic_rag.search.vector_search import SearchCache
 
 
 class TestVectorSearch:
@@ -59,8 +60,6 @@ class TestVectorSearch:
     @pytest.mark.asyncio
     async def test_search_cache_functionality(self):
         """Test search result caching."""
-        from src.agentic_rag.search.vector_search import SearchCache
-
         cache = SearchCache(ttl_seconds=60)
 
         # Create test results
@@ -317,7 +316,7 @@ class TestHybridSearch:
                         relationship_indicators=[],
                     )
 
-                    result = await search.search("test query", strategy=SearchStrategy.HYBRID)
+                    await search.search("test query", strategy=SearchStrategy.HYBRID)
 
                     # Both searches should be called
                     mock_vector.assert_called()
@@ -478,7 +477,7 @@ class TestResultRanking:
         ]
 
         # Rank with temporal context
-        ranked = ranker.rank_chunks(chunks, limit=2, temporal_context=now)
+        ranker.rank_chunks(chunks, limit=2, temporal_context=now)
 
         # Recent content might rank higher despite lower similarity
         stats = ranker.get_stats()
