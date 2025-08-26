@@ -26,12 +26,12 @@ This guide helps you diagnose and resolve common issues with the Luminari AI Age
 curl http://localhost:8501/health
 
 # Detailed health check (if FastAPI endpoints are running)
-curl http://localhost:8000/health/detailed
+curl http://localhost:8058/health/detailed
 
 # Check individual components
-curl http://localhost:8000/health/components/database
-curl http://localhost:8000/health/components/llm
-curl http://localhost:8000/health/components/embedding
+curl http://localhost:8058/health/components/database
+curl http://localhost:8058/health/components/llm
+curl http://localhost:8058/health/components/embedding
 ```
 
 ### Environment Validation
@@ -64,7 +64,7 @@ from src.agentic_rag.agent.intent_analyzer import IntentAnalyzer
 analyzer = IntentAnalyzer()
 test_queries = [
     "What is the capital of France?",
-    "How is Microsoft related to OpenAI?", 
+    "How is Microsoft related to OpenAI?",
     "When did AI research begin?",
     "Compare Python and JavaScript",
     "What are emerging AI trends?"
@@ -103,7 +103,7 @@ result = await analyzer.analyze(query)
 print(f"Entities found: {len(result.entities)}")
 for entity in result.entities:
     print(f"  {entity.name} ({entity.type})")
-    
+
 print(f"Temporal context: {result.temporal_context}")
 ```
 
@@ -130,7 +130,7 @@ from src.agentic_rag.agent.router import SearchRouter
 router = SearchRouter()
 test_cases = [
     ("What is machine learning?", "vector_search"),
-    ("How is Tesla related to SpaceX?", "graph_search"), 
+    ("How is Tesla related to SpaceX?", "graph_search"),
     ("Compare AI frameworks", "hybrid_search"),
     ("AI trends in healthcare", "comprehensive_search")
 ]
@@ -138,7 +138,7 @@ test_cases = [
 for query, expected_strategy in test_cases:
     intent_result = await analyzer.analyze(query)
     selected_strategy = await router.route_query(query, intent_result)
-    
+
     print(f"Query: {query}")
     print(f"Expected: {expected_strategy}")
     print(f"Selected: {selected_strategy}")
@@ -171,19 +171,19 @@ from src.agentic_rag.agent.tools import vector_search, graph_search, hybrid_sear
 
 async def test_search_performance():
     query = "artificial intelligence applications"
-    
+
     # Vector search target: <150ms
     start = time.time()
     vector_result = await vector_search(query)
     vector_time = (time.time() - start) * 1000
     print(f"Vector search: {vector_time:.2f}ms (target: <150ms)")
-    
-    # Graph search target: <500ms  
+
+    # Graph search target: <500ms
     start = time.time()
     graph_result = await graph_search(query)
     graph_time = (time.time() - start) * 1000
     print(f"Graph search: {graph_time:.2f}ms (target: <500ms)")
-    
+
     # Hybrid search target: <300ms
     start = time.time()
     hybrid_result = await hybrid_search(query)
@@ -224,7 +224,7 @@ curl -u neo4j:password http://localhost:7474/db/data/
 # Test from Python
 python -c "
 from neo4j import GraphDatabase
-driver = GraphDatabase.driver('bolt://localhost:7687', 
+driver = GraphDatabase.driver('bolt://localhost:7687',
                              auth=('neo4j', 'password'))
 with driver.session() as session:
     result = session.run('RETURN 1 as test')
@@ -247,7 +247,7 @@ export NEO4J_USER=neo4j
 export NEO4J_PASSWORD=password
 
 # Initialize knowledge graph
-python -m EXAMPLE_agentic-rag-knowledge-graph.agent.graph_utils init
+python -m src.agentic_rag.storage.neo4j_store init
 ```
 
 #### 2. Knowledge Extraction Issues
@@ -267,7 +267,7 @@ relationships = await extractor.extract_relationships(test_text)
 facts = await extractor.extract_facts(test_text)
 
 print(f"Entities: {len(entities)}")
-print(f"Relationships: {len(relationships)}") 
+print(f"Relationships: {len(relationships)}")
 print(f"Facts: {len(facts)}")
 
 # Verify each extraction
@@ -368,13 +368,13 @@ print(f"High quality confidence: {high_response.confidence}")
 // Check for content in Neo4j nodes
 MATCH (n)
 WHERE EXISTS(n.content) AND length(n.content) > 100
-RETURN count(n) as nodes_with_content, 
+RETURN count(n) as nodes_with_content,
        avg(length(n.content)) as avg_content_length
 ```
 
 **Solution:**
 ```cypher
-// Remove content from Neo4j nodes  
+// Remove content from Neo4j nodes
 MATCH (n)
 WHERE EXISTS(n.content)
 REMOVE n.content
@@ -422,7 +422,7 @@ print(f"Storage efficiency: {efficiency:.1%} (target: >99%)")
 ```python
 # Compare individual vs hybrid results
 vector_results = await vector_search(query)
-graph_results = await graph_search(query) 
+graph_results = await graph_search(query)
 hybrid_results = await hybrid_search(query)
 
 print(f"Vector results: {len(vector_results.results)}")
@@ -436,7 +436,7 @@ print(f"Hybrid quality: {hybrid_results.quality_score}")
 # Adjust result merging weights
 MERGE_CONFIG = {
     "vector_weight": 0.6,
-    "graph_weight": 0.4, 
+    "graph_weight": 0.4,
     "boost_factor": 0.2,
     "diversity_threshold": 0.8
 }
@@ -694,7 +694,7 @@ RAG_CHUNK_SIZE=1000
 **Solution:**
 ```python
 # Check rate limit status
-curl http://localhost:8000/health/rate-limits/your-user-id
+curl http://localhost:8058/health/rate-limits/your-user-id
 
 # Adjust rate limits in configuration
 # Edit src/utils/rate_limiting.py
@@ -912,7 +912,7 @@ streamlit run src/ui/streamlit_app.py --logger.level debug
 
 ```bash
 # Check metrics endpoint
-curl http://localhost:8000/metrics
+curl http://localhost:8058/metrics
 
 # Monitor system resources
 htop
@@ -955,12 +955,12 @@ docker-compose logs > docker.log
 
 ```bash
 # Generate comprehensive health report
-curl http://localhost:8000/health/detailed > health_report.json
+curl http://localhost:8058/health/detailed > health_report.json
 
 # Check all components
 for component in database llm embedding memory web_search; do
     echo "=== $component ==="
-    curl http://localhost:8000/health/components/$component
+    curl http://localhost:8058/health/components/$component
     echo
 done
 ```

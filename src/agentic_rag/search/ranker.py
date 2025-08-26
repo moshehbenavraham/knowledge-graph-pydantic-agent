@@ -286,7 +286,7 @@ class ResultRanker:
                             chunk_time = datetime.fromisoformat(chunk.metadata[field])
                         elif isinstance(chunk.metadata[field], datetime):
                             chunk_time = chunk.metadata[field]
-                    except:
+                    except (KeyError, ValueError, TypeError):
                         continue
 
         if not chunk_time:

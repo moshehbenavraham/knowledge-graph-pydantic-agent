@@ -68,14 +68,14 @@ class OptimizedIntentAnalyzer:
         # Cache common intent patterns
         self.pattern_cache = {}
         self.entity_cache = {}
-        
+
     async def analyze_with_caching(self, query: str) -> IntentAnalysisResult:
         # Quick hash-based lookup for repeated queries
         query_hash = hashlib.md5(query.lower().encode()).hexdigest()
-        
+
         if query_hash in self.pattern_cache:
             return self.pattern_cache[query_hash]
-        
+
         # Parallel processing for intent scoring
         intent_tasks = [
             self.score_factual_intent(query),
@@ -83,10 +83,10 @@ class OptimizedIntentAnalyzer:
             self.score_temporal_intent(query),
             # ... other intent types
         ]
-        
+
         scores = await asyncio.gather(*intent_tasks)
         result = self.select_primary_intent(scores)
-        
+
         # Cache result for future queries
         self.pattern_cache[query_hash] = result
         return result
@@ -108,19 +108,19 @@ class OptimizedEntityExtractor:
     def __init__(self):
         self.entity_patterns = self.compile_patterns()
         self.entity_cache = {}
-    
+
     def extract_entities_fast(self, query: str) -> List[Entity]:
         # Use regex patterns for common entities first
         entities = []
-        
+
         # Company patterns
         companies = re.findall(r'\b[A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)*\b', query)
         entities.extend([Entity(name=c, type="company") for c in companies])
-        
+
         # Time patterns
         time_patterns = re.findall(r'\b(?:19|20)\d{2}\b|\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\w*\b', query)
         entities.extend([Entity(name=t, type="time") for t in time_patterns])
-        
+
         return entities
 ```
 
@@ -134,33 +134,33 @@ class SmartSearchRouter:
     def __init__(self):
         self.routing_cache = {}
         self.performance_history = {}
-    
+
     async def route_query_optimized(self, query: str, intent_result: IntentAnalysisResult) -> SearchStrategy:
         # Check routing cache first
         cache_key = f"{intent_result.primary_intent}:{intent_result.complexity_score:.1f}"
-        
+
         if cache_key in self.routing_cache:
             return self.routing_cache[cache_key]
-        
+
         # Performance-based routing
         strategy = await self.select_optimal_strategy(intent_result)
-        
+
         # Cache the routing decision
         self.routing_cache[cache_key] = strategy
         return strategy
-    
+
     async def select_optimal_strategy(self, intent_result: IntentAnalysisResult) -> SearchStrategy:
         # Consider historical performance
         if intent_result.complexity_score > 0.8:
             return SearchStrategy.COMPREHENSIVE
-        
+
         # Intent-based routing with performance fallbacks
         if intent_result.primary_intent == IntentType.RELATIONSHIP:
             if self.is_graph_performing_well():
                 return SearchStrategy.GRAPH_HEAVY
             else:
                 return SearchStrategy.HYBRID  # Fallback
-        
+
         return SearchStrategy.SMART
 
 # Performance monitoring for routing decisions
@@ -169,13 +169,13 @@ class RoutingPerformanceMonitor:
         key = strategy.value
         if key not in self.performance_history:
             self.performance_history[key] = []
-        
+
         self.performance_history[key].append({
             "latency": latency,
             "quality": quality,
             "timestamp": time.time()
         })
-        
+
         # Keep only recent history (last 100 queries)
         self.performance_history[key] = self.performance_history[key][-100:]
 ```
@@ -193,7 +193,7 @@ class ParallelSearchExecutor:
         graph_task = asyncio.create_task(
             asyncio.wait_for(self.graph_search(query, intent_result.entities), timeout=3.0)
         )
-        
+
         # Wait for both with different priorities
         try:
             vector_results, graph_results = await asyncio.gather(
@@ -202,7 +202,7 @@ class ParallelSearchExecutor:
         except asyncio.TimeoutError:
             # Handle partial results gracefully
             return self.handle_partial_results(vector_task, graph_task)
-        
+
         # Intelligent result merging with performance weighting
         return self.merge_results_optimized(vector_results, graph_results, intent_result)
 ```

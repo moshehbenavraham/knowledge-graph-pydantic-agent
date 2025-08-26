@@ -9,7 +9,7 @@ This project and everyone participating in it is governed by our [Code of Conduc
 ## 🚀 Quick Start for Contributors
 
 ### Prerequisites
-- **Python 3.11+** 
+- **Python 3.11+**
 - **Git** for version control
 - **Make** (recommended for development commands)
 - **Docker** (optional, for containerized development)
@@ -27,7 +27,7 @@ This project and everyone participating in it is governed by our [Code of Conduc
    ```bash
    # Install dependencies and pre-commit hooks
    make setup
-   
+
    # Alternative: Manual installation
    python -m pip install -e .[dev]
    pre-commit install
@@ -83,7 +83,7 @@ We welcome several types of contributions:
    ```bash
    # Run the full test suite
    make check
-   
+
    # Individual checks
    make test          # Run tests
    make lint          # Check code style
@@ -164,7 +164,7 @@ pytest -k "test_rag" -v
 
 ### Agentic RAG System
 
-When working on the Agentic RAG system (`EXAMPLE_agentic-rag-knowledge-graph/`):
+When working on the Agentic RAG system (`src/agentic_rag/`):
 
 - **Database**: Test changes with both PostgreSQL and Neo4j
 - **Search strategies**: Ensure vector, graph, and hybrid search work
@@ -253,11 +253,11 @@ make dev
 # PostgreSQL schema changes
 # Update sql/ files and test thoroughly
 
-# Neo4j schema changes  
+# Neo4j schema changes
 # Update graph initialization scripts
 
 # Test database migrations
-python -m EXAMPLE_agentic-rag-knowledge-graph.agent.graph_utils init
+python -m src.agentic_rag.storage.neo4j_store init
 ```
 
 ### Performance Testing

@@ -127,7 +127,7 @@ response = await smart_search("How are Tesla and SpaceX related to Elon Musk?")
 {
     "answer": "Elon Musk is the founder and CEO of both Tesla and SpaceX...",
     "strategy_used": "graph_search",
-    "intent_detected": "RELATIONSHIP", 
+    "intent_detected": "RELATIONSHIP",
     "confidence": 0.92,
     "sources": [
         {"source": "company_profiles.pdf", "confidence": 0.95},
@@ -643,7 +643,7 @@ Phase 3 Processing:
 # For queries requiring <1s response time
 async def fast_fact_lookup(query: str):
     """Optimized for factual queries with strict timing requirements."""
-    
+
     # Quick intent check
     if is_factual_intent(query):
         # Direct vector search for fastest results
@@ -658,13 +658,13 @@ async def fast_fact_lookup(query: str):
 # For queries requiring maximum accuracy over speed
 async def comprehensive_research(query: str):
     """Optimized for research queries prioritizing accuracy."""
-    
+
     # Always use comprehensive search for research
     primary_results = await comprehensive_search(query)
-    
+
     # Cross-validate with multiple strategies
     validation_results = await parallel_search_validation(query)
-    
+
     # Merge and verify results
     return merge_with_confidence_weighting(primary_results, validation_results)
 ```
@@ -722,7 +722,7 @@ Confidence Building Process:
 # Phase 3 error recovery with intelligent fallbacks
 async def resilient_search(query: str):
     """Search with built-in error recovery and fallbacks."""
-    
+
     try:
         # Attempt optimal strategy
         return await smart_search(query)

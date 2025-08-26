@@ -294,15 +294,9 @@ async def extract_key_facts(content: str, max_facts: int = 5) -> list[dict[str, 
     Returns structured facts with confidence scores.
     """
     try:
-        from ..prompts import FACT_EXTRACTION_PROMPT
-        from ..providers import get_llm_model
 
-        # Use LLM to extract facts
-        model = get_llm_model()
-
-        prompt = FACT_EXTRACTION_PROMPT.format(
-            text=content[:2000], max_length=500  # Limit content length
-        )
+        # TODO: Implement LLM-based fact extraction
+        # Use LLM to extract facts (currently using placeholder)
 
         # This would use the actual LLM call in production
         # For now, return placeholder
@@ -373,11 +367,9 @@ async def validate_facts(
     validated_facts = []
 
     for fact in facts:
-        fact_text = fact.get("fact", "").lower()
-
         # Check if fact appears in any source chunk
         support_count = 0
-        for chunk_id in source_chunks:
+        for _chunk_id in source_chunks:
             # In production, would fetch actual chunk content
             # For now, assume validation
             support_count += 1

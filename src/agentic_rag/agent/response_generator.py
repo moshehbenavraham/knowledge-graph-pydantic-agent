@@ -82,63 +82,65 @@ class ResponseGenerator:
 
         # Extract from vector results
         if "vector_results" in search_results:
-            for result in search_results.get("vector_results", []):
-                if isinstance(result, dict):
-                    content_pieces.append(
-                        {
-                            "content": result.get("content", ""),
-                            "score": result.get("score", 0.5),
-                            "source_type": "vector",
-                            "document_title": result.get("document_title", "Unknown"),
-                            "document_id": result.get("document_id"),
-                            "chunk_id": result.get("chunk_id"),
-                        }
-                    )
+            vector_pieces = [
+                {
+                    "content": result.get("content", ""),
+                    "score": result.get("score", 0.5),
+                    "source_type": "vector",
+                    "document_title": result.get("document_title", "Unknown"),
+                    "document_id": result.get("document_id"),
+                    "chunk_id": result.get("chunk_id"),
+                }
+                for result in search_results.get("vector_results", [])
+                if isinstance(result, dict)
+            ]
+            content_pieces.extend(vector_pieces)
 
         # Extract from results list (alternative format)
         if "results" in search_results:
-            for result in search_results.get("results", []):
-                if isinstance(result, dict):
-                    content_pieces.append(
-                        {
-                            "content": result.get("content", ""),
-                            "score": result.get("score", 0.5),
-                            "source_type": "vector",
-                            "document_title": result.get("document_title", "Unknown"),
-                            "document_id": result.get("document_id"),
-                            "chunk_id": result.get("chunk_id"),
-                        }
-                    )
+            results_pieces = [
+                {
+                    "content": result.get("content", ""),
+                    "score": result.get("score", 0.5),
+                    "source_type": "vector",
+                    "document_title": result.get("document_title", "Unknown"),
+                    "document_id": result.get("document_id"),
+                    "chunk_id": result.get("chunk_id"),
+                }
+                for result in search_results.get("results", [])
+                if isinstance(result, dict)
+            ]
+            content_pieces.extend(results_pieces)
 
         # Extract from graph results
         if "graph_results" in search_results:
             graph_data = search_results["graph_results"]
             if isinstance(graph_data, dict):
-                for fact in graph_data.get("facts", []):
-                    content_pieces.append(
-                        {
-                            "content": fact.get("fact", ""),
-                            "score": fact.get("confidence", 0.8),
-                            "source_type": "graph",
-                            "source_chunk": fact.get("source_chunk"),
-                            "entities": fact.get("entities", []),
-                        }
-                    )
+                graph_pieces = [
+                    {
+                        "content": fact.get("fact", ""),
+                        "score": fact.get("confidence", 0.8),
+                        "source_type": "graph",
+                        "source_chunk": fact.get("source_chunk"),
+                        "entities": fact.get("entities", []),
+                    }
+                    for fact in graph_data.get("facts", [])
+                ]
+                content_pieces.extend(graph_pieces)
 
         # Extract from facts (alternative format)
         if "facts" in search_results:
-            for fact in search_results.get("facts", []):
-                content_pieces.append(
-                    {
-                        "content": fact.get("fact", "") if isinstance(fact, dict) else str(fact),
-                        "score": fact.get("confidence", 0.8) if isinstance(fact, dict) else 0.8,
-                        "source_type": "graph",
-                        "source_chunk": (
-                            fact.get("source_chunk") if isinstance(fact, dict) else None
-                        ),
-                        "entities": fact.get("entities", []) if isinstance(fact, dict) else [],
-                    }
-                )
+            facts_pieces = [
+                {
+                    "content": fact.get("fact", "") if isinstance(fact, dict) else str(fact),
+                    "score": fact.get("confidence", 0.8) if isinstance(fact, dict) else 0.8,
+                    "source_type": "graph",
+                    "source_chunk": (fact.get("source_chunk") if isinstance(fact, dict) else None),
+                    "entities": fact.get("entities", []) if isinstance(fact, dict) else [],
+                }
+                for fact in search_results.get("facts", [])
+            ]
+            content_pieces.extend(facts_pieces)
 
         # Sort by relevance score
         content_pieces.sort(key=lambda x: x.get("score", 0), reverse=True)
@@ -197,7 +199,7 @@ class ResponseGenerator:
             complexity_factor = 1.0 - (analyzed_query.complexity_score * 0.3)
 
         # 4. Source diversity (both vector and graph results)
-        source_types = set(c.get("source_type", "unknown") for c in content_pieces)
+        source_types = {c.get("source_type", "unknown") for c in content_pieces}
         diversity_factor = 1.0 if len(source_types) > 1 else 0.8
 
         # Weighted combination
@@ -274,8 +276,10 @@ class ResponseGenerator:
                 entities.update(piece["entities"])
 
         # Generate entity-based follow-ups
-        for entity in list(entities)[:3]:
-            follow_ups.append(f"What else can you tell me about {entity}?")
+        entity_followups = [
+            f"What else can you tell me about {entity}?" for entity in list(entities)[:3]
+        ]
+        follow_ups.extend(entity_followups)
 
         # Add general follow-ups
         follow_ups.extend(
@@ -304,28 +308,30 @@ class ResponseGenerator:
         all_results = []
 
         # Add vector results
-        for vr in merged["vector_results"]:
-            if isinstance(vr, dict):
-                all_results.append(
-                    {
-                        **vr,
-                        "source": "vector",
-                        "adjusted_score": vr.get("score", 0.5) * 0.6,  # Weight for vector
-                    }
-                )
+        vector_results = [
+            {
+                **vr,
+                "source": "vector",
+                "adjusted_score": vr.get("score", 0.5) * 0.6,  # Weight for vector
+            }
+            for vr in merged["vector_results"]
+            if isinstance(vr, dict)
+        ]
+        all_results.extend(vector_results)
 
         # Add graph facts as results
         if isinstance(graph_results, dict):
-            for fact in graph_results.get("facts", []):
-                all_results.append(
-                    {
-                        "content": fact.get("fact", ""),
-                        "source": "graph",
-                        "score": fact.get("confidence", 0.8),
-                        "adjusted_score": fact.get("confidence", 0.8) * 0.4,  # Weight for graph
-                        "entities": fact.get("entities", []),
-                    }
-                )
+            graph_fact_results = [
+                {
+                    "content": fact.get("fact", ""),
+                    "source": "graph",
+                    "score": fact.get("confidence", 0.8),
+                    "adjusted_score": fact.get("confidence", 0.8) * 0.4,  # Weight for graph
+                    "entities": fact.get("entities", []),
+                }
+                for fact in graph_results.get("facts", [])
+            ]
+            all_results.extend(graph_fact_results)
 
         # Sort by adjusted score
         all_results.sort(key=lambda x: x.get("adjusted_score", 0), reverse=True)
@@ -364,8 +370,8 @@ class ResponseGenerator:
         lines = full_answer.split("\n")
         current_section = "summary"
 
-        for line in lines:
-            line = line.strip()
+        for raw_line in lines:
+            line = raw_line.strip()
 
             if "Relevant facts:" in line:
                 current_section = "facts"

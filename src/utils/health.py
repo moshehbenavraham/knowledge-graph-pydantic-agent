@@ -1,12 +1,33 @@
 """Health check and system monitoring utilities."""
 
 import asyncio
+import contextlib
 import os
 import time
 from datetime import datetime
 
 import httpx
 from pydantic import BaseModel
+
+try:
+    from clients.database import get_supabase_client
+except ImportError:
+    get_supabase_client = None
+
+try:
+    from clients.llm import get_llm_client
+except ImportError:
+    get_llm_client = None
+
+try:
+    from clients.embedding import get_embedding_client
+except ImportError:
+    get_embedding_client = None
+
+try:
+    from clients.memory import get_mem0_client
+except ImportError:
+    get_mem0_client = None
 
 from .monitoring import logger, monitor
 
@@ -47,7 +68,8 @@ class HealthChecker:
         start_time = time.time()
 
         try:
-            from clients.database import get_supabase_client
+            if not get_supabase_client:
+                raise ImportError("Database client not available")
 
             supabase = get_supabase_client()
 
@@ -89,7 +111,8 @@ class HealthChecker:
         start_time = time.time()
 
         try:
-            from clients.llm import get_llm_client
+            if not get_llm_client:
+                raise ImportError("LLM client not available")
 
             client = get_llm_client()
 
@@ -138,7 +161,8 @@ class HealthChecker:
         start_time = time.time()
 
         try:
-            from clients.embedding import get_embedding_client
+            if not get_embedding_client:
+                raise ImportError("Embedding client not available")
 
             client = get_embedding_client()
 
@@ -186,7 +210,8 @@ class HealthChecker:
         start_time = time.time()
 
         try:
-            from clients.memory import get_mem0_client
+            if not get_mem0_client:
+                raise ImportError("Memory client not available")
 
             client = get_mem0_client()
 
@@ -198,10 +223,8 @@ class HealthChecker:
 
             if result and result.get("id"):
                 # Clean up test memory
-                try:
+                with contextlib.suppress(Exception):
                     client.delete(result["id"])
-                except Exception:
-                    pass  # Ignore cleanup errors
 
                 return ComponentHealth(
                     name="memory",

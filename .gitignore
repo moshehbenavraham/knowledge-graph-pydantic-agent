@@ -50,6 +50,27 @@ test_env/
 *.swp
 *.swo
 *~
+.cache/
 
 # Local configuration
 local_config.py
+
+# Agentic RAG
+ingested_data/
+embeddings_cache/
+graph_cache/
+search_cache/
+
+# Neo4j
+neo4j_data/
+
+# Jupyter notebooks
+*.ipynb_checkpoints
+
+# Documentation build
+docs/_build/
+
+# Additional test outputs
+test_results/
+coverage.xml
+*.cover

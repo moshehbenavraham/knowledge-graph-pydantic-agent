@@ -1,8 +1,24 @@
 import os
 
-from openai import AsyncOpenAI
-from pydantic_ai.models.openai import OpenAIModel
-from pydantic_ai.providers.openai import OpenAIProvider
+try:
+    from openai import AsyncOpenAI
+except ImportError:
+    AsyncOpenAI = None
+
+try:
+    from pydantic_ai.models.openai import OpenAIModel
+except ImportError:
+    OpenAIModel = None
+
+try:
+    from pydantic_ai.providers.openai import OpenAIProvider
+except ImportError:
+    OpenAIProvider = None
+
+try:
+    from pydantic_ai.models.anthropic import AnthropicModel
+except ImportError:
+    AnthropicModel = None
 
 
 def get_llm_client():
@@ -26,7 +42,8 @@ def get_model():
     api_key = os.getenv("LLM_API_KEY", "ollama")
 
     if provider == "anthropic":
-        from pydantic_ai.models.anthropic import AnthropicModel
+        if not AnthropicModel:
+            raise ImportError("Anthropic model not available")
 
         # Map common model names to Anthropic's naming
         model_map = {

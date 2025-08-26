@@ -120,7 +120,7 @@ class EmbeddingCache:
         Returns:
             Hash string
         """
-        return hashlib.md5(text.encode()).hexdigest()
+        return hashlib.md5(text.encode(), usedforsecurity=False).hexdigest()
 
 
 class EmbeddingGenerator:

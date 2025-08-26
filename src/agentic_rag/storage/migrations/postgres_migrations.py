@@ -65,7 +65,7 @@ class PostgreSQLMigration:
         """Run a single migration file."""
         version = migration_file.stem
         content = migration_file.read_text()
-        checksum = hashlib.md5(content.encode()).hexdigest()
+        checksum = hashlib.md5(content.encode(), usedforsecurity=False).hexdigest()
 
         # Check if migration already applied
         existing = await conn.fetchrow(

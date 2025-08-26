@@ -1,15 +1,15 @@
 [project]
 name = "luminari-ai-agent"
-version = "0.1.0"
+version = "0.7.1"
 description = "Production-ready AI agent with RAG, memory, and multi-tool capabilities"
 requires-python = ">=3.11"
 dependencies = [
     "pydantic-ai[anthropic]>=0.1.2",
     "pydantic>=2.5.0",
-    "streamlit>=1.29.0",
+    "streamlit>=1.44.0",
     "python-dotenv>=1.0.0",
-    "openai>=1.10.0",
-    "anthropic>=0.39.0",
+    "openai>=1.75.0",
+    "anthropic>=0.49.0",
     "ollama>=0.1.0",
     "mem0ai>=0.0.10",
     "supabase>=2.3.0",
@@ -23,13 +23,17 @@ dependencies = [
     "fastapi>=0.104.0",
     "uvicorn>=0.24.0",
     "click>=8.1.0",
-    "httpx>=0.24.0",
+    "httpx>=0.28.0",
     "asyncpg>=0.28.0",
-    "numpy>=1.24.0",
+    "numpy>=2.2.0",
+    "pandas>=2.2.0",
     "aiofiles>=23.0.0",
     "RestrictedPython>=6.0",
-    "pillow>=10.0.0",
+    "pillow>=11.2.0",
     "pgvector>=0.3.0",
+    "altair>=5.5.0",
+    "mcp>=1.6.0",
+    "anyio>=4.9.0",
 ]
 
 [project.optional-dependencies]
@@ -49,6 +53,10 @@ rag = [
     "python-docx>=1.1.0",
     "openpyxl>=3.1.2",
     "unstructured>=0.11.0",
+    "graphiti-core>=0.1.0",
+    "neo4j>=5.28.0",
+    "tiktoken>=0.7.0",
+    "sentence-transformers>=3.3.1",
 ]
 security = [
     "bandit>=1.7.5",
@@ -65,6 +73,19 @@ luminari-ui = "src.ui.streamlit_app:main"
 line-length = 100
 target-version = "py311"
 fix = true
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "UP", # pyupgrade
+]
+ignore = [
+    "E501",  # line too long (handled by black)
+    "B008",  # do not perform function calls in argument defaults
+    "B905",  # `zip()` without an explicit `strict=` parameter
+]
 
 [tool.black]
 line-length = 100
@@ -76,12 +97,21 @@ addopts = [
     "--verbose",
     "--cov=src",
     "--cov-report=term-missing",
+    "--cov-report=html",
     "--cov-fail-under=75",
     "--asyncio-mode=auto",
 ]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
 
 [tool.mypy]
 ignore_missing_imports = true
+strict_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+disallow_untyped_defs = false
+check_untyped_defs = true
 
 [tool.docformatter]
 wrap-summaries = 88
@@ -89,7 +119,7 @@ wrap-descriptions = 88
 
 [tool.commitizen]
 name = "cz_conventional_commits"
-version = "0.1.0"
+version = "0.7.1"
 tag_format = "$version"
 version_files = [
     "pyproject.toml:version"

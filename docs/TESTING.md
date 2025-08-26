@@ -392,10 +392,10 @@ from src.agentic_rag.agent.intent_analyzer import IntentAnalyzer, IntentType
 
 class TestIntentAnalysis:
     """Test suite for Phase 3 intent analysis functionality."""
-    
+
     def setup_method(self):
         self.analyzer = IntentAnalyzer()
-    
+
     @pytest.mark.parametrize("query,expected_intent,min_confidence", [
         ("What is the capital of France?", IntentType.FACTUAL, 0.9),
         ("How is Microsoft related to OpenAI?", IntentType.RELATIONSHIP, 0.85),
@@ -409,32 +409,32 @@ class TestIntentAnalysis:
     async def test_intent_classification_accuracy(self, query, expected_intent, min_confidence):
         """Test intent classification accuracy across all 8 intent types."""
         result = await self.analyzer.analyze(query)
-        
+
         assert result.primary_intent == expected_intent
         assert result.confidence >= min_confidence
         assert result.complexity_score >= 0.0 and result.complexity_score <= 1.0
-    
+
     async def test_entity_extraction_accuracy(self):
         """Test entity extraction with known entities."""
         query = "What is the relationship between Microsoft and OpenAI in 2023?"
         result = await self.analyzer.analyze(query)
-        
+
         entity_names = [e.name for e in result.entities]
         assert "Microsoft" in entity_names
         assert "OpenAI" in entity_names
         assert any(e.type == "company" for e in result.entities)
         assert result.temporal_context is not None
-    
+
     @pytest.mark.performance
     async def test_intent_analysis_performance(self):
         """Test intent analysis performance target (<1s)."""
         import time
-        
+
         query = "Analyze the competitive landscape of cloud computing providers"
         start_time = time.time()
-        
+
         result = await self.analyzer.analyze(query)
-        
+
         execution_time = time.time() - start_time
         assert execution_time < 1.0  # <1s performance target
         assert result.primary_intent is not None
@@ -450,48 +450,48 @@ from src.agentic_rag.agent.tools import smart_search, hybrid_search, comprehensi
 
 class TestSearchStrategies:
     """Test suite for Phase 3 search strategy functionality."""
-    
+
     def setup_method(self):
         self.router = SearchRouter()
-    
+
     @pytest.mark.asyncio
     async def test_smart_search_routing(self):
         """Test smart search automatic strategy selection."""
         # Factual query should route to vector search
         factual_result = await smart_search("What is machine learning?")
         assert factual_result.strategy_used in ["vector", "smart"]
-        
+
         # Relationship query should route to graph search
         relationship_result = await smart_search("How is Tesla related to SpaceX?")
         assert relationship_result.strategy_used in ["graph", "hybrid"]
-        
+
         # Complex query should route to comprehensive search
         complex_result = await smart_search("Analyze the evolution of AI and its impact on the job market")
         assert complex_result.strategy_used in ["comprehensive", "hybrid"]
-    
+
     @pytest.mark.performance
     async def test_search_strategy_performance(self):
         """Test search strategy performance targets."""
         import time
-        
+
         # Vector search: <150ms
         start = time.time()
         vector_result = await self.router.vector_search("machine learning")
         vector_time = (time.time() - start) * 1000
         assert vector_time < 150  # <150ms target
-        
+
         # Graph search: <100ms for entity lookups
         start = time.time()
         graph_result = await self.router.graph_search("Microsoft OpenAI")
         graph_time = (time.time() - start) * 1000
         assert graph_time < 500  # <500ms for complex traversals
-        
+
         # Hybrid search: <200ms parallel execution
         start = time.time()
         hybrid_result = await hybrid_search("AI startup funding")
         hybrid_time = (time.time() - start) * 1000
         assert hybrid_time < 300  # <300ms for parallel execution
-    
+
     async def test_search_strategy_fallbacks(self):
         """Test strategy fallback mechanisms."""
         # Simulate graph search failure
@@ -500,11 +500,11 @@ class TestSearchStrategies:
             # Should fallback to hybrid or vector search
             assert result.strategy_used != "graph"
             assert result.results is not None  # Still returns results
-    
+
     async def test_parallel_search_execution(self):
         """Test parallel search execution in comprehensive search."""
         result = await comprehensive_search("AI trends in healthcare")
-        
+
         # Should include results from multiple strategies
         assert result.vector_results is not None
         assert result.graph_results is not None
@@ -521,25 +521,25 @@ from src.agentic_rag.agent.response_generator import ResponseGenerator, AgentRes
 
 class TestResponseGeneration:
     """Test suite for Phase 3 response generation functionality."""
-    
+
     def setup_method(self):
         self.generator = ResponseGenerator()
-    
+
     async def test_citation_management(self):
         """Test 100% citation requirement."""
         query = "What is the capital of France?"
         mock_search_results = [
             {"content": "Paris is the capital of France", "source": "geography.pdf", "confidence": 0.95}
         ]
-        
+
         response = await self.generator.generate_response(query, mock_search_results)
-        
+
         # 100% citation requirement
         assert response.sources is not None
         assert len(response.sources) > 0
         assert all(source.get("source") for source in response.sources)
         assert response.answer is not None
-    
+
     async def test_confidence_scoring(self):
         """Test confidence scoring 0.0-1.0 scale."""
         query = "Explain quantum computing"
@@ -547,12 +547,12 @@ class TestResponseGeneration:
             {"content": "Quantum computing uses quantum mechanics", "confidence": 0.9},
             {"content": "Related quantum information", "confidence": 0.7}
         ]
-        
+
         response = await self.generator.generate_response(query, mock_search_results)
-        
+
         assert response.confidence >= 0.0 and response.confidence <= 1.0
         assert isinstance(response.confidence, float)
-    
+
     async def test_answer_synthesis(self):
         """Test multi-source information merging."""
         query = "What are the benefits of renewable energy?"
@@ -561,23 +561,23 @@ class TestResponseGeneration:
             {"content": "Wind power is cost-effective", "source": "wind_analysis.pdf"},
             {"content": "Renewable energy creates jobs", "source": "economics_report.pdf"}
         ]
-        
+
         response = await self.generator.generate_response(query, mock_search_results)
-        
+
         # Should synthesize information from multiple sources
         assert len(response.sources) >= 2
         assert "solar" in response.answer.lower() or "wind" in response.answer.lower()
         assert response.confidence > 0.0
-    
+
     async def test_follow_up_generation(self):
         """Test intelligent follow-up question generation."""
         query = "What is machine learning?"
         mock_search_results = [
             {"content": "Machine learning is a subset of AI", "source": "ml_guide.pdf"}
         ]
-        
+
         response = await self.generator.generate_response(query, mock_search_results)
-        
+
         assert response.follow_up_questions is not None
         assert len(response.follow_up_questions) > 0
         assert all(isinstance(q, str) for q in response.follow_up_questions)
@@ -593,59 +593,59 @@ from src.agentic_rag.storage.postgres_store import PostgresStore
 
 class TestKnowledgeGraphIntegration:
     """Test suite for Phase 3 knowledge graph functionality."""
-    
+
     def setup_method(self):
         self.neo4j_store = Neo4jStore()
         self.postgres_store = PostgresStore()
-    
+
     async def test_dual_database_integration(self):
         """Test dual-database storage without content duplication."""
         document_content = "Microsoft invested $10 billion in OpenAI in 2023."
-        
+
         # Store content in PostgreSQL
         chunk_id = await self.postgres_store.store_chunk(document_content)
-        
+
         # Extract and store knowledge in Neo4j
         entities = await self.neo4j_store.extract_entities(document_content)
         await self.neo4j_store.store_entities(entities, chunk_id)
-        
+
         # Verify no content duplication
         neo4j_content = await self.neo4j_store.get_content(chunk_id)
         assert neo4j_content is None  # No content stored in Neo4j
-        
+
         # Verify entity storage
         microsoft_entity = await self.neo4j_store.get_entity("Microsoft")
         assert microsoft_entity is not None
         assert microsoft_entity.type == "company"
-    
+
     async def test_storage_efficiency(self):
         """Test 99.6% storage efficiency target."""
         # Simulate large document processing
         large_document = "Large document content..." * 1000  # 10KB+ content
-        
+
         postgres_size = len(large_document.encode('utf-8'))
-        
+
         # Process and store
         entities = await self.neo4j_store.extract_entities(large_document)
         neo4j_size = sum(len(e.name.encode('utf-8')) for e in entities)
-        
+
         # Calculate storage efficiency
         efficiency = (postgres_size - neo4j_size) / postgres_size
         assert efficiency > 0.99  # >99% efficiency target
-    
+
     async def test_entity_relationship_accuracy(self):
         """Test entity and relationship extraction accuracy."""
         text = "Elon Musk founded Tesla and SpaceX. Tesla produces electric vehicles."
-        
+
         entities = await self.neo4j_store.extract_entities(text)
         relationships = await self.neo4j_store.extract_relationships(text)
-        
+
         # Check entity extraction
         entity_names = [e.name for e in entities]
         assert "Elon Musk" in entity_names
         assert "Tesla" in entity_names
         assert "SpaceX" in entity_names
-        
+
         # Check relationship extraction
         relationship_types = [r.type for r in relationships]
         assert "FOUNDED" in relationship_types
@@ -661,12 +661,12 @@ import asyncio
 
 class TestPhase3Performance:
     """Test suite for Phase 3 performance requirements."""
-    
+
     @pytest.mark.performance
     async def test_end_to_end_latency(self):
         """Test <2s response time for 95% of queries."""
         from src.agentic_rag.agent import AgenticRAGAgent
-        
+
         agent = AgenticRAGAgent()
         test_queries = [
             "What is artificial intelligence?",
@@ -675,37 +675,37 @@ class TestPhase3Performance:
             "What are the latest AI trends?",
             "Explain the history of neural networks"
         ]
-        
+
         response_times = []
-        
+
         for query in test_queries:
             start_time = time.time()
             response = await agent.chat(query)
             response_time = time.time() - start_time
             response_times.append(response_time)
-            
+
             assert response.answer is not None
             assert response.confidence > 0.0
-        
+
         # 95th percentile should be <2s
         response_times.sort()
         p95_time = response_times[int(len(response_times) * 0.95)]
         assert p95_time < 2.0  # <2s target
-    
+
     @pytest.mark.performance
     async def test_concurrent_user_handling(self):
         """Test concurrent user support."""
         from src.agentic_rag.agent import AgenticRAGAgent
-        
+
         agent = AgenticRAGAgent()
-        
+
         async def user_query(user_id):
             return await agent.chat(f"Tell me about AI", user_id=user_id)
-        
+
         # Simulate 10 concurrent users
         tasks = [user_query(f"user_{i}") for i in range(10)]
         results = await asyncio.gather(*tasks)
-        
+
         # All queries should complete successfully
         assert len(results) == 10
         assert all(r.answer is not None for r in results)

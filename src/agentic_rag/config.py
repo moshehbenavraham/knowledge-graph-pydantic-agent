@@ -33,7 +33,7 @@ class DatabaseConfig:
         default_factory=lambda: os.getenv("NEO4J_ENCRYPTED", "true").lower() == "true"
     )
 
-    # Redis (optional)
+    # Redis configuration (optional)
     redis_url: str | None = field(default_factory=lambda: os.getenv("REDIS_URL"))
     enable_redis_cache: bool = field(
         default_factory=lambda: os.getenv("ENABLE_REDIS_CACHE", "false").lower() == "true"
@@ -171,7 +171,7 @@ class IngestionConfig:
 class APIConfig:
     """API server configuration."""
 
-    host: str = field(default_factory=lambda: os.getenv("API_HOST", "0.0.0.0"))
+    host: str = field(default_factory=lambda: os.getenv("API_HOST", "0.0.0.0"))  # nosec B104
     port: int = field(default_factory=lambda: int(os.getenv("API_PORT", "8058")))
     cors_origins: list[str] = field(
         default_factory=lambda: os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")

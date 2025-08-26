@@ -345,14 +345,13 @@ class Neo4jStore:
         """Find paths between two entities."""
         async with self.connection_manager.get_neo4j_session() as session:
             result = await session.run(
-                """
+                f"""
                 MATCH path = shortestPath(
-                    (e1:Entity {id: $entity1_id})-[*..%d]-(e2:Entity {id: $entity2_id})
+                    (e1:Entity {{id: $entity1_id}})-[*..{max_depth}]-(e2:Entity {{id: $entity2_id}})
                 )
                 RETURN path
                 LIMIT 5
-            """
-                % max_depth,
+            """,
                 entity1_id=entity1_id,
                 entity2_id=entity2_id,
             )

@@ -29,30 +29,89 @@ All environment variables can be configured in your `.env` file. See [`.env.exam
 | `EMBEDDING_API_KEY` | String | Authentication key | Required |
 | `EMBEDDING_MODEL_CHOICE` | Model name | Embedding model | `text-embedding-3-small` |
 
-### Agentic RAG Settings (New)
+### Agentic RAG Settings
 
 #### Neo4j Knowledge Graph
-| Variable | Description | Example |
+| Variable | Description | Default |
 |----------|-------------|---------|
 | `NEO4J_URI` | Neo4j connection URI | `bolt://localhost:7687` |
 | `NEO4J_USER` | Neo4j username | `neo4j` |
-| `NEO4J_PASSWORD` | Neo4j password | `your-password` |
+| `NEO4J_PASSWORD` | Neo4j password | *Required* |
+| `NEO4J_DATABASE` | Neo4j database name | `neo4j` |
+| `NEO4J_ENCRYPTED` | Enable encrypted connection | `true` |
+| `NEO4J_POOL_SIZE` | Neo4j connection pool size | `50` |
+| `NEO4J_CONNECTION_TIMEOUT` | Connection timeout in seconds | `30.0` |
+| `NEO4J_MAX_RETRY_TIME` | Maximum retry time in seconds | `30` |
 
-#### Agentic RAG Configuration
+#### Document Ingestion Configuration
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `ENABLE_GRAPH` | Enable knowledge graph features | `true` |
-| `ENABLE_CACHING` | Enable result caching | `true` |
-| `PARALLEL_SEARCH` | Enable parallel search execution | `true` |
 | `CHUNK_SIZE` | Document chunk size in tokens | `1000` |
 | `CHUNK_OVERLAP` | Chunk overlap for context | `200` |
 | `MAX_ENTITIES_PER_CHUNK` | Entity extraction limit | `10` |
 | `MAX_FACT_LENGTH` | Maximum fact description length | `500` |
-| `EXTRACTION_MODEL` | Model for knowledge extraction | `gpt-4o-mini` |
+| `USE_SEMANTIC_CHUNKING` | Enable semantic chunking | `true` |
 
-#### Performance Settings
+#### Performance Configuration
 | Variable | Description | Default |
 |----------|-------------|---------|
+| `ENABLE_GRAPH` | Enable knowledge graph features | `true` |
+| `ENABLE_CACHING` | Enable result caching | `true` |
+| `ENABLE_PARALLEL_SEARCH` | Enable parallel search execution | `true` |
+| `VECTOR_SEARCH_TIMEOUT` | Vector search timeout in seconds | `2.0` |
+| `GRAPH_SEARCH_TIMEOUT` | Graph search timeout in seconds | `3.0` |
+| `EMBEDDING_CACHE_SIZE` | Embedding cache size | `1000` |
+| `EMBEDDING_CACHE_TTL` | Embedding cache TTL in seconds | `3600` |
+| `GRAPH_CACHE_SIZE` | Graph cache size | `500` |
+| `GRAPH_CACHE_TTL` | Graph cache TTL in seconds | `1800` |
+| `GRAPH_BATCH_SIZE` | Graph batch processing size | `10` |
+
+#### Connection Pool Configuration
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `PG_POOL_MIN` | PostgreSQL minimum pool size | `5` |
+| `PG_POOL_MAX` | PostgreSQL maximum pool size | `20` |
+| `PG_MAX_QUERIES` | PostgreSQL max queries per connection | `50000` |
+| `PG_MAX_INACTIVE_LIFETIME` | PostgreSQL connection lifetime (seconds) | `300` |
+| `PG_COMMAND_TIMEOUT` | PostgreSQL command timeout (seconds) | `60` |
+
+#### Circuit Breaker Configuration
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `CIRCUIT_BREAKER_FAILURE_THRESHOLD` | Failure threshold for circuit breaker | `5` |
+| `CIRCUIT_BREAKER_RECOVERY_TIMEOUT` | Recovery timeout in seconds | `60` |
+| `CIRCUIT_BREAKER_HALF_OPEN_REQUESTS` | Half-open state request limit | `3` |
+
+#### API Configuration
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `API_HOST` | API server host | `0.0.0.0` |
+| `API_PORT` | API server port | `8058` |
+| `CORS_ORIGINS` | CORS allowed origins (comma-separated) | `http://localhost:3000` |
+| `APP_ENV` | Application environment | `development` |
+
+#### Optional Redis Cache
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `REDIS_URL` | Redis connection URL | *Optional* |
+| `ENABLE_REDIS_CACHE` | Enable Redis caching | `false` |
+| `REDIS_POOL_SIZE` | Redis connection pool size | `10` |
+| `REDIS_SOCKET_TIMEOUT` | Redis socket timeout in seconds | `5` |
+
+#### LLM Configuration
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `LLM_MODEL` | Primary LLM model | `gpt-4o-mini` |
+| `EXTRACTION_MODEL` | Model for knowledge extraction | `gpt-4o-mini` |
+| `LLM_TEMPERATURE` | Model temperature | `0.7` |
+| `LLM_MAX_TOKENS` | Maximum tokens per response | `2000` |
+
+#### Embedding Configuration
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `EMBEDDING_MODEL` | Embedding model name | `text-embedding-3-small` |
+| `EMBEDDING_DIMENSION` | Embedding dimension | `1536` |
+| `EMBEDDING_BATCH_SIZE` | Batch size for embeddings | `100` |
 | `VECTOR_SEARCH_TIMEOUT` | Vector search timeout (seconds) | `2.0` |
 | `GRAPH_SEARCH_TIMEOUT` | Graph search timeout (seconds) | `3.0` |
 | `EMBEDDING_CACHE_SIZE` | Embedding cache size | `1000` |
@@ -154,7 +213,7 @@ docker run -d \
 
 # Or use Neo4j Aura cloud instance
 # Initialize the graph
-python -m EXAMPLE_agentic-rag-knowledge-graph.agent.graph_utils init
+python -m src.agentic_rag.storage.neo4j_store init
 ```
 
 ### Vector Dimension Configuration

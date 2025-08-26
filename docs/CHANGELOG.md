@@ -33,7 +33,7 @@ Previous changelogs can be found in /docs/changelogs_previous/
   - Factual, Relationship, Temporal, Comparison, Exploratory, Aggregation, Definition, Multi-hop
   - Entity extraction and temporal context detection
   - Complexity scoring for optimal strategy selection
-  
+
 - **Pydantic AI Agent Integration**: Full agent implementation with intelligent tool usage
   - Smart search orchestration based on intent
   - Parallel tool execution for performance
@@ -116,14 +116,14 @@ Next: Phase 4 - API & Performance Optimization
 
 #### 🏗️ System Components
 
-##### Agent Intelligence (`EXAMPLE_agentic-rag-knowledge-graph/agent/`)
+##### Agent Intelligence (`src/agentic_rag/agent/`)
 - **Pydantic AI Agent** (`agent.py`): Smart search with intent analysis
 - **FastAPI Server** (`api.py`): RESTful API with streaming support
 - **Database Utils** (`db_utils.py`): PostgreSQL operations with connection pooling
 - **Graph Utils** (`graph_utils.py`): Neo4j operations with Graphiti integration
 - **Search Tools** (`tools.py`): Vector, graph, and hybrid search implementations
 
-##### Ingestion Pipeline (`EXAMPLE_agentic-rag-knowledge-graph/ingestion/`)
+##### Ingestion Pipeline (`src/agentic_rag/ingestion/`)
 - **Semantic Chunking** (`chunker.py`): LLM-powered and rule-based strategies
 - **Multi-Model Embeddings** (`embedder.py`): Support for OpenAI, Ollama, Nomic
 - **Knowledge Extraction** (`graph_builder.py`): Entity and relationship extraction
