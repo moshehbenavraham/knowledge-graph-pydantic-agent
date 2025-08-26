@@ -32,7 +32,8 @@
       "mcp__visioncraft__vision-query",
       "Bash(git gc:*)",
       "Bash(git fsck:*)",
-      "Bash(git verify-pack:*)"
+      "Bash(git verify-pack:*)",
+      "Bash(chmod:*)"
     ],
     "deny": [],
     "ask": []
