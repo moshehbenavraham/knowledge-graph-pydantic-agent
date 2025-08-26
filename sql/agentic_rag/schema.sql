@@ -169,7 +169,7 @@ RETURNS TABLE (
 ) AS $$
 BEGIN
     RETURN QUERY
-    SELECT 
+    SELECT
         dc.id AS chunk_id,
         dc.document_id,
         dc.content,

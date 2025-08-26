@@ -2,25 +2,57 @@ import os
 from unittest.mock import MagicMock
 
 import pytest
-from dotenv import load_dotenv
-
-# Load test environment variables
-load_dotenv(".env.test")
 
 
-# Set required environment variables for tests if not already set
+# Set required environment variables for tests
 def setup_test_environment():
     """Ensure all required environment variables are set for testing."""
-    required_vars = {
+    test_env_vars = {
+        # Supabase Configuration (test values)
         "SUPABASE_URL": "https://test.supabase.co",
         "SUPABASE_KEY": "test_key_for_testing_only",
         "SUPABASE_SERVICE_KEY": "test_service_key_for_testing_only",
-        "OPENAI_API_KEY": "test_openai_key",
+        
+        # Neo4j Configuration (test values)
+        "NEO4J_URI": "bolt://localhost:7687",
+        "NEO4J_USER": "neo4j",
+        "NEO4J_PASSWORD": "test_password",
+        "NEO4J_DATABASE": "test",
+        
+        # LLM Configuration (test values)
+        "LLM_PROVIDER": "openai",
+        "LLM_API_KEY": "test_openai_key",
+        "LLM_CHOICE": "gpt-3.5-turbo",
+        "LLM_BASE_URL": "https://api.openai.com/v1",
+        
+        # Embedding Configuration (test values)
+        "EMBEDDING_PROVIDER": "openai",
+        "EMBEDDING_API_KEY": "test_openai_key",
+        "EMBEDDING_MODEL_CHOICE": "text-embedding-3-small",
+        
+        # Other test configurations
         "LOG_LEVEL": "DEBUG",
         "ENVIRONMENT": "test",
+        "MEM0_API_KEY": "test_mem0_key",
+        "BRAVE_API_KEY": "test_brave_key",
+        "SEARXNG_BASE_URL": "http://localhost:8080",
+        "DATABASE_URL": "postgresql://test:test@localhost:5432/test_db",
+        
+        # Feature flags for testing
+        "ENABLE_CODE_EXECUTION": "false",
+        "ENABLE_WEB_SEARCH": "false",
+        "ENABLE_IMAGE_ANALYSIS": "false",
+        "ENABLE_LONG_TERM_MEMORY": "false",
+        "ENABLE_RAG": "false",
+        "ENABLE_AGENTIC_RAG": "false",
+        "ENABLE_GRAPH_SEARCH": "false",
+        
+        # Test-specific settings
+        "TESTING": "true",
+        "TEST_MODE": "true",
     }
 
-    for var, default_value in required_vars.items():
+    for var, default_value in test_env_vars.items():
         if not os.getenv(var):
             os.environ[var] = default_value
 
