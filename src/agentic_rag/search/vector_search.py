@@ -114,7 +114,7 @@ class SearchCache:
             json.dumps(filters or {}, sort_keys=True),
         ]
         key_str = "|".join(key_parts)
-        return hashlib.md5(key_str.encode()).hexdigest()
+        return hashlib.md5(key_str.encode(), usedforsecurity=False).hexdigest()
 
 
 class VectorSearch:

@@ -32,7 +32,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip wheel setuptools
         pip install -r requirements.txt
-        pip install -e .[dev,security]
+        pip install -e .[dev,security,rag]
 
     - name: Lint with Ruff
       run: |

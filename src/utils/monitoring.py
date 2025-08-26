@@ -18,6 +18,11 @@ from prometheus_client import (
     start_http_server,
 )
 
+try:
+    import psutil
+except ImportError:
+    psutil = None
+
 
 # Configure structured logging
 def configure_logging():
@@ -61,7 +66,7 @@ def _get_or_create_metric(
         for collector in list(registry._collector_to_names.keys()):
             if hasattr(collector, "_name") and collector._name == name:
                 return collector
-    except:
+    except (AttributeError, KeyError):
         pass
 
     # Create new metric
@@ -281,19 +286,24 @@ class PerformanceMonitor:
 
     def get_system_stats(self) -> dict[str, Any]:
         """Get current system statistics."""
-        import psutil
-
         stats = {
             "uptime": time.time() - self.start_time,
             "active_requests": len(self.active_requests),
             "active_sessions": self.session_count,
-            "memory_usage": psutil.virtual_memory().used,
-            "cpu_percent": psutil.cpu_percent(),
-            "disk_usage": psutil.disk_usage("/").percent,
         }
 
-        # Update Prometheus gauge
-        MEMORY_USAGE.set(stats["memory_usage"])
+        if psutil:
+            stats.update(
+                {
+                    "memory_usage": psutil.virtual_memory().used,
+                    "cpu_percent": psutil.cpu_percent(),
+                    "disk_usage": psutil.disk_usage("/").percent,
+                }
+            )
+
+        # Update Prometheus gauge if available
+        if "memory_usage" in stats:
+            MEMORY_USAGE.set(stats["memory_usage"])
 
         return stats
 

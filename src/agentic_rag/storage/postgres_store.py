@@ -306,7 +306,7 @@ class PostgresStore:
         document_id: UUID | None = None,
         chunk_id: UUID | None = None,
         operation: str = "create",
-        payload: dict[str, Any] = None,
+        payload: dict[str, Any] | None = None,
     ):
         """Add an item to the graph sync queue."""
         async with self.connection_manager.get_pg_connection() as conn:

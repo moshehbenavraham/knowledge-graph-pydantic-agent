@@ -14,6 +14,19 @@ from .prompts import SYSTEM_PROMPT
 from .providers import get_llm_model
 from .response_generator import ResponseGenerator
 
+# Import search modules for tools
+try:
+    from src.agentic_rag.search.graph_search import GraphSearch
+    from src.agentic_rag.search.ranker import ResultRanker
+    from src.agentic_rag.search.vector_search import VectorSearch
+    from src.agentic_rag.storage.postgres_store import PostgresStore
+except ImportError:
+    # Graceful fallback when modules aren't available
+    VectorSearch = None
+    GraphSearch = None
+    ResultRanker = None
+    PostgresStore = None
+
 logger = logging.getLogger(__name__)
 
 
@@ -112,7 +125,13 @@ async def vector_search(
     - General information retrieval
     """
     try:
-        from ..search.vector_search import VectorSearch
+        if VectorSearch is None:
+            return {
+                "type": "vector",
+                "query": query,
+                "results": [],
+                "error": "VectorSearch not available",
+            }
 
         searcher = VectorSearch()
         results = await searcher.search(query, limit)
@@ -156,7 +175,13 @@ async def graph_search(ctx: RunContext[AgentDependencies], query: str) -> dict[s
     - Specific facts
     """
     try:
-        from ..search.graph_search import GraphSearch
+        if GraphSearch is None:
+            return {
+                "type": "graph",
+                "query": query,
+                "results": [],
+                "error": "GraphSearch not available",
+            }
 
         searcher = GraphSearch()
         results = await searcher.search(query)
@@ -195,7 +220,13 @@ async def get_entity_relationships(
     Returns the entity's connections up to specified depth.
     """
     try:
-        from ..search.graph_search import GraphSearch
+        if GraphSearch is None:
+            return {
+                "type": "graph",
+                "entity": entity_name,
+                "results": [],
+                "error": "GraphSearch not available",
+            }
 
         searcher = GraphSearch()
         relationships = await searcher.get_entity_relationships(entity_name, depth)
@@ -231,7 +262,13 @@ async def get_entity_timeline(
     Shows how information about the entity has evolved over time.
     """
     try:
-        from ..search.graph_search import GraphSearch
+        if GraphSearch is None:
+            return {
+                "type": "graph",
+                "entity": entity_name,
+                "results": [],
+                "error": "GraphSearch not available",
+            }
 
         searcher = GraphSearch()
         timeline = await searcher.get_entity_timeline(entity_name, start_date, end_date)
@@ -253,7 +290,8 @@ async def get_chunks_by_ids(
     Used for getting full content when we have chunk references from graph search.
     """
     try:
-        from ..storage.postgres_store import PostgresStore
+        if PostgresStore is None:
+            return {"type": "storage", "error": "PostgresStore not available"}
 
         store = PostgresStore()
         chunks = await store.get_chunks_by_ids(chunk_ids)
@@ -347,7 +385,8 @@ async def comprehensive_search(
     # Combine and rank results
     if results["vector_results"] or results["graph_results"]:
         try:
-            from ..search.ranker import ResultRanker
+            if ResultRanker is None:
+                return {"error": "ResultRanker not available", "results": []}
 
             ranker = ResultRanker()
             results["combined_results"] = await ranker.rank_combined(

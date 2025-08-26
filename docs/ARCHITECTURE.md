@@ -97,22 +97,44 @@ base_agent/
 │   │   └── streamlit_ui_streaming.py # Streaming UI variant
 │   └── utils/                 # Utility modules
 │       └── __init__.py        # Package initialization
-├── EXAMPLE_agentic-rag-knowledge-graph/  # Agentic RAG implementation
-│   ├── agent/                 # Agentic RAG agent
-│   │   ├── agent.py          # Pydantic AI agent with tools
-│   │   ├── api.py            # FastAPI endpoints
-│   │   ├── db_utils.py       # PostgreSQL operations
-│   │   ├── graph_utils.py    # Neo4j/Graphiti operations
-│   │   ├── models.py         # Data models
-│   │   ├── prompts.py        # System prompts
-│   │   ├── providers.py      # LLM providers
-│   │   └── tools.py          # Search tools
-│   ├── ingestion/            # Document ingestion pipeline
-│   │   ├── chunker.py        # Semantic chunking
-│   │   ├── embedder.py       # Embedding generation
-│   │   ├── graph_builder.py  # Knowledge extraction
-│   │   └── ingest.py         # Pipeline orchestrator
-│   └── cli.py               # Command-line interface
+├── src/agentic_rag/           # Agentic RAG implementation (Phase 3 Complete)
+│   ├── __init__.py            # Package initialization
+│   ├── config.py              # Configuration management
+│   ├── agent/                 # Agent Intelligence Layer
+│   │   ├── __init__.py        # Package initialization
+│   │   ├── agent.py           # Main Pydantic AI agent with tools
+│   │   ├── config.py          # Agent configuration and dependencies
+│   │   ├── intent_analyzer.py # Intent analysis system (8 intent types)
+│   │   ├── prompts.py         # System prompts for agent
+│   │   ├── providers.py       # LLM provider configurations
+│   │   ├── response_generator.py # Response generation with citations
+│   │   ├── router.py          # Query routing and strategy selection
+│   │   └── tools.py           # Advanced search tools implementation
+│   ├── ingestion/             # Document processing pipeline
+│   │   ├── __init__.py        # Package initialization
+│   │   ├── chunker.py         # Semantic document chunking
+│   │   ├── embedder.py        # Embedding generation with caching
+│   │   ├── extractor.py       # Knowledge extraction using Graphiti
+│   │   └── pipeline.py        # Main pipeline orchestrator
+│   ├── search/                # Search strategies implementation
+│   │   ├── __init__.py        # Package initialization
+│   │   ├── base.py            # Base search interface
+│   │   ├── graph.py           # Knowledge graph search
+│   │   ├── hybrid.py          # Hybrid search (vector + graph)
+│   │   ├── strategies.py      # Search strategy definitions
+│   │   ├── vector.py          # Vector search implementation
+│   │   └── weighted.py        # Result merging and ranking
+│   └── storage/               # Storage layer abstractions
+│       ├── __init__.py        # Package initialization
+│       ├── base.py            # Base storage interface
+│       ├── models.py          # Data models and schemas
+│       ├── neo4j_store.py     # Neo4j operations
+│       ├── postgres_store.py  # PostgreSQL operations
+│       ├── schema.sql         # Enhanced database schema
+│       └── utils.py           # Storage utilities
+├── src/api/                   # API layer
+│   ├── __init__.py            # Package initialization
+│   └── main.py                # FastAPI application with endpoints
 ├── sql/                       # Database schema definitions
 │   ├── documents.sql          # Vector document storage table
 │   ├── document_metadata.sql  # Document metadata table

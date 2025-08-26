@@ -38,6 +38,12 @@ run-rag:
 run-mcp:
 	python -m mcp
 
+run-api:
+	python -m src.api.main
+
+run-agentic-rag:
+	python -m src.agentic_rag.agent.agent
+
 dev:
 	streamlit run src/ui/streamlit_app.py --server.runOnSave true
 
@@ -51,13 +57,23 @@ docker-run:
 docker-stop:
 	docker-compose down
 
-# Database (Supabase)
+# Database (Supabase and Neo4j)
 db-setup:
 	echo "Using Supabase - no local database setup needed"
 	echo "Configure your Supabase project and set SUPABASE_URL and SUPABASE_SERVICE_KEY"
+	echo "For Neo4j, ensure NEO4J_URI, NEO4J_USER, and NEO4J_PASSWORD are set"
 
 db-migrate:
 	echo "Database migrations handled through Supabase dashboard or CLI"
+
+neo4j-init:
+	python -m src.agentic_rag.storage.neo4j_store init
+
+ingest:
+	python -m src.agentic_rag.ingestion.pipeline ingest
+
+ingest-clean:
+	python -m src.agentic_rag.ingestion.pipeline --clean
 
 # Development utilities
 clean:
@@ -76,4 +92,4 @@ requirements:
 install-dev:
 	python -m pip install -e .[dev]
 
-.PHONY: setup check format test test-coverage lint security run-ui run-rag run-mcp dev docker-build docker-run docker-stop db-setup db-migrate clean clean-all requirements install-dev
+.PHONY: setup check format test test-coverage lint security run-ui run-rag run-mcp run-api run-agentic-rag dev docker-build docker-run docker-stop db-setup db-migrate neo4j-init ingest ingest-clean clean clean-all requirements install-dev

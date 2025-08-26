@@ -67,7 +67,7 @@ The system now includes the complete Phase 3 Agent Intelligence Layer with advan
    # Copy connection details to .env
 
    # Initialize knowledge graph
-   python -m EXAMPLE_agentic-rag-knowledge-graph.agent.graph_utils init
+   python -m src.agentic_rag.storage.neo4j_store init
    ```
 
    **Environment Variables for Agentic RAG:**
@@ -100,14 +100,14 @@ The system now includes the complete Phase 3 Agent Intelligence Layer with advan
    # Access the web interface at http://localhost:8501
 
    # For Agentic RAG API server (Phase 3)
-   python -m EXAMPLE_agentic-rag-knowledge-graph.agent.api
-   # API available at http://localhost:8000 with intent analysis
+   python -m src.api.main
+   # API available at http://localhost:8058 with intent analysis
 
    # For Agentic RAG CLI with smart search
-   python -m EXAMPLE_agentic-rag-knowledge-graph.cli chat "Your question"
-   
+   python -m src.agentic_rag.agent.agent chat "Your question"
+
    # Test Phase 3 features
-   python -m EXAMPLE_agentic-rag-knowledge-graph.cli chat "How is Microsoft related to OpenAI?"
+   python -m src.agentic_rag.agent.agent chat "How is Microsoft related to OpenAI?"
    ```
 
 ## Deployment Options
@@ -299,7 +299,7 @@ asyncio.run(test())
 
 # Expected output should show:
 # Intent: EXPLORATORY or FACTUAL
-# Strategy: COMPREHENSIVE or HYBRID  
+# Strategy: COMPREHENSIVE or HYBRID
 # Confidence: 0.7-0.9
 ```
 

@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import JSONResponse
 
 from src.utils.health import health_checker
-from src.utils.monitoring import monitor
+from src.utils.monitoring import logger, monitor
 from src.utils.rate_limiting import rate_limiter
 
 router = APIRouter(prefix="/health", tags=["health"])
@@ -72,7 +72,7 @@ async def get_metrics():
         }
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get metrics: {e!s}")
+        raise HTTPException(status_code=500, detail=f"Failed to get metrics: {e!s}") from e
 
 
 @router.get("/rate-limits/{user_id}")
@@ -83,7 +83,9 @@ async def get_rate_limit_status(user_id: str):
         return stats
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get rate limit status: {e!s}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to get rate limit status: {e!s}"
+        ) from e
 
 
 @router.post("/rate-limits/{user_id}/tier")
@@ -94,7 +96,7 @@ async def set_user_tier(user_id: str, tier: str = Query(..., regex="^(free|premi
         return {"user_id": user_id, "tier": tier, "updated_at": datetime.utcnow().isoformat()}
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to set user tier: {e!s}")
+        raise HTTPException(status_code=500, detail=f"Failed to set user tier: {e!s}") from e
 
 
 @router.get("/components/{component}")
@@ -136,7 +138,9 @@ async def get_component_health(component: str):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to check component health: {e!s}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to check component health: {e!s}"
+        ) from e
 
 
 @router.get("/readiness")
@@ -231,7 +235,6 @@ def initialize_monitoring():
             monitor.start_metrics_server(metrics_port)
 
         # Log initialization
-        from src.utils.monitoring import logger
 
         logger.info(
             "Monitoring initialized",

@@ -41,7 +41,7 @@ Access the web interface at **http://localhost:8501**
 - **Vector Database**: Supabase with pgvector extension (content storage)
 - **Knowledge Graph**: Neo4j with Graphiti (entity relationships and facts)
 - **Memory Store**: mem0ai ≥0.0.10 with PostgreSQL backend
-- **Embedding Models**: 
+- **Embedding Models**:
   - OpenAI text-embedding-3-small (1536d)
   - Ollama nomic-embed-text (768d)
   - Support for multiple embedding models
@@ -52,7 +52,7 @@ Access the web interface at **http://localhost:8501**
 ## 📋 Requirements
 
 - **Python**: 3.11 or higher
-- **Database**: 
+- **Database**:
   - Supabase project with pgvector extension enabled (content storage)
   - Neo4j 5.0+ instance (knowledge graph) - local or cloud
 - **Memory**: 4GB+ RAM for local LLM deployment (if using Ollama)
@@ -91,7 +91,7 @@ Access the web interface at **http://localhost:8501**
    ```
 
 4. **Database Setup**
-   
+
    **PostgreSQL/Supabase (Content Storage):**
    - Create a Supabase project at [supabase.com](https://supabase.com)
    - Enable the `pgvector` extension in Database → Extensions
@@ -101,7 +101,7 @@ Access the web interface at **http://localhost:8501**
      - [`sql/document_rows.sql`](sql/document_rows.sql)
      - [`sql/execute_sql_rpc.sql`](sql/execute_sql_rpc.sql)
      - [`sql/agentic_rag/schema.sql`](sql/agentic_rag/schema.sql) (for Agentic RAG)
-   
+
    **Neo4j (Knowledge Graph):**
    ```bash
    # Option A: Docker deployment
@@ -110,12 +110,12 @@ Access the web interface at **http://localhost:8501**
      -p 7474:7474 -p 7687:7687 \
      -e NEO4J_AUTH=neo4j/password \
      neo4j:latest
-   
+
    # Option B: Neo4j Aura cloud
    # Create instance at https://neo4j.com/cloud/aura/
-   
+
    # Initialize knowledge graph
-   python -m EXAMPLE_agentic-rag-knowledge-graph.agent.graph_utils init
+   python -m src.agentic_rag.storage.neo4j_store init
    ```
 
 5. **Run Application**
@@ -238,13 +238,13 @@ The Agentic RAG system enhances traditional RAG with intelligent search routing 
 
 ```bash
 # Start the API server
-python -m EXAMPLE_agentic-rag-knowledge-graph.agent.api
+python -m src.api.main
 
 # Or use the CLI
-python -m EXAMPLE_agentic-rag-knowledge-graph.cli chat "Your question here"
+python -m src.agentic_rag.agent.agent chat "Your question here"
 
 # Ingest documents
-python -m EXAMPLE_agentic-rag-knowledge-graph.cli ingest path/to/documents
+python -m src.agentic_rag.ingestion.pipeline ingest path/to/documents
 ```
 
 ### API Endpoints
@@ -383,25 +383,41 @@ base_agent/
 │   │   └── streamlit_ui_streaming.py  # Streaming variant
 │   └── utils/                  # Utility modules
 │       └── __init__.py        # Package initialization
-├── EXAMPLE_agentic-rag-knowledge-graph/  # Agentic RAG implementation
-│   ├── agent/                  # Agentic RAG agent
+├── src/agentic_rag/               # Agentic RAG implementation
+│   ├── __init__.py            # Package initialization
+│   ├── config.py              # Configuration management
+│   ├── agent/                 # Agent Intelligence Layer
+│   │   ├── __init__.py        # Package initialization
 │   │   ├── agent.py           # Pydantic AI agent with tools
-│   │   ├── api.py             # FastAPI endpoints
-│   │   ├── db_utils.py        # PostgreSQL operations
-│   │   ├── graph_utils.py     # Neo4j/Graphiti operations
-│   │   ├── models.py          # Data models
+│   │   ├── config.py          # Agent configuration
+│   │   ├── intent_analyzer.py # Intent analysis system
 │   │   ├── prompts.py         # System prompts
 │   │   ├── providers.py       # LLM providers
+│   │   ├── response_generator.py # Response generation
+│   │   ├── router.py          # Query routing
 │   │   └── tools.py           # Search tools
 │   ├── ingestion/             # Document ingestion pipeline
+│   │   ├── __init__.py        # Package initialization
 │   │   ├── chunker.py         # Semantic chunking
 │   │   ├── embedder.py        # Embedding generation
-│   │   ├── graph_builder.py   # Knowledge extraction
-│   │   └── ingest.py          # Pipeline orchestrator
-│   ├── sql/                   # Database schemas
-│   │   └── schema.sql         # Agentic RAG tables
-│   ├── tests/                 # Test suite
-│   └── cli.py                 # Command-line interface
+│   │   ├── extractor.py       # Knowledge extraction
+│   │   └── pipeline.py        # Pipeline orchestrator
+│   ├── search/                # Search implementations
+│   │   ├── __init__.py        # Package initialization
+│   │   ├── base.py            # Base search interface
+│   │   ├── graph.py           # Graph search
+│   │   ├── hybrid.py          # Hybrid search
+│   │   ├── strategies.py      # Search strategies
+│   │   ├── vector.py          # Vector search
+│   │   └── weighted.py        # Weighted result merging
+│   └── storage/               # Storage implementations
+│       ├── __init__.py        # Package initialization
+│       ├── base.py            # Base storage interface
+│       ├── models.py          # Data models
+│       ├── neo4j_store.py     # Neo4j operations
+│       ├── postgres_store.py  # PostgreSQL operations
+│       ├── schema.sql         # Enhanced database schema
+│       └── utils.py           # Storage utilities
 ├── sql/                        # Database schemas
 │   ├── documents.sql          # Vector document storage
 │   ├── document_metadata.sql  # Document metadata table
@@ -563,6 +579,6 @@ For questions, issues, or contributions:
 
 ---
 
-**Version**: 0.7.0
+**Version**: 0.7.1
 **Last Updated**: December 2024
-**Key Feature**: Phase 3 Complete - Agent Intelligence Layer with Intent Analysis
+**Status**: Phase 3 Complete - Agent Intelligence Layer with Intent Analysis

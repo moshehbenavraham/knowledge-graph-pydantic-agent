@@ -7,6 +7,7 @@ import logging
 import os
 from dataclasses import asdict, dataclass
 from functools import lru_cache
+from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -123,13 +124,13 @@ class AgentConfig:
     @classmethod
     def from_file(cls, file_path: str) -> "AgentConfig":
         """Load configuration from JSON file."""
-        with open(file_path) as f:
+        with Path(file_path).open() as f:
             config_dict = json.load(f)
         return cls.from_dict(config_dict)
 
     def save(self, file_path: str):
         """Save configuration to JSON file."""
-        with open(file_path, "w") as f:
+        with Path(file_path).open("w") as f:
             json.dump(self.to_dict(), f, indent=2)
 
     def validate(self) -> bool:
@@ -229,7 +230,7 @@ def get_agent_config() -> AgentConfig:
     """Get the global agent configuration."""
     # Try to load from file first
     config_file = os.getenv("AGENT_CONFIG_FILE")
-    if config_file and os.path.exists(config_file):
+    if config_file and Path(config_file).exists():
         logger.info(f"Loading agent config from file: {config_file}")
         config = AgentConfig.from_file(config_file)
     else:

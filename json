@@ -1,0 +1,14 @@
+Name       Version ID                  Fix Versions
+---------- ------- ------------------- --------------------
+aiohttp    3.11.16 GHSA-9548-qrrj-x5pj 3.12.14
+h2         4.2.0   GHSA-847f-9342-265h 4.3.0
+protobuf   5.29.4  GHSA-8qvm-5x2c-j2w7 4.25.8,5.29.5,6.31.1
+requests   2.32.3  GHSA-9hjg-9r4m-mvj7 2.32.4
+setuptools 78.1.0  PYSEC-2025-49       78.1.1
+starlette  0.46.1  GHSA-2c2j-9gv5-cj73 0.47.2
+tornado    6.4.2   GHSA-7cx3-6m66-7c5m 6.5
+urllib3    2.3.0   GHSA-48p4-8xcf-vxj5 2.5.0
+urllib3    2.3.0   GHSA-pq67-6m6q-mj2v 2.5.0
+Name              Skip Reason
+----------------- --------------------------------------------------------------------------------
+luminari-ai-agent Dependency not found on PyPI and could not be audited: luminari-ai-agent (0.1.0)

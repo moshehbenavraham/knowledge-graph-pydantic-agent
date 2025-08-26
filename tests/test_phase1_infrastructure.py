@@ -295,7 +295,7 @@ class TestDatabaseInfrastructure:
 
             # Attempt connections that will fail
             for _i in range(3):
-                with pytest.raises(Exception):
+                with pytest.raises((ConnectionError, OSError, Exception)):
                     async with connection_manager.get_pg_connection() as conn:
                         pass
 

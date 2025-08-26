@@ -10,22 +10,22 @@ The Agentic RAG system enhances traditional RAG with knowledge graph capabilitie
 #### Command Line Interface
 ```bash
 # Chat with the agent
-python -m EXAMPLE_agentic-rag-knowledge-graph.cli chat "What is the relationship between Microsoft and OpenAI?"
+python -m src.agentic_rag.agent.agent chat "What is the relationship between Microsoft and OpenAI?"
 
 # Ingest documents
-python -m EXAMPLE_agentic-rag-knowledge-graph.cli ingest path/to/documents --chunk-size 1000
+python -m src.agentic_rag.ingestion.pipeline ingest path/to/documents --chunk-size 1000
 
 # Direct search
-python -m EXAMPLE_agentic-rag-knowledge-graph.cli search --mode hybrid "Your query"
+python -m src.agentic_rag.agent.agent search --mode hybrid "Your query"
 ```
 
 #### API Server
 ```bash
 # Start the FastAPI server
-python -m EXAMPLE_agentic-rag-knowledge-graph.agent.api
+python -m src.api.main
 
-# API available at http://localhost:8000
-# Docs at http://localhost:8000/docs
+# API available at http://localhost:8058
+# Docs at http://localhost:8058/docs
 ```
 
 ### API Endpoints
@@ -33,7 +33,7 @@ python -m EXAMPLE_agentic-rag-knowledge-graph.agent.api
 #### Document Ingestion
 ```bash
 # POST /ingest
-curl -X POST http://localhost:8000/ingest \
+curl -X POST http://localhost:8058/ingest \
   -H "Content-Type: application/json" \
   -d '{
     "content": "Document content here",
@@ -45,12 +45,12 @@ curl -X POST http://localhost:8000/ingest \
 #### Chat Interface
 ```bash
 # POST /chat
-curl -X POST http://localhost:8000/chat \
+curl -X POST http://localhost:8058/chat \
   -H "Content-Type: application/json" \
   -d '{"message": "Your question here"}'
 
 # POST /chat/stream (Server-Sent Events)
-curl -X POST http://localhost:8000/chat/stream \
+curl -X POST http://localhost:8058/chat/stream \
   -H "Content-Type: application/json" \
   -d '{"message": "Your question here"}'
 ```
@@ -59,7 +59,7 @@ curl -X POST http://localhost:8000/chat/stream \
 ```bash
 # GET /search/{mode}?q=query&limit=10
 # Modes: vector, graph, hybrid
-curl http://localhost:8000/search/hybrid?q=Microsoft%20OpenAI&limit=5
+curl http://localhost:8058/search/hybrid?q=Microsoft%20OpenAI&limit=5
 ```
 
 ### Search Strategies
@@ -187,12 +187,12 @@ GOOGLE_DRIVE_CREDENTIALS_PATH=config/google_credentials.json
 - [`sources/google_drive.py`](../src/rag_pipeline/sources/google_drive.py): Google Drive integration
 - [`sources/local_files.py`](../src/rag_pipeline/sources/local_files.py): Local file processing
 
-**Agentic RAG Pipeline** ([`EXAMPLE_agentic-rag-knowledge-graph/`](../EXAMPLE_agentic-rag-knowledge-graph/)):
-- [`ingestion/chunker.py`](../EXAMPLE_agentic-rag-knowledge-graph/ingestion/chunker.py): Semantic chunking
-- [`ingestion/embedder.py`](../EXAMPLE_agentic-rag-knowledge-graph/ingestion/embedder.py): Multi-model embeddings
-- [`ingestion/graph_builder.py`](../EXAMPLE_agentic-rag-knowledge-graph/ingestion/graph_builder.py): Knowledge extraction
-- [`agent/db_utils.py`](../EXAMPLE_agentic-rag-knowledge-graph/agent/db_utils.py): PostgreSQL operations
-- [`agent/graph_utils.py`](../EXAMPLE_agentic-rag-knowledge-graph/agent/graph_utils.py): Neo4j operations
+**Agentic RAG Pipeline** ([`src/agentic_rag/`](../src/agentic_rag/)):
+- [`ingestion/chunker.py`](../src/agentic_rag/ingestion/chunker.py): Semantic chunking
+- [`ingestion/embedder.py`](../src/agentic_rag/ingestion/embedder.py): Multi-model embeddings
+- [`ingestion/extractor.py`](../src/agentic_rag/ingestion/extractor.py): Knowledge extraction
+- [`storage/postgres_store.py`](../src/agentic_rag/storage/postgres_store.py): PostgreSQL operations
+- [`storage/neo4j_store.py`](../src/agentic_rag/storage/neo4j_store.py): Neo4j operations
 
 ## Running the Agent
 
@@ -273,7 +273,7 @@ For enhanced capabilities, you can use the MCP (Model Context Protocol) server:
 - **Function**: Intelligently routes queries to optimal search strategy
 - **Intent Analysis**: Automatic detection of query type
 - **Returns**: Chunks, facts, entities, and relationships
-- **Implementation**: [`EXAMPLE_agentic-rag-knowledge-graph/agent/tools.py`](../EXAMPLE_agentic-rag-knowledge-graph/agent/tools.py)
+- **Implementation**: [`src/agentic_rag/agent/tools.py`](../src/agentic_rag/agent/tools.py)
 
 #### `vector_search`
 - **Function**: Pure semantic similarity search
@@ -418,7 +418,7 @@ Query: "What is the capital of France?"
 → Strategy: vector_search
 → Response: <800ms
 
-# Relationship Intent (Graph Search)  
+# Relationship Intent (Graph Search)
 Query: "How is Microsoft connected to OpenAI?"
 → Intent: RELATIONSHIP (0.92 confidence)
 → Strategy: graph_search

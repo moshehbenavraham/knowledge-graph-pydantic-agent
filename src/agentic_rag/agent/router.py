@@ -74,15 +74,17 @@ class QueryRouter:
         )
 
         # Adjust based on entities
-        if analyzed_query.entities and len(analyzed_query.entities) > 2:
+        if (
+            analyzed_query.entities
+            and len(analyzed_query.entities) > 2
+            and primary_strategy == SearchStrategy.VECTOR_ONLY
+        ):
             # Multiple entities suggest relationship exploration
-            if primary_strategy == SearchStrategy.VECTOR_ONLY:
-                primary_strategy = SearchStrategy.HYBRID
+            primary_strategy = SearchStrategy.HYBRID
 
         # Adjust based on temporal context
-        if analyzed_query.temporal_context:
-            if primary_strategy == SearchStrategy.VECTOR_ONLY:
-                primary_strategy = SearchStrategy.GRAPH_FIRST
+        if analyzed_query.temporal_context and primary_strategy == SearchStrategy.VECTOR_ONLY:
+            primary_strategy = SearchStrategy.GRAPH_FIRST
 
         # Get fallback strategies
         fallbacks = self.fallback_map.get(primary_strategy, [SearchStrategy.HYBRID])

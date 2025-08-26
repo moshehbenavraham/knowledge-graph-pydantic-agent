@@ -13,18 +13,21 @@ This directory contains the Streamlit-based user interface for the Luminari AI A
 
 - **Interactive Chat Interface** - Clean, modern chat experience
 - **Multi-LLM Support** - Works with OpenAI, Anthropic, Ollama, and other providers
-- **RAG Integration** - Document search and retrieval capabilities
+- **Agentic RAG Integration** - Advanced document search with knowledge graph and vector search
+- **Knowledge Graph** - Entity relationships and temporal facts via Neo4j
 - **Long-term Memory** - Persistent conversation memory using Mem0
 - **Web Search** - Integration with Brave Search API and SearXNG
 - **Code Execution** - Safe code execution in sandboxed environments
 - **Image Analysis** - Vision capabilities for image understanding
 - **Real-time Streaming** - Token-by-token response streaming
+- **MCP Support** - Model Context Protocol for extended capabilities
 
 ## Prerequisites
 
 - Python 3.11+
 - Supabase account and project
 - LLM API access (OpenAI, Anthropic, etc.)
+- Neo4j database (for Agentic RAG features)
 - Optional: Brave Search API key
 
 ## Quick Start
@@ -57,6 +60,11 @@ Edit `.env` with your configuration:
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_KEY=your_supabase_service_role_key
 
+# ===== NEO4J (Knowledge Graph) =====
+NEO4J_URI=bolt://localhost:7687
+NEO4J_USER=neo4j
+NEO4J_PASSWORD=your_neo4j_password
+
 # ===== LLM CONFIGURATION =====
 LLM_PROVIDER=openai
 LLM_BASE_URL=https://api.openai.com/v1
@@ -77,6 +85,8 @@ ENABLE_WEB_SEARCH=true
 ENABLE_IMAGE_ANALYSIS=true
 ENABLE_LONG_TERM_MEMORY=true
 ENABLE_RAG=true
+ENABLE_AGENTIC_RAG=true
+ENABLE_GRAPH_SEARCH=true
 ```
 
 ### 3. Database Setup

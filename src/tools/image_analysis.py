@@ -2,8 +2,21 @@ import base64
 import os
 
 from pydantic_ai import Agent, BinaryContent
-from pydantic_ai.models.openai import OpenAIModel
-from pydantic_ai.providers.openai import OpenAIProvider
+
+try:
+    from pydantic_ai.models.openai import OpenAIModel
+except ImportError:
+    OpenAIModel = None
+
+try:
+    from pydantic_ai.providers.openai import OpenAIProvider
+except ImportError:
+    OpenAIProvider = None
+
+try:
+    from pydantic_ai.models.anthropic import AnthropicModel
+except ImportError:
+    AnthropicModel = None
 
 from supabase.client import Client
 
@@ -17,7 +30,8 @@ async def image_analysis_tool(supabase: Client, document_id: str, query: str) ->
 
         # Define the vision agent based on the provider
         if provider == "anthropic":
-            from pydantic_ai.models.anthropic import AnthropicModel
+            if not AnthropicModel:
+                raise ImportError("Anthropic model not available")
 
             # Map common model names to Anthropic's naming
             model_map = {

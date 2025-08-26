@@ -25,11 +25,11 @@ The Phase 3 Agent Intelligence Layer provides advanced query understanding and i
 **Strategy Selected:** Vector Search
 **Response:** "The capital of France is Paris. [Confidence: 0.98] [Sources: geography_facts.pdf]"
 
-#### 2. Relationship Intent  
+#### 2. Relationship Intent
 **Query:** "How is Microsoft connected to OpenAI?"
 **Intent Detected:** RELATIONSHIP
 **Strategy Selected:** Graph Search
-**Response:** 
+**Response:**
 ```
 Microsoft has several connections to OpenAI:
 
@@ -43,7 +43,7 @@ Microsoft has several connections to OpenAI:
 
 #### 3. Temporal Intent
 **Query:** "When did the AI revolution begin and how has it evolved?"
-**Intent Detected:** TEMPORAL  
+**Intent Detected:** TEMPORAL
 **Strategy Selected:** Graph Search + Timeline
 **Response:**
 ```
@@ -126,7 +126,7 @@ result = await smart_search(query)
 
 # Intent: FACTUAL + TEMPORAL
 # Strategy Selected: Hybrid Search
-# Combines vector search for "Microsoft acquisitions" with 
+# Combines vector search for "Microsoft acquisitions" with
 # graph search for recent acquisition relationships
 ```
 
@@ -138,7 +138,7 @@ result = await comprehensive_search(query)
 
 # Executes:
 # 1. Vector search for cloud provider information
-# 2. Graph search for competitive relationships  
+# 2. Graph search for competitive relationships
 # 3. Timeline analysis for AI offering evolution
 # 4. Entity relationship mapping
 # 5. Intelligent result merging
@@ -161,10 +161,10 @@ result = await iterative_search(query)
 #### Using the FastAPI Server
 ```bash
 # Start the Agentic RAG API
-python -m EXAMPLE_agentic-rag-knowledge-graph.agent.api
+python -m src.api.main
 
 # Chat with intent analysis
-curl -X POST http://localhost:8000/chat \
+curl -X POST http://localhost:8058/chat \
   -H "Content-Type: application/json" \
   -d '{
     "message": "How are Tesla and SpaceX related to Elon Musk?",
@@ -173,7 +173,7 @@ curl -X POST http://localhost:8000/chat \
 
 # Response includes:
 # - Intent analysis results
-# - Selected search strategy  
+# - Selected search strategy
 # - Confidence scores
 # - Source citations
 # - Follow-up questions
@@ -182,13 +182,13 @@ curl -X POST http://localhost:8000/chat \
 #### Direct Search API
 ```bash
 # Vector search
-curl "http://localhost:8000/search/vector?q=machine%20learning%20algorithms&limit=5"
+curl "http://localhost:8058/search/vector?q=machine%20learning%20algorithms&limit=5"
 
-# Graph search  
-curl "http://localhost:8000/search/graph?q=Microsoft%20OpenAI%20relationship&limit=3"
+# Graph search
+curl "http://localhost:8058/search/graph?q=Microsoft%20OpenAI%20relationship&limit=3"
 
 # Hybrid search
-curl "http://localhost:8000/search/hybrid?q=AI%20startup%20funding%20trends&limit=8"
+curl "http://localhost:8058/search/hybrid?q=AI%20startup%20funding%20trends&limit=8"
 ```
 
 #### Python SDK Usage
@@ -204,7 +204,7 @@ response = await agent.chat(
 )
 
 print(f"Answer: {response.answer}")
-print(f"Intent: {response.intent}")  
+print(f"Intent: {response.intent}")
 print(f"Strategy: {response.search_strategy}")
 print(f"Confidence: {response.confidence}")
 print(f"Sources: {response.sources}")
@@ -216,7 +216,7 @@ print(f"Follow-ups: {response.follow_up_questions}")
 #### Batch Document Processing
 ```bash
 # Ingest multiple documents with knowledge extraction
-python -m EXAMPLE_agentic-rag-knowledge-graph.cli ingest \
+python -m src.agentic_rag.ingestion.pipeline ingest \
   path/to/documents \
   --chunk-size 1000 \
   --extract-entities \
@@ -224,7 +224,7 @@ python -m EXAMPLE_agentic-rag-knowledge-graph.cli ingest \
 
 # Output:
 # Processed: 15 documents
-# Created: 1,247 chunks  
+# Created: 1,247 chunks
 # Extracted: 342 entities, 158 relationships, 89 temporal facts
 # Storage: 18MB PostgreSQL, 85KB Neo4j (99.5% savings)
 ```
@@ -239,12 +239,12 @@ pipeline = IngestionPipeline()
 # Process document with full knowledge extraction
 result = await pipeline.ingest_document(
     content="Tesla announced a new AI chip for autonomous driving...",
-    title="Tesla AI Chip Announcement",  
+    title="Tesla AI Chip Announcement",
     source="tech_news_2024.pdf"
 )
 
 print(f"Entities: {result.entities_count}")
-print(f"Facts: {result.facts_count}")  
+print(f"Facts: {result.facts_count}")
 print(f"Processing time: {result.processing_time}ms")
 ```
 

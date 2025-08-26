@@ -1,1 +1,41 @@
--e .[dev]
+# Core dependencies - compile with: pip-compile requirements.in
+pydantic-ai[anthropic]
+pydantic
+streamlit
+python-dotenv
+openai
+anthropic
+ollama
+mem0ai
+supabase
+vecs
+brave-search-python-client
+pypdf
+google-api-python-client
+structlog
+prometheus-client
+psutil
+fastapi
+uvicorn
+click
+httpx
+asyncpg
+numpy
+pandas
+aiofiles
+RestrictedPython
+pillow
+pgvector
+altair
+mcp
+anyio
+
+# RAG dependencies (for Agentic RAG)
+watchdog
+python-docx
+openpyxl
+unstructured
+graphiti-core
+neo4j
+tiktoken
+sentence-transformers

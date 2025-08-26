@@ -18,30 +18,30 @@ This design ensures zero content duplication while providing powerful graph-base
 graph TB
     A[Pydantic AI Agent] --> B[Query Intent Analyzer]
     B --> C{Search Strategy}
-    
+
     C -->|Vector| D[PostgreSQL/Supabase]
     C -->|Graph| E[Neo4j Knowledge Graph]
     C -->|Hybrid| F[Parallel Search]
-    
+
     D --> G[Document Chunks]
     D --> H[Embeddings]
     D --> I[Metadata]
-    
+
     E --> J[Entities]
     E --> K[Relationships]
     E --> L[Temporal Facts]
-    
+
     F --> D
     F --> E
-    
+
     G --> M[Result Merger]
     J --> M
     K --> M
     L --> M
-    
+
     M --> N[Response Generator]
     N --> O[User]
-    
+
     P[Document Ingestion] --> Q[Chunking]
     Q --> R[Embedding Generation]
     R --> D
@@ -333,15 +333,15 @@ The Phase 3 Agent Intelligence Layer features an advanced intent analysis system
 ```python
 class AdvancedIntentAnalyzer:
     """Phase 3 Intent Analysis with 8 intent types and entity extraction."""
-    
+
     def analyze(self, query: str) -> IntentAnalysisResult:
         """Comprehensive intent analysis with confidence scoring."""
-        
+
         # Extract entities and temporal context
         entities = self.extract_entities(query)
         temporal_context = self.detect_temporal_context(query)
         complexity_score = self.calculate_complexity(query)
-        
+
         # Determine primary intent
         intent_scores = {
             IntentType.FACTUAL: self.score_factual_intent(query),
@@ -353,10 +353,10 @@ class AdvancedIntentAnalyzer:
             IntentType.DEFINITION: self.score_definition_intent(query),
             IntentType.MULTI_HOP: self.score_multi_hop_intent(query)
         }
-        
+
         primary_intent = max(intent_scores, key=intent_scores.get)
         confidence = intent_scores[primary_intent]
-        
+
         return IntentAnalysisResult(
             primary_intent=primary_intent,
             confidence=confidence,
@@ -368,11 +368,11 @@ class AdvancedIntentAnalyzer:
 
     def recommend_strategy(self, intent: IntentType, complexity: float) -> SearchStrategy:
         """Route queries to optimal search strategy based on intent."""
-        
+
         # High complexity queries benefit from comprehensive search
         if complexity > 0.8:
             return SearchStrategy.COMPREHENSIVE
-        
+
         # Intent-based routing
         strategy_map = {
             IntentType.FACTUAL: SearchStrategy.VECTOR_HEAVY,
@@ -384,7 +384,7 @@ class AdvancedIntentAnalyzer:
             IntentType.DEFINITION: SearchStrategy.VECTOR_HEAVY,
             IntentType.MULTI_HOP: SearchStrategy.ITERATIVE
         }
-        
+
         return strategy_map.get(intent, SearchStrategy.SMART)
 ```
 
@@ -404,36 +404,36 @@ The Phase 3 implementation includes an advanced response generation system with 
 ```python
 class ResponseGenerator:
     """Phase 3 Response Generation with citations and confidence scoring."""
-    
+
     async def generate_response(
-        self, 
-        query: str, 
+        self,
+        query: str,
         search_results: List[SearchResult],
         intent_result: IntentAnalysisResult
     ) -> AgentResponse:
         """Generate response with citations and confidence scoring."""
-        
+
         # Synthesize information from multiple sources
         synthesized_content = await self.synthesize_information(search_results)
-        
+
         # Generate response with citations
         response_text = await self.generate_with_citations(
             query, synthesized_content, intent_result
         )
-        
+
         # Calculate confidence score
         confidence = self.calculate_confidence(
             search_results, synthesized_content, intent_result
         )
-        
+
         # Extract citations
         citations = self.extract_citations(search_results, response_text)
-        
+
         # Generate follow-up questions
         follow_ups = await self.generate_follow_ups(
             query, response_text, intent_result
         )
-        
+
         return AgentResponse(
             answer=response_text,
             confidence=confidence,
@@ -697,7 +697,7 @@ all_memories = await memory.get_all(user_id="user_123")
 
 3. **Initialize Knowledge Graph**
    ```bash
-   python -m EXAMPLE_agentic-rag-knowledge-graph.agent.graph_utils init
+   python -m src.agentic_rag.storage.neo4j_store init
    ```
 
 ### 3. Environment Configuration

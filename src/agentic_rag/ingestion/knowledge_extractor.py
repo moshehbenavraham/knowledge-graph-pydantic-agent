@@ -539,7 +539,7 @@ class KnowledgeExtractor:
                 try:
                     # Simple parsing - would need more robust solution in production
                     return datetime.now()  # Placeholder
-                except:
+                except (ValueError, TypeError):
                     pass
 
         return None

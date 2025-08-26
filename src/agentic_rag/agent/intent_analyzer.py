@@ -127,24 +127,21 @@ class IntentAnalyzer:
 
         # Check patterns in priority order
         if any(re.search(p, query_lower) for p in self.relationship_patterns):
-            return QueryIntent.RELATIONSHIP
+            intent = QueryIntent.RELATIONSHIP
+        elif any(re.search(p, query_lower) for p in self.temporal_patterns):
+            intent = QueryIntent.TEMPORAL
+        elif "compare" in query_lower or "vs" in query_lower:
+            intent = QueryIntent.COMPARISON
+        elif any(term in query_lower for term in ["all", "list", "summary", "overview"]):
+            intent = QueryIntent.AGGREGATION
+        elif any(re.search(p, query_lower) for p in self.factual_patterns):
+            intent = QueryIntent.FACTUAL
+        elif "?" not in query and len(query.split()) > 10:
+            intent = QueryIntent.EXPLORATORY
+        else:
+            intent = QueryIntent.FACTUAL  # Default
 
-        if any(re.search(p, query_lower) for p in self.temporal_patterns):
-            return QueryIntent.TEMPORAL
-
-        if "compare" in query_lower or "vs" in query_lower:
-            return QueryIntent.COMPARISON
-
-        if any(term in query_lower for term in ["all", "list", "summary", "overview"]):
-            return QueryIntent.AGGREGATION
-
-        if any(re.search(p, query_lower) for p in self.factual_patterns):
-            return QueryIntent.FACTUAL
-
-        if "?" not in query and len(query.split()) > 10:
-            return QueryIntent.EXPLORATORY
-
-        return QueryIntent.FACTUAL  # Default
+        return intent
 
     def _find_secondary_intents(self, query: str) -> list[QueryIntent]:
         """Find secondary intents in the query."""
@@ -152,17 +149,22 @@ class IntentAnalyzer:
         query_lower = query.lower()
 
         # Check for multiple intent indicators
-        if any(re.search(p, query_lower) for p in self.relationship_patterns):
-            if QueryIntent.RELATIONSHIP not in secondary_intents:
-                secondary_intents.append(QueryIntent.RELATIONSHIP)
+        if (
+            any(re.search(p, query_lower) for p in self.relationship_patterns)
+            and QueryIntent.RELATIONSHIP not in secondary_intents
+        ):
+            secondary_intents.append(QueryIntent.RELATIONSHIP)
 
-        if any(re.search(p, query_lower) for p in self.temporal_patterns):
-            if QueryIntent.TEMPORAL not in secondary_intents:
-                secondary_intents.append(QueryIntent.TEMPORAL)
+        if (
+            any(re.search(p, query_lower) for p in self.temporal_patterns)
+            and QueryIntent.TEMPORAL not in secondary_intents
+        ):
+            secondary_intents.append(QueryIntent.TEMPORAL)
 
-        if "compare" in query_lower or "difference" in query_lower:
-            if QueryIntent.COMPARISON not in secondary_intents:
-                secondary_intents.append(QueryIntent.COMPARISON)
+        if (
+            "compare" in query_lower or "difference" in query_lower
+        ) and QueryIntent.COMPARISON not in secondary_intents:
+            secondary_intents.append(QueryIntent.COMPARISON)
 
         return secondary_intents
 
@@ -174,11 +176,17 @@ class IntentAnalyzer:
 
         # Look for capitalized words (simple heuristic)
         words = query.split()
-        for word in words:
-            if word[0].isupper() and len(word) > 1:
-                # Filter out common starting words
-                if word.lower() not in ["what", "who", "where", "when", "how", "why"]:
-                    entities.append(word.strip(".,!?"))
+        # Use list comprehension for entity extraction
+        word_entities = [
+            word.strip(".,!?")
+            for word in words
+            if (
+                word[0].isupper()
+                and len(word) > 1
+                and word.lower() not in ["what", "who", "where", "when", "how", "why"]
+            )
+        ]
+        entities.extend(word_entities)
 
         # Look for quoted terms
         quoted = re.findall(r'"([^"]*)"', query)
