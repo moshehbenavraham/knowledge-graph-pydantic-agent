@@ -75,7 +75,7 @@ test_results/
 coverage.xml
 *.cover
 
-# Cursor AI files
+# AI Assistant files and directories
 .cursorrules
 CLAUDE.md
 .grok/
