@@ -30,7 +30,13 @@ security:
 
 # Running Services
 run-ui:
-	streamlit run src/ui/streamlit_app.py
+	UI_MODE=$(or $(MODE),standard) streamlit run src/ui/streamlit_app.py
+
+run-ui-simple:
+	UI_MODE=simple streamlit run src/ui/streamlit_app.py
+
+run-ui-advanced:
+	UI_MODE=advanced streamlit run src/ui/streamlit_app.py
 
 run-rag:
 	python -m src.rag_pipeline.pipeline
@@ -45,7 +51,7 @@ run-agentic-rag:
 	python -m src.agentic_rag.agent.agent
 
 dev:
-	streamlit run src/ui/streamlit_app.py --server.runOnSave true
+	UI_MODE=$(or $(MODE),standard) streamlit run src/ui/streamlit_app.py --server.runOnSave true
 
 # Docker
 docker-build:

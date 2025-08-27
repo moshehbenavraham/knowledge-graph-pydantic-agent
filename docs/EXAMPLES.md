@@ -1,610 +1,510 @@
-# Usage Examples
+# Usage Examples - Unified Super Agent
 
-This document provides comprehensive examples of how to use the Luminari AI Agent system effectively, including the advanced Agentic RAG capabilities with Phase 3 Agent Intelligence Layer.
+This document provides comprehensive examples of how to use the **Unified Super Agent** - our new all-in-one AI assistant that combines every capability into a single, powerful implementation.
 
 ## Table of Contents
 
-- [Agentic RAG Examples (Phase 3)](#agentic-rag-examples-phase-3)
+- [Quick Start](#quick-start)
 - [Basic Usage](#basic-usage)
-- [Research Workflows](#research-workflows)
-- [Document Analysis](#document-analysis)
-- [Code Execution](#code-execution)
-- [Data Analysis](#data-analysis)
-- [Multi-Tool Workflows](#multi-tool-workflows)
-- [Advanced Features](#advanced-features)
+- [Tool-Specific Examples](#tool-specific-examples)
+- [Advanced Workflows](#advanced-workflows)
+- [Search Strategies](#search-strategies)
+- [Multi-Tool Orchestration](#multi-tool-orchestration)
+- [Migration from Legacy Agents](#migration-from-legacy-agents)
 
-## Agentic RAG Examples (Phase 3)
+## Quick Start
 
-The Phase 3 Agent Intelligence Layer provides advanced query understanding and intelligent search orchestration. Here are examples showcasing the 8 intent types and smart routing capabilities.
-
-### Intent-Based Search Examples
-
-#### 1. Factual Intent
-**Query:** "What is the capital of France?"
-**Intent Detected:** FACTUAL
-**Strategy Selected:** Vector Search
-**Response:** "The capital of France is Paris. [Confidence: 0.98] [Sources: geography_facts.pdf]"
-
-#### 2. Relationship Intent
-**Query:** "How is Microsoft connected to OpenAI?"
-**Intent Detected:** RELATIONSHIP
-**Strategy Selected:** Graph Search
-**Response:**
-```
-Microsoft has several connections to OpenAI:
-
-1. **Investment Partnership**: Microsoft invested $10 billion in OpenAI in 2023
-2. **Technology Integration**: OpenAI's models are integrated into Microsoft products like Office 365
-3. **Azure Partnership**: OpenAI runs its infrastructure on Microsoft Azure
-4. **Strategic Alliance**: Long-term partnership for AI development
-
-[Confidence: 0.92] [Sources: tech_partnerships.pdf, Graph: Microsoft→INVESTED_IN→OpenAI]
-```
-
-#### 3. Temporal Intent
-**Query:** "When did the AI revolution begin and how has it evolved?"
-**Intent Detected:** TEMPORAL
-**Strategy Selected:** Graph Search + Timeline
-**Response:**
-```
-AI Revolution Timeline:
-
-• 1956: Dartmouth Conference - Birth of AI as a field
-• 1980s: Expert Systems boom
-• 1997: Deep Blue defeats world chess champion
-• 2012: AlexNet breakthrough in deep learning
-• 2017: Transformer architecture introduced
-• 2020: GPT-3 demonstrates large language model capabilities
-• 2022: ChatGPT launches, bringing AI to mainstream
-• 2023: GPT-4 and multimodal AI systems
-
-[Confidence: 0.89] [Sources: ai_history.pdf, Timeline graph analysis]
-```
-
-#### 4. Comparison Intent
-**Query:** "Compare Python and JavaScript for web development"
-**Intent Detected:** COMPARISON
-**Strategy Selected:** Hybrid Search
-**Response:**
-```
-Python vs JavaScript for Web Development:
-
-**Python:**
-✓ Excellent for backend with Django/Flask
-✓ Great data processing capabilities
-✓ Clean, readable syntax
-✗ Not native for frontend
-✗ Slower execution than compiled languages
-
-**JavaScript:**
-✓ Full-stack capability (frontend + Node.js backend)
-✓ Huge ecosystem and community
-✓ Fast development cycle
-✗ Type safety challenges (solved by TypeScript)
-✗ Callback complexity
-
-**Recommendation:** Use JavaScript for full-stack web apps, Python for data-heavy backend applications.
-
-[Confidence: 0.85] [Sources: programming_guide.pdf, web_dev_best_practices.md]
-```
-
-#### 5. Exploratory Intent
-**Query:** "What are the emerging trends in artificial intelligence?"
-**Intent Detected:** EXPLORATORY
-**Strategy Selected:** Comprehensive Search
-**Response:**
-```
-Emerging AI Trends (2024):
-
-🔬 **Technical Advances:**
-- Multimodal AI (text, image, video, audio)
-- Smaller, more efficient models (edge AI)
-- Retrieval-Augmented Generation (RAG)
-- Agent-based AI systems
-
-🏢 **Industry Applications:**
-- AI-powered drug discovery
-- Autonomous vehicle improvements
-- AI in cybersecurity
-- Personalized education platforms
-
-⚡ **Infrastructure:**
-- Specialized AI chips (beyond GPUs)
-- Federated learning systems
-- AI model optimization techniques
-
-[Confidence: 0.78] [Sources: Web search, ai_trends_2024.pdf, tech_reports/]
-```
-
-### Smart Search Tool Examples
-
-#### Using `smart_search`
 ```python
-# Automatically selects optimal strategy based on intent
-query = "What companies has Microsoft acquired recently?"
-result = await smart_search(query)
+from src.agent import super_agent, UnifiedAgentDeps, run_unified_agent
+from src.clients import get_supabase_client, get_embedding_client
+from httpx import AsyncClient
 
-# Intent: FACTUAL + TEMPORAL
-# Strategy Selected: Hybrid Search
-# Combines vector search for "Microsoft acquisitions" with
-# graph search for recent acquisition relationships
-```
-
-#### Using `comprehensive_search`
-```python
-# For complex queries requiring multiple strategies
-query = "Analyze the competitive landscape between cloud providers and their AI offerings"
-result = await comprehensive_search(query)
-
-# Executes:
-# 1. Vector search for cloud provider information
-# 2. Graph search for competitive relationships
-# 3. Timeline analysis for AI offering evolution
-# 4. Entity relationship mapping
-# 5. Intelligent result merging
-```
-
-#### Using `iterative_search`
-```python
-# For multi-hop reasoning queries
-query = "Who are the key researchers behind transformer architecture and what companies do they work for now?"
-result = await iterative_search(query)
-
-# Step 1: Find transformer research papers
-# Step 2: Extract researcher names
-# Step 3: Find current company affiliations
-# Step 4: Cross-reference and verify
-```
-
-### Advanced API Examples
-
-#### Using the FastAPI Server
-```bash
-# Start the Agentic RAG API
-python -m src.api.main
-
-# Chat with intent analysis
-curl -X POST http://localhost:8058/chat \
-  -H "Content-Type: application/json" \
-  -d '{
-    "message": "How are Tesla and SpaceX related to Elon Musk?",
-    "session_id": "user123"
-  }'
-
-# Response includes:
-# - Intent analysis results
-# - Selected search strategy
-# - Confidence scores
-# - Source citations
-# - Follow-up questions
-```
-
-#### Direct Search API
-```bash
-# Vector search
-curl "http://localhost:8058/search/vector?q=machine%20learning%20algorithms&limit=5"
-
-# Graph search
-curl "http://localhost:8058/search/graph?q=Microsoft%20OpenAI%20relationship&limit=3"
-
-# Hybrid search
-curl "http://localhost:8058/search/hybrid?q=AI%20startup%20funding%20trends&limit=8"
-```
-
-#### Python SDK Usage
-```python
-from EXAMPLE_agentic_rag_knowledge_graph.agent import AgenticRAGAgent
-
-# Initialize agent
-agent = AgenticRAGAgent()
-
-# Chat with full intelligence layer
-response = await agent.chat(
-    "What are the latest developments in quantum computing and who are the key players?"
+# Simplest usage
+result = await run_unified_agent(
+    query="What documents are available?",
+    session_id="quick_start"
 )
-
-print(f"Answer: {response.answer}")
-print(f"Intent: {response.intent}")
-print(f"Strategy: {response.search_strategy}")
-print(f"Confidence: {response.confidence}")
-print(f"Sources: {response.sources}")
-print(f"Follow-ups: {response.follow_up_questions}")
-```
-
-### Document Ingestion Examples
-
-#### Batch Document Processing
-```bash
-# Ingest multiple documents with knowledge extraction
-python -m src.agentic_rag.ingestion.pipeline ingest \
-  path/to/documents \
-  --chunk-size 1000 \
-  --extract-entities \
-  --extract-relationships
-
-# Output:
-# Processed: 15 documents
-# Created: 1,247 chunks
-# Extracted: 342 entities, 158 relationships, 89 temporal facts
-# Storage: 18MB PostgreSQL, 85KB Neo4j (99.5% savings)
-```
-
-#### Real-time Processing
-```python
-# Stream processing for real-time updates
-from EXAMPLE_agentic_rag_knowledge_graph.ingestion import IngestionPipeline
-
-pipeline = IngestionPipeline()
-
-# Process document with full knowledge extraction
-result = await pipeline.ingest_document(
-    content="Tesla announced a new AI chip for autonomous driving...",
-    title="Tesla AI Chip Announcement",
-    source="tech_news_2024.pdf"
-)
-
-print(f"Entities: {result.entities_count}")
-print(f"Facts: {result.facts_count}")
-print(f"Processing time: {result.processing_time}ms")
+print(result["response"])
 ```
 
 ## Basic Usage
 
-### Starting a Simple Conversation
+### Simple Chat Interface
 
 ```python
-# Using the Streamlit UI
-# 1. Start the application
-streamlit run src/ui/streamlit_app.py
+import asyncio
+from src.agent import run_unified_agent
 
-# 2. Navigate to http://localhost:8501
-# 3. Type your question in the chat input
+async def chat():
+    while True:
+        query = input("\nYou: ")
+        if query.lower() == 'exit':
+            break
+            
+        result = await run_unified_agent(
+            query=query,
+            session_id="chat_session",
+            memories="User prefers concise answers"
+        )
+        
+        print(f"\nAgent: {result['response']}")
+        
+asyncio.run(chat())
 ```
 
-**Example Queries:**
-- "What is machine learning?"
-- "Explain the difference between Python and JavaScript"
-- "How do I set up a virtual environment in Python?"
-
-### Memory-Aware Conversations
-
-The agent remembers your preferences and context across sessions:
-
-```
-User: I'm learning Python programming
-Agent: Great! Python is an excellent language to start with...
-
-[Later in the conversation]
-User: Show me some examples
-Agent: Here are some Python examples since you're learning Python...
-```
-
-## Research Workflows
-
-### Academic Research
-
-**Query:** "Find recent research papers on transformer architectures in NLP"
-
-**What happens:**
-1. Agent searches web for latest papers
-2. Retrieves relevant documents from knowledge base
-3. Synthesizes information from multiple sources
-4. Provides citations and links
-
-**Example Response:**
-```
-Based on recent research and documents in the knowledge base:
-
-**Recent Developments:**
-- Attention mechanisms have evolved beyond the original Transformer...
-- New architectures like GPT-4 and Claude show improvements in...
-
-**Key Papers:**
-1. "Attention Is All You Need" - Foundational transformer paper
-2. "BERT: Pre-training of Deep Bidirectional Transformers" - Bidirectional approach
-3. Recent work on efficient transformers...
-
-**Sources:**
-- Web search: Latest arXiv papers from 2024
-- Knowledge base: transformer_architectures.pdf, nlp_survey_2024.pdf
-```
-
-### Market Research
-
-**Query:** "What are the current trends in AI startups and their funding?"
-
-**Workflow:**
-1. Web search for recent funding news
-2. Query database for historical funding data
-3. Analyze trends and provide insights
-
-## Document Analysis
-
-### Uploading and Analyzing Documents
-
-1. **Upload Process:**
-   ```bash
-   # Place documents in the data directory
-   cp your_document.pdf data/
-
-   # Run RAG pipeline to process
-   python -m src.rag_pipeline.pipeline --source local --interval 60
-   ```
-
-2. **Analysis Queries:**
-   ```
-   User: "Analyze the financial performance in the Q3 report"
-   Agent: [Retrieves Q3_report.pdf] Based on the Q3 financial report...
-
-   User: "What are the key risks mentioned in the document?"
-   Agent: [Searches document content] The main risks identified include...
-   ```
-
-### Multi-Document Analysis
-
-**Query:** "Compare the methodologies used in research_paper_1.pdf and research_paper_2.pdf"
-
-**Process:**
-1. Retrieves content from both documents
-2. Identifies methodology sections
-3. Compares approaches
-4. Highlights similarities and differences
-
-## Code Execution
-
-### Data Analysis with Python
-
-**Query:** "Analyze this dataset and create visualizations"
+### With Full Configuration
 
 ```python
-# Agent executes:
-import pandas as pd
-import matplotlib.pyplot as plt
-import numpy as np
+from src.agent import super_agent, UnifiedAgentDeps
+import os
 
-# Load sample data
-data = pd.DataFrame({
-    'month': ['Jan', 'Feb', 'Mar', 'Apr', 'May'],
-    'sales': [1000, 1200, 1100, 1300, 1500],
-    'costs': [800, 900, 850, 950, 1000]
-})
-
-# Calculate profit
-data['profit'] = data['sales'] - data['costs']
-
-# Create visualization
-plt.figure(figsize=(10, 6))
-plt.plot(data['month'], data['sales'], label='Sales', marker='o')
-plt.plot(data['month'], data['costs'], label='Costs', marker='s')
-plt.plot(data['month'], data['profit'], label='Profit', marker='^')
-plt.legend()
-plt.title('Monthly Financial Performance')
-plt.show()
-
-print("Summary Statistics:")
-print(f"Average Sales: ${data['sales'].mean():.2f}")
-print(f"Average Profit: ${data['profit'].mean():.2f}")
-print(f"Profit Margin: {(data['profit'].mean()/data['sales'].mean()*100):.1f}%")
-```
-
-### Machine Learning Example
-
-**Query:** "Build a simple linear regression model to predict house prices"
-
-```python
-# Agent executes:
-from sklearn.linear_model import LinearRegression
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error, r2_score
-import numpy as np
-
-# Generate sample data
-np.random.seed(42)
-n_samples = 1000
-
-# Features: size, bedrooms, age
-size = np.random.normal(2000, 500, n_samples)
-bedrooms = np.random.poisson(3, n_samples)
-age = np.random.uniform(0, 50, n_samples)
-
-# Target: price (with some realistic relationships)
-price = (size * 150 + bedrooms * 10000 - age * 1000 +
-         np.random.normal(0, 20000, n_samples))
-
-# Prepare data
-X = np.column_stack([size, bedrooms, age])
-y = price
-
-# Split data
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-# Train model
-model = LinearRegression()
-model.fit(X_train, y_train)
-
-# Make predictions
-y_pred = model.predict(X_test)
-
-# Evaluate
-mse = mean_squared_error(y_test, y_pred)
-r2 = r2_score(y_test, y_pred)
-
-print(f"Model Performance:")
-print(f"R² Score: {r2:.3f}")
-print(f"RMSE: ${np.sqrt(mse):,.2f}")
-print(f"\nFeature Coefficients:")
-print(f"Size ($/sqft): ${model.coef_[0]:.2f}")
-print(f"Bedrooms: ${model.coef_[1]:,.2f}")
-print(f"Age ($/year): ${model.coef_[2]:.2f}")
-```
-
-## Data Analysis
-
-### SQL Queries for Business Intelligence
-
-**Query:** "Show me the top 10 customers by revenue this year"
-
-```sql
--- Agent executes:
-SELECT
-    customer_name,
-    SUM(order_total) as total_revenue,
-    COUNT(*) as order_count,
-    AVG(order_total) as avg_order_value
-FROM orders o
-JOIN customers c ON o.customer_id = c.id
-WHERE EXTRACT(YEAR FROM order_date) = EXTRACT(YEAR FROM CURRENT_DATE)
-GROUP BY customer_name
-ORDER BY total_revenue DESC
-LIMIT 10;
-```
-
-### Complex Analytics
-
-**Query:** "Analyze customer churn patterns and identify at-risk customers"
-
-```sql
--- Agent executes multiple queries:
-
--- 1. Calculate customer metrics
-WITH customer_metrics AS (
-    SELECT
-        customer_id,
-        COUNT(*) as total_orders,
-        MAX(order_date) as last_order_date,
-        AVG(order_total) as avg_order_value,
-        EXTRACT(DAYS FROM CURRENT_DATE - MAX(order_date)) as days_since_last_order
-    FROM orders
-    GROUP BY customer_id
-),
-
--- 2. Identify churn risk
-churn_risk AS (
-    SELECT *,
-        CASE
-            WHEN days_since_last_order > 90 THEN 'High Risk'
-            WHEN days_since_last_order > 60 THEN 'Medium Risk'
-            WHEN days_since_last_order > 30 THEN 'Low Risk'
-            ELSE 'Active'
-        END as churn_risk_level
-    FROM customer_metrics
+# Create custom dependencies
+deps = UnifiedAgentDeps(
+    supabase=get_supabase_client(),
+    embedding_client=get_embedding_client(),
+    http_client=AsyncClient(),
+    brave_api_key=os.getenv("BRAVE_API_KEY"),
+    jina_api_key=os.getenv("JINA_API_KEY"),
+    memories="User is a data scientist interested in ML",
+    session_id="advanced_session",
+    search_config={
+        "use_vector": True,
+        "use_graph": True,
+        "confidence_threshold": 0.85,
+        "max_results": 30
+    }
 )
 
--- 3. Summary by risk level
-SELECT
-    churn_risk_level,
-    COUNT(*) as customer_count,
-    AVG(avg_order_value) as avg_customer_value,
-    AVG(days_since_last_order) as avg_days_inactive
-FROM churn_risk
-GROUP BY churn_risk_level
-ORDER BY
-    CASE churn_risk_level
-        WHEN 'High Risk' THEN 1
-        WHEN 'Medium Risk' THEN 2
-        WHEN 'Low Risk' THEN 3
-        WHEN 'Active' THEN 4
-    END;
+result = await super_agent.run(
+    "Analyze the latest trends in machine learning",
+    deps=deps
+)
 ```
 
-## Multi-Tool Workflows
+## Tool-Specific Examples
 
-### Comprehensive Research Project
+### 1. Smart Search (Intelligent Routing)
 
-**Query:** "Research the impact of AI on job markets, analyze relevant data, and create a presentation"
+```python
+# The agent automatically determines the best search strategy
 
-**Workflow:**
-1. **Web Search:** Latest news and studies on AI job impact
-2. **Document Retrieval:** Academic papers from knowledge base
-3. **Data Analysis:** Employment statistics and trends
-4. **Code Execution:** Create visualizations and charts
-5. **Synthesis:** Combine all information into coherent analysis
+# Relationship query → Graph search
+result = await run_unified_agent(
+    "What is the relationship between OpenAI and Microsoft?"
+)
 
-**Example Process:**
-```
-1. Web Search Results:
-   - "AI could displace 40% of jobs in next decade" - Recent study
-   - "New AI roles emerging faster than traditional jobs lost" - Industry report
+# Similarity query → Vector search  
+result = await run_unified_agent(
+    "Find documents similar to neural networks"
+)
 
-2. Document Analysis:
-   - Retrieved: ai_employment_study_2024.pdf, future_of_work_report.pdf
-   - Key findings: Automation affects routine tasks most
-
-3. Data Analysis:
-   [SQL queries for employment data]
-   [Python code for trend analysis and visualization]
-
-4. Final Synthesis:
-   Based on current research and data analysis, AI's impact on employment shows...
+# Complex query → Hybrid search
+result = await run_unified_agent(
+    "Explain quantum computing with examples and timeline"
+)
 ```
 
-### Investment Research
+### 2. Web Search
 
-**Query:** "Analyze Tesla's financial performance and compare with competitors"
+```python
+# Real-time information from the internet
+result = await run_unified_agent(
+    "What are the latest AI developments in December 2024?"
+)
 
-**Multi-step Process:**
-1. **Web Search:** Recent Tesla news and stock performance
-2. **Database Query:** Historical financial data
-3. **Document Analysis:** Annual reports and SEC filings
-4. **Code Execution:** Financial ratio calculations and comparisons
-5. **Visualization:** Charts and graphs for presentation
-
-## Advanced Features
-
-### Image Analysis
-
-**Query:** "Analyze the chart in quarterly_report.png and extract key metrics"
-
-**Process:**
-1. Agent retrieves image from knowledge base
-2. Uses vision model to analyze chart
-3. Extracts numerical data and trends
-4. Provides structured summary
-
-### Memory-Driven Personalization
-
-**Long-term Context:**
-```
-Session 1: User asks about Python web frameworks
-Session 2: User asks about database integration
-Session 3: User asks "How do I deploy my application?"
-
-Agent Response: "Since you've been working with Python web frameworks and database integration, here are deployment options that work well with your stack..."
+# With specific provider preference
+deps = UnifiedAgentDeps(
+    web_search_provider="jina",  # Use Jina.ai for clean content
+    jina_api_key="your_key"
+)
+result = await super_agent.run(
+    "Get the latest news about SpaceX",
+    deps=deps
+)
 ```
 
-### Custom Workflows
+### 3. SQL Query Execution
 
-**Query:** "Create a daily market analysis report"
+```python
+# First, list available datasets
+result = await run_unified_agent(
+    "List all available documents and datasets"
+)
 
-**Automated Workflow:**
-1. Fetch latest market data
-2. Analyze key indicators
-3. Compare with historical trends
-4. Generate formatted report
-5. Highlight significant changes
+# Then query specific data
+result = await run_unified_agent(
+    """Execute SQL: 
+    SELECT 
+        row_data->>'category' as category,
+        COUNT(*) as count,
+        AVG((row_data->>'price')::numeric) as avg_price
+    FROM document_rows
+    WHERE dataset_id = 'sales_data_2024'
+    GROUP BY category
+    ORDER BY count DESC
+    """
+)
+```
+
+### 4. Code Execution
+
+```python
+# Simple calculations
+result = await run_unified_agent(
+    "Write and execute Python code to calculate factorial of 10"
+)
+
+# Complex algorithms
+result = await run_unified_agent(
+    """Write and execute Python code to:
+    1. Generate first 20 Fibonacci numbers
+    2. Calculate their mean and median
+    3. Create a simple ASCII chart
+    """
+)
+
+# Data processing
+result = await run_unified_agent(
+    """Execute this Python code:
+    import json
+    data = [1, 2, 3, 4, 5]
+    result = {
+        'sum': sum(data),
+        'mean': sum(data) / len(data),
+        'squared': [x**2 for x in data]
+    }
+    print(json.dumps(result, indent=2))
+    """
+)
+```
+
+### 5. Image Analysis
+
+```python
+# First, list available images
+result = await run_unified_agent(
+    "Show me all image files in the knowledge base"
+)
+
+# Analyze specific image
+result = await run_unified_agent(
+    "Analyze the image 'architecture_diagram.png' and describe what it shows"
+)
+
+# Extract specific information
+result = await run_unified_agent(
+    "Look at 'chart.png' and extract all the data points and labels"
+)
+```
+
+### 6. Document Management
+
+```python
+# Browse documents
+result = await run_unified_agent(
+    "List all PDF documents about machine learning"
+)
+
+# Retrieve full document
+result = await run_unified_agent(
+    "Get the complete content of 'ml_fundamentals.pdf'"
+)
+
+# Search within documents
+result = await run_unified_agent(
+    "Search for information about transformers in AI papers"
+)
+```
+
+## Advanced Workflows
+
+### Research Assistant
+
+```python
+async def research_topic(topic: str):
+    """Comprehensive research on a topic."""
+    
+    # Step 1: Initial search
+    overview = await run_unified_agent(
+        f"Provide an overview of {topic}",
+        session_id="research"
+    )
+    
+    # Step 2: Find relevant documents
+    docs = await run_unified_agent(
+        f"Find all documents related to {topic}",
+        session_id="research"
+    )
+    
+    # Step 3: Get latest information
+    latest = await run_unified_agent(
+        f"Search the web for latest developments in {topic}",
+        session_id="research"
+    )
+    
+    # Step 4: Synthesize
+    synthesis = await run_unified_agent(
+        f"Based on our research, create a comprehensive summary of {topic}",
+        session_id="research"
+    )
+    
+    return {
+        "overview": overview["response"],
+        "documents": docs["response"],
+        "latest_info": latest["response"],
+        "synthesis": synthesis["response"]
+    }
+
+# Use it
+research = await research_topic("quantum computing")
+```
+
+### Data Analysis Pipeline
+
+```python
+async def analyze_dataset(dataset_id: str):
+    """Complete data analysis workflow."""
+    
+    # Step 1: Explore structure
+    schema = await run_unified_agent(
+        f"Show me the schema and sample data from {dataset_id}"
+    )
+    
+    # Step 2: Statistical analysis
+    stats = await run_unified_agent(
+        f"""Execute SQL to get statistics:
+        SELECT 
+            COUNT(*) as total_rows,
+            COUNT(DISTINCT row_data->>'id') as unique_ids
+        FROM document_rows
+        WHERE dataset_id = '{dataset_id}'
+        """
+    )
+    
+    # Step 3: Visualization code
+    viz = await run_unified_agent(
+        f"""Write and execute Python code to create 
+        a simple histogram of the data distribution for {dataset_id}"""
+    )
+    
+    # Step 4: Insights
+    insights = await run_unified_agent(
+        f"Based on the analysis, what insights can you provide about {dataset_id}?"
+    )
+    
+    return {
+        "schema": schema["response"],
+        "statistics": stats["response"],
+        "visualization": viz["response"],
+        "insights": insights["response"]
+    }
+```
+
+## Search Strategies
+
+### Comprehensive Search
+
+```python
+# Execute all search strategies in parallel
+result = await run_unified_agent(
+    "Do a comprehensive search about artificial general intelligence"
+)
+
+# With custom configuration
+deps = UnifiedAgentDeps(
+    search_config={
+        "use_vector": True,
+        "use_graph": True,
+        "max_results": 50
+    }
+)
+result = await super_agent.run(
+    "Find everything about neural architecture search",
+    deps=deps
+)
+```
+
+### Iterative Search
+
+```python
+# Multi-step exploration for complex queries
+result = await run_unified_agent(
+    """Investigate the evolution of transformer models:
+    1. Start with the original paper
+    2. Find key improvements and variants
+    3. Identify current state-of-the-art
+    4. Predict future directions
+    """
+)
+```
+
+## Multi-Tool Orchestration
+
+### Complex Multi-Tool Query
+
+```python
+result = await run_unified_agent(
+    """Help me understand BERT:
+    1. Search documents for BERT architecture
+    2. Find the latest BERT variants on the web
+    3. Write Python code to show how attention works
+    4. If there are any diagrams, analyze them
+    5. Create a summary with all findings
+    """
+)
+```
+
+### Automated Report Generation
+
+```python
+async def generate_report(company: str):
+    """Generate comprehensive company report."""
+    
+    report = []
+    
+    # Gather information
+    tasks = [
+        ("Overview", f"Provide overview of {company}"),
+        ("Documents", f"Find all documents mentioning {company}"),
+        ("Web News", f"Get latest news about {company} from the web"),
+        ("Relationships", f"What companies is {company} connected to?"),
+        ("Data", f"Show any data or statistics about {company}")
+    ]
+    
+    for section, query in tasks:
+        result = await run_unified_agent(query)
+        report.append(f"## {section}\n{result['response']}\n")
+    
+    # Generate final report
+    final = await run_unified_agent(
+        f"Create an executive summary based on: {' '.join(report)}"
+    )
+    
+    return "\n".join(report) + f"\n## Executive Summary\n{final['response']}"
+
+# Generate report
+report = await generate_report("OpenAI")
+print(report)
+```
+
+## No Migration Needed!
+
+### Clean Architecture - One Agent Only
+
+The project now has **ONE unified agent** - no migration needed because the old agents have been removed!
+
+**The Only Way:**
+```python
+from src.agent import super_agent, UnifiedAgentDeps, run_unified_agent
+
+# Option 1: Simple usage
+result = await run_unified_agent(
+    query="Your question here",
+    session_id="my_session"
+)
+
+# Option 2: With dependencies
+deps = UnifiedAgentDeps(
+    supabase=client,
+    embedding_client=embed,
+    http_client=http,
+    memories="User context"
+)
+result = await super_agent.run(query, deps=deps)
+```
+
+### Why No Migration?
+
+- ✅ Legacy agents have been **DELETED**
+- ✅ Only `unified_agent.py` remains
+- ✅ All code updated to use the unified agent
+- ✅ No confusion - just one clean API
 
 ## Best Practices
 
-### Effective Query Formulation
+### 1. Session Management
+```python
+# Maintain context across queries
+session_id = "user_123_session"
+for query in queries:
+    result = await run_unified_agent(
+        query=query,
+        session_id=session_id  # Same session preserves context
+    )
+```
 
-**Good Queries:**
-- "Compare the performance of different machine learning algorithms for text classification"
-- "Analyze the financial trends in our Q3 data and identify areas for cost reduction"
-- "Find recent research on sustainable energy solutions and summarize key innovations"
+### 2. Memory Integration
+```python
+# Personalize responses with user context
+result = await run_unified_agent(
+    query="Recommend a programming language",
+    memories="User is a beginner interested in web development"
+)
+```
 
-**Less Effective Queries:**
-- "Tell me about AI" (too broad)
-- "Fix this" (lacks context)
-- "What should I do?" (unclear objective)
+### 3. Error Handling
+```python
+try:
+    result = await run_unified_agent(query)
+    if result["status"] == "success":
+        print(result["response"])
+    else:
+        print(f"Error: {result['error']}")
+except Exception as e:
+    print(f"Failed to run agent: {e}")
+```
 
-### Leveraging Memory
+### 4. Tool Selection Hints
+```python
+# Help the agent choose the right tool with clear queries
 
-- **Be specific about your role/context:** "I'm a data scientist working on customer segmentation"
-- **Mention your preferences:** "I prefer Python over R for analysis"
-- **Reference previous conversations:** "Building on our earlier discussion about neural networks..."
+# ✅ Good - Clear intent
+"Execute SQL: SELECT * FROM users WHERE active = true"
+"Search the web for latest SpaceX launch"
+"Analyze the image report_chart.png"
 
-### Optimizing Performance
+# ❌ Avoid - Ambiguous
+"Get data about users"  # SQL or search?
+"Information about SpaceX"  # Web or documents?
+```
 
-- **Use specific document references:** "According to the methodology in research_paper_1.pdf..."
-- **Break complex requests into steps:** "First analyze the data, then create visualizations"
-- **Provide context for code execution:** "Using the sales data from last quarter..."
+## Performance Tips
+
+1. **Use specific tools when you know what you need:**
+   ```python
+   # If you specifically need web search
+   result = await super_agent.run("search_web: latest AI news")
+   ```
+
+2. **Batch related queries in one session:**
+   ```python
+   # Good - maintains context
+   session = "analysis_001"
+   await run_unified_agent("Load dataset X", session_id=session)
+   await run_unified_agent("Analyze patterns", session_id=session)
+   await run_unified_agent("Generate insights", session_id=session)
+   ```
+
+3. **Configure search appropriately:**
+   ```python
+   # For simple queries - limit results
+   deps.search_config["max_results"] = 5
+   
+   # For research - comprehensive search
+   deps.search_config["max_results"] = 50
+   deps.search_config["use_graph"] = True
+   deps.search_config["use_vector"] = True
+   ```
+
+## Summary
+
+The Unified Super Agent (`src/agent/unified_agent.py`) is your one-stop solution for:
+- 🔍 Intelligent search with automatic routing
+- 🌐 Web search with multiple providers
+- 📊 SQL queries and data analysis
+- 💻 Safe Python code execution
+- 🖼️ Image analysis and understanding
+- 📄 Document management and RAG
+- 🧠 Memory-enhanced personalization
+
+No more confusion between multiple agents - just use `super_agent` for everything!

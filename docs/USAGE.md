@@ -1,22 +1,29 @@
 # Usage
 
-## Agentic RAG System (New)
+## 🆕 Unified Super Agent
 
 ### Overview
-The Agentic RAG system enhances traditional RAG with knowledge graph capabilities, providing intelligent search routing and relationship-aware retrieval.
+The Unified Super Agent (`src/agent/unified_agent.py`) is the ONLY agent in the system, combining ALL capabilities into one powerful implementation with intelligent routing, comprehensive toolset, and clean API.
 
-### Quick Start
+### Quick Start with Unified Agent
 
-#### Command Line Interface
-```bash
-# Chat with the agent
-python -m src.agentic_rag.agent.agent chat "What is the relationship between Microsoft and OpenAI?"
+#### Python Code
+```python
+from src.agent import super_agent, UnifiedAgentDeps, run_unified_agent
+from src.clients import get_supabase_client, get_embedding_client
+from httpx import AsyncClient
 
-# Ingest documents
-python -m src.agentic_rag.ingestion.pipeline ingest path/to/documents --chunk-size 1000
+# Simple usage
+result = await run_unified_agent(
+    query="What is the relationship between Microsoft and OpenAI?",
+    session_id="my_session",
+    supabase_client=get_supabase_client(),
+    embedding_client=get_embedding_client(),
+    http_client=AsyncClient(),
+    memories="User is interested in tech companies"
+)
 
-# Direct search
-python -m src.agentic_rag.agent.agent search --mode hybrid "Your query"
+print(result["response"])
 ```
 
 #### API Server
@@ -62,47 +69,92 @@ curl -X POST http://localhost:8058/chat/stream \
 curl http://localhost:8058/search/hybrid?q=Microsoft%20OpenAI&limit=5
 ```
 
-### Search Strategies
+### Unified Agent Search Strategies
 
-1. **Vector Search** (`/search/vector`)
-   - Semantic similarity search in PostgreSQL
-   - Returns document chunks with embeddings
-   - Best for: Content discovery, general questions
+The unified agent automatically selects the best strategy:
 
-2. **Graph Search** (`/search/graph`)
-   - Entity and relationship traversal in Neo4j
-   - Returns facts, entities, and connections
-   - Best for: Relationship queries, temporal analysis
+1. **Smart Search** (Primary Tool)
+   - Analyzes query intent
+   - Routes to optimal strategy
+   - Combines multiple approaches when needed
 
-3. **Hybrid Search** (`/search/hybrid`)
-   - Parallel execution of both strategies
-   - Intelligent result merging with boosting
-   - Best for: Complex queries requiring comprehensive results
+2. **Vector Search**
+   - Semantic similarity in PostgreSQL/pgvector
+   - Best for: Similar content, concepts
 
-### Python SDK Usage
+3. **Graph Search** (When Available)
+   - Entity relationships in Neo4j
+   - Best for: Connections, timelines
+
+4. **Comprehensive Search**
+   - Executes all strategies in parallel
+   - Intelligently merges results
+   - Best for: Complex, multi-faceted queries
+
+5. **Iterative Search**
+   - Multi-step exploration
+   - Refines based on initial results
+   - Best for: Deep research questions
+
+### Unified Agent Tools
+
+The unified agent provides these powerful tools:
 
 ```python
-from EXAMPLE_agentic_rag_knowledge_graph.agent import AgenticRAGAgent
-from EXAMPLE_agentic_rag_knowledge_graph.ingestion import IngestionPipeline
+# 1. Smart Search - Intelligent routing
+await super_agent.run("Find information about neural networks", deps=deps)
 
-# Initialize agent
-agent = AgenticRAGAgent()
+# 2. Web Search - Real-time information
+await super_agent.run("What's the latest AI news in 2024?", deps=deps)
 
-# Chat with agent
-response = await agent.chat("What companies did Microsoft acquire?")
-print(response.answer)
-print(f"Search strategy used: {response.search_type}")
-print(f"Sources: {response.sources}")
+# 3. SQL Queries - Analyze structured data
+await super_agent.run("Show me sales data from the database", deps=deps)
 
-# Ingest documents
-pipeline = IngestionPipeline()
-result = await pipeline.ingest_document(
-    content="Microsoft invested $10 billion in OpenAI...",
-    title="Tech News",
-    source="article.pdf"
+# 4. Code Execution - Run Python safely
+await super_agent.run("Calculate fibonacci sequence up to 10", deps=deps)
+
+# 5. Image Analysis - Understand visuals
+await super_agent.run("Analyze the diagram.png image", deps=deps)
+
+# 6. Document Management
+await super_agent.run("List all available documents", deps=deps)
+
+# 7. Comprehensive Search - Multi-strategy
+await super_agent.run("Do a comprehensive search about quantum computing", deps=deps)
+```
+
+### Advanced Usage with Custom Configuration
+
+```python
+from src.agent import super_agent, UnifiedAgentDeps
+from src.config import get_settings
+from src.config.agent import agent_config
+
+# Load centralized configuration
+settings = get_settings()
+
+# Create custom dependencies with config
+deps = UnifiedAgentDeps(
+    supabase=supabase_client,
+    embedding_client=embedding_client,
+    http_client=http_client,
+    brave_api_key=agent_config.brave_api_key,  # From config
+    jina_api_key=agent_config.jina_api_key,    # From config
+    memories="User context and preferences",
+    session_id="custom_session",
+    search_config={
+        "use_vector": settings.enable_vector_search,
+        "use_graph": settings.enable_graph,
+        "confidence_threshold": settings.confidence_threshold,
+        "max_results": settings.search_limit
+    }
 )
-print(f"Entities extracted: {result.entities_count}")
-print(f"Facts extracted: {result.facts_count}")
+
+# Run with custom config
+result = await super_agent.run(
+    "Complex multi-step query here",
+    deps=deps
+)
 ```
 
 ## Document Processing Pipeline
@@ -130,16 +182,20 @@ The enhanced Agentic RAG pipeline processes documents through dual storage:
 
 The RAG pipeline processes documents from local filesystem or Google Drive.
 
-**Configuration:** Environment variables in `.env`:
+**Configuration:** Using centralized config system (see [Configuration Guide](CONFIGURATION.md)):
 ```bash
-# Text processing settings
-EMBEDDING_MODEL_CHOICE=text-embedding-3-small
+# Text processing settings (in .env)
+EMBEDDING_MODEL=text-embedding-3-small
 EMBEDDING_API_KEY=your_openai_api_key
 EMBEDDING_BASE_URL=https://api.openai.com/v1
 
 # Database settings
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_KEY=your_service_role_key
+
+# Access in code via centralized config
+from src.config.clients import clients_config
+print(f"Embedding model: {clients_config.embedding_model}")
 ```
 
 **Execution:**
@@ -154,11 +210,20 @@ python -m src.rag_pipeline.pipeline --source local --interval 60
 python -m src.rag_pipeline.pipeline --source google_drive --interval 60
 ```
 
-**Processing Settings (configurable in code):**
-- **Chunk Size:** 400 characters (default)
-- **Chunk Overlap:** 0 characters (default)
-- **Supported Formats:** PDF, DOCX, TXT, MD, CSV, XLSX, images
-- **Embedding Model:** Configurable via `EMBEDDING_MODEL_CHOICE`
+**Processing Settings (via centralized config):**
+```python
+from src.config.agent import agent_config
+
+# Access chunking settings
+chunk_config = agent_config.get_chunking_config()
+print(f"Chunk Size: {chunk_config['chunk_size']}")  # 1000 (default)
+print(f"Chunk Overlap: {chunk_config['chunk_overlap']}")  # 200 (default)
+
+# Embedding settings
+from src.config.clients import clients_config
+print(f"Embedding Model: {clients_config.embedding_model}")
+print(f"Embedding Dimension: {clients_config.embedding_dimension}")
+```
 
 ### Google Drive Pipeline
 
@@ -198,27 +263,37 @@ GOOGLE_DRIVE_CREDENTIALS_PATH=config/google_credentials.json
 
 ### Streamlit Web Interface
 
-**Start the agent:**
+**Start the agent with configurable modes:**
 ```bash
-# Standard UI
+# Standard mode - streaming + tools (default)
 make run-ui
 
-# Development mode with auto-reload
-make dev
+# Simple mode - fast, no persistence
+make run-ui-simple
 
-# Or run directly
-streamlit run src/ui/streamlit_app.py
+# Advanced mode - all features enabled
+make run-ui-advanced
+
+# Custom mode selection
+make run-ui MODE=simple
+UI_MODE=advanced streamlit run src/ui/streamlit_app.py
+
+# Development mode with auto-reload
+make dev MODE=standard
 ```
 
 **Access:** http://localhost:8501
 
-**UI Variants:**
-- [`streamlit_app.py`](../src/ui/streamlit_app.py): Full-featured UI with memory
-- [`streamlit_ui_simple.py`](../src/ui/streamlit_ui_simple.py): Simplified interface
-- [`streamlit_ui_streaming.py`](../src/ui/streamlit_ui_streaming.py): Streaming responses
+**UI Modes (switchable at runtime via sidebar):**
+- **Simple Mode** 🟢: Basic chat without streaming or persistence
+- **Standard Mode** 🔵: Real-time streaming with tool visibility (recommended)
+- **Advanced Mode** 🟣: All features including memory, MCP servers, and metrics
 
 **Features:**
-- Real-time chat interface
+- Unified configurable interface with 3 modes
+- Runtime mode switching without restart
+- Real-time chat with streaming support
+- Conversation export to JSON
 - File upload for document processing
 - Conversation history with persistent memory
 - Tool execution visibility and feedback
@@ -243,7 +318,7 @@ The agent uses a custom safe execution environment implemented in [`src/tools/co
 - Custom print function for output capture
 
 **Configuration:**
-- Enabled by default in [`src/agent/agent.py`](../src/agent/agent.py) (lines 187-201)
+- Enabled by default in [`src/agent/unified_agent.py`](../src/agent/unified_agent.py)
 - Uses `execute_safe_code_tool` from [`src/tools/code_execution.py`](../src/tools/code_execution.py)
 - Can be disabled via `ENABLE_CODE_EXECUTION=false` in `.env`
 
@@ -257,7 +332,7 @@ For enhanced capabilities, you can use the MCP (Model Context Protocol) server:
    ```bash
    deno run -N -R=node_modules -W=node_modules --node-modules-dir=auto jsr:@pydantic/mcp-run-python sse
    ```
-3. Configure MCP in [`src/agent/agent.py`](../src/agent/agent.py) (see comments in the file)
+3. Configure MCP in [`src/agent/unified_agent.py`](../src/agent/unified_agent.py) (see comments in the file)
 4. Comment out the built-in `execute_code` tool
 
 **Benefits:**
@@ -273,7 +348,7 @@ For enhanced capabilities, you can use the MCP (Model Context Protocol) server:
 - **Function**: Intelligently routes queries to optimal search strategy
 - **Intent Analysis**: Automatic detection of query type
 - **Returns**: Chunks, facts, entities, and relationships
-- **Implementation**: [`src/agentic_rag/agent/tools.py`](../src/agentic_rag/agent/tools.py)
+- **Implementation**: Built into [`src/agent/unified_agent.py`](../src/agent/unified_agent.py) as smart_search tool
 
 #### `vector_search`
 - **Function**: Pure semantic similarity search
@@ -356,42 +431,67 @@ For enhanced capabilities, you can use the MCP (Model Context Protocol) server:
 
 ### Multi-Provider Setup
 ```bash
-# Primary LLM
+# Primary LLM (in .env)
 LLM_PROVIDER=openai
-LLM_CHOICE=gpt-4o-mini
+LLM_MODEL=gpt-4o-mini
+LLM_API_KEY=your_openai_key
 
 # Vision model for images
-VISION_LLM_CHOICE=gpt-4o-mini
+VISION_LLM_MODEL=gpt-4o-mini
 
 # Embedding model
 EMBEDDING_PROVIDER=openai
-EMBEDDING_MODEL_CHOICE=text-embedding-3-small
+EMBEDDING_MODEL=text-embedding-3-small
+EMBEDDING_API_KEY=your_openai_key
 
 # Search providers
 BRAVE_API_KEY=your_brave_api_key  # Primary
 SEARXNG_BASE_URL=http://localhost:8080  # Fallback
+JINA_API_KEY=your_jina_key  # For clean content extraction
+```
+
+```python
+# Access configuration in code
+from src.config import get_settings
+from src.config.clients import clients_config
+
+settings = get_settings()
+print(f"LLM Provider: {settings.llm_provider}")
+print(f"LLM Model: {clients_config.llm_model}")
 ```
 
 ### Local Ollama Setup
 ```bash
-# Use Ollama for LLM
+# Use Ollama for LLM (in .env)
 LLM_PROVIDER=ollama
 LLM_BASE_URL=http://localhost:11434
-LLM_CHOICE=llama3.1
+LLM_MODEL=llama3.1
 
 # Use Ollama for embeddings
 EMBEDDING_PROVIDER=ollama
 EMBEDDING_BASE_URL=http://localhost:11434
-EMBEDDING_MODEL_CHOICE=nomic-embed-text
+EMBEDDING_MODEL=nomic-embed-text
+EMBEDDING_DIMENSION=768  # Nomic uses 768d vectors
 
-# Phase 3 Agent Intelligence Layer Settings
-ENABLE_INTENT_ANALYSIS=true
-ENABLE_SMART_ROUTING=true
-INTENT_ANALYSIS_TIMEOUT=1.0
+# Performance settings
+ENABLE_GRAPH=true
+ENABLE_PARALLEL_SEARCH=true
+VECTOR_SEARCH_TIMEOUT=2.0
+GRAPH_SEARCH_TIMEOUT=3.0
 CONFIDENCE_THRESHOLD=0.7
 
 # Update SQL scripts for 768-dimensional embeddings
 # Change vector(1536) to vector(768) in sql/*.sql files
+```
+
+```python
+# Verify Ollama configuration
+from src.config import get_settings
+
+settings = get_settings()
+assert settings.llm_provider == "ollama"
+assert settings.embedding_dimension == 768
+print("Ollama configured successfully!")
 ```
 
 ### Phase 3 Performance Metrics (Live System)

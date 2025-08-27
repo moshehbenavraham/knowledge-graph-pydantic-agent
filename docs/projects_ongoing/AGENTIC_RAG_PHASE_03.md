@@ -1,5 +1,8 @@
 # Phase 3: Agent Intelligence (Days 7-9)
 
+> **Note**: This document has been updated (2025-08-27) to reflect the current unified agent architecture.  
+> The agent implementation has been consolidated into `src/agent/unified_agent.py` and the intent analyzer is now at `src/agentic_rag/search/intent_analyzer.py`.
+
 ## Executive Summary
 
 Phase 3 implements the intelligent agent layer using Pydantic AI, building upon the robust database infrastructure (Phase 1) and core components (Phase 2). This phase creates a context-aware agent capable of understanding query intent, intelligently routing searches, and generating well-sourced, confident responses.
@@ -53,7 +56,7 @@ Query Processing Flow:
 
 ### 3.1 Intent Analysis System
 
-#### Intent Analyzer Module (`src/agentic_rag/agent/intent_analyzer.py`)
+#### Intent Analyzer Module (`src/agentic_rag/search/intent_analyzer.py`)
 
 ```python
 from enum import Enum
@@ -62,32 +65,27 @@ from typing import List, Optional, Set
 import re
 from datetime import datetime
 
-class QueryIntent(Enum):
-    """Types of query intents."""
-    FACTUAL = "factual"              # Simple fact lookup
-    RELATIONSHIP = "relationship"      # Entity relationships
-    TEMPORAL = "temporal"             # Time-based queries
-    COMPARISON = "comparison"         # Comparing entities
-    EXPLORATORY = "exploratory"       # Open-ended exploration
-    AGGREGATION = "aggregation"       # Statistical/summary
-    DEFINITION = "definition"         # Concept explanation
-    MULTI_HOP = "multi_hop"          # Requires multiple steps
+class SearchIntent(Enum):
+    """Types of search intent."""
+    VECTOR_HEAVY = "vector_heavy"        # Semantic content search
+    GRAPH_HEAVY = "graph_heavy"          # Relationship/fact search
+    HYBRID = "hybrid"                    # Combined search
+    TEMPORAL = "temporal"                # Timeline/history search
+    ENTITY_FOCUSED = "entity_focused"    # Specific entity search
 
 class SearchStrategy(Enum):
     """Search strategies based on intent."""
     VECTOR_ONLY = "vector_only"
     GRAPH_ONLY = "graph_only"
     HYBRID = "hybrid"
-    VECTOR_FIRST = "vector_first"    # Vector with graph enrichment
-    GRAPH_FIRST = "graph_first"      # Graph with vector context
-    ITERATIVE = "iterative"          # Multi-step refinement
+    ADAPTIVE = "adaptive"            # Dynamically selected strategy
 
 @dataclass
 class AnalyzedQuery:
     """Analyzed query with extracted information."""
     original_query: str
-    primary_intent: QueryIntent
-    secondary_intents: List[QueryIntent]
+    primary_intent: SearchIntent
+    confidence: float
     entities: List[str]
     temporal_context: Optional[tuple[datetime, datetime]]
     relationship_types: List[str]

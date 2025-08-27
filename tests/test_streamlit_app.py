@@ -1,14 +1,13 @@
 import sys
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, call, patch
+from unittest.mock import AsyncMock, MagicMock, patch
+from enum import Enum
 
 import pytest
-from pydantic_ai import Agent
 from pydantic_ai.messages import (
-    PartDeltaEvent,
-    PartStartEvent,
+    ModelRequest,
+    ModelResponse,
     TextPart,
-    TextPartDelta,
     UserPromptPart,
 )
 
@@ -26,14 +25,67 @@ sys.path.append(str(Path(__file__).parent.parent.resolve() / "src"))
 
 # Import after mocking and path setup
 from ui.streamlit_app import (  # noqa: E402
+    UIMode,
+    UIConfig,
     display_message_part,
-    get_agent_deps,
-    initialize_mem0,
-    run_agent_with_streaming,
+    initialize_session_state,
+    handle_user_input,
+    export_conversation,
+    render_sidebar,
 )
-from ui.streamlit_app import (  # noqa: E402
-    main as streamlit_main,  # Rename to avoid conflict with pytest main
-)
+from ui.streamlit_app import main as streamlit_main  # noqa: E402
+from ui.features.base_handler import SimpleHandler  # noqa: E402
+from ui.features.streaming_handler import StreamingHandler  # noqa: E402
+from ui.features.memory_handler import MemoryHandler  # noqa: E402
+from ui.features.mcp_handler import MCPHandler  # noqa: E402
+
+
+class TestUIConfig:
+    def test_ui_modes(self):
+        config = UIConfig()
+        assert config.mode == UIMode.STANDARD  # Default mode
+        
+    def test_features_for_simple_mode(self):
+        features = UIConfig._get_features_for_mode(UIMode.SIMPLE)
+        assert features["streaming"] is False
+        assert features["memory"] is False
+        assert features["mcp"] is False
+        assert features["tools_visibility"] is False
+        assert features["metrics"] is False
+    
+    def test_features_for_standard_mode(self):
+        features = UIConfig._get_features_for_mode(UIMode.STANDARD)
+        assert features["streaming"] is True
+        assert features["memory"] is False
+        assert features["mcp"] is False
+        assert features["tools_visibility"] is True
+        assert features["metrics"] is False
+    
+    def test_features_for_advanced_mode(self):
+        features = UIConfig._get_features_for_mode(UIMode.ADVANCED)
+        assert features["streaming"] is True
+        assert features["memory"] is True
+        assert features["mcp"] is True
+        assert features["tools_visibility"] is True
+        assert features["metrics"] is True
+    
+    def test_get_handler_simple(self):
+        config = UIConfig()
+        config.mode = UIMode.SIMPLE
+        handler = config.get_handler()
+        assert isinstance(handler, SimpleHandler)
+    
+    def test_get_handler_standard(self):
+        config = UIConfig()
+        config.mode = UIMode.STANDARD
+        handler = config.get_handler()
+        assert isinstance(handler, StreamingHandler)
+    
+    def test_get_handler_advanced(self):
+        config = UIConfig()
+        config.mode = UIMode.ADVANCED
+        handler = config.get_handler()
+        assert isinstance(handler, MCPHandler)
 
 
 class TestStreamlitApp:
@@ -42,172 +94,218 @@ class TestStreamlitApp:
         # Reset Streamlit mocks before each test
         sys.modules["streamlit"].reset_mock()
         sys.modules["streamlit.session_state"].reset_mock()
-        sys.modules["streamlit.session_state"].messages = (
-            []
-        )  # Ensure messages is empty for each test
-
+        sys.modules["streamlit.session_state"].messages = []
+        sys.modules["streamlit.session_state"].config = UIConfig()
+        sys.modules["streamlit.session_state"].handler = None
+        sys.modules["streamlit.session_state"].theme = "light"
+        
         # Mock external dependencies
         with (
-            patch("ui.streamlit_app.get_agent_clients") as mock_get_agent_clients,
-            patch("ui.streamlit_app.get_mem0_client") as mock_get_mem0_client,
-            patch("ui.streamlit_app.agent") as mock_agent,
+            patch("ui.streamlit_app.get_llm_client") as mock_get_llm_client,
+            patch("ui.streamlit_app.get_supabase_client") as mock_get_supabase_client,
+            patch("ui.features.base_handler.get_llm_client") as mock_handler_llm_client,
+            patch("ui.features.base_handler.get_supabase_client") as mock_handler_supabase_client,
+            patch("ui.features.memory_handler.get_mem0_client") as mock_get_mem0_client,
             patch("ui.streamlit_app.AsyncClient") as mock_async_client,
-            patch("ui.streamlit_app.os.getenv") as mock_getenv,
+            patch("ui.streamlit_app.super_agent") as mock_super_agent,
+            patch("ui.features.base_handler.super_agent") as mock_handler_super_agent,
         ):
-
-            # Configure get_agent_clients mock
-            mock_embedding_client = MagicMock()
+            # Configure mocks
+            mock_llm_client = MagicMock()
             mock_supabase_client = MagicMock()
-            mock_get_agent_clients.return_value = (mock_embedding_client, mock_supabase_client)
-
-            # Configure get_mem0_client mock
+            mock_get_llm_client.return_value = mock_llm_client
+            mock_get_supabase_client.return_value = mock_supabase_client
+            mock_handler_llm_client.return_value = mock_llm_client
+            mock_handler_supabase_client.return_value = mock_supabase_client
+            
+            # Configure mem0 client mock
             mock_mem0_client = MagicMock()
-            mock_mem0_client.search.return_value = {"results": []}  # Default no memories
+            mock_mem0_client.search.return_value = {"results": []}
             mock_mem0_client.add.return_value = None
             mock_get_mem0_client.return_value = mock_mem0_client
-
-            # Configure agent mock
-            mock_agent_run_mcp_servers = AsyncMock()
-            mock_agent.run_mcp_servers.return_value.__aenter__.return_value = (
-                mock_agent_run_mcp_servers
-            )
-            mock_agent.run_mcp_servers.return_value.__aexit__.return_value = None
-
-            mock_agent_iter = AsyncMock()
-            mock_agent.iter.return_value.__aenter__.return_value = mock_agent_iter
-            mock_agent.iter.return_value.__aexit__.return_value = None
-            mock_agent_iter.result = MagicMock()
-            mock_agent_iter.result.new_messages.return_value = []  # Default no new messages
-
+            
             # Configure AsyncClient mock
             mock_http_client = AsyncMock()
             mock_async_client.return_value.__aenter__.return_value = mock_http_client
             mock_async_client.return_value.__aexit__.return_value = None
-
-            # Configure os.getenv mock
-            mock_getenv.side_effect = lambda key, default=None: {
-                "BRAVE_API_KEY": "test_brave_key",
-                "SEARXNG_BASE_URL": "test_searxng_url",
-            }.get(key, default)
-
-            self.mock_get_agent_clients = mock_get_agent_clients
+            
+            # Configure super_agent mock
+            mock_result = MagicMock()
+            mock_result.output = "Test response"
+            mock_result.new_messages.return_value = []
+            mock_super_agent.run.return_value = mock_result
+            mock_handler_super_agent.run.return_value = mock_result
+            
+            self.mock_get_llm_client = mock_get_llm_client
+            self.mock_get_supabase_client = mock_get_supabase_client
             self.mock_get_mem0_client = mock_get_mem0_client
-            self.mock_agent = mock_agent
             self.mock_async_client = mock_async_client
-            self.mock_getenv = mock_getenv
-            self.mock_mem0_client = mock_mem0_client
-            self.mock_agent_iter = mock_agent_iter
+            self.mock_super_agent = mock_super_agent
             self.mock_http_client = mock_http_client
-
+            self.mock_mem0_client = mock_mem0_client
+            
             yield
-
-    def test_get_agent_deps(self):
-        deps = get_agent_deps()
-        self.mock_get_agent_clients.assert_called_once()
-        assert deps == self.mock_get_agent_clients.return_value
-
-    def test_initialize_mem0(self):
-        mem0 = initialize_mem0()
-        self.mock_get_mem0_client.assert_called_once()
-        assert mem0 == self.mock_get_mem0_client.return_value
-
+    
     def test_display_message_part_user_prompt(self):
         mock_st = sys.modules["streamlit"]
         part = UserPromptPart(content="Hello user")
         display_message_part(part)
         mock_st.chat_message.assert_called_once_with("user")
         mock_st.markdown.assert_called_once_with("Hello user")
-
+    
     def test_display_message_part_text(self):
         mock_st = sys.modules["streamlit"]
         part = TextPart(content="Hello assistant")
         display_message_part(part)
         mock_st.chat_message.assert_called_once_with("assistant")
         mock_st.markdown.assert_called_once_with("Hello assistant")
-
-    @pytest.mark.asyncio
-    async def test_run_agent_with_streaming_basic_flow(self):
+    
+    def test_initialize_session_state(self):
         mock_st = sys.modules["streamlit"]
-        user_input = "test query"
-
-        # Mock agent.iter to yield some events
-        async def mock_agent_iter_yield():
-            yield MagicMock(
-                spec=Agent,
-                is_model_request_node=lambda x: True,
-                stream=AsyncMock(
-                    return_value=AsyncMock(
-                        __aenter__=AsyncMock(
-                            return_value=AsyncMock(
-                                __aiter__=AsyncMock(
-                                    return_value=[
-                                        PartStartEvent(part=TextPart(content="Hello")),
-                                        PartDeltaEvent(delta=TextPartDelta(content_delta=" world")),
-                                        PartDeltaEvent(delta=TextPartDelta(content_delta="!")),
-                                    ]
-                                )
-                            )
-                        )
-                    )
-                ),
-            )  # Corrected: Removed unnecessary backslashes before newlines and quotes
-
-        self.mock_agent_iter.__aiter__.return_value = (
-            mock_agent_iter_yield()
-        )  # Corrected: Removed unnecessary backslashes before newlines and quotes
-
-        # Mock new_messages to return some messages
-        self.mock_agent_iter.result.new_messages.return_value = [TextPart(content="Full response")]
-
-        # Run the streaming function
-        generator = run_agent_with_streaming(user_input)
-        full_response = ""
-        async for message_chunk in generator:
-            full_response += message_chunk
-
-        # Assertions
-        self.mock_mem0_client.search.assert_called_once_with(
-            query=user_input, user_id="streamlit_user", limit=3
-        )
-        self.mock_get_agent_clients.assert_called_once()
-        self.MockAsyncClient.assert_called_once()
-        self.mock_agent.run_mcp_servers.assert_called_once()
-        self.mock_agent.iter.assert_called_once()
-
-        assert full_response == "Hello world!"
-        assert mock_st.session_state.messages == [TextPart(content="Full response")]
-        self.mock_mem0_client.add.assert_called_once_with(
-            [{"role": "user", "content": user_input}], user_id="streamlit_user"
-        )
-
-    @pytest.mark.asyncio
-    async def test_main_function_flow(self):
+        mock_st.session_state = MagicMock()
+        mock_st.session_state.__contains__ = lambda self, key: False
+        mock_st.session_state.messages = None
+        mock_st.session_state.config = None
+        mock_st.session_state.handler = None
+        mock_st.session_state.theme = None
+        
+        initialize_session_state()
+        
+        assert mock_st.session_state.messages == []
+        assert isinstance(mock_st.session_state.config, UIConfig)
+        assert mock_st.session_state.handler is not None
+        assert mock_st.session_state.theme == "light"
+    
+    def test_export_conversation(self):
         mock_st = sys.modules["streamlit"]
-        mock_st.chat_input.return_value = "User input test"
-        mock_st.empty.return_value = MagicMock()
-
-        # Mock the streaming generator
-        async def mock_streaming_generator():
-            yield "chunk1"
-            yield "chunk2"
-
-        with patch(
-            "ui.streamlit_app.run_agent_with_streaming", return_value=mock_streaming_generator()
-        ) as mock_run_agent_with_streaming:
-            await streamlit_main()
-
-            # Assertions
-            assert mock_st.session_state.messages == []  # Initialized
-            mock_st.title.assert_called_once_with("Pydantic AI Agent")
-            mock_st.chat_input.assert_called_once_with("What do you want to do today?")
-
-            # User message displayed
-            mock_st.chat_message.assert_any_call("user")
-            mock_st.markdown.assert_any_call("User input test")
-
-            # Assistant message streaming
-            mock_st.chat_message.assert_any_call("assistant")
-            mock_st.empty.return_value.markdown.assert_has_calls(
-                [call("chunk1▌"), call("chunk1chunk2▌"), call("chunk1chunk2")]
-            )
-            mock_run_agent_with_streaming.assert_called_once_with("User input test")
+        mock_st.session_state.config = UIConfig()
+        mock_st.session_state.messages = [
+            ModelRequest(parts=[UserPromptPart(content="Test question")]),
+            ModelResponse(parts=[TextPart(content="Test answer")]),
+        ]
+        
+        export_conversation()
+        
+        # Check that download_button was called
+        mock_st.download_button.assert_called_once()
+        call_args = mock_st.download_button.call_args
+        assert call_args[1]["label"] == "Download JSON"
+        assert "conversation_" in call_args[1]["file_name"]
+        assert call_args[1]["mime"] == "application/json"
+    
+    @pytest.mark.asyncio
+    async def test_handle_user_input_simple_mode(self):
+        mock_st = sys.modules["streamlit"]
+        mock_st.session_state.config = UIConfig()
+        mock_st.session_state.config.mode = UIMode.SIMPLE
+        mock_st.session_state.config.features = UIConfig._get_features_for_mode(UIMode.SIMPLE)
+        mock_st.session_state.handler = mock_st.session_state.config.get_handler()
+        mock_st.session_state.handler.initialize = MagicMock()
+        mock_st.session_state.handler.initialize()
+        mock_st.session_state.messages = []
+        mock_st.spinner.return_value.__enter__ = MagicMock()
+        mock_st.spinner.return_value.__exit__ = MagicMock()
+        
+        # Mock the handler's run_agent method
+        mock_result = {
+            "response": "Simple response",
+            "new_messages": [],
+            "streaming": False
+        }
+        mock_st.session_state.handler.run_agent = AsyncMock(return_value=mock_result)
+        
+        await handle_user_input("Test input")
+        
+        # Verify user message was displayed
+        assert mock_st.chat_message.call_count >= 2  # User and assistant
+        mock_st.markdown.assert_any_call("Test input")
+        mock_st.markdown.assert_any_call("Simple response")
+    
+    @pytest.mark.asyncio
+    async def test_handle_user_input_streaming_mode(self):
+        mock_st = sys.modules["streamlit"]
+        mock_st.session_state.config = UIConfig()
+        mock_st.session_state.config.mode = UIMode.STANDARD
+        mock_st.session_state.config.features = UIConfig._get_features_for_mode(UIMode.STANDARD)
+        mock_st.session_state.handler = mock_st.session_state.config.get_handler()
+        mock_st.session_state.handler.initialize = MagicMock()
+        mock_st.session_state.handler.initialize()
+        mock_st.session_state.messages = []
+        
+        mock_placeholder = MagicMock()
+        mock_st.empty.return_value = mock_placeholder
+        
+        # Mock the handler's run_agent method to yield streaming chunks
+        async def mock_streaming():
+            yield {"type": "start", "content": "Hello"}
+            yield {"type": "delta", "content": " world"}
+            yield {"type": "complete", "new_messages": []}
+        
+        mock_st.session_state.handler.run_agent = mock_streaming
+        
+        await handle_user_input("Test input")
+        
+        # Verify streaming updates
+        assert mock_st.chat_message.call_count >= 2
+        mock_placeholder.markdown.assert_any_call("Hello▌")
+        mock_placeholder.markdown.assert_any_call("Hello world▌")
+        mock_placeholder.markdown.assert_any_call("Hello world")
+    
+    @pytest.mark.asyncio
+    async def test_main_function_configuration(self):
+        mock_st = sys.modules["streamlit"]
+        mock_st.set_page_config = MagicMock()
+        mock_st.title = MagicMock()
+        mock_st.caption = MagicMock()
+        mock_st.chat_input = MagicMock(return_value=None)
+        mock_st.session_state = MagicMock()
+        mock_st.session_state.__contains__ = lambda self, key: True
+        mock_st.session_state.messages = []
+        mock_st.session_state.config = UIConfig()
+        mock_st.session_state.handler = None
+        mock_st.session_state.theme = "light"
+        
+        with patch("ui.streamlit_app.initialize_session_state") as mock_init:
+            with patch("ui.streamlit_app.render_sidebar") as mock_sidebar:
+                await streamlit_main()
+                
+                # Verify page configuration
+                mock_st.set_page_config.assert_called_once()
+                config_args = mock_st.set_page_config.call_args
+                assert config_args[1]["page_title"] == "Pydantic AI Agent"
+                assert config_args[1]["page_icon"] == "🤖"
+                assert config_args[1]["layout"] == "wide"
+                
+                # Verify initialization
+                mock_init.assert_called_once()
+                
+                # Verify title
+                mock_st.title.assert_called_once_with("🤖 Pydantic AI Agent")
+                
+                # Verify mode indicator
+                mock_st.caption.assert_called()
+    
+    def test_render_sidebar(self):
+        mock_st = sys.modules["streamlit"]
+        mock_st.session_state.config = UIConfig()
+        mock_st.session_state.handler = mock_st.session_state.config.get_handler()
+        mock_st.sidebar = MagicMock()
+        mock_st.sidebar.__enter__ = MagicMock()
+        mock_st.sidebar.__exit__ = MagicMock()
+        
+        # Mock the various sidebar elements
+        mock_st.sidebar.title = MagicMock()
+        mock_st.sidebar.subheader = MagicMock()
+        mock_st.sidebar.radio = MagicMock(return_value=UIMode.STANDARD)
+        mock_st.sidebar.divider = MagicMock()
+        mock_st.sidebar.columns = MagicMock(return_value=[MagicMock(), MagicMock()])
+        mock_st.sidebar.button = MagicMock(return_value=False)
+        mock_st.sidebar.caption = MagicMock()
+        
+        with mock_st.sidebar:
+            render_sidebar()
+        
+        # Verify sidebar was populated
+        mock_st.sidebar.title.assert_called_with("⚙️ Settings")
+        mock_st.sidebar.subheader.assert_any_call("UI Mode")
+        mock_st.sidebar.radio.assert_called_once()

@@ -1,438 +1,405 @@
-# Configuration
+# Configuration Guide
 
-## Environment Variables
+## Overview
 
-All environment variables can be configured in your `.env` file. See [`.env.example`](../.env.example) for a complete template.
+The Base Agent uses a **centralized configuration system** built on Pydantic Settings, providing type safety, validation, and a single source of truth for all configuration values.
 
-### Required Core Settings
+## Configuration Architecture
 
-#### Supabase Database
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `SUPABASE_URL` | Supabase project URL | `https://your-project.supabase.co` |
-| `SUPABASE_SERVICE_KEY` | Supabase service role key | `eyJ...` |
-| `DATABASE_URL` | Same as SUPABASE_URL (for mem0) | `${SUPABASE_URL}` |
+### Core Components
 
-#### LLM Provider Settings
-| Variable | Options | Description | Default |
-|----------|---------|-------------|---------|
-| `LLM_PROVIDER` | `openai`, `openrouter`, `ollama` | Primary LLM service | `openai` |
-| `LLM_BASE_URL` | URL | Service endpoint | `https://api.openai.com/v1` |
-| `LLM_API_KEY` | String | Authentication key | Required |
-| `LLM_CHOICE` | Model name | Model identifier | `gpt-4o-mini` |
-
-#### Embedding Provider Settings
-| Variable | Options | Description | Default |
-|----------|---------|-------------|---------|
-| `EMBEDDING_PROVIDER` | `openai`, `ollama` | Embedding service | `openai` |
-| `EMBEDDING_BASE_URL` | URL | Service endpoint | `https://api.openai.com/v1` |
-| `EMBEDDING_API_KEY` | String | Authentication key | Required |
-| `EMBEDDING_MODEL_CHOICE` | Model name | Embedding model | `text-embedding-3-small` |
-
-### Agentic RAG Settings
-
-#### Neo4j Knowledge Graph
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `NEO4J_URI` | Neo4j connection URI | `bolt://localhost:7687` |
-| `NEO4J_USER` | Neo4j username | `neo4j` |
-| `NEO4J_PASSWORD` | Neo4j password | *Required* |
-| `NEO4J_DATABASE` | Neo4j database name | `neo4j` |
-| `NEO4J_ENCRYPTED` | Enable encrypted connection | `true` |
-| `NEO4J_POOL_SIZE` | Neo4j connection pool size | `50` |
-| `NEO4J_CONNECTION_TIMEOUT` | Connection timeout in seconds | `30.0` |
-| `NEO4J_MAX_RETRY_TIME` | Maximum retry time in seconds | `30` |
-
-#### Document Ingestion Configuration
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `CHUNK_SIZE` | Document chunk size in tokens | `1000` |
-| `CHUNK_OVERLAP` | Chunk overlap for context | `200` |
-| `MAX_ENTITIES_PER_CHUNK` | Entity extraction limit | `10` |
-| `MAX_FACT_LENGTH` | Maximum fact description length | `500` |
-| `USE_SEMANTIC_CHUNKING` | Enable semantic chunking | `true` |
-
-#### Performance Configuration
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `ENABLE_GRAPH` | Enable knowledge graph features | `true` |
-| `ENABLE_CACHING` | Enable result caching | `true` |
-| `ENABLE_PARALLEL_SEARCH` | Enable parallel search execution | `true` |
-| `VECTOR_SEARCH_TIMEOUT` | Vector search timeout in seconds | `2.0` |
-| `GRAPH_SEARCH_TIMEOUT` | Graph search timeout in seconds | `3.0` |
-| `EMBEDDING_CACHE_SIZE` | Embedding cache size | `1000` |
-| `EMBEDDING_CACHE_TTL` | Embedding cache TTL in seconds | `3600` |
-| `GRAPH_CACHE_SIZE` | Graph cache size | `500` |
-| `GRAPH_CACHE_TTL` | Graph cache TTL in seconds | `1800` |
-| `GRAPH_BATCH_SIZE` | Graph batch processing size | `10` |
-
-#### Connection Pool Configuration
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `PG_POOL_MIN` | PostgreSQL minimum pool size | `5` |
-| `PG_POOL_MAX` | PostgreSQL maximum pool size | `20` |
-| `PG_MAX_QUERIES` | PostgreSQL max queries per connection | `50000` |
-| `PG_MAX_INACTIVE_LIFETIME` | PostgreSQL connection lifetime (seconds) | `300` |
-| `PG_COMMAND_TIMEOUT` | PostgreSQL command timeout (seconds) | `60` |
-
-#### Circuit Breaker Configuration
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `CIRCUIT_BREAKER_FAILURE_THRESHOLD` | Failure threshold for circuit breaker | `5` |
-| `CIRCUIT_BREAKER_RECOVERY_TIMEOUT` | Recovery timeout in seconds | `60` |
-| `CIRCUIT_BREAKER_HALF_OPEN_REQUESTS` | Half-open state request limit | `3` |
-
-#### API Configuration
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `API_HOST` | API server host | `0.0.0.0` |
-| `API_PORT` | API server port | `8058` |
-| `CORS_ORIGINS` | CORS allowed origins (comma-separated) | `http://localhost:3000` |
-| `APP_ENV` | Application environment | `development` |
-
-#### Optional Redis Cache
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `REDIS_URL` | Redis connection URL | *Optional* |
-| `ENABLE_REDIS_CACHE` | Enable Redis caching | `false` |
-| `REDIS_POOL_SIZE` | Redis connection pool size | `10` |
-| `REDIS_SOCKET_TIMEOUT` | Redis socket timeout in seconds | `5` |
-
-#### LLM Configuration
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `LLM_MODEL` | Primary LLM model | `gpt-4o-mini` |
-| `EXTRACTION_MODEL` | Model for knowledge extraction | `gpt-4o-mini` |
-| `LLM_TEMPERATURE` | Model temperature | `0.7` |
-| `LLM_MAX_TOKENS` | Maximum tokens per response | `2000` |
-
-#### Embedding Configuration
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `EMBEDDING_MODEL` | Embedding model name | `text-embedding-3-small` |
-| `EMBEDDING_DIMENSION` | Embedding dimension | `1536` |
-| `EMBEDDING_BATCH_SIZE` | Batch size for embeddings | `100` |
-| `VECTOR_SEARCH_TIMEOUT` | Vector search timeout (seconds) | `2.0` |
-| `GRAPH_SEARCH_TIMEOUT` | Graph search timeout (seconds) | `3.0` |
-| `EMBEDDING_CACHE_SIZE` | Embedding cache size | `1000` |
-| `EMBEDDING_CACHE_TTL` | Cache TTL in seconds | `3600` |
-| `GRAPH_CACHE_SIZE` | Graph result cache size | `500` |
-| `GRAPH_CACHE_TTL` | Graph cache TTL in seconds | `1800` |
-
-### Optional Settings
-
-#### Search Provider Settings
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `BRAVE_API_KEY` | Brave Search API key | Empty (uses SearXNG) |
-| `SEARXNG_BASE_URL` | SearXNG instance URL | `http://localhost:8080` |
-
-#### Agent Settings
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `AGENT_NAME` | Agent display name | `Luminari` |
-| `AGENT_TEMPERATURE` | LLM temperature setting (0.0-1.0) | `0.7` |
-| `VISION_LLM_CHOICE` | Vision model for image analysis | Same as `LLM_CHOICE` |
-
-#### Feature Flags
-| Variable | Options | Description | Default |
-|----------|---------|-------------|---------|
-| `ENABLE_CODE_EXECUTION` | `true`, `false` | Enable/disable code execution tool | `false` |
-| `ENABLE_WEB_SEARCH` | `true`, `false` | Enable/disable web search functionality | `true` |
-| `ENABLE_IMAGE_ANALYSIS` | `true`, `false` | Enable/disable image analysis | `true` |
-| `ENABLE_LONG_TERM_MEMORY` | `true`, `false` | Enable/disable persistent memory | `true` |
-| `ENABLE_RAG` | `true`, `false` | Enable/disable RAG functionality | `true` |
-
-#### Optional Integrations
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `GOOGLE_DRIVE_FOLDER_ID` | Google Drive folder ID for document sync | No |
-| `GOOGLE_DRIVE_CREDENTIALS_PATH` | Path to Google credentials JSON | No |
-
-## Database Schema Setup
-
-### Required Tables
-
-Execute these SQL scripts in your Supabase SQL Editor in order:
-
-1. **[`sql/documents.sql`](../sql/documents.sql)** - Vector document storage
-   - Creates `documents` table with pgvector extension
-   - `id`: Primary key (bigserial)
-   - `content`: Document text content
-   - `metadata`: JSONB metadata (file_id, file_title, file_url)
-   - `embedding`: Vector column (1536 for OpenAI, 768 for Ollama)
-   - Includes `match_documents` function for vector search
-
-2. **[`sql/document_metadata.sql`](../sql/document_metadata.sql)** - Document metadata
-   - Creates `document_metadata` table
-   - Document titles, schemas, source URLs
-   - File type and processing information
-
-3. **[`sql/document_rows.sql`](../sql/document_rows.sql)** - Structured data storage
-   - Creates `document_rows` table
-   - Tabular data from CSV/Excel stored as JSONB
-   - `dataset_id` references document file_id
-
-4. **[`sql/execute_sql_rpc.sql`](../sql/execute_sql_rpc.sql)** - Secure query execution
-   - Creates `execute_custom_sql` RPC function
-   - Read-only SQL execution with security validation
-   - SQL injection protection and operation validation
-
-### Agentic RAG Database Setup
-
-#### PostgreSQL/Supabase Schema
-Execute [`sql/agentic_rag/schema.sql`](../sql/agentic_rag/schema.sql) after the standard setup:
-
-```sql
--- Enhanced chunks table with entity references
-CREATE TABLE IF NOT EXISTS chunks (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    document_id UUID REFERENCES documents(id) ON DELETE CASCADE,
-    content TEXT NOT NULL,
-    embedding vector(1536), -- Or 768 for Ollama
-    chunk_index INTEGER NOT NULL,
-    metadata JSONB DEFAULT '{}', -- Includes entity_refs
-    token_count INTEGER,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Index for entity references
-CREATE INDEX idx_chunks_entity_refs ON chunks
-    USING GIN ((metadata->'entity_refs'));
+```
+src/config/
+├── settings.py          # Main Settings class with Pydantic BaseSettings
+├── __init__.py         # Exports get_settings() singleton
+├── api.py              # API-specific configuration facade
+├── agent.py            # Agent and search configuration facade  
+├── clients.py          # Database and client configurations
+└── ui.py               # UI configuration facade
 ```
 
-#### Neo4j Knowledge Graph Setup
+### Key Features
+
+- **Type Safety**: Full Pydantic validation with helpful error messages
+- **Environment-based**: Loads from environment variables and `.env` files
+- **Validation**: Automatic validation with environment-specific rules
+- **Singleton Pattern**: Cached settings for performance
+- **Module Facades**: Clean interfaces for each subsystem
+- **Backward Compatible**: Maintains compatibility with legacy code
+
+## Quick Start
+
+### 1. Basic Setup
 
 ```bash
-# Docker deployment
-docker run -d \
-  --name neo4j \
-  -p 7474:7474 -p 7687:7687 \
-  -e NEO4J_AUTH=neo4j/password \
-  neo4j:latest
-
-# Or use Neo4j Aura cloud instance
-# Initialize the graph
-python -m src.agentic_rag.storage.neo4j_store init
-```
-
-### Vector Dimension Configuration
-
-**OpenAI Embeddings (default):**
-```sql
-embedding vector(1536)
-query_embedding vector(1536)
-```
-
-**Ollama Embeddings:**
-```sql
-embedding vector(768)
-query_embedding vector(768)
-```
-
-**Multiple Embedding Models:**
-The Agentic RAG system supports multiple embedding models simultaneously:
-```sql
--- Multi-model support
-embedding_openai vector(1536)
-embedding_nomic vector(768)
-embedding_model TEXT -- Track which model was used
-```
-
-**Important:** Update vector dimensions in SQL scripts before execution for Ollama deployments. Change all instances of `vector(1536)` to `vector(768)` in the SQL files.
-
-## Provider-Specific Configuration Examples
-
-### OpenAI (Default)
-```bash
-# Core LLM
-LLM_PROVIDER=openai
-LLM_BASE_URL=https://api.openai.com/v1
-LLM_API_KEY=sk-your-openai-key
-LLM_CHOICE=gpt-4o-mini
-
-# Embeddings
-EMBEDDING_PROVIDER=openai
-EMBEDDING_BASE_URL=https://api.openai.com/v1
-EMBEDDING_API_KEY=sk-your-openai-key
-EMBEDDING_MODEL_CHOICE=text-embedding-3-small
-
-# Vision model
-VISION_LLM_CHOICE=gpt-4o-mini
-```
-
-### OpenRouter
-```bash
-# Core LLM
-LLM_PROVIDER=openrouter
-LLM_BASE_URL=https://openrouter.ai/api/v1
-LLM_API_KEY=sk-or-your-openrouter-key
-LLM_CHOICE=anthropic/claude-3-sonnet
-
-# Embeddings (still use OpenAI)
-EMBEDDING_PROVIDER=openai
-EMBEDDING_BASE_URL=https://api.openai.com/v1
-EMBEDDING_API_KEY=sk-your-openai-key
-EMBEDDING_MODEL_CHOICE=text-embedding-3-small
-
-# Vision model
-VISION_LLM_CHOICE=anthropic/claude-3-sonnet
-```
-
-### Ollama (Local)
-```bash
-# Core LLM
-LLM_PROVIDER=ollama
-LLM_BASE_URL=http://localhost:11434
-LLM_CHOICE=llama3.1
-
-# Embeddings
-EMBEDDING_PROVIDER=ollama
-EMBEDDING_BASE_URL=http://localhost:11434
-EMBEDDING_MODEL_CHOICE=nomic-embed-text
-
-# Vision model
-VISION_LLM_CHOICE=llava
-```
-
-### Anthropic Claude (via API)
-```bash
-# Core LLM
-LLM_PROVIDER=anthropic
-LLM_API_KEY=sk-ant-your-key
-LLM_CHOICE=claude-3-5-sonnet-20241022
-
-# Use OpenAI for embeddings
-EMBEDDING_PROVIDER=openai
-EMBEDDING_API_KEY=sk-your-openai-key
-EMBEDDING_MODEL_CHOICE=text-embedding-3-small
-```
-
-### Google Gemini
-```bash
-# Core LLM
-LLM_PROVIDER=gemini
-LLM_API_KEY=your-gemini-key
-LLM_CHOICE=gemini-1.5-pro
-
-# Use OpenAI for embeddings
-EMBEDDING_PROVIDER=openai
-EMBEDDING_API_KEY=sk-your-openai-key
-EMBEDDING_MODEL_CHOICE=text-embedding-3-small
-```
-
-### Agentic RAG Full Configuration (Phase 3)
-```bash
-# PostgreSQL/Supabase (Required)
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_SERVICE_KEY=your-service-key
-DATABASE_URL=${SUPABASE_URL}  # For mem0 compatibility
-
-# Neo4j Knowledge Graph (Required for Agentic RAG)
-NEO4J_URI=bolt://localhost:7687
-NEO4J_USER=neo4j
-NEO4J_PASSWORD=your-password
-
-# LLM Configuration (Required)
-LLM_PROVIDER=openai
-LLM_API_KEY=sk-your-key
-LLM_CHOICE=gpt-4o-mini
-LLM_BASE_URL=https://api.openai.com/v1
-LLM_TEMPERATURE=0.7
-
-# Extraction Model (for knowledge extraction)
-EXTRACTION_MODEL=gpt-4o-mini
-
-# Embedding Configuration (Required)
-EMBEDDING_PROVIDER=openai
-EMBEDDING_API_KEY=sk-your-key
-EMBEDDING_MODEL_CHOICE=text-embedding-3-small
-EMBEDDING_BASE_URL=https://api.openai.com/v1
-
-# Vision Model Configuration
-VISION_LLM_CHOICE=gpt-4o-mini
-
-# Agent Settings
-AGENT_NAME=Luminari
-AGENT_TEMPERATURE=0.7
-
-# Agentic RAG Core Settings
-ENABLE_GRAPH=true
-ENABLE_CACHING=true
-PARALLEL_SEARCH=true
-ENABLE_INTENT_ANALYSIS=true
-ENABLE_SMART_ROUTING=true
-
-# Document Processing
-CHUNK_SIZE=1000
-CHUNK_OVERLAP=200
-MAX_ENTITIES_PER_CHUNK=10
-MAX_FACT_LENGTH=500
-SEMANTIC_CHUNKING=true
-
-# Performance Timeouts
-VECTOR_SEARCH_TIMEOUT=2.0
-GRAPH_SEARCH_TIMEOUT=3.0
-INTENT_ANALYSIS_TIMEOUT=1.0
-RESPONSE_GENERATION_TIMEOUT=5.0
-
-# Caching Configuration
-EMBEDDING_CACHE_SIZE=1000
-EMBEDDING_CACHE_TTL=3600
-GRAPH_CACHE_SIZE=500
-GRAPH_CACHE_TTL=1800
-INTENT_CACHE_SIZE=200
-INTENT_CACHE_TTL=900
-
-# Search Strategy Thresholds
-VECTOR_SIMILARITY_THRESHOLD=0.7
-GRAPH_CONFIDENCE_THRESHOLD=0.5
-HYBRID_BOOST_FACTOR=0.2
-MAX_SEARCH_RESULTS=10
-
-# Tool Settings
-ENABLE_CODE_EXECUTION=false
-ENABLE_WEB_SEARCH=true
-ENABLE_IMAGE_ANALYSIS=true
-ENABLE_LONG_TERM_MEMORY=true
-ENABLE_RAG=true
-ENABLE_SQL_QUERIES=true
-
-# Search Provider Settings
-BRAVE_API_KEY=your_brave_api_key
-SEARXNG_BASE_URL=http://localhost:8080
-
-# Google Drive Integration (Optional)
-GOOGLE_DRIVE_FOLDER_ID=your_folder_id
-GOOGLE_DRIVE_CREDENTIALS_PATH=config/google_credentials.json
-
-# MCP Server Configuration (Optional)
-ENABLE_MCP_CODE_EXECUTION=false
-MCP_SERVER_URL=http://localhost:3000
-
-# Logging and Monitoring
-LOG_LEVEL=INFO
-ENABLE_STRUCTURED_LOGGING=true
-ENABLE_PERFORMANCE_METRICS=true
-ENABLE_ERROR_TRACKING=true
-
-# Development Settings
-DEBUG_MODE=false
-ENABLE_DEBUG_LOGGING=false
-SKIP_AUTH_FOR_TESTING=false
-
-# Important Notes:
-# - For Ollama: Change vector dimensions from 1536 to 768 in SQL scripts
-# - For production: Set DEBUG_MODE=false and enable authentication
-# - For testing: Use separate database instances
-```
-
-## Environment File Template
-
-Copy the example environment file and customize:
-```bash
+# Copy example configuration
 cp .env.example .env
-# Edit .env with your credentials
+
+# Edit with your credentials
+nano .env
 ```
 
-The `.env.example` file contains all available configuration options with sensible defaults.
+### 2. Required Settings
+
+```bash
+# Database - Choose one
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_KEY=your_service_key
+# OR
+DATABASE_URL=postgresql://user:pass@localhost/db
+
+# LLM Configuration
+LLM_PROVIDER=openai              # openai, anthropic, ollama, openrouter
+LLM_API_KEY=your_api_key
+LLM_MODEL=gpt-4o-mini           # Model to use
+
+# Embedding Configuration  
+EMBEDDING_PROVIDER=openai        # openai, nomic, ollama, cohere
+EMBEDDING_API_KEY=your_api_key
+EMBEDDING_MODEL=text-embedding-3-small
+```
+
+### 3. Using in Code
+
+```python
+# Import centralized settings
+from src.config import get_settings
+
+settings = get_settings()
+print(f"Running in {settings.app_env} mode")
+print(f"API port: {settings.api_port}")
+
+# Use module-specific facades
+from src.config.api import api_config
+print(f"CORS origins: {api_config.cors_origins}")
+
+from src.config.agent import agent_config
+print(f"LLM model: {agent_config.llm_model}")
+```
+
+## Configuration Categories
+
+### Application Environment
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `APP_ENV` | Enum | `development` | Environment: development, testing, production |
+| `DEBUG` | Boolean | `false` | Enable debug mode |
+| `LOG_LEVEL` | String | `INFO` | Logging level |
+
+### Database Configuration
+
+#### PostgreSQL/Supabase
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `DATABASE_URL` | String | - | PostgreSQL connection string |
+| `SUPABASE_URL` | String | - | Supabase project URL |
+| `SUPABASE_SERVICE_KEY` | String | - | Supabase service role key |
+
+#### Neo4j (Knowledge Graph)
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `NEO4J_URI` | String | `bolt://localhost:7687` | Neo4j connection URI |
+| `NEO4J_USER` | String | `neo4j` | Neo4j username |
+| `NEO4J_PASSWORD` | String | - | Neo4j password |
+| `NEO4J_DATABASE` | String | `neo4j` | Database name |
+| `NEO4J_ENCRYPTED` | Boolean | `true` | Use encrypted connection |
+
+#### Redis (Optional Cache)
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `REDIS_URL` | String | - | Redis connection URL |
+| `ENABLE_REDIS_CACHE` | Boolean | `false` | Enable Redis caching |
+
+### LLM Configuration
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `LLM_PROVIDER` | Enum | `openai` | Provider: openai, anthropic, ollama, openrouter |
+| `LLM_BASE_URL` | String | `https://api.openai.com/v1` | API base URL |
+| `LLM_API_KEY` | String | - | API key for LLM provider |
+| `LLM_MODEL` | String | `gpt-4o-mini` | Model to use |
+| `LLM_TEMPERATURE` | Float | `0.7` | Generation temperature (0.0-2.0) |
+| `LLM_MAX_TOKENS` | Integer | `2000` | Maximum response tokens |
+
+### Embedding Configuration
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `EMBEDDING_PROVIDER` | Enum | `openai` | Provider: openai, nomic, ollama, cohere |
+| `EMBEDDING_BASE_URL` | String | `https://api.openai.com/v1` | API base URL |
+| `EMBEDDING_API_KEY` | String | - | API key for embeddings |
+| `EMBEDDING_MODEL` | String | `text-embedding-3-small` | Embedding model |
+| `EMBEDDING_DIMENSION` | Integer | `1536` | Vector dimension |
+| `EMBEDDING_BATCH_SIZE` | Integer | `100` | Batch size for processing |
+
+### UI Configuration
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `UI_MODE` | Enum | `standard` | UI mode: simple, standard, advanced |
+
+**UI Modes Explained:**
+- **Simple**: Fast, lightweight, no persistence
+- **Standard**: Streaming, tools visibility, conversation history
+- **Advanced**: All features including metrics, memory, MCP support
+
+### Web Search Configuration
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `WEB_SEARCH_PROVIDER` | Enum | - | Force specific provider: jina, brave, searxng |
+| `JINA_API_KEY` | String | - | Jina.ai API key |
+| `BRAVE_API_KEY` | String | - | Brave Search API key |
+| `SEARXNG_BASE_URL` | String | - | SearXNG instance URL |
+
+### Performance Settings
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `ENABLE_GRAPH` | Boolean | `true` | Enable graph database features |
+| `ENABLE_CACHING` | Boolean | `true` | Enable caching |
+| `ENABLE_PARALLEL_SEARCH` | Boolean | `true` | Enable parallel search execution |
+| `VECTOR_SEARCH_TIMEOUT` | Float | `2.0` | Vector search timeout (seconds) |
+| `GRAPH_SEARCH_TIMEOUT` | Float | `3.0` | Graph search timeout (seconds) |
+
+### Ingestion & Chunking
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `CHUNK_SIZE` | Integer | `1000` | Document chunk size |
+| `CHUNK_OVERLAP` | Integer | `200` | Overlap between chunks |
+| `USE_SEMANTIC_CHUNKING` | Boolean | `true` | Use semantic chunking |
+| `MAX_ENTITIES_PER_CHUNK` | Integer | `10` | Max entities to extract |
+| `MAX_FACT_LENGTH` | Integer | `500` | Maximum fact length |
+| `GRAPH_BATCH_SIZE` | Integer | `10` | Batch size for graph operations |
+
+### Connection Pools
+
+#### PostgreSQL Pool
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `PG_POOL_MIN` | Integer | `5` | Minimum pool size |
+| `PG_POOL_MAX` | Integer | `20` | Maximum pool size |
+| `PG_COMMAND_TIMEOUT` | Integer | `60` | Command timeout (seconds) |
+| `PG_MAX_QUERIES` | Integer | `50000` | Max queries before connection reset |
+| `PG_MAX_INACTIVE_LIFETIME` | Integer | `300` | Max inactive connection lifetime |
+
+#### Neo4j Pool
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `NEO4J_POOL_SIZE` | Integer | `50` | Connection pool size |
+| `NEO4J_CONNECTION_TIMEOUT` | Float | `30.0` | Connection timeout (seconds) |
+| `NEO4J_MAX_RETRY_TIME` | Integer | `30` | Maximum retry time |
+
+#### Redis Pool
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `REDIS_POOL_SIZE` | Integer | `10` | Redis connection pool size |
+| `REDIS_SOCKET_TIMEOUT` | Integer | `5` | Socket timeout (seconds) |
+
+### API Configuration
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `API_HOST` | String | `0.0.0.0` | API server host |
+| `API_PORT` | Integer | `8058` | API server port |
+| `CORS_ORIGINS` | String | `http://localhost:3000` | Comma-separated CORS origins |
+| `HOT_RELOAD` | Boolean | `false` | Enable hot reload |
+
+### Circuit Breaker
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `CIRCUIT_BREAKER_FAILURE_THRESHOLD` | Integer | `5` | Failures before circuit opens |
+| `CIRCUIT_BREAKER_RECOVERY_TIMEOUT` | Integer | `60` | Recovery timeout (seconds) |
+| `CIRCUIT_BREAKER_HALF_OPEN_REQUESTS` | Integer | `3` | Requests in half-open state |
+
+### Caching Configuration
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `EMBEDDING_CACHE_SIZE` | Integer | `1000` | Embedding cache size |
+| `EMBEDDING_CACHE_TTL` | Integer | `3600` | Embedding cache TTL (seconds) |
+| `GRAPH_CACHE_SIZE` | Integer | `500` | Graph cache size |
+| `GRAPH_CACHE_TTL` | Integer | `1800` | Graph cache TTL (seconds) |
+
+### Monitoring & Observability
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `ENABLE_TRACING` | Boolean | `false` | Enable OpenTelemetry tracing |
+| `JAEGER_HOST` | String | `localhost` | Jaeger agent host |
+| `JAEGER_PORT` | Integer | `6831` | Jaeger agent port |
+
+## Advanced Usage
+
+### Environment-Specific Validation
+
+The configuration system automatically validates settings based on the environment:
+
+```python
+# Production requires certain settings
+APP_ENV=production
+# Will validate that API keys are set
+# Will warn about debug mode being enabled
+# Will require database URLs
+```
+
+### Accessing Configuration
+
+#### Direct Access
+```python
+from src.config import get_settings
+
+settings = get_settings()
+# All settings available with auto-completion
+print(settings.llm_model)
+print(settings.chunk_size)
+```
+
+#### Module Facades
+```python
+# API-specific settings
+from src.config.api import api_config
+uvicorn_config = api_config.get_uvicorn_config()
+cors_config = api_config.get_cors_config()
+
+# Agent settings
+from src.config.agent import agent_config
+if agent_config.has_web_search_configured():
+    search_config = agent_config.get_web_search_config()
+
+# Client settings
+from src.config.clients import clients_config
+llm_config = clients_config.get_llm_config()
+db_config = clients_config.get_postgres_config()
+
+# UI settings
+from src.config.ui import ui_config
+if ui_config.is_advanced_mode:
+    # Enable advanced features
+    pass
+```
+
+### Testing with Configuration
+
+```python
+import os
+from unittest.mock import patch
+from src.config import reload_settings
+
+def test_with_config():
+    with patch.dict(os.environ, {
+        "UI_MODE": "advanced",
+        "LLM_MODEL": "gpt-4",
+        "ENABLE_GRAPH": "false"
+    }):
+        settings = reload_settings()
+        assert settings.ui_mode == "advanced"
+        assert settings.llm_model == "gpt-4"
+        assert not settings.enable_graph
+```
+
+### Configuration Validation
+
+The system provides comprehensive validation:
+
+```python
+from src.config import get_settings
+
+settings = get_settings()
+
+# Check for production warnings
+if settings.app_env == "production":
+    warnings = settings.validate_for_production()
+    for warning in warnings:
+        print(f"⚠️ {warning}")
+```
+
+### Custom Configuration
+
+Extend the configuration for your needs:
+
+```python
+from src.config.settings import Settings
+from pydantic import Field
+
+class CustomSettings(Settings):
+    """Extended settings with custom fields."""
+    
+    my_custom_field: str = Field(
+        default="default_value",
+        description="My custom configuration"
+    )
+```
+
+## Migration from Old System
+
+### Before (Scattered Configuration)
+```python
+# Old way - scattered across files
+import os
+api_key = os.getenv("LLM_API_KEY", "default")
+model = os.getenv("LLM_MODEL", "gpt-3.5-turbo")
+
+# Duplicate configs in multiple files
+class EmbeddingConfig:
+    dimension = 1536
+    model = "text-embedding-3-small"
+```
+
+### After (Centralized)
+```python
+# New way - centralized with validation
+from src.config import get_settings
+from src.config.clients import clients_config
+
+settings = get_settings()
+# Type-safe with auto-completion
+api_key = settings.llm_api_key
+model = settings.llm_model
+
+# Or use facades
+model = clients_config.llm_model
+dimension = clients_config.embedding_dimension
+```
+
+## Best Practices
+
+1. **Always use the centralized system** - Don't use `os.getenv()` directly
+2. **Use facades for module-specific config** - Cleaner and more maintainable
+3. **Validate in production** - Use the built-in validation methods
+4. **Keep secrets in `.env`** - Never commit credentials
+5. **Use type hints** - The system provides full type safety
+6. **Test with overrides** - Use `patch.dict(os.environ)` for testing
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue**: "Configuration validation failed"
+```bash
+# Check required fields are set
+cat .env | grep -E "SUPABASE_URL|LLM_API_KEY|EMBEDDING_API_KEY"
+
+# Ensure no typos in environment variable names
+```
+
+**Issue**: "Settings not updating"
+```python
+# Force reload after environment changes
+from src.config import reload_settings
+settings = reload_settings()
+```
+
+**Issue**: "Import errors"
+```python
+# Ensure you're importing from the right location
+from src.config import get_settings  # ✅
+from src.agentic_rag.config import get_config  # ⚠️ Legacy (but still works)
+```
+
+## Complete Environment Variables Reference
+
+See [.env.example](../.env.example) for a complete list of all available environment variables with descriptions and examples.

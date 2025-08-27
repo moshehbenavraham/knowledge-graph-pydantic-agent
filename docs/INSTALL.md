@@ -36,7 +36,14 @@ The system now includes the complete Phase 3 Agent Intelligence Layer with advan
    cp .env.example .env
 
    # Edit .env with your service credentials
-   # Required: SUPABASE_URL, SUPABASE_SERVICE_KEY, LLM_API_KEY, EMBEDDING_API_KEY
+   # The system uses a centralized Pydantic configuration with validation
+   
+   # Required settings:
+   # - SUPABASE_URL and SUPABASE_SERVICE_KEY (or DATABASE_URL)
+   # - LLM_API_KEY and LLM_PROVIDER
+   # - EMBEDDING_API_KEY and EMBEDDING_PROVIDER
+   
+   # The configuration system will validate all settings on startup
    ```
 
 3. **Database Setup**
