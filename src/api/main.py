@@ -1,7 +1,6 @@
 """FastAPI main application with comprehensive middleware stack."""
 
 import asyncio
-import os
 import time
 from contextlib import asynccontextmanager
 from typing import Any, Dict, List, Optional
@@ -20,8 +19,11 @@ from prometheus_client import (
 )
 from pydantic import BaseModel, Field
 
-from src.agentic_rag.agent.agent import AgenticRAGChatbot
+# Using unified agent now
+from src.agent import super_agent, UnifiedAgentDeps, run_unified_agent
 from src.api.health_endpoints import router as health_router
+from src.config.api import api_config
+from src.config.agent import agent_config
 from src.utils.cache import get_cache, cache
 from src.utils.monitoring import track_metrics
 
@@ -123,7 +125,7 @@ async def lifespan(app: FastAPI):
         # Continue without agent for health checks
 
     # Initialize OpenTelemetry if enabled
-    if os.getenv("ENABLE_TRACING", "false").lower() == "true":
+    if api_config.enable_tracing:
         from opentelemetry import trace
         from opentelemetry.exporter.jaeger.thrift import JaegerExporter
         from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
@@ -136,8 +138,8 @@ async def lifespan(app: FastAPI):
         trace.set_tracer_provider(provider)
 
         jaeger_exporter = JaegerExporter(
-            agent_host_name=os.getenv("JAEGER_HOST", "localhost"),
-            agent_port=int(os.getenv("JAEGER_PORT", "6831")),
+            agent_host_name=api_config.jaeger_host,
+            agent_port=api_config.jaeger_port,
         )
         provider.add_span_processor(BatchSpanProcessor(jaeger_exporter))
 
@@ -163,16 +165,9 @@ app = FastAPI(
 )
 
 # Configure CORS
-cors_origins = os.getenv(
-    "CORS_ORIGINS", "http://localhost:3000,http://localhost:8080"
-).split(",")
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=cors_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    **api_config.get_cors_config(),
 )
 
 
@@ -256,7 +251,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
     try:
         # Track LLM request
         llm_requests_total.labels(
-            model=os.getenv("LLM_CHOICE", "gpt-4o-mini"), endpoint="chat"
+            model=agent_config.llm_model, endpoint="chat"
         ).inc()
 
         # Get response from agent
@@ -478,16 +473,13 @@ async def general_exception_handler(request: Request, exc: Exception):
 
 def run_server():
     """Run the FastAPI server."""
-    host = os.getenv("API_HOST", "0.0.0.0")
-    port = int(os.getenv("API_PORT", "8058"))
+    uvicorn_config = api_config.get_uvicorn_config()
 
-    logger.info(f"Starting API server on {host}:{port}")
+    logger.info(f"Starting API server on {uvicorn_config['host']}:{uvicorn_config['port']}")
 
     uvicorn.run(
         "src.api.main:app",
-        host=host,
-        port=port,
-        reload=os.getenv("HOT_RELOAD", "false").lower() == "true",
+        **uvicorn_config,
         log_config={
             "version": 1,
             "disable_existing_loggers": False,
@@ -504,7 +496,7 @@ def run_server():
                 },
             },
             "root": {
-                "level": os.getenv("LOG_LEVEL", "INFO"),
+                "level": api_config.log_level,
                 "handlers": ["default"],
             },
         },

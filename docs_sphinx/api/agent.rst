@@ -1,36 +1,63 @@
 Agent Module
 ============
 
-The agent module provides the core Pydantic AI agent implementation with tool definitions and context management.
+The agent module provides the unified super agent that combines ALL capabilities into a single powerful implementation.
 
-Main Agent
-----------
+Unified Agent
+-------------
 
-.. automodule:: src.agentic_rag.agent.agent
+.. automodule:: src.agent.unified_agent
    :members:
    :undoc-members:
    :show-inheritance:
 
-Intent Analysis
----------------
+Agent Base Classes
+------------------
 
-.. automodule:: src.agentic_rag.agent.intent_analyzer
+.. automodule:: src.agent.base
    :members:
    :undoc-members:
    :show-inheritance:
 
-Response Generation
--------------------
+Configuration System
+--------------------
 
-.. automodule:: src.agentic_rag.agent.response_generator
+Central Settings
+~~~~~~~~~~~~~~~~
+
+.. automodule:: src.config.settings
    :members:
    :undoc-members:
    :show-inheritance:
 
-Query Router
-------------
+Agent Configuration
+~~~~~~~~~~~~~~~~~~~
 
-.. automodule:: src.agentic_rag.agent.router
+.. automodule:: src.config.agent
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Client Configuration
+~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: src.config.clients
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+API Configuration
+~~~~~~~~~~~~~~~~~
+
+.. automodule:: src.config.api
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+UI Configuration
+~~~~~~~~~~~~~~~~
+
+.. automodule:: src.config.ui
    :members:
    :undoc-members:
    :show-inheritance:
@@ -38,23 +65,85 @@ Query Router
 Tools
 -----
 
-.. automodule:: src.agentic_rag.agent.tools
+RAG Tools
+~~~~~~~~~
+
+.. automodule:: src.tools.rag
    :members:
    :undoc-members:
    :show-inheritance:
 
-Configuration
--------------
+Web Search Tools
+~~~~~~~~~~~~~~~~
 
-.. automodule:: src.agentic_rag.agent.config
+.. automodule:: src.tools.web_search
    :members:
    :undoc-members:
    :show-inheritance:
 
-Prompts
--------
+Code Execution Tools
+~~~~~~~~~~~~~~~~~~~~
 
-.. automodule:: src.agentic_rag.agent.prompts
+.. automodule:: src.tools.code_execution
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Image Analysis Tools
+~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: src.tools.image_analysis
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+SQL Query Tools
+~~~~~~~~~~~~~~~
+
+.. automodule:: src.tools.sql_query
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Search Components
+-----------------
+
+Intent Analyzer
+~~~~~~~~~~~~~~~
+
+.. automodule:: src.agentic_rag.search.intent_analyzer
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Vector Search
+~~~~~~~~~~~~~
+
+.. automodule:: src.agentic_rag.search.vector_search
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Graph Search
+~~~~~~~~~~~~
+
+.. automodule:: src.agentic_rag.search.graph_search
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Hybrid Search
+~~~~~~~~~~~~~
+
+.. automodule:: src.agentic_rag.search.hybrid_search
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Result Ranking
+~~~~~~~~~~~~~~
+
+.. automodule:: src.agentic_rag.search.ranker
    :members:
    :undoc-members:
    :show-inheritance:

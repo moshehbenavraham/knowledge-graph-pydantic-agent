@@ -4,10 +4,12 @@ This directory contains the Streamlit-based user interface for the Luminari AI A
 
 ## Available UI Components
 
-- `streamlit_app.py` - Main production-ready Streamlit application
-- `streamlit_ui_simple.py` - Basic implementation for development/testing
-- `streamlit_ui_streaming.py` - Enhanced version with real-time streaming
-- `requirements.txt` - UI-specific dependencies
+- `streamlit_app.py` - Unified configurable Streamlit application with three modes
+- `features/` - Modular feature handlers for different UI capabilities
+  - `base_handler.py` - Core chat functionality
+  - `streaming_handler.py` - Real-time token streaming
+  - `memory_handler.py` - Mem0 integration for persistent memory
+  - `mcp_handler.py` - Model Context Protocol support
 
 ## Features
 
@@ -100,17 +102,32 @@ The application uses Supabase as the primary database. Make sure to:
 ### 4. Running the UI
 
 ```bash
-# Using Make (recommended)
+# Standard mode (default - streaming with tools)
 make run-ui
 
+# Simple mode (fast, no persistence)
+make run-ui-simple
+
+# Advanced mode (all features enabled)
+make run-ui-advanced
+
+# With custom mode via environment variable
+make run-ui MODE=simple
+
 # Or directly with Streamlit
-streamlit run src/ui/streamlit_app.py
+UI_MODE=advanced streamlit run src/ui/streamlit_app.py
 
 # For development with auto-reload
-make dev
+make dev MODE=standard
 ```
 
 The application will be available at http://localhost:8501
+
+### UI Modes
+
+- **Simple Mode** 🟢 - Basic chat interface with no streaming or advanced features. Fast and lightweight.
+- **Standard Mode** 🔵 - Real-time streaming with tool visibility. Recommended for most users.
+- **Advanced Mode** 🟣 - Full feature set including memory persistence, MCP servers, and metrics.
 
 ## Development
 
@@ -156,10 +173,13 @@ make docker-stop
 
 ```
 src/ui/
-├── streamlit_app.py          # Main production UI
-├── streamlit_ui_simple.py    # Simple chat interface
-├── streamlit_ui_streaming.py # Streaming chat interface
-├── requirements.txt          # UI-specific dependencies
+├── streamlit_app.py          # Unified configurable UI
+├── features/                 # Modular feature handlers
+│   ├── __init__.py
+│   ├── base_handler.py      # Core functionality
+│   ├── streaming_handler.py # Streaming support
+│   ├── memory_handler.py    # Memory persistence
+│   └── mcp_handler.py       # MCP server integration
 └── README.md                # This file
 ```
 

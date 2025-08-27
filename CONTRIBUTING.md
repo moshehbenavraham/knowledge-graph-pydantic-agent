@@ -39,12 +39,33 @@ This project and everyone participating in it is governed by our [Code of Conduc
    cp .env.example .env
    # Edit .env with your test credentials
    ```
+   
+   **Note:** We use a centralized configuration system. Always use `from src.config import get_settings` instead of direct `os.getenv()` calls.
 
 4. **Run Tests**
    ```bash
    # Verify your setup works
    make test
    ```
+
+## 🏗️ Architecture Guidelines
+
+### Configuration System
+We use a **centralized Pydantic-based configuration** system:
+- All settings are in `src/config/settings.py`
+- Use module facades (`api_config`, `agent_config`, etc.) for clean access
+- Never use `os.getenv()` directly - always go through the config system
+- Add new settings with proper validation and defaults
+
+### Unified Agent
+- There is ONE agent: `src/agent/unified_agent.py`
+- All tools and capabilities are integrated here
+- Don't create separate agent implementations
+
+### UI System
+- Single configurable UI in `src/ui/streamlit_app.py`
+- Three modes: Simple, Standard, Advanced
+- Add new features as modular handlers in `src/ui/features/`
 
 ## 📋 How to Contribute
 

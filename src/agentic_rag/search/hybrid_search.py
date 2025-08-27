@@ -9,27 +9,18 @@ import asyncio
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
 from typing import Any
 from uuid import UUID
 
 from ..config import get_config
 from ..storage.connection_manager import ConnectionManager
+from src.config import SearchStrategy
 from .graph_search import GraphSearch, GraphSearchResult
 from .intent_analyzer import IntentAnalyzer, SearchIntent
 from .ranker import ResultRanker
 from .vector_search import ChunkResult, VectorSearch
 
 logger = logging.getLogger(__name__)
-
-
-class SearchStrategy(Enum):
-    """Search strategy types."""
-
-    VECTOR_ONLY = "vector_only"
-    GRAPH_ONLY = "graph_only"
-    HYBRID = "hybrid"
-    ADAPTIVE = "adaptive"
 
 
 @dataclass

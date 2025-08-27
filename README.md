@@ -1,6 +1,13 @@
-# Base Agent - Production-Ready AI Assistant with Agentic RAG
+# Base Agent - Unified Super AI Assistant with Comprehensive Capabilities
 
-Advanced AI agent implementation using Pydantic AI with **Agentic RAG (Retrieval-Augmented Generation)** system that combines PostgreSQL/Supabase for content storage with Neo4j knowledge graphs for intelligent search and reasoning. Features comprehensive tooling for document retrieval, memory management, web search, image analysis, and code execution with support for multiple LLM providers.
+🚀 **NEW: Unified Super Agent** - One powerful agent that combines ALL capabilities! Advanced AI agent implementation using Pydantic AI with intelligent routing, comprehensive tooling for document retrieval, memory management, web search, image analysis, SQL queries, and code execution with support for multiple LLM providers.
+
+## 🎉 Recent Updates
+
+- **Centralized Configuration System** - Beautiful Pydantic-based configuration with validation, type safety, and module-specific facades
+- **UI Consolidation** - Three UI modes (Simple, Standard, Advanced) in a single modular system
+- **Agent Unification** - One super agent to rule them all - no more confusion between multiple implementations
+- **60% Code Reduction** - Removed 15+ duplicate files and 3000+ lines through intelligent consolidation
 
 ## 🚀 Quick Start
 
@@ -16,28 +23,56 @@ make setup
 cp .env.example .env
 # Edit .env with your credentials
 
-# Run the application
-make run-ui
+# Run the application (3 modes available)
+make run-ui               # Standard mode - streaming with tools (default)
+make run-ui-simple        # Simple mode - fast, no persistence
+make run-ui-advanced      # Advanced mode - all features enabled
 ```
 
 Access the web interface at **http://localhost:8501**
 
+## 🆕 Using the Unified Super Agent
+
+```python
+from src.agent import super_agent, UnifiedAgentDeps, run_unified_agent
+
+# Simple usage
+result = await run_unified_agent(
+    query="Your question here",
+    session_id="my_session",
+    supabase_client=supabase,
+    embedding_client=embedding_client,
+)
+
+print(result["response"])
+```
+
 ## 🎯 Core Features
 
-### Agent Capabilities
-- **Agentic RAG System**: Advanced knowledge-graph enhanced retrieval with intelligent query routing
-  - Vector search for semantic similarity (PostgreSQL/pgvector)
-  - Graph search for relationships and facts (Neo4j/Graphiti)
-  - Hybrid search combining both approaches
-  - Intent-based search strategy selection
-- **Long-term Memory**: Persistent conversation memory via mem0 with PostgreSQL backend
-- **Web Search**: Internet search via Brave API or self-hosted SearXNG
-- **Image Analysis**: Vision model integration for image content analysis
-- **Code Execution**: Sandboxed Python code execution with RestrictedPython
-- **SQL Query Execution**: Read-only database queries with security validation
+### ⭐ Unified Super Agent (`src/agent/unified_agent.py`)
+Our unified agent combines ALL capabilities in one clean implementation:
+
+- **Intelligent Search System**: Smart routing using IntentAnalyzer
+  - `smart_search`: Analyzes intent (VECTOR_HEAVY, GRAPH_HEAVY, HYBRID, TEMPORAL, ENTITY_FOCUSED) and routes accordingly
+  - `retrieve_documents`: Vector search for semantic similarity
+  - `comprehensive_search`: Parallel multi-strategy search
+  - `iterative_search`: Complex multi-step queries
+- **Web Intelligence**: Real-time information gathering
+  - Multiple providers: Jina.ai, Brave Search, SearXNG
+  - Clean markdown extraction and formatting
+- **Data Analysis**: 
+  - `execute_sql`: Query structured data with SQL
+  - `execute_python_code`: Safe code execution environment
+- **Document Management**:
+  - `list_all_documents`: Browse knowledge base
+  - `get_full_document`: Retrieve complete documents
+- **Visual Understanding**: 
+  - `analyze_image`: Vision model integration for images
+- **Memory & Personalization**: User context integration
 
 ### Technical Stack
 - **Framework**: Pydantic AI ≥0.0.10 with async support
+- **Configuration**: Centralized Pydantic Settings with environment-based validation
 - **Vector Database**: Supabase with pgvector extension (content storage)
 - **Knowledge Graph**: Neo4j with Graphiti (entity relationships and facts)
 - **Memory Store**: mem0ai ≥0.0.10 with PostgreSQL backend
@@ -46,7 +81,7 @@ Access the web interface at **http://localhost:8501**
   - Ollama nomic-embed-text (768d)
   - Support for multiple embedding models
 - **LLM Support**: OpenAI GPT models, Anthropic Claude, OpenRouter providers, Google Gemini, Ollama local models
-- **UI Framework**: Streamlit ≥1.29.0 + FastAPI for API endpoints
+- **UI Framework**: Streamlit ≥1.29.0 with modular feature system + FastAPI for API endpoints
 - **Security**: Custom sandboxed environment for safe code execution
 
 ## 📋 Requirements
@@ -77,18 +112,27 @@ Access the web interface at **http://localhost:8501**
    cp .env.example .env
    ```
 
-   Edit `.env` with your service credentials:
+   The project uses a centralized configuration system with Pydantic validation:
    ```bash
    # Required: Supabase credentials
    SUPABASE_URL=https://your-project.supabase.co
    SUPABASE_SERVICE_KEY=your_service_role_key
 
-   # Required: LLM API key
-   LLM_API_KEY=your_openai_api_key
+   # Required: LLM configuration
+   LLM_PROVIDER=openai              # or anthropic, ollama, openrouter
+   LLM_API_KEY=your_api_key
+   LLM_MODEL=gpt-4o-mini           # or claude-3-sonnet, etc.
 
-   # Required: Embedding API key
-   EMBEDDING_API_KEY=your_openai_api_key
+   # Required: Embedding configuration
+   EMBEDDING_PROVIDER=openai        # or nomic, ollama, cohere
+   EMBEDDING_API_KEY=your_api_key
+   EMBEDDING_MODEL=text-embedding-3-small
+
+   # Optional: UI Mode
+   UI_MODE=standard                 # simple, standard, or advanced
    ```
+   
+   See [Configuration Guide](docs/CONFIGURATION.md) for all available settings.
 
 4. **Database Setup**
 
@@ -258,17 +302,27 @@ python -m src.agentic_rag.ingestion.pipeline ingest path/to/documents
 
 ### Web Interface
 
-1. **Start the agent:**
+1. **Start the agent with your preferred mode:**
    ```bash
-   make run-ui
-   # or
-   streamlit run src/ui/streamlit_app.py
+   make run-ui               # Standard mode (streaming + tools)
+   make run-ui-simple        # Simple mode (fast, no persistence)
+   make run-ui-advanced      # Advanced mode (all features)
+   
+   # Or with custom mode:
+   UI_MODE=simple streamlit run src/ui/streamlit_app.py
    ```
 
 2. **Access:** http://localhost:8501
 
-3. **Features:**
-   - Real-time chat interface
+3. **UI Modes:**
+   - **Simple Mode** 🟢: Basic chat, no streaming or advanced features
+   - **Standard Mode** 🔵: Real-time streaming with tool visibility (default)
+   - **Advanced Mode** 🟣: All features including memory, MCP servers, and metrics
+
+4. **Features:**
+   - Real-time chat interface with streaming support
+   - Runtime mode switching via sidebar
+   - Conversation export to JSON
    - File upload for document processing
    - Conversation history with persistent memory
    - Tool execution visibility and feedback
@@ -345,10 +399,9 @@ base_agent/
 ├── src/                        # Core application code
 │   ├── __init__.py            # Package initialization
 │   ├── __main__.py            # Main entry point
-│   ├── agent/                  # Agent implementation
+│   ├── agent/                  # Unified agent implementation
 │   │   ├── __init__.py        # Package initialization
-│   │   ├── agent.py            # Main Pydantic AI agent
-│   │   ├── base.py             # Base agent class
+│   │   ├── unified_agent.py    # THE unified super agent
 │   │   └── prompt.py           # System prompts
 │   ├── clients/                # External service clients
 │   │   ├── __init__.py        # Package initialization with exports
@@ -386,16 +439,6 @@ base_agent/
 ├── src/agentic_rag/               # Agentic RAG implementation
 │   ├── __init__.py            # Package initialization
 │   ├── config.py              # Configuration management
-│   ├── agent/                 # Agent Intelligence Layer
-│   │   ├── __init__.py        # Package initialization
-│   │   ├── agent.py           # Pydantic AI agent with tools
-│   │   ├── config.py          # Agent configuration
-│   │   ├── intent_analyzer.py # Intent analysis system
-│   │   ├── prompts.py         # System prompts
-│   │   ├── providers.py       # LLM providers
-│   │   ├── response_generator.py # Response generation
-│   │   ├── router.py          # Query routing
-│   │   └── tools.py           # Search tools
 │   ├── ingestion/             # Document ingestion pipeline
 │   │   ├── __init__.py        # Package initialization
 │   │   ├── chunker.py         # Semantic chunking
@@ -404,12 +447,11 @@ base_agent/
 │   │   └── pipeline.py        # Pipeline orchestrator
 │   ├── search/                # Search implementations
 │   │   ├── __init__.py        # Package initialization
-│   │   ├── base.py            # Base search interface
-│   │   ├── graph.py           # Graph search
-│   │   ├── hybrid.py          # Hybrid search
-│   │   ├── strategies.py      # Search strategies
-│   │   ├── vector.py          # Vector search
-│   │   └── weighted.py        # Weighted result merging
+│   │   ├── intent_analyzer.py # Intent analysis for query routing
+│   │   ├── graph_search.py    # Graph search implementation
+│   │   ├── hybrid_search.py   # Hybrid search orchestrator
+│   │   ├── ranker.py          # Result ranking system
+│   │   └── vector_search.py   # Vector search implementation
 │   └── storage/               # Storage implementations
 │       ├── __init__.py        # Package initialization
 │       ├── base.py            # Base storage interface

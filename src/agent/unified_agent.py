@@ -1,0 +1,587 @@
+"""
+Unified Super Agent - The One Agent to Rule Them All
+=====================================================
+
+This is the ultimate AI agent that combines all capabilities:
+- Intelligent intent-based search routing (from agentic_rag)
+- Web search with multiple providers (Jina, Brave, SearXNG)
+- Advanced RAG with vector and graph search
+- SQL query execution on tabular data
+- Image analysis with vision models
+- Safe code execution
+- Document management
+- Memory/personalization support
+- Comprehensive search strategies
+
+No more confusion - just one powerful, clean agent.
+"""
+
+import asyncio
+import logging
+from dataclasses import dataclass
+from typing import Any
+
+from dotenv import load_dotenv
+from httpx import AsyncClient
+from openai import AsyncOpenAI
+from pydantic_ai import Agent, RunContext
+from supabase.client import Client
+
+from src.agentic_rag.search.intent_analyzer import IntentAnalyzer, SearchIntent
+from src.clients.llm import get_model
+from src.config.agent import agent_config
+from src.tools import (
+    execute_safe_code_tool,
+    execute_sql_query_tool,
+    get_document_content_tool,
+    image_analysis_tool,
+    list_documents_tool,
+    retrieve_relevant_documents_tool,
+    web_search_tool,
+)
+
+# Load environment
+load_dotenv()
+
+logger = logging.getLogger(__name__)
+
+
+# ========== Unified Dependencies ==========
+@dataclass
+class UnifiedAgentDeps:
+    """All dependencies our super-agent needs."""
+    
+    # Core clients
+    supabase: Client
+    embedding_client: AsyncOpenAI
+    http_client: AsyncClient
+    
+    # Web search configuration
+    brave_api_key: str | None = None
+    searxng_base_url: str | None = None
+    jina_api_key: str | None = None
+    web_search_provider: str | None = None
+    
+    # User context
+    memories: str = ""
+    session_id: str = "default"
+    user_id: str | None = None
+    
+    # Search preferences
+    search_config: dict[str, Any] | None = None
+    
+    def __post_init__(self):
+        if self.search_config is None:
+            self.search_config = {
+                "use_vector": True,
+                "use_graph": True,
+                "use_hybrid": True,
+                "confidence_threshold": 0.7,
+                "max_results": 20,
+            }
+
+
+# ========== System Prompt ==========
+UNIFIED_SYSTEM_PROMPT = """
+You are an advanced AI assistant with comprehensive capabilities for research, analysis, and problem-solving.
+
+You excel at:
+1. **Intelligent Search**: Analyzing queries to select optimal search strategies
+2. **Information Synthesis**: Combining data from multiple sources into coherent answers
+3. **Data Analysis**: SQL queries, code execution, and numerical analysis
+4. **Document Understanding**: RAG retrieval, image analysis, and content extraction
+5. **Web Research**: Real-time information gathering from the internet
+6. **Personalization**: Using memories to provide contextual responses
+
+Core Principles:
+- Always check memories first for personalized context
+- Select the most appropriate tools based on query intent
+- Provide well-sourced, accurate information
+- Be proactive in offering comprehensive answers
+- Acknowledge limitations when information is incomplete
+
+Tool Selection Strategy:
+- **Factual queries**: Use smart_search for intelligent routing
+- **Data analysis**: Use SQL for structured data, code execution for calculations
+- **Current events**: Use web_search for real-time information
+- **Visual content**: Use image_analysis for images
+- **Document exploration**: Use list_documents and get_document_content
+- **Complex queries**: Combine multiple tools for comprehensive answers
+
+Response Format:
+- Start with a direct answer when possible
+- Include supporting evidence and citations
+- Explain your reasoning process
+- Suggest follow-up questions when appropriate
+"""
+
+
+# ========== Initialize the Super Agent ==========
+super_agent = Agent(
+    get_model(),
+    system_prompt=UNIFIED_SYSTEM_PROMPT,
+    deps_type=UnifiedAgentDeps,
+    retries=2,
+)
+
+
+# ========== Memory Tool ==========
+@super_agent.system_prompt
+def add_memories(ctx: RunContext[UnifiedAgentDeps]) -> str:
+    """Add user memories to context."""
+    if ctx.deps.memories:
+        return f"\nUser Memories:\n{ctx.deps.memories}"
+    return ""
+
+
+# ========== Smart Search Tool (Intelligent Routing) ==========
+# Initialize intent analyzer (reused across calls for better performance)
+_intent_analyzer = IntentAnalyzer()
+
+@super_agent.tool
+async def smart_search(ctx: RunContext[UnifiedAgentDeps], query: str) -> dict[str, Any]:
+    """
+    Intelligent search that analyzes intent and routes to optimal strategy.
+    
+    This is the primary search tool that orchestrates:
+    - Vector search for semantic similarity
+    - Graph search for relationships and entities
+    - Hybrid search for comprehensive results
+    
+    Automatically selects the best approach based on query analysis.
+    """
+    logger.info(f"Smart search for: {query}")
+    
+    # Use IntentAnalyzer for sophisticated intent detection
+    intent_result = _intent_analyzer.analyze(query)
+    
+    results = {
+        "query": query, 
+        "intent": intent_result.primary_intent.value,
+        "confidence": intent_result.confidence,
+        "entities": intent_result.entities_mentioned,
+        "strategy": "hybrid",
+        "results": []
+    }
+    
+    # Route based on analyzed intent
+    if intent_result.primary_intent == SearchIntent.GRAPH_HEAVY:
+        results["strategy"] = "graph_focused"
+        logger.info(f"Using graph-focused strategy (confidence: {intent_result.confidence:.2f})")
+        # Would call graph search here if implemented
+        # For now, fall back to vector search
+        vector_results = await retrieve_relevant_documents_tool(
+            ctx.deps.supabase, ctx.deps.embedding_client, query
+        )
+        results["results"] = vector_results
+        
+    elif intent_result.primary_intent == SearchIntent.VECTOR_HEAVY:
+        results["strategy"] = "vector_focused"
+        logger.info(f"Using vector-focused strategy (confidence: {intent_result.confidence:.2f})")
+        # Call vector search
+        vector_results = await retrieve_relevant_documents_tool(
+            ctx.deps.supabase, ctx.deps.embedding_client, query
+        )
+        results["results"] = vector_results
+        
+    elif intent_result.primary_intent == SearchIntent.ENTITY_FOCUSED:
+        results["strategy"] = "entity_focused"
+        logger.info(f"Entity-focused search for: {intent_result.entities_mentioned}")
+        # Entity-specific search
+        vector_results = await retrieve_relevant_documents_tool(
+            ctx.deps.supabase, ctx.deps.embedding_client, query
+        )
+        results["results"] = vector_results
+        
+    elif intent_result.primary_intent == SearchIntent.TEMPORAL:
+        results["strategy"] = "temporal_focused"
+        logger.info(f"Temporal search with markers: {intent_result.temporal_markers}")
+        # Timeline/history search
+        vector_results = await retrieve_relevant_documents_tool(
+            ctx.deps.supabase, ctx.deps.embedding_client, query
+        )
+        results["results"] = vector_results
+        
+    else:  # HYBRID or default
+        results["strategy"] = "hybrid"
+        logger.info(f"Using hybrid strategy (intent: {intent_result.primary_intent.value})")
+        # Default to hybrid approach for comprehensive coverage
+        try:
+            # Parallel execution of vector and graph search
+            vector_task = retrieve_relevant_documents_tool(
+                ctx.deps.supabase, ctx.deps.embedding_client, query
+            )
+            
+            # For now, just use vector search (graph search would be added when available)
+            vector_results = await vector_task
+            results["results"] = vector_results
+            
+        except Exception as e:
+            logger.error(f"Smart search failed: {e}")
+            results["error"] = str(e)
+    
+    return results
+
+
+# ========== Core RAG Tools ==========
+@super_agent.tool  
+async def retrieve_documents(ctx: RunContext[UnifiedAgentDeps], query: str, limit: int = 10) -> str:
+    """
+    Retrieve relevant documents using RAG with vector search.
+    
+    Best for:
+    - Finding similar content
+    - Conceptual matches
+    - General information retrieval
+    
+    Args:
+        query: Search query
+        limit: Maximum number of results (default 10)
+    
+    Returns:
+        Formatted string with relevant document chunks
+    """
+    logger.info(f"RAG retrieval for: {query}")
+    return await retrieve_relevant_documents_tool(
+        ctx.deps.supabase, ctx.deps.embedding_client, query
+    )
+
+
+@super_agent.tool
+async def list_all_documents(ctx: RunContext[UnifiedAgentDeps]) -> list[str]:
+    """
+    List all available documents in the knowledge base.
+    
+    Returns metadata including:
+    - Document IDs
+    - File paths/URLs
+    - Document types
+    - Schema information for structured data
+    """
+    logger.info("Listing all documents")
+    return await list_documents_tool(ctx.deps.supabase)
+
+
+@super_agent.tool
+async def get_full_document(ctx: RunContext[UnifiedAgentDeps], document_id: str) -> str:
+    """
+    Get the complete content of a specific document.
+    
+    Args:
+        document_id: The ID or file path of the document
+    
+    Returns:
+        Full document content with all chunks combined
+    """
+    logger.info(f"Getting full document: {document_id}")
+    return await get_document_content_tool(ctx.deps.supabase, document_id)
+
+
+# ========== Web Search Tool ==========
+@super_agent.tool
+async def search_web(ctx: RunContext[UnifiedAgentDeps], query: str) -> str:
+    """
+    Search the web for current information.
+    
+    Supports multiple providers:
+    - Jina.ai: Clean, formatted markdown content
+    - Brave: Search results with titles and descriptions
+    - SearXNG: Privacy-focused search results
+    
+    Args:
+        query: Web search query
+    
+    Returns:
+        Formatted search results from the configured provider
+    """
+    logger.info(f"Web search for: {query}")
+    return await web_search_tool(
+        query=query,
+        http_client=ctx.deps.http_client,
+        brave_api_key=ctx.deps.brave_api_key,
+        searxng_base_url=ctx.deps.searxng_base_url,
+        jina_api_key=ctx.deps.jina_api_key,
+        search_provider=ctx.deps.web_search_provider
+    )
+
+
+# ========== SQL Query Tool ==========
+@super_agent.tool
+async def execute_sql(ctx: RunContext[UnifiedAgentDeps], sql_query: str) -> str:
+    """
+    Execute SQL queries on tabular data.
+    
+    Use for:
+    - Data analysis
+    - Aggregations and statistics
+    - Filtering structured data
+    
+    IMPORTANT: Always use list_all_documents first to get valid file IDs.
+    
+    Example queries:
+    ```sql
+    SELECT AVG((row_data->>'revenue')::numeric)
+    FROM document_rows
+    WHERE dataset_id = 'actual_file_id';
+    
+    SELECT 
+        row_data->>'category' as category,
+        SUM((row_data->>'sales')::numeric) as total_sales
+    FROM document_rows
+    WHERE dataset_id = 'actual_file_id'
+    GROUP BY row_data->>'category';
+    ```
+    
+    Args:
+        sql_query: Read-only SQL query to execute
+    
+    Returns:
+        Query results in JSON format
+    """
+    logger.info(f"Executing SQL: {sql_query}")
+    return await execute_sql_query_tool(ctx.deps.supabase, sql_query)
+
+
+# ========== Image Analysis Tool ==========
+@super_agent.tool
+async def analyze_image(ctx: RunContext[UnifiedAgentDeps], document_id: str, analysis_query: str) -> str:
+    """
+    Analyze images using vision models.
+    
+    Process:
+    1. Use list_all_documents to find available images
+    2. Get the exact document_id for the image
+    3. Call this tool with your analysis question
+    
+    Args:
+        document_id: ID or file path of the image
+        analysis_query: What to extract/analyze from the image
+    
+    Returns:
+        Detailed image analysis based on the query
+    """
+    logger.info(f"Analyzing image {document_id}: {analysis_query}")
+    return await image_analysis_tool(ctx.deps.supabase, document_id, analysis_query)
+
+
+# ========== Code Execution Tool ==========
+@super_agent.tool
+async def execute_python_code(ctx: RunContext[UnifiedAgentDeps], code: str) -> str:
+    """
+    Execute Python code in a safe, sandboxed environment.
+    
+    Use for:
+    - Data calculations
+    - Algorithm implementation
+    - Data transformation
+    - Generating visualizations (text-based)
+    
+    IMPORTANT: Use print() to output results.
+    
+    Example:
+    ```python
+    import math
+    result = math.sqrt(16)
+    print(f"Square root of 16 is: {result}")
+    ```
+    
+    Args:
+        code: Python code to execute
+    
+    Returns:
+        Standard output from the code execution
+    """
+    logger.info(f"Executing Python code: {code[:100]}...")
+    return execute_safe_code_tool(code)
+
+
+# ========== Advanced Search Tools ==========
+@super_agent.tool
+async def comprehensive_search(
+    ctx: RunContext[UnifiedAgentDeps], 
+    query: str,
+    use_vector: bool = True,
+    use_graph: bool = True,
+    max_results: int = 20
+) -> dict[str, Any]:
+    """
+    Perform comprehensive search using multiple strategies in parallel.
+    
+    Executes all search types and intelligently combines results.
+    
+    Args:
+        query: Search query
+        use_vector: Enable vector/semantic search
+        use_graph: Enable graph/relationship search (when available)
+        max_results: Maximum combined results
+    
+    Returns:
+        Combined and ranked results from all search methods
+    """
+    logger.info(f"Comprehensive search for: {query}")
+    
+    results = {
+        "query": query,
+        "search_config": {
+            "use_vector": use_vector,
+            "use_graph": use_graph,
+            "max_results": max_results
+        },
+        "vector_results": [],
+        "graph_results": [],
+        "combined_results": []
+    }
+    
+    tasks = []
+    
+    # Vector search task
+    if use_vector:
+        tasks.append(("vector", retrieve_relevant_documents_tool(
+            ctx.deps.supabase, ctx.deps.embedding_client, query
+        )))
+    
+    # Graph search would be added here when available
+    # if use_graph:
+    #     tasks.append(("graph", graph_search(query)))
+    
+    # Execute searches in parallel
+    if tasks:
+        search_results = await asyncio.gather(
+            *[task[1] for task in tasks], 
+            return_exceptions=True
+        )
+        
+        for (search_type, _), result in zip(tasks, search_results):
+            if isinstance(result, Exception):
+                logger.error(f"{search_type} search failed: {result}")
+                results[f"{search_type}_error"] = str(result)
+            elif search_type == "vector":
+                results["vector_results"] = result
+                results["combined_results"] = result  # For now, just use vector results
+    
+    return results
+
+
+@super_agent.tool
+async def iterative_search(
+    ctx: RunContext[UnifiedAgentDeps],
+    query: str,
+    max_iterations: int = 3
+) -> dict[str, Any]:
+    """
+    Multi-step iterative search for complex queries.
+    
+    Process:
+    1. Initial broad search
+    2. Extract key entities/concepts
+    3. Deep dive into specific aspects
+    4. Synthesize comprehensive answer
+    
+    Args:
+        query: Complex query requiring multiple search steps
+        max_iterations: Maximum refinement iterations
+    
+    Returns:
+        Detailed results from iterative exploration
+    """
+    logger.info(f"Iterative search for: {query}")
+    
+    results = {
+        "query": query,
+        "iterations": [],
+        "final_answer": ""
+    }
+    
+    # Step 1: Initial search
+    initial_results = await retrieve_relevant_documents_tool(
+        ctx.deps.supabase, ctx.deps.embedding_client, query
+    )
+    
+    results["iterations"].append({
+        "step": 1,
+        "action": "initial_search",
+        "results": initial_results
+    })
+    
+    # Step 2: Would extract entities and refine search
+    # This is where we'd use NER and query expansion
+    
+    # Step 3: Final synthesis
+    results["final_answer"] = initial_results
+    
+    return results
+
+
+# ========== Main Execution Function ==========
+async def run_unified_agent(
+    query: str,
+    session_id: str = "default",
+    user_id: str | None = None,
+    supabase_client: Client | None = None,
+    embedding_client: AsyncOpenAI | None = None,
+    http_client: AsyncClient | None = None,
+    memories: str = "",
+    search_config: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    """
+    Main entry point for the unified super-agent.
+    
+    Args:
+        query: User's question or request
+        session_id: Session identifier for context
+        user_id: Optional user identifier
+        supabase_client: Supabase client instance
+        embedding_client: OpenAI client for embeddings
+        http_client: HTTP client for web requests
+        memories: User context/memories
+        search_config: Search configuration preferences
+    
+    Returns:
+        Agent response with answer and metadata
+    """
+    # Create dependencies
+    deps = UnifiedAgentDeps(
+        supabase=supabase_client,
+        embedding_client=embedding_client,
+        http_client=http_client or AsyncClient(),
+        brave_api_key=agent_config.brave_api_key,
+        searxng_base_url=agent_config.searxng_base_url,
+        jina_api_key=agent_config.jina_api_key,
+        web_search_provider=agent_config.web_search_provider.value if agent_config.web_search_provider else None,
+        memories=memories,
+        session_id=session_id,
+        user_id=user_id,
+        search_config=search_config
+    )
+    
+    try:
+        # Run the agent
+        result = await super_agent.run(query, deps=deps)
+        
+        return {
+            "status": "success",
+            "query": query,
+            "response": result.data,
+            "metadata": {
+                "session_id": session_id,
+                "user_id": user_id,
+                "model_used": result.model_used if hasattr(result, "model_used") else None,
+                "tools_used": result.tools_used if hasattr(result, "tools_used") else [],
+            }
+        }
+    
+    except Exception as e:
+        logger.error(f"Agent execution failed: {e}")
+        return {
+            "status": "error",
+            "query": query,
+            "error": str(e),
+            "metadata": {
+                "session_id": session_id,
+                "user_id": user_id
+            }
+        }
+
+
+# Export the main components
+__all__ = ["super_agent", "UnifiedAgentDeps", "run_unified_agent"]

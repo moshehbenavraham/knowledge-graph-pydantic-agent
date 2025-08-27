@@ -1,4 +1,4 @@
-import os
+from src.config.clients import clients_config
 
 try:
     from openai import AsyncOpenAI
@@ -23,23 +23,23 @@ except ImportError:
 
 def get_llm_client():
     """Get the LLM client for agent interactions."""
-    provider = os.getenv("LLM_PROVIDER", "openai").lower()
-
-    if provider == "anthropic":
+    if clients_config.llm_provider.value == "anthropic":
         # For Anthropic, we don't use AsyncOpenAI client
         # The pydantic-ai AnthropicModel handles this internally
         return None
-    base_url = os.getenv("LLM_BASE_URL", "https://api.openai.com/v1")
-    api_key = os.getenv("LLM_API_KEY", "no-api-key-provided")
-    llm_client = AsyncOpenAI(base_url=base_url, api_key=api_key)
+    
+    llm_client = AsyncOpenAI(
+        base_url=clients_config.llm_base_url,
+        api_key=clients_config.llm_api_key
+    )
     return llm_client
 
 
 def get_model():
     """Get the configured model for the agent."""
-    provider = os.getenv("LLM_PROVIDER", "openai").lower()
-    llm = os.getenv("LLM_CHOICE", "gpt-4o-mini")
-    api_key = os.getenv("LLM_API_KEY", "ollama")
+    provider = clients_config.llm_provider.value
+    llm = clients_config.llm_model
+    api_key = clients_config.llm_api_key
 
     if provider == "anthropic":
         if not AnthropicModel:
@@ -56,5 +56,11 @@ def get_model():
         # Use mapped name if available, otherwise use as-is
         anthropic_model = model_map.get(llm, llm)
         return AnthropicModel(anthropic_model, api_key=api_key)
-    base_url = os.getenv("LLM_BASE_URL", "https://api.openai.com/v1")
-    return OpenAIModel(llm, provider=OpenAIProvider(base_url=base_url, api_key=api_key))
+    
+    return OpenAIModel(
+        llm,
+        provider=OpenAIProvider(
+            base_url=clients_config.llm_base_url,
+            api_key=api_key
+        )
+    )

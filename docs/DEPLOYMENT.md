@@ -87,12 +87,25 @@ EMBEDDING_MODEL_CHOICE=text-embedding-3-small
 
 6. **Run Application**
 ```bash
-streamlit run src/ui/streamlit_app.py
-# Or using make
+# Standard mode (recommended)
 make run-ui
+
+# Simple mode (fast, no persistence)
+make run-ui-simple
+
+# Advanced mode (all features)
+make run-ui-advanced
+
+# Custom mode via environment
+UI_MODE=simple streamlit run src/ui/streamlit_app.py
 ```
 
 Access at: **http://localhost:8501**
+
+**UI Modes:**
+- **Simple**: Basic chat, fast startup, no persistence
+- **Standard**: Real-time streaming with tool visibility
+- **Advanced**: Full features including memory and metrics
 
 ### Performance Optimization
 
