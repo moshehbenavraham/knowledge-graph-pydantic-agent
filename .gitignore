@@ -26,40 +26,47 @@ share/python-wheels/
 
 # Environment variables
 .env
+.env.local
+.env.*.local
 
 # Streamlit
 .streamlit/
 
 # Docker
 docker-compose.override.yml
+docker-compose.local.yml
 
 # Logs and temporary files
 *.log
 tmp/
 temp/
+logs/
+*.log.*
 
 # OS-specific
 .DS_Store
 Thumbs.db
+*.swp
+*.swo
+*~
 
 # Testing Environment
 test_env/
 
 # Cache and temporary files
 *.bak
-*.swp
-*.swo
-*~
 .cache/
 
 # Local configuration
 local_config.py
+config.local.py
 
 # Agentic RAG
 ingested_data/
 embeddings_cache/
 graph_cache/
 search_cache/
+memory_cache/
 
 # Neo4j
 neo4j_data/
@@ -69,11 +76,14 @@ neo4j_data/
 
 # Documentation build
 docs/_build/
+docs_sphinx/_build/
+site/
 
 # Additional test outputs
 test_results/
 coverage.xml
 *.cover
+.hypothesis/
 
 # AI Assistant files and directories
 .cursorrules
@@ -82,3 +92,80 @@ CLAUDE.md
 AGENTS.md
 .grok/
 .claude/
+
+# Monitoring & Observability
+prometheus_data/
+grafana_data/
+redis_data/
+loki_data/
+jaeger_data/
+
+# Performance & Profiling
+*.prof
+*.profile
+*.pstats
+profile_output/
+profiling/
+
+# Database files (local development)
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+*.sql.gz
+
+# Security & Credentials
+*.pem
+*.key
+*.cert
+*.csr
+*.p12
+*.pfx
+secrets/
+credentials/
+
+# Load Testing (Locust)
+locust_reports/
+*.html
+!docs/**/*.html
+!docs_sphinx/**/*.html
+
+# Uploads & User Data
+uploads/
+uploaded_files/
+user_data/
+
+# MCP Server Data
+.mcp/
+mcp_servers/
+
+# Alembic (database migrations - keep tracked, ignore local overrides)
+# alembic/versions/*.py  # Uncomment if you want to ignore migration files
+
+# Python package manager files (optional - uncomment if needed)
+# poetry.lock
+# Pipfile.lock
+# pdm.lock
+
+# Debug & Development
+debug_*.py
+scratch.py
+test_*.temp
+playground/
+
+# Sphinx documentation
+docs_sphinx/_static/
+docs_sphinx/_templates/
+
+# Redis dumps
+dump.rdb
+appendonly.aof
+
+# Session data
+sessions/
+.sessions/
+
+# Backup files
+*.backup
+*.old
+backups/

@@ -93,8 +93,17 @@ async def jina_web_search(query: str, http_client: AsyncClient, jina_api_key: st
         )
         response.raise_for_status()
 
-        # Parse JSON response - search mode returns a list of results
-        data = response.json()
+        # Parse JSON response - Jina returns {code, status, data: [...]}
+        response_data = response.json()
+
+        # Extract the data array from the response
+        if isinstance(response_data, dict) and "data" in response_data:
+            data = response_data["data"]
+        elif isinstance(response_data, list):
+            data = response_data
+        else:
+            logger.warning(f"Unexpected Jina response format: {type(response_data)}")
+            return "No results found for the query."
 
         # Format the search results
         if isinstance(data, list) and len(data) > 0:
@@ -103,6 +112,11 @@ async def jina_web_search(query: str, http_client: AsyncClient, jina_api_key: st
                 title = item.get("title", "No title")
                 content = item.get("content", "No content")
                 url = item.get("url", "")
+                description = item.get("description", "")
+
+                # Use description if content is too short or missing
+                if not content or content == "No content":
+                    content = description
 
                 # Truncate content if too long
                 if len(content) > 500:

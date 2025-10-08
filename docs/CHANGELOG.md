@@ -4,6 +4,57 @@ All notable changes to the Base Agent project are documented in this file.
 
 Previous changelogs can be found in /docs/changelogs_previous/
 
+## [Unreleased] - 2025-10-09
+
+### Fixed
+
+#### File Upload & Image Analysis Fixes
+- **FIXED**: AsyncIO event loop conflict in file upload handler (`src/ui/features/upload_handler.py`)
+  - Removed duplicate `import asyncio` inside exception handler (line 268)
+  - Import shadowing caused `UnboundLocalError`
+- **FIXED**: Database schema compliance for file uploads
+  - Added required `title` field to all upload handlers (documents, images, tabular)
+  - Documents table requires `title`, `source`, and `content` (NOT NULL constraint)
+- **FIXED**: Image analysis metadata field mapping (`src/tools/image_analysis.py`)
+  - Updated to support both `image_data` and `file_contents` fields
+  - Updated to support both `file_type` and `mime_type` fields
+  - Ensures compatibility with Streamlit upload handler format
+- **FIXED**: Filename escaping for images with spaces (`src/tools/image_analysis.py`)
+  - Changed from `.or_()` to `.eq()` method for Supabase queries
+  - Filenames with spaces (e.g., "ai with apex classroom book collection.png") now work correctly
+  - Previously caused HTTP 400 Bad Request errors
+- **FIXED**: Pydantic AI result attribute error (`src/tools/image_analysis.py:93`)
+  - Changed `result.data` to `result.output` to match Pydantic AI v0.1.2+ API
+  - Fixed `'AgentRunResult' object has no attribute 'data'` error
+
+### Added
+
+#### Streamlit File Upload Feature
+- **NEW**: Complete file upload system in Streamlit UI (`src/ui/features/upload_handler.py`)
+  - **Document upload**: Supports PDF, TXT, MD files
+    - Automatic semantic chunking (1000 char chunks, 200 char overlap)
+    - Embedding generation using configured LLM client
+    - Stores chunks in Supabase with metadata
+  - **Image upload**: Supports PNG, JPG, JPEG, GIF, WEBP
+    - Base64 encoding for storage
+    - Stored in `metadata.image_data` field
+    - Compatible with vision model analysis
+  - **Tabular upload**: Supports CSV, XLSX, XLS files
+    - Automatic schema detection
+    - Row-by-row storage in `document_rows` table
+    - Metadata includes columns, row count, and data types
+- **NEW**: Upload section in Streamlit sidebar
+  - File type selector (Documents/Images/Data)
+  - File uploader with appropriate type filters
+  - Upload button with processing spinner
+  - Success/error feedback messages
+- **NEW**: Image analysis via vision model
+  - Configured via `VISION_LLM_CHOICE` env variable (defaults to `gpt-5-mini`)
+  - Supports both OpenAI and Anthropic vision models
+  - OCR, object detection, scene analysis capabilities
+
+---
+
 ## [Unreleased] - 2025-01-08
 
 ### Phase 4.5 Complete - API Completion & Validation

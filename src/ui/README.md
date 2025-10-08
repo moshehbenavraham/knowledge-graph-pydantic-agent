@@ -10,17 +10,22 @@ This directory contains the Streamlit-based user interface for the Luminari AI A
   - `streaming_handler.py` - Real-time token streaming
   - `memory_handler.py` - Mem0 integration for persistent memory
   - `mcp_handler.py` - Model Context Protocol support
+  - `upload_handler.py` - File upload processing for documents, images, and tabular data
 
 ## Features
 
 - **Interactive Chat Interface** - Clean, modern chat experience
 - **Multi-LLM Support** - Works with OpenAI, Anthropic, Ollama, and other providers
+- **File Upload** - Direct upload of documents, images, and tabular data via sidebar
+  - **Documents**: PDF, TXT, MD files with automatic chunking and embedding
+  - **Images**: PNG, JPG, JPEG, GIF, WEBP with base64 storage
+  - **Tabular**: CSV, XLSX, XLS with schema detection and row storage
 - **Agentic RAG Integration** - Advanced document search with knowledge graph and vector search
 - **Knowledge Graph** - Entity relationships and temporal facts via Neo4j
 - **Long-term Memory** - Persistent conversation memory using Mem0
 - **Web Search** - Integration with Brave Search API and SearXNG
 - **Code Execution** - Safe code execution in sandboxed environments
-- **Image Analysis** - Vision capabilities for image understanding
+- **Image Analysis** - Vision capabilities with gpt-5-mini (OCR, object detection, scene analysis)
 - **Real-time Streaming** - Token-by-token response streaming
 - **MCP Support** - Model Context Protocol for extended capabilities
 
