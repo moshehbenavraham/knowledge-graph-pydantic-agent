@@ -444,6 +444,195 @@ MERGE_CONFIG = {
 # Review merging algorithm in tools.py
 ```
 
+### Ingestion Pipeline Issues
+
+#### 1. Import Errors in Ingestion Module
+
+**Error:** `ImportError: cannot import name 'ChunkingConfig' from 'src.agentic_rag.ingestion.chunker'`
+
+**Root Cause:**
+- The ingestion `__init__.py` was importing classes that don't exist
+- Functions like `get_chunking_config()` and `get_embedding_config()` were used instead of classes
+
+**Solution:**
+
+Already fixed in codebase. If you encounter this:
+
+```python
+# src/agentic_rag/ingestion/__init__.py should import:
+from .chunker import DocumentChunk, SemanticChunker, SimpleChunker, get_chunking_config
+from .embedder import EmbeddingGenerator, get_embedding_config
+
+# NOT these (they don't exist):
+# from .chunker import ChunkingConfig, ChunkingStrategy  # ❌ Wrong
+# from .embedder import EmbeddingConfig  # ❌ Wrong
+```
+
+**Verification:**
+```bash
+python -c "from src.agentic_rag.ingestion.pipeline import DocumentIngestionPipeline; print('✅ Import successful')"
+```
+
+#### 2. Missing CLI Interface
+
+**Error:** Module cannot be run as `python -m src.agentic_rag.ingestion.pipeline`
+
+**Solution:**
+
+CLI interface created at `src/agentic_rag/ingestion/__main__.py`:
+
+```bash
+# Run ingestion with default path
+make ingest
+
+# Run with custom path
+python -m src.agentic_rag.ingestion.pipeline ingest --path /path/to/docs
+
+# Run with verbose logging
+python -m src.agentic_rag.ingestion.pipeline ingest --verbose
+
+# Test connection first
+python test_db_connection.py
+```
+
+**Available options:**
+- `--path` - Directory containing markdown files (default: docs/example_big_tech_docs_for_ingestion_testing)
+- `--clean` - Clean existing data before ingestion
+- `--verbose` / `-v` - Enable debug logging
+
+#### 3. Document Ingestion Failing
+
+**Error:** Various errors during document ingestion
+
+**Diagnosis:**
+```bash
+# Check if databases are accessible
+python test_db_connection.py
+
+# Test with single document
+python -c "
+import asyncio
+from pathlib import Path
+from src.agentic_rag.ingestion.pipeline import DocumentIngestionPipeline
+
+async def test():
+    pipeline = DocumentIngestionPipeline()
+    result = await pipeline.ingest_document(
+        content='Test content',
+        title='Test',
+        source='test.md'
+    )
+    print(f'Success: {result.success}')
+    print(f'Chunks: {result.chunks_created}')
+    print(f'Entities: {result.entities_extracted}')
+
+asyncio.run(test())
+"
+```
+
+**Common causes and solutions:**
+
+1. **Database connection issues** - See DATABASE_URL Configuration Errors above
+2. **OpenAI API key invalid** - Check `LLM_API_KEY` and `EMBEDDING_API_KEY` in `.env`
+3. **Neo4j unavailable** - Disable graph features temporarily:
+   ```env
+   ENABLE_GRAPH=false
+   ENABLE_GRAPH_SEARCH=false
+   ```
+4. **Out of memory** - Reduce batch sizes:
+   ```env
+   INGESTION_BATCH_SIZE=5
+   MAX_CONCURRENT_EMBEDDINGS=10
+   MAX_CONCURRENT_EXTRACTIONS=5
+   ```
+
+#### 4. Storage Backend Selection (PostgreSQL vs REST API)
+
+**Issue:** Confused about which storage backend to use
+
+**Decision Tree:**
+
+```
+Do PostgreSQL ports (5432/6543) work?
+├─ YES → Use PostgreSQL (default, automatic)
+│  └─ Benefits: Faster, connection pooling, full SQL features
+│  └─ Command: python -m src.agentic_rag.ingestion ingest
+│
+└─ NO (ports blocked by firewall/VPN/WSL2) → Use REST API
+   └─ Benefits: Works over HTTPS (443), no network config needed
+   └─ Command: python -m src.agentic_rag.ingestion ingest --rest-api
+```
+
+**Automatic Fallback (Recommended):**
+
+The system automatically tries PostgreSQL first and falls back to REST API on failure:
+
+```bash
+# Default - intelligent fallback
+make ingest
+python -m src.agentic_rag.ingestion ingest
+
+# Output shows which backend is used:
+# → Attempting direct PostgreSQL connection...
+# ⚠️  PostgreSQL connection failed: [Errno 101] Network is unreachable
+# → Falling back to Supabase REST API...
+```
+
+**Force REST API Mode:**
+
+```bash
+# Skip PostgreSQL attempt, go straight to REST API
+python -m src.agentic_rag.ingestion ingest --rest-api
+```
+
+**Test Connectivity:**
+
+```bash
+# Test PostgreSQL
+python test_db_connection.py
+# Should output: ✅ Database connected!
+
+# Test REST API
+python test_supabase_rest.py
+# Should output: ✅ Supabase REST API is working!
+```
+
+**Performance Comparison:**
+
+| Feature | PostgreSQL (Primary) | REST API (Fallback) |
+|---------|---------------------|---------------------|
+| Speed | ⚡ Fast | 🐌 Slower (REST overhead) |
+| Connection Pooling | ✅ Yes (5-20 connections) | ❌ No |
+| Network Requirements | Direct port 5432/6543 | HTTPS port 443 |
+| Firewall Compatibility | ⚠️ Often blocked | ✅ Rarely blocked |
+| Feature Support | ✅ Full SQL features | ⚠️ Basic operations |
+| Best For | Production, local dev | Restrictive networks, WSL2 |
+
+**When to Use Each:**
+
+- **PostgreSQL**: Default choice when network allows
+  - Local development
+  - Production deployments
+  - Docker containers
+  - Networks without restrictions
+
+- **REST API**: Fallback when PostgreSQL fails
+  - Corporate VPNs/firewalls
+  - WSL2 with IPv6 issues
+  - Public Wi-Fi networks
+  - Restrictive security policies
+
+**Current Known Issues:**
+
+1. **WSL2 + Supabase**: Direct DB is IPv6-only, WSL2 doesn't support IPv6 well
+   - **Solution**: REST API fallback works perfectly
+
+2. **Corporate VPNs**: Often block PostgreSQL ports
+   - **Solution**: Use `--rest-api` flag
+
+3. **Connection Pooler**: May have IPv4 support
+   - **Try**: Update DATABASE_URL to use pooler (port 6543)
+
 ## Installation Issues
 
 ### Common Installation Problems
@@ -568,10 +757,12 @@ asyncio.run(test())
 **Solution:**
 ```bash
 # Run SQL setup scripts
-psql -h your-supabase-host -U postgres -d postgres -f sql/documents.sql
-psql -h your-supabase-host -U postgres -d postgres -f sql/document_metadata.sql
-psql -h your-supabase-host -U postgres -d postgres -f sql/document_rows.sql
-psql -h your-supabase-host -U postgres -d postgres -f sql/execute_sql_rpc.sql
+# Run in Supabase SQL Editor:
+# Copy contents of src/agentic_rag/storage/migrations/sql/001_enhanced_schema.sql
+# Paste into SQL Editor and click "Run"
+
+# Or via psql (if you have direct database access):
+psql -h your-supabase-host -U postgres -d postgres -f src/agentic_rag/storage/migrations/sql/001_enhanced_schema.sql
 
 # Or use Supabase dashboard to run the scripts
 ```
@@ -724,7 +915,136 @@ psql "postgresql://postgres:password@your-host:5432/postgres" -c "SELECT 1;"
 # Check connection pooling settings
 ```
 
-#### 2. Vector Extension Issues
+#### 2. DATABASE_URL Configuration Errors
+
+**Error:** `KeyError: 'DATABASE_URL'` or `invalid DSN: scheme is expected to be either "postgresql" or "postgres", got 'https'`
+
+**Root Causes:**
+1. DATABASE_URL contains HTTPS URL instead of PostgreSQL connection string
+2. Password contains special characters that need URL encoding
+3. Shell environment variable overrides .env file
+4. Config dict keys using wrong case (uppercase vs lowercase)
+
+**Solution:**
+
+1. **Correct DATABASE_URL format** in `.env`:
+```env
+# WRONG - This is the API URL:
+DATABASE_URL=https://your-project.supabase.co
+
+# CORRECT - PostgreSQL connection string with URL-encoded password:
+DATABASE_URL=postgresql://postgres:your%3Fpass%24word@db.your-project.supabase.co:5432/postgres
+
+# URL encoding for special characters:
+#   ? becomes %3F
+#   $ becomes %24
+#   @ becomes %40
+#   & becomes %26
+```
+
+2. **Clear cached environment variables:**
+```bash
+# Check if DATABASE_URL is set in shell
+env | grep DATABASE_URL
+
+# Unset if needed
+unset DATABASE_URL
+
+# Or restart terminal session
+```
+
+3. **Test configuration:**
+```bash
+python -c "from src.config import get_settings; print(get_settings().database_url)"
+# Should output: postgresql://postgres:...
+```
+
+**Get correct connection string from Supabase:**
+1. Go to **Project Settings → Database**
+2. Find **Connection string** section
+3. Select **URI** tab
+4. Copy and URL-encode the password
+5. Add to `.env`
+
+**Alternative: Use connection pooler** (recommended for WSL2):
+```env
+# Session pooler (port 5432) - recommended for WSL2 and IPv4-only networks
+DATABASE_URL=postgresql://postgres.your-project:[password]@aws-1-us-east-2.pooler.supabase.com:5432/postgres
+
+# Transaction pooler (port 6543) - may timeout on WSL2
+DATABASE_URL=postgresql://postgres.your-project:[password]@aws-1-us-east-2.pooler.supabase.com:6543/postgres
+
+# Note: Get correct region from Supabase dashboard → Settings → Database → Connection string
+```
+
+#### 3. WSL2 Network Connectivity Issues
+
+**Error:** `OSError: [Errno 101] Network is unreachable` when connecting to Supabase
+
+**Symptoms:**
+```
+Failed to initialize PostgreSQL: [Errno 101] Network is unreachable
+ping: connect: Network is unreachable
+```
+
+**Quick Fixes (try in order):**
+
+1. **Restart WSL2** (from Windows PowerShell as Administrator):
+```powershell
+wsl --shutdown
+# Wait 10 seconds, then reopen WSL2
+```
+
+2. **Check basic connectivity:**
+```bash
+# Test internet
+ping -c 2 8.8.8.8
+
+# Test DNS
+nslookup db.your-project.supabase.co
+
+# Test database port
+nc -zv db.your-project.supabase.co 5432
+```
+
+3. **Fix WSL2 DNS:**
+```bash
+# Check current DNS
+cat /etc/resolv.conf
+
+# Fix if needed
+sudo nano /etc/wsl.conf
+# Add:
+[network]
+generateResolvConf = false
+
+# Set DNS manually
+sudo rm /etc/resolv.conf
+echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf
+
+# Restart WSL2
+```
+
+4. **Use Session pooler** (port 5432 - recommended for WSL2):
+```env
+# Session pooler works reliably on WSL2
+DATABASE_URL=postgresql://postgres.your-project:password@aws-1-us-east-2.pooler.supabase.com:5432/postgres
+
+# Note: Transaction pooler (port 6543) may timeout on WSL2
+```
+
+5. **Environment variable caching** - Shell may have cached DATABASE_URL:
+```bash
+# Check if DATABASE_URL is exported in shell
+env | grep DATABASE_URL
+
+# Unset if it exists
+unset DATABASE_URL
+
+# Or start a new terminal session
+```
+
+#### 4. Vector Extension Issues
 
 **Error:** `extension "vector" does not exist`
 

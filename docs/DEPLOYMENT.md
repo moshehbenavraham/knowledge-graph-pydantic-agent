@@ -47,15 +47,12 @@ pip install -r requirements.txt
 
 4. **Configure Supabase**
 - Create project at [supabase.com](https://supabase.com)
-- Enable pgvector extension: Database → Extensions → Search "pgvector" → Enable
-- Run SQL scripts in order:
-  ```sql
-  -- Run in SQL Editor
-  sql/documents.sql
-  sql/document_metadata.sql
-  sql/document_rows.sql
-  sql/execute_sql_rpc.sql
-  ```
+- Enable pgvector extension: Database → Extensions → Search "vector" → Enable
+- Run single migration file:
+  - Go to SQL Editor → New Query
+  - Copy contents of `src/agentic_rag/storage/migrations/sql/001_enhanced_schema.sql`
+  - Paste and click "Run"
+  - This creates all required tables, indexes, and functions
 
 5. **Configure Environment**
 ```bash

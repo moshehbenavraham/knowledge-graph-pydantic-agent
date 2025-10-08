@@ -672,11 +672,9 @@ all_memories = await memory.get_all(user_id="user_123")
    ```
 
 3. **Run Schema Setup**
-   ```bash
-   # Upload SQL files from sql/ directory to Supabase
-   # Or run them manually in SQL Editor
-   # Include sql/agentic_rag/schema.sql for Agentic RAG
-   ```
+   - Go to Supabase SQL Editor → New Query
+   - Copy contents of `src/agentic_rag/storage/migrations/sql/001_enhanced_schema.sql`
+   - Paste and run to create all tables, indexes, and functions
 
 ### 2. Neo4j Setup (Agentic RAG)
 

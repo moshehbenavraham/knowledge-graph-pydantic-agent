@@ -78,6 +78,34 @@ See `CHANGELOG.md` for complete release notes.
 
 ## Prerequisites
 
+### ⚠️ Deployment Options
+
+**Choose your installation path based on needed features:**
+
+| Feature | Lightweight | Full RAG |
+|---------|-------------|----------|
+| **Install command** | `pip install -e .[dev]` | `pip install -e .[dev,rag]` |
+| **Disk space** | ~500MB | ~5.5GB |
+| **Install time** | ~5 min | ~15 min |
+| **RAM needed** | 2-4GB | 8GB+ |
+| | |
+| Vector search | ✅ | ✅ |
+| OpenAI embeddings (API) | ✅ | ✅ |
+| Web search | ✅ | ✅ |
+| Image analysis | ✅ | ✅ |
+| Code execution | ✅ | ✅ |
+| Conversation memory | ✅ | ✅ |
+| | |
+| **Knowledge graph** | ❌ | ✅ |
+| **Local embeddings** | ❌ | ✅ |
+| **Entity extraction** | ❌ | ✅ |
+| **Temporal reasoning** | ❌ | ✅ |
+| **Document parsing** | ❌ | ✅ |
+
+**💡 Recommendation:** Start with **Lightweight** to test the system, upgrade to **Full RAG** later if you need knowledge graph features.
+
+**⚠️ Note:** Full RAG downloads 3.7GB of CUDA libraries (mostly unused on CPU) due to PyTorch including GPU support by default.
+
 ### Required
 - **Python 3.11+** (tested with 3.11 and 3.12)
 - **Supabase project** with `pgvector` extension enabled (or compatible PostgreSQL 14+ instance)
@@ -114,8 +142,8 @@ See `CHANGELOG.md` for complete release notes.
    # update .env with Supabase, LLM, embedding, and optional provider credentials
    ```
 3. **Bootstrap data stores**
-   - Run the SQL scripts under `sql/` in your Supabase instance (order: `documents.sql`, `document_metadata.sql`, `document_rows.sql`, `execute_sql_rpc.sql`, and `agentic_rag/schema.sql` if using the agentic pipeline).
-   - Provision a Neo4j database if graph search is enabled, then initialise it with `python -m src.agentic_rag.storage.neo4j_store init`.
+   - Run the single migration file `src/agentic_rag/storage/migrations/sql/001_enhanced_schema.sql` in your Supabase SQL Editor (creates all tables, indexes, and functions in one step)
+   - Provision a Neo4j database if graph search is enabled, then initialise it with `make neo4j-init` or `python -m src.agentic_rag.storage.migrations.neo4j_init`
 4. **Run the agent**
    ```bash
    make run-ui            # Streamlit UI on http://localhost:8501
@@ -176,8 +204,11 @@ All configuration is managed through type-safe Pydantic models in `src/config/` 
 ## Data Stores & Ingestion
 
 ### Storage Architecture
-- **Supabase (PostgreSQL + pgvector):** Primary store for full document content, embeddings (1536d for OpenAI, 768d for Ollama), and SQL-backed tools. Initialize with SQL scripts in `sql/` (order: `documents.sql` → `document_metadata.sql` → `document_rows.sql` → `execute_sql_rpc.sql` → `agentic_rag/schema.sql`)
-- **Neo4j + Graphiti:** Temporal knowledge graph storing entities, relationships, and facts with timestamps. Initialize with `make neo4j-init` or `python -m src.agentic_rag.storage.neo4j_store init`
+- **Supabase (PostgreSQL + pgvector):** Primary store for full document content, embeddings (1536d for OpenAI, 768d for Ollama), and SQL-backed tools. Initialize with single migration file: `src/agentic_rag/storage/migrations/sql/001_enhanced_schema.sql`
+  - **Dual backend support:** Direct PostgreSQL (primary, optimal performance) with automatic fallback to REST API (when ports 5432/6543 blocked by firewalls/VPNs)
+  - PostgreSQL via asyncpg with connection pooling: `src/agentic_rag/storage/postgres_store.py`
+  - REST API via HTTPS (port 443): `src/agentic_rag/storage/supabase_rest_store.py` (automatic fallback)
+- **Neo4j + Graphiti:** Temporal knowledge graph storing entities, relationships, and facts with timestamps. Initialize with `make neo4j-init` or `python -m src.agentic_rag.storage.migrations.neo4j_init`
 - **mem0:** Session and long-term memory for conversational context, configured via `src/clients/memory.py`
 - **Redis (optional):** Query result caching with configurable TTL - enable with `ENABLE_REDIS_CACHE=true`
 
@@ -194,9 +225,17 @@ Two complementary pipelines are available:
    - Semantic chunking with LLM-powered boundary detection
    - Graphiti-driven entity and relationship extraction
    - Dual storage (PostgreSQL content + Neo4j graph)
-   - Run with `make run-agentic-rag` or invoke programmatically
+   - **Intelligent storage backend selection:** Tries PostgreSQL first, auto-falls back to REST API if connection blocked
+   - Run with `make ingest` or `python -m src.agentic_rag.ingestion ingest [--rest-api]`
 
-See `docs/DB_AND_RAG.md` for detailed ingestion examples and best practices.
+**Ingestion Commands:**
+```bash
+make ingest                                        # Default: Auto-fallback (tries PostgreSQL → REST API)
+python -m src.agentic_rag.ingestion ingest        # Same as above
+python -m src.agentic_rag.ingestion ingest --rest-api  # Force REST API mode
+```
+
+See `docs/DB_AND_RAG.md` and `docs/TROUBLESHOOTING.md` for detailed ingestion examples, storage backend selection, and network troubleshooting.
 
 ## Tools & Capabilities
 
@@ -296,7 +335,6 @@ base_agent/
 ├── tests/                    # pytest suites (mirrors runtime modules)
 ├── docs/                     # Architecture, configuration, installation guides
 ├── docs_sphinx/              # Sphinx documentation project
-├── sql/                      # Supabase schema and functions
 ├── docker/                   # Containerisation assets
 ├── supabase/                 # Supabase CLI configuration
 ├── examples/                 # Sample scripts (e.g. unified_agent_demo.py)

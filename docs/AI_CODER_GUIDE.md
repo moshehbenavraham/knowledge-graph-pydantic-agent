@@ -458,7 +458,7 @@ print(f"LLM_PROVIDER: {settings.llm_provider}")
 ```sql
 -- Check if function exists
 SELECT proname FROM pg_proc WHERE proname = 'match_documents';
--- If missing, re-run sql/documents.sql
+-- If missing, re-run src/agentic_rag/storage/migrations/sql/001_enhanced_schema.sql
 ```
 
 ## Key Files Reference

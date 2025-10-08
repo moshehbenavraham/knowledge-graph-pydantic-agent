@@ -57,6 +57,7 @@ class ConnectionManager:
     def __init__(self, config: dict[str, Any] | None = None):
         if config is None:
             from ..config import get_config
+
             self.config = get_config().dict()
         else:
             self.config = config
@@ -84,8 +85,8 @@ class ConnectionManager:
         """Initialize all connection pools with proper error handling."""
         initialization_tasks = [
             self._init_postgresql(),
-            self._init_neo4j(),
-            self._init_redis() if self.config.get("ENABLE_REDIS_CACHE") else None,
+            self._init_neo4j() if self.config.get("enable_graph", True) else None,
+            self._init_redis() if self.config.get("enable_redis_cache") else None,
         ]
 
         results = await asyncio.gather(
@@ -103,9 +104,9 @@ class ConnectionManager:
         """Initialize PostgreSQL connection pool with optimized settings."""
         try:
             self.pg_pool = await asyncpg.create_pool(
-                dsn=self.config["DATABASE_URL"],
-                min_size=self.config.get("PG_POOL_MIN", 5),
-                max_size=self.config.get("PG_POOL_MAX", 20),
+                dsn=self.config["database_url"],
+                min_size=self.config.get("pg_pool_min", 5),
+                max_size=self.config.get("pg_pool_max", 20),
                 max_queries=50000,
                 max_inactive_connection_lifetime=300,
                 command_timeout=60,
@@ -141,29 +142,31 @@ class ConnectionManager:
     async def _init_postgres_connection(self, connection):
         """Initialize function for new PostgreSQL connections."""
         # Prepare commonly used statements
-        await connection.execute(
-            """
-            PREPARE vector_search (vector, int) AS
-            SELECT id, content, 1 - (embedding <=> $1) as similarity
-            FROM chunks
-            WHERE embedding IS NOT NULL
-            ORDER BY embedding <=> $1
-            LIMIT $2
-        """
-        )
+        # NOTE: Commented out - schema uses embedding_1536/embedding_768 columns, not 'embedding'
+        # await connection.execute(
+        #     """
+        #     PREPARE vector_search (vector, int) AS
+        #     SELECT id, content, 1 - (embedding <=> $1) as similarity
+        #     FROM chunks
+        #     WHERE embedding IS NOT NULL
+        #     ORDER BY embedding <=> $1
+        #     LIMIT $2
+        # """
+        # )
+        pass
 
     async def _init_neo4j(self):
         """Initialize Neo4j driver with connection pooling."""
         try:
             self.neo4j_driver = AsyncGraphDatabase.driver(
-                self.config["NEO4J_URI"],
-                auth=(self.config["NEO4J_USER"], self.config["NEO4J_PASSWORD"]),
-                max_connection_pool_size=self.config.get("NEO4J_POOL_SIZE", 50),
+                self.config["neo4j_uri"],
+                auth=(self.config["neo4j_user"], self.config["neo4j_password"]),
+                max_connection_pool_size=self.config.get("neo4j_pool_size", 50),
                 connection_acquisition_timeout=30,
                 max_transaction_retry_time=30,
-                encrypted=self.config.get("NEO4J_ENCRYPTED", True),
-                trusted_certificates=self.config.get("NEO4J_TRUSTED_CERTS"),
-                database=self.config.get("NEO4J_DATABASE", "neo4j"),
+                encrypted=self.config.get("neo4j_encrypted", True),
+                trusted_certificates=self.config.get("neo4j_trusted_certs"),
+                database=self.config.get("neo4j_database", "neo4j"),
                 # Connection pool configuration
                 connection_timeout=30.0,
                 keep_alive=True,
@@ -188,8 +191,8 @@ class ConnectionManager:
         """Initialize Redis client for caching."""
         try:
             self.redis_client = redis.from_url(
-                self.config["REDIS_URL"],
-                max_connections=self.config.get("REDIS_POOL_SIZE", 10),
+                self.config["redis_url"],
+                max_connections=self.config.get("redis_pool_size", 10),
                 decode_responses=True,
                 socket_timeout=5,
                 socket_connect_timeout=5,
