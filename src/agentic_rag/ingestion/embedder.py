@@ -10,8 +10,7 @@ import hashlib
 import logging
 from typing import Any
 
-from ..config import get_config
-from src.config import EmbeddingProvider
+from src.agentic_rag.config import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +19,7 @@ def get_embedding_config():
     """Get embedding configuration from global settings."""
     config = get_config().embedding
     perf_config = get_config().performance
-    
+
     return {
         "provider": config.provider,
         "model": config.model,
@@ -120,7 +119,7 @@ class EmbeddingGenerator:
             config: Embedding configuration dictionary
         """
         self.config = config or get_embedding_config()
-        self.cache = EmbeddingCache() if self.config.get('enable_cache', True) else None
+        self.cache = EmbeddingCache() if self.config.get("enable_cache", True) else None
         self._client = None
         self._stats = {"cache_hits": 0, "cache_misses": 0, "api_calls": 0, "total_embeddings": 0}
 
@@ -133,17 +132,17 @@ class EmbeddingGenerator:
 
     def _create_client(self):
         """Create embedding client based on provider."""
-        if self.config['provider'] == 'openai':
+        if self.config["provider"] == "openai":
             import openai
 
             config = get_config()
             return openai.AsyncOpenAI(
                 api_key=config.embedding.api_key, base_url=config.embedding.base_url
             )
-        if self.config['provider'] == 'nomic':
+        if self.config["provider"] == "nomic":
             # Nomic implementation
             raise NotImplementedError("Nomic provider not yet implemented")
-        if self.config['provider'] == 'ollama':
+        if self.config["provider"] == "ollama":
             # Ollama implementation
             raise NotImplementedError("Ollama provider not yet implemented")
         raise ValueError(f"Unknown embedding provider: {self.config['provider']}")
@@ -241,8 +240,8 @@ class EmbeddingGenerator:
         embeddings = []
 
         # Process in batches
-        for i in range(0, len(texts), self.config['batch_size']):
-            batch = texts[i : i + self.config['batch_size']]
+        for i in range(0, len(texts), self.config["batch_size"]):
+            batch = texts[i : i + self.config["batch_size"]]
             batch_embeddings = await self._generate_batch_with_retry(batch)
             embeddings.extend(batch_embeddings)
 
@@ -258,17 +257,17 @@ class EmbeddingGenerator:
         Returns:
             List of embeddings
         """
-        for attempt in range(self.config['max_retries']):
+        for attempt in range(self.config["max_retries"]):
             try:
-                if self.config['provider'] == 'openai':
+                if self.config["provider"] == "openai":
                     return await self._generate_openai_embeddings(batch)
                 raise NotImplementedError(f"Provider {self.config['provider']} not implemented")
 
             except Exception as e:
                 logger.warning(f"Embedding generation attempt {attempt + 1} failed: {e}")
 
-                if attempt < self.config['max_retries'] - 1:
-                    await asyncio.sleep(self.config['retry_delay'] * (2**attempt))
+                if attempt < self.config["max_retries"] - 1:
+                    await asyncio.sleep(self.config["retry_delay"] * (2**attempt))
                 else:
                     raise
 
@@ -286,7 +285,7 @@ class EmbeddingGenerator:
         """
         self._stats["api_calls"] += 1
 
-        response = await self.client.embeddings.create(model=self.config['model'], input=texts)
+        response = await self.client.embeddings.create(model=self.config["model"], input=texts)
 
         return [data.embedding for data in response.data]
 
