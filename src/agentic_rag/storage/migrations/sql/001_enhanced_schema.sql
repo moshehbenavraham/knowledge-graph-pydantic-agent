@@ -145,8 +145,7 @@ CREATE INDEX IF NOT EXISTS idx_documents_title_trgm ON documents USING GIN (titl
 CREATE INDEX IF NOT EXISTS idx_chunks_content_fts ON chunks USING GIN (to_tsvector('english', content));
 
 -- Cache optimization
-CREATE INDEX IF NOT EXISTS idx_search_cache_expires ON search_cache(expires_at)
-    WHERE expires_at > NOW();
+CREATE INDEX IF NOT EXISTS idx_search_cache_expires ON search_cache(expires_at);
 CREATE INDEX IF NOT EXISTS idx_search_cache_popular ON search_cache(hit_count DESC, last_accessed_at DESC);
 
 -- ========================================

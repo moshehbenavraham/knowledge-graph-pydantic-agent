@@ -17,6 +17,7 @@ from ..storage.connection_manager import ConnectionManager
 from ..storage.graphiti_client import GraphitiClient
 from ..storage.neo4j_store import Neo4jStore
 from ..storage.postgres_store import PostgresStore
+from ..storage.supabase_rest_store import SupabaseRestStore
 from .chunker import DocumentChunk, SemanticChunker, SimpleChunker, get_chunking_config
 from .embedder import EmbeddingGenerator, get_embedding_config
 from .knowledge_extractor import KnowledgeExtractor
@@ -74,20 +75,39 @@ class DocumentIngestionPipeline:
     - Error handling and recovery
     """
 
-    def __init__(self, config: dict[str, Any] | None = None):
+    def __init__(self, config: dict[str, Any] | None = None, use_rest_api: bool = False):
         """
         Initialize ingestion pipeline.
 
         Args:
             config: Optional configuration overrides
+            use_rest_api: Force use of REST API instead of direct PostgreSQL
         """
         self.config = get_config()
+        self.use_rest_api = use_rest_api
 
-        # Initialize components
-        self.connection_manager = ConnectionManager()
-        self.pg_store = PostgresStore(self.connection_manager)
-        self.neo4j_store = Neo4jStore(self.connection_manager)
-        self.graphiti_client = GraphitiClient(self.neo4j_store)
+        # Initialize storage - use REST API if forced or if PostgreSQL unavailable
+        if use_rest_api:
+            logger.info("Using Supabase REST API for storage (forced)")
+            from src.config import get_settings
+
+            settings = get_settings()
+            self.pg_store = SupabaseRestStore(settings.supabase_url, settings.supabase_service_key)
+            self.connection_manager = None
+        else:
+            logger.info("Initializing direct PostgreSQL connection")
+            self.connection_manager = ConnectionManager()
+            self.pg_store = PostgresStore(self.connection_manager)
+
+        # Initialize Neo4j if enabled (skip for REST-only mode)
+        if not use_rest_api and self.config.performance.enable_graph:
+            self.neo4j_store = Neo4jStore(self.connection_manager)
+            self.graphiti_client = GraphitiClient(self.neo4j_store)
+        else:
+            if use_rest_api:
+                logger.info("Skipping Neo4j initialization (REST API mode)")
+            self.neo4j_store = None
+            self.graphiti_client = None
 
         # Configure chunking
         self.chunking_config = get_chunking_config()
@@ -163,10 +183,12 @@ class DocumentIngestionPipeline:
             logger.debug("Extracting knowledge...")
             extraction_results = await self._extract_knowledge(chunks, chunk_ids)
 
-            # Step 5: Store knowledge in Neo4j (if enabled)
-            if self.config.performance.enable_graph:
+            # Step 5: Store knowledge in Neo4j (if enabled and available)
+            if self.config.performance.enable_graph and self.neo4j_store is not None:
                 logger.debug("Updating knowledge graph...")
                 await self._update_knowledge_graph(extraction_results, doc_id, chunk_ids)
+            elif self.use_rest_api:
+                logger.debug("Skipping knowledge graph update (REST API mode)")
 
             # Step 6: Update cross-references
             logger.debug("Updating cross-references...")

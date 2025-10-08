@@ -1,21 +1,78 @@
 # Installation
 
+## ⚠️ Choose Your Deployment Path
+
+**Before installing, decide which features you need:**
+
+### 🌐 Option A: Lightweight Cloud-Only (Recommended for Getting Started)
+
+**Install:** `pip install -e .[dev]` (253 packages, ~500MB, 5 minutes)
+
+**Resources Required:**
+- 500MB disk space
+- 2GB RAM
+- Python 3.11+
+
+**What You Get:**
+- ✅ Full AI assistant with streaming chat
+- ✅ Vector search (Supabase pgvector)
+- ✅ OpenAI embeddings (via API)
+- ✅ Web search, image analysis, SQL queries, code execution
+- ✅ Conversation memory (mem0)
+- ❌ No knowledge graph
+- ❌ No local embeddings
+
+**Best for:** Quick setup, testing, production deployment, cost-sensitive projects
+
+---
+
+### 🧠 Option B: Full Agentic RAG (Advanced Features)
+
+**Install:** `pip install -e .[dev,rag]` (303 packages, ~5.5GB, 15 minutes)
+
+**Resources Required:**
+- **5.5GB disk space** (includes 3.7GB of PyTorch + CUDA)
+- **8GB+ RAM** (PyTorch memory overhead)
+- Python 3.11+
+
+**What You Get:**
+- ✅ Everything from Option A, plus:
+- ✅ Knowledge graph (Neo4j + Graphiti)
+- ✅ Entity extraction & relationship discovery
+- ✅ Temporal reasoning (facts with timestamps)
+- ✅ Local embeddings (sentence-transformers)
+- ✅ Document parsing (PDFs, DOCX via unstructured)
+
+**Best for:** Research, advanced RAG features, offline embeddings, entity-centric queries
+
+**⚠️ Note:** Downloads 3.7GB of CUDA libraries (PyTorch includes GPU support by default)
+- **With NVIDIA GPU:** Utilized for 10-50x faster embeddings (run `nvidia-smi` to check)
+- **CPU-only:** Unused bloat, but harmless
+
+---
+
 ## System Requirements
 
-### Phase 3 Ready: Agent Intelligence Layer
-The system now includes the complete Phase 3 Agent Intelligence Layer with advanced intent analysis and intelligent search orchestration.
-
-### Hardware Requirements
+### Hardware Requirements (Option A - Lightweight)
 - **Python**: 3.11 or higher
-- **Memory**: 4GB+ RAM (8GB+ recommended for optimal performance)
-- **Storage**: 2GB+ free space for dependencies
+- **Memory**: 2GB+ RAM (4GB recommended)
+- **Storage**: 500MB+ free space
 - **Network**: Internet connection for LLM providers and web search
 - **OS**: Windows, macOS, or Linux
 
+### Hardware Requirements (Option B - Full RAG)
+- **Python**: 3.11 or higher
+- **Memory**: 8GB+ RAM (for PyTorch + transformers)
+- **Storage**: 6GB+ free space (5.5GB for packages)
+- **Network**: Internet connection for cloud services
+- **OS**: Windows, macOS, or Linux
+
 ### Database Requirements
-- **PostgreSQL/Supabase**: Primary storage with pgvector extension (required)
-- **Neo4j 5.0+**: Knowledge graph for Agentic RAG (required for Phase 3 features)
+- **PostgreSQL/Supabase**: Primary storage with pgvector extension (**required for both options**)
+- **Neo4j 5.0+**: Knowledge graph (**optional** - only needed for Option B)
 - **Vector Dimensions**: 1536 (OpenAI) or 768 (Ollama) embeddings support
+
+**Note:** Neo4j setup is optional. The system works fully without it (Option A), you just won't have knowledge graph features.
 
 ## Quick Start
 
@@ -23,11 +80,31 @@ The system now includes the complete Phase 3 Agent Intelligence Layer with advan
    ```bash
    git clone <repository-url>
    cd base_agent
+   python3 -m venv .venv
+   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+   ```
 
-   # Install dependencies with development tools
-   make setup
+2. **Choose Your Installation Path**
 
-   # This runs: python -m pip install -e .[dev] && pre-commit install
+   **Option A: Lightweight (Recommended first)**
+   ```bash
+   # Install with UV (faster) or pip
+   pip install uv  # Optional but 30x faster
+   uv pip install -e .[dev]
+   # OR: pip install -e .[dev]
+
+   # Install pre-commit hooks
+   pre-commit install
+   ```
+
+   **Option B: Full RAG (5.5GB download)**
+   ```bash
+   # Install with UV (recommended for large installs)
+   pip install uv
+   uv pip install -e .[dev,rag]
+
+   # Install pre-commit hooks
+   pre-commit install
    ```
 
 2. **Configure Environment Variables**
@@ -37,12 +114,12 @@ The system now includes the complete Phase 3 Agent Intelligence Layer with advan
 
    # Edit .env with your service credentials
    # The system uses a centralized Pydantic configuration with validation
-   
+
    # Required settings:
    # - SUPABASE_URL and SUPABASE_SERVICE_KEY (or DATABASE_URL)
    # - LLM_API_KEY and LLM_PROVIDER
    # - EMBEDDING_API_KEY and EMBEDDING_PROVIDER
-   
+
    # The configuration system will validate all settings on startup
    ```
 
@@ -53,12 +130,25 @@ The system now includes the complete Phase 3 Agent Intelligence Layer with advan
    - Enable the `pgvector` extension in Database → Extensions
    - Get your project URL and service role key from Project Settings → API
    - Update `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` in your `.env` file
-   - **Execute SQL scripts in order** in the Supabase SQL Editor:
-     1. [`sql/documents.sql`](../sql/documents.sql) - Vector storage with search function
-     2. [`sql/document_metadata.sql`](../sql/document_metadata.sql) - Document metadata
-     3. [`sql/document_rows.sql`](../sql/document_rows.sql) - Structured data storage
-     4. [`sql/execute_sql_rpc.sql`](../sql/execute_sql_rpc.sql) - Secure SQL execution
-     5. [`sql/agentic_rag/schema.sql`](../sql/agentic_rag/schema.sql) - Agentic RAG tables (optional)
+   - **Get PostgreSQL connection string** from Project Settings → Database → Connection string:
+     ```env
+     # For WSL2 or IPv4-only networks, use Session pooler (recommended):
+     # Important: URL-encode special characters in password (? → %3F, $ → %24, @ → %40)
+     DATABASE_URL=postgresql://postgres.[PROJECT-REF]:[PASSWORD]@aws-[REGION].pooler.supabase.com:5432/postgres
+
+     # Example for us-east-2 region:
+     DATABASE_URL=postgresql://postgres.hokdgtbedrsenvldxbyx:your%3Fpass%24word@aws-1-us-east-2.pooler.supabase.com:5432/postgres
+
+     # Direct connection (IPv6 only, not compatible with WSL2):
+     DATABASE_URL=postgresql://postgres:your%3Fpass%24word@db.your-project.supabase.co:5432/postgres
+
+     # Note: Transaction pooler (port 6543) may timeout on WSL2 - use Session pooler (port 5432)
+     ```
+   - **Execute single migration file** in the Supabase SQL Editor:
+     - Go to SQL Editor → New Query
+     - Copy contents of [`src/agentic_rag/storage/migrations/sql/001_enhanced_schema.sql`](../src/agentic_rag/storage/migrations/sql/001_enhanced_schema.sql)
+     - Paste and run
+     - This creates all tables (documents, chunks, sessions, messages, search_cache, graph_sync_queue), indexes, functions, and triggers
 
    **Neo4j Setup (For Agentic RAG - Optional):**
    ```bash
@@ -116,6 +206,50 @@ The system now includes the complete Phase 3 Agent Intelligence Layer with advan
    # Test Phase 3 features
    python -m src.agentic_rag.agent.agent chat "How is Microsoft related to OpenAI?"
    ```
+
+5. **Ingest Documents (Agentic RAG)**
+
+   **Storage Backend Options:**
+
+   The system supports two storage backends with intelligent fallback:
+
+   - **PostgreSQL (Primary)**: Direct database connection - faster, with connection pooling
+   - **REST API (Fallback)**: HTTPS-based - works when PostgreSQL ports blocked
+
+   ```bash
+   # Default: Tries PostgreSQL, auto-falls back to REST API if connection fails
+   make ingest
+
+   # Or with custom document path:
+   python -m src.agentic_rag.ingestion ingest --path /path/to/documents
+
+   # Force REST API mode (skip PostgreSQL attempt):
+   python -m src.agentic_rag.ingestion ingest --rest-api
+
+   # With verbose logging:
+   python -m src.agentic_rag.ingestion ingest --verbose
+   ```
+
+   **Test documents included:**
+   ```bash
+   # Ingest example documents (21 AI industry articles)
+   make ingest
+   # Uses: docs/example_big_tech_docs_for_ingestion_testing/
+   ```
+
+   **Verify ingestion:**
+   ```bash
+   # Test PostgreSQL connectivity
+   python test_db_connection.py
+
+   # Test REST API connectivity
+   python test_supabase_rest.py
+   ```
+
+   **When to use each backend:**
+   - **Auto (recommended)**: Let system choose based on network availability
+   - **PostgreSQL**: Production, local development, Docker (when ports 5432/6543 accessible)
+   - **REST API**: Corporate VPNs, restrictive firewalls, WSL2 with IPv6 issues
 
 ## Deployment Options
 
