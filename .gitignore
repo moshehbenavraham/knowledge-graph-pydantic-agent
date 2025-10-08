@@ -78,5 +78,7 @@ coverage.xml
 # AI Assistant files and directories
 .cursorrules
 CLAUDE.md
+@CLAUDE.md
+AGENTS.md
 .grok/
 .claude/

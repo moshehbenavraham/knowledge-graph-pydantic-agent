@@ -7,7 +7,7 @@ pipelines for ingestion and evaluation so the same agent logic can run in multip
 
 ## Highlights
 - Single asynchronous agent (`src/agent/unified_agent.py`) with intent-aware tool orchestration
-- Agentic RAG stack with Supabase pgvector, Neo4j graph search, and configurable hybrid routing
+- Agentic RAG stack with Supabase pgvector, Graphiti-powered Neo4j knowledge graph, and configurable hybrid routing
 - Streamlit UI with simple/standard/advanced modes, FastAPI endpoints, and CLI utilities
 - Centralised configuration via `.env` + Pydantic settings, supporting OpenAI, Anthropic, Ollama, and OpenRouter
 - Observability built in: caching, structured logging, Prometheus metrics, and optional monitoring stack
@@ -15,7 +15,7 @@ pipelines for ingestion and evaluation so the same agent logic can run in multip
 ## Architecture Overview
 - **Agent layer:** Pydantic-AI agent exposing async tools for RAG, SQL, web search, code execution, and image analysis.
 - **Retrieval layer:** `src/agentic_rag` and `src/rag_pipeline` provide ingestion, semantic chunking, embeddings, and hybrid search.
-- **Persistence:** Supabase (PostgreSQL + pgvector) stores documents, embeddings, and mem0 memory; Neo4j handles the knowledge graph.
+- **Persistence:** Supabase (PostgreSQL + pgvector) stores documents, embeddings, and mem0 memory; Neo4j + Graphiti handle the knowledge graph.
 - **Interfaces:** Streamlit UI (`src/ui/streamlit_app.py`), FastAPI service (`src/api/main.py`), and CLI helpers in `examples/`.
 - **Configuration:** `src/config/` modules source environment variables defined in `.env` (see `.env.example` for the full catalogue).
 
@@ -81,10 +81,10 @@ Settings are loaded through Pydantic models in `src/config/`, so updates to `.en
 
 ## Data Stores & Ingestion
 - **Supabase (pgvector):** primary store for documents, embeddings, and SQL-backed tools. The SQL scripts in `sql/` create the required tables, functions, and agentic RAG schema.
-- **Neo4j:** used for entity and relationship storage. Run `python -m src.agentic_rag.storage.neo4j_store init` after configuring environment variables.
+- **Neo4j + Graphiti:** used for entity and relationship storage. Run `python -m src.agentic_rag.storage.neo4j_store init` after configuring environment variables.
 - **mem0:** provides persistent and session memory, configured via `src/clients/memory.py`.
 - **Optional caching:** enable Redis with `ENABLE_REDIS_CACHE=true` to speed up repeated queries.
-- **Ingestion pipeline:** `src/rag_pipeline/pipeline.py` handles scheduled ingestion and watching; the agentic pipeline (`DocumentIngestionPipeline` in `src/agentic_rag/ingestion/pipeline.py`) can be invoked from custom scripts for semantic chunking + knowledge extraction (see `docs/DB_AND_RAG.md` for examples).
+- **Ingestion pipeline:** `src/rag_pipeline/pipeline.py` handles scheduled ingestion and watching; the agentic pipeline (`DocumentIngestionPipeline` in `src/agentic_rag/ingestion/pipeline.py`) uses Graphiti for entity/relationship extraction and can be invoked from custom scripts for semantic chunking + knowledge extraction (see `docs/DB_AND_RAG.md` for examples).
 
 ## Tools & Capabilities
 - `smart_search` – intent-aware routing that combines vector, graph, and hybrid search strategies.
@@ -94,6 +94,7 @@ Settings are loaded through Pydantic models in `src/config/`, so updates to `.en
 - `web_search` – integrates Jina.ai, Brave Search, and SearXNG with automatic provider selection.
 - `image_analysis` – forwards images to the configured multimodal model.
 - Memory hooks – mem0-backed session and long-term memory surfaced in responses.
+- Knowledge extraction – Graphiti-driven entity, relationship, and fact extraction powering the knowledge graph.
 
 ## Development Workflow
 ```bash
