@@ -19,7 +19,7 @@ graph TB
     end
 
     subgraph "Agent Layer"
-        Agent[Pydantic AI Agent]
+        Agent[AI with Apex Pydantic Agent]
         Intent[Intent Analyzer]
         Router[Query Router]
         Tools[Tool System]

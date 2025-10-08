@@ -16,7 +16,7 @@ This design ensures zero content duplication while providing powerful graph-base
 
 ```mermaid
 graph TB
-    A[Pydantic AI Agent] --> B[Query Intent Analyzer]
+    A[AI with Apex Pydantic AI Agent] --> B[Query Intent Analyzer]
     B --> C{Search Strategy}
 
     C -->|Vector| D[PostgreSQL/Supabase]

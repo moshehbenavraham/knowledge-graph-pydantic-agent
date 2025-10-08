@@ -266,7 +266,7 @@ class TestStreamlitApp:
                 # Verify page configuration
                 mock_st.set_page_config.assert_called_once()
                 config_args = mock_st.set_page_config.call_args
-                assert config_args[1]["page_title"] == "Pydantic AI Agent"
+                assert config_args[1]["page_title"] == "AI with Apex Advanced RAG Agent"
                 assert config_args[1]["page_icon"] == "🤖"
                 assert config_args[1]["layout"] == "wide"
 
@@ -274,7 +274,7 @@ class TestStreamlitApp:
                 mock_init.assert_called_once()
 
                 # Verify title
-                mock_st.title.assert_called_once_with("🤖 Pydantic AI Agent")
+                mock_st.title.assert_called_once_with("🤖 AI with Apex Advanced RAG Agent")
 
                 # Verify mode indicator
                 mock_st.caption.assert_called()

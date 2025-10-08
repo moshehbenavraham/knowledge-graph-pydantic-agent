@@ -164,7 +164,7 @@ make docker-stop
 ### Main Components
 
 - **Chat Interface** - Streamlit-based conversational UI
-- **Agent Integration** - Connects to the core Pydantic AI agent
+- **Agent Integration** - Connects to the core 'AI with Apex Advanced RAG Agent'
 - **Memory Management** - Handles conversation persistence
 - **Tool Integration** - Access to web search, RAG, code execution
 - **Streaming Support** - Real-time response rendering
