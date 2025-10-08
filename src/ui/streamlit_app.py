@@ -223,26 +223,39 @@ async def handle_user_input(user_input: str):
         else:
             # Streaming mode
             message_placeholder = st.empty()
+            status_placeholder = st.empty()
             full_response = ""
+            first_chunk_received = False
 
             async with AsyncClient() as http_client:
+                # Show thinking indicator while waiting for first chunk
+                status_placeholder.status("Thinking...", state="running")
+
                 async for chunk in handler.run_agent(
                     user_input, st.session_state.messages, http_client
                 ):
                     if chunk.get("type") == "start":
+                        # Clear the thinking indicator once we start receiving content
+                        if not first_chunk_received:
+                            status_placeholder.empty()
+                            first_chunk_received = True
                         full_response = chunk["content"]
                         message_placeholder.markdown(full_response + "▌")
                     elif chunk.get("type") == "delta":
+                        if not first_chunk_received:
+                            status_placeholder.empty()
+                            first_chunk_received = True
                         full_response += chunk["content"]
                         message_placeholder.markdown(full_response + "▌")
                     elif chunk.get("type") == "complete":
+                        status_placeholder.empty()
                         message_placeholder.markdown(full_response)
                         st.session_state.messages.extend(chunk["new_messages"])
 
 
 async def main():
     st.set_page_config(
-        page_title="Pydantic AI Agent",
+        page_title="AI with Apex Advanced RAG Agent",
         page_icon="🤖",
         layout="wide",
         initial_sidebar_state=(
@@ -259,7 +272,7 @@ async def main():
         render_sidebar()
 
     # Main chat interface
-    st.title("🤖 Pydantic AI Agent")
+    st.title("🤖 AI with Apex Advanced RAG Agent")
 
     # Mode indicator
     mode = st.session_state.config.mode
