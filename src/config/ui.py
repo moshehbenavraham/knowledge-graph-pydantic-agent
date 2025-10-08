@@ -49,10 +49,10 @@ class UIConfig:
         """Get maximum message length based on mode."""
         if self.is_simple_mode:
             return 1000
-        elif self.is_standard_mode:
+        if self.is_standard_mode:
             return 5000
-        else:  # Advanced
-            return 10000
+        # Advanced
+        return 10000
 
     @property
     def show_metrics(self) -> bool:

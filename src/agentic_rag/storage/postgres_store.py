@@ -544,7 +544,7 @@ class PostgresStore:
                 param_idx += 1
 
             # Always update the updated_at timestamp
-            set_clauses.append(f"updated_at = NOW()")
+            set_clauses.append("updated_at = NOW()")
 
             query = f"""
                 UPDATE documents

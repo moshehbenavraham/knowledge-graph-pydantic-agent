@@ -39,7 +39,7 @@ This project and everyone participating in it is governed by our [Code of Conduc
    cp .env.example .env
    # Edit .env with your test credentials
    ```
-   
+
    **Note:** We use a centralized configuration system. Always use `from src.config import get_settings` instead of direct `os.getenv()` calls.
 
 4. **Run Tests**

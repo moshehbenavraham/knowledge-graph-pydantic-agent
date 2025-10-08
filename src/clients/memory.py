@@ -1,14 +1,15 @@
 import os
 
+from mem0 import AsyncMemory, Memory
+
 from src.config import get_settings
 from src.config.clients import clients_config
-from mem0 import AsyncMemory, Memory
 
 
 def get_mem0_config():
     # Get configuration from centralized settings
     settings = get_settings()
-    
+
     # Initialize config dictionary
     config = {}
 
@@ -44,7 +45,9 @@ def get_mem0_config():
 
         # Set base URL for Ollama if provided
         if clients_config.llm_base_url:
-            config["llm"]["config"]["ollama_base_url"] = clients_config.llm_base_url.replace("/v1", "")
+            config["llm"]["config"]["ollama_base_url"] = clients_config.llm_base_url.replace(
+                "/v1", ""
+            )
 
     # Configure embedder based on provider
     embedding_provider = clients_config.embedding_provider.value
@@ -72,7 +75,9 @@ def get_mem0_config():
 
         # Set base URL for Ollama if provided
         if clients_config.embedding_base_url:
-            config["embedder"]["config"]["ollama_base_url"] = clients_config.embedding_base_url.replace("/v1", "")
+            config["embedder"]["config"]["ollama_base_url"] = (
+                clients_config.embedding_base_url.replace("/v1", "")
+            )
 
     # Configure Supabase vector store (using Supabase for everything)
     config["vector_store"] = {

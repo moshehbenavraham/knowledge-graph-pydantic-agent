@@ -381,10 +381,15 @@ ENABLE_REDIS_CACHE=false
 - [x] **Fixed ConnectionManager prepared statement** (schema uses embedding_1536/768, not embedding)
 - [x] **Made Neo4j initialization conditional** (only loads when ENABLE_GRAPH=true)
 - [x] **PostgreSQL connection confirmed working** (63 documents, 810 chunks accessible)
-- [ ] Resolve PostgreSQL storage circuit breaker issue (currently investigating schema mismatch)
+- [x] **Fixed Makefile venv activation** (all `make run-*` commands now activate .venv and set PYTHONPATH)
+- [x] **Fixed OpenAIModel deprecation** (updated to OpenAIChatModel in src/clients/llm.py)
+- [x] **Fixed Prometheus metrics duplicate registration** (handles Streamlit reloads gracefully)
+- [x] **Streamlit UI running successfully** (accessible at http://localhost:8501, HTTP 200 verified)
+- [x] **Fixed RAG list_documents_tool** (was querying non-existent document_metadata table, now queries documents table correctly)
+- [x] **Updated TESTING_GUIDE.md** (added document-specific test queries based on ingested content)
+- [x] **Deployment fully operational** (UI + RAG + 63 documents accessible)
 - [ ] Neo4j knowledge graph initialized (optional - for graph features only)
-- [ ] Test UI with ingested documents
-- [ ] Test search and retrieval functionality
+- [ ] Complete comprehensive testing with TESTING_GUIDE.md
 
 ## Next Steps
 
@@ -395,12 +400,13 @@ ENABLE_REDIS_CACHE=false
 5. ✅ ~~Create ingestion CLI interface~~ (COMPLETED)
 6. ✅ ~~Diagnose WSL2 network connectivity~~ (COMPLETED - IPv6/port blocking identified)
 7. ✅ ~~Create REST API fallback~~ (COMPLETED - automatic fallback implemented)
-8. ✅ ~~Initialize Supabase schema~~ (COMPLETED - confirmed 42 documents, 540 chunks)
-9. ✅ ~~Test document ingestion~~ (COMPLETED - 21 documents successfully ingested via REST API)
-10. **Test UI with ingested documents** (NEXT - verify search/retrieval)
-11. Test search functionality with ingested data
-12. Initialize Neo4j graph (optional - for knowledge graph features)
-13. Test full system end-to-end
+8. ✅ ~~Initialize Supabase schema~~ (COMPLETED - 63 documents, 810 chunks)
+9. ✅ ~~Test document ingestion~~ (COMPLETED - 63 documents successfully ingested)
+10. ✅ ~~Fix UI and RAG tools~~ (COMPLETED - Makefile, Prometheus, list_documents fixed)
+11. ✅ ~~Deploy UI successfully~~ (COMPLETED - running on http://localhost:8501)
+12. **Test with TESTING_GUIDE.md queries** (CURRENT - comprehensive test suite ready)
+13. **Initialize Neo4j graph** (OPTIONAL - for knowledge graph features, requires `pip install -e ".[rag]"`)
+14. **Switch to standard UI mode** (OPTIONAL - for streaming + tool visibility: `make run-ui`)
 
 ## Troubleshooting
 
@@ -699,6 +705,105 @@ nslookup db.hokdgtbedrsenvldxbyx.supabase.co
 # Test HTTPS (should work)
 curl -I https://hokdgtbedrsenvldxbyx.supabase.co
 ```
+
+### Makefile Issues (Resolved)
+
+**Issue:** `ModuleNotFoundError: No module named 'src'` or `streamlit: not found` when running `make run-ui`
+
+**Root Cause:**
+- Makefile commands weren't activating the virtual environment
+- Python couldn't find the `src` module without PYTHONPATH set
+
+**Resolution (COMPLETED):**
+Updated all Makefile `run-*` commands to:
+1. Activate virtual environment: `source .venv/bin/activate`
+2. Set PYTHONPATH: `PYTHONPATH=$(PWD):$$PYTHONPATH`
+
+**Example fix applied:**
+```makefile
+# Before (broken)
+run-ui-simple:
+	UI_MODE=simple streamlit run src/ui/streamlit_app.py
+
+# After (working)
+run-ui-simple:
+	bash -c "source .venv/bin/activate && PYTHONPATH=$(PWD):$$PYTHONPATH UI_MODE=simple streamlit run src/ui/streamlit_app.py"
+```
+
+**Commands fixed:**
+- `make run-ui`, `make run-ui-simple`, `make run-ui-advanced`
+- `make run-api`, `make run-rag`, `make run-agentic-rag`
+- `make neo4j-init`, `make ingest`, `make ingest-clean`
+- `make dev`
+
+**Manual alternative** (if Makefile still fails):
+```bash
+source .venv/bin/activate
+PYTHONPATH=/home/aiwithapex/projects/base_agent:$PYTHONPATH UI_MODE=simple streamlit run src/ui/streamlit_app.py
+```
+
+### Prometheus Metrics Duplicate Registration (Resolved)
+
+**Issue:** `ValueError: Duplicated timeseries in CollectorRegistry: {'luminari_requests', 'luminari_requests_created', 'luminari_requests_total'}`
+
+**Root Cause:**
+- Streamlit reloads modules on each script run
+- Prometheus metrics get re-registered, causing duplicate timeseries error
+
+**Resolution (COMPLETED):**
+Updated `src/utils/monitoring.py` `_get_or_create_metric()` function to:
+1. Check if metric already exists before creating
+2. Catch `ValueError` on duplicate registration
+3. Return existing metric instead of failing
+
+**Code change:**
+```python
+try:
+    return metric_class(**kwargs)
+except ValueError as e:
+    # Metric already registered (happens with Streamlit reloads)
+    if "Duplicated timeseries" in str(e):
+        for collector in list(registry._collector_to_names.keys()):
+            collector_name = getattr(collector, "_name", None) or getattr(collector, "name", None)
+            if collector_name == name:
+                return collector
+    raise
+```
+
+**Result:** UI now starts cleanly without metrics errors
+
+### RAG Tools Schema Mismatch (Resolved)
+
+**Issue:** Agent says "I don't have any documents" despite 63 documents in database
+
+**Root Cause:**
+- `list_documents_tool` in `src/tools/rag.py` was querying non-existent `document_metadata` table
+- Schema uses `documents` table with metadata as JSONB column (not separate table)
+
+**Resolution (COMPLETED):**
+Updated `src/tools/rag.py` line 72:
+```python
+# Before (WRONG - table doesn't exist)
+result = supabase.from_("document_metadata").select("id, title, schema, url").execute()
+
+# After (CORRECT - queries actual table)
+result = supabase.from_("documents").select("id, title, source, created_at").execute()
+```
+
+**Verification:**
+```bash
+source .venv/bin/activate
+python -c "
+from src.config import get_settings
+from supabase import create_client
+settings = get_settings()
+supabase = create_client(settings.supabase_url, settings.supabase_service_key)
+result = supabase.from_('documents').select('*', count='exact').execute()
+print(f'Documents: {result.count}')
+"
+```
+
+**Result:** Agent now successfully lists all 63 documents when asked "What documents do you have?"
 
 ### Cloud Service Issues
 

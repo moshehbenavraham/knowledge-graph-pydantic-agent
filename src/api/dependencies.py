@@ -4,12 +4,12 @@ Dependency injection layer for FastAPI endpoints.
 Provides database sessions, search clients, agent orchestrator, and cache.
 """
 
-from typing import AsyncGenerator, Optional
+from collections.abc import AsyncGenerator
 
 import structlog
 from fastapi import Depends, HTTPException, status
 
-from src.agent.unified_agent import UnifiedAgentDeps, super_agent
+from src.agent.unified_agent import UnifiedAgentDeps
 from src.agentic_rag.search.hybrid_search import HybridSearch
 from src.agentic_rag.search.intent_analyzer import IntentAnalyzer
 from src.agentic_rag.search.vector_search import VectorSearch
@@ -18,16 +18,16 @@ from src.agentic_rag.storage.graphiti_client import GraphitiClient
 from src.agentic_rag.storage.neo4j_store import Neo4jStore
 from src.agentic_rag.storage.postgres_store import PostgresStore
 from src.config import get_settings
-from src.utils.cache import get_cache, CacheManager
+from src.utils.cache import CacheManager, get_cache
 
 logger = structlog.get_logger()
 
 # Global instances (initialized in lifespan)
-_connection_manager: Optional[ConnectionManager] = None
-_postgres_store: Optional[PostgresStore] = None
-_neo4j_store: Optional[Neo4jStore] = None
-_graphiti_client: Optional[GraphitiClient] = None
-_cache_manager: Optional[CacheManager] = None
+_connection_manager: ConnectionManager | None = None
+_postgres_store: PostgresStore | None = None
+_neo4j_store: Neo4jStore | None = None
+_graphiti_client: GraphitiClient | None = None
+_cache_manager: CacheManager | None = None
 
 
 async def init_dependencies():
@@ -96,7 +96,7 @@ async def get_connection_manager() -> ConnectionManager:
     if _connection_manager is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Connection manager not initialized"
+            detail="Connection manager not initialized",
         )
     return _connection_manager
 
@@ -106,17 +106,17 @@ async def get_postgres_store() -> PostgresStore:
     if _postgres_store is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="PostgreSQL store not initialized"
+            detail="PostgreSQL store not initialized",
         )
     return _postgres_store
 
 
-async def get_neo4j_store() -> Optional[Neo4jStore]:
+async def get_neo4j_store() -> Neo4jStore | None:
     """Get Neo4j store instance (if enabled)."""
     return _neo4j_store
 
 
-async def get_graphiti_client() -> Optional[GraphitiClient]:
+async def get_graphiti_client() -> GraphitiClient | None:
     """Get Graphiti client instance (if enabled)."""
     return _graphiti_client
 
@@ -125,8 +125,7 @@ async def get_cache_manager() -> CacheManager:
     """Get cache manager instance."""
     if _cache_manager is None:
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Cache manager not initialized"
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Cache manager not initialized"
         )
     return _cache_manager
 
@@ -140,8 +139,8 @@ async def get_vector_search(
 
 async def get_hybrid_search(
     postgres_store: PostgresStore = Depends(get_postgres_store),
-    neo4j_store: Optional[Neo4jStore] = Depends(get_neo4j_store),
-    graphiti_client: Optional[GraphitiClient] = Depends(get_graphiti_client),
+    neo4j_store: Neo4jStore | None = Depends(get_neo4j_store),
+    graphiti_client: GraphitiClient | None = Depends(get_graphiti_client),
 ) -> HybridSearch:
     """Get hybrid search instance."""
     return HybridSearch(
@@ -158,7 +157,7 @@ async def get_intent_analyzer() -> IntentAnalyzer:
 
 async def get_agent_deps(
     postgres_store: PostgresStore = Depends(get_postgres_store),
-    neo4j_store: Optional[Neo4jStore] = Depends(get_neo4j_store),
+    neo4j_store: Neo4jStore | None = Depends(get_neo4j_store),
     cache_manager: CacheManager = Depends(get_cache_manager),
 ) -> UnifiedAgentDeps:
     """
@@ -203,8 +202,7 @@ async def get_neo4j_session() -> AsyncGenerator:
 
     if not conn_manager.neo4j_driver:
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Neo4j not available"
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Neo4j not available"
         )
 
     async with conn_manager.get_neo4j_session() as session:

@@ -5,22 +5,22 @@ Provides distributed tracing, metrics, and logging integration.
 """
 
 import logging
-from typing import Callable, Optional
+import time
+from collections.abc import Callable
 
 from fastapi import FastAPI, Request, Response
-from opentelemetry import trace, metrics
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry import metrics, trace
 from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-from opentelemetry.instrumentation.requests import RequestsInstrumentor
 from opentelemetry.instrumentation.logging import LoggingInstrumentor
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.instrumentation.requests import RequestsInstrumentor
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
-from opentelemetry.sdk.resources import Resource, SERVICE_NAME, SERVICE_VERSION
-from prometheus_client import Counter, Histogram, Gauge
-import time
+from opentelemetry.sdk.resources import SERVICE_NAME, SERVICE_VERSION, Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from prometheus_client import Counter, Gauge, Histogram
 
 logger = logging.getLogger(__name__)
 
@@ -28,92 +28,61 @@ logger = logging.getLogger(__name__)
 
 # HTTP Metrics
 http_requests_total = Counter(
-    'http_requests_total',
-    'Total HTTP requests',
-    ['method', 'path', 'status']
+    "http_requests_total", "Total HTTP requests", ["method", "path", "status"]
 )
 
 http_request_duration_seconds = Histogram(
-    'http_request_duration_seconds',
-    'HTTP request duration in seconds',
-    ['method', 'path']
+    "http_request_duration_seconds", "HTTP request duration in seconds", ["method", "path"]
 )
 
 # LLM Metrics
-llm_requests_total = Counter(
-    'llm_requests_total',
-    'Total LLM requests',
-    ['provider', 'model']
-)
+llm_requests_total = Counter("llm_requests_total", "Total LLM requests", ["provider", "model"])
 
 llm_requests_failed_total = Counter(
-    'llm_requests_failed_total',
-    'Failed LLM requests',
-    ['provider', 'model', 'error_type']
+    "llm_requests_failed_total", "Failed LLM requests", ["provider", "model", "error_type"]
 )
 
 llm_request_duration_seconds = Histogram(
-    'llm_request_duration_seconds',
-    'LLM request duration',
-    ['provider', 'model']
+    "llm_request_duration_seconds", "LLM request duration", ["provider", "model"]
 )
 
 # RAG Metrics
-vector_search_total = Counter(
-    'vector_search_total',
-    'Total vector searches',
-    ['search_type']
-)
+vector_search_total = Counter("vector_search_total", "Total vector searches", ["search_type"])
 
 vector_search_duration_seconds = Histogram(
-    'vector_search_duration_seconds',
-    'Vector search duration',
-    ['search_type']
+    "vector_search_duration_seconds", "Vector search duration", ["search_type"]
 )
 
-graph_search_total = Counter(
-    'graph_search_total',
-    'Total graph searches',
-    ['query_type']
-)
+graph_search_total = Counter("graph_search_total", "Total graph searches", ["query_type"])
 
 graph_search_duration_seconds = Histogram(
-    'graph_search_duration_seconds',
-    'Graph search duration',
-    ['query_type']
+    "graph_search_duration_seconds", "Graph search duration", ["query_type"]
 )
 
 graph_search_failures_total = Counter(
-    'graph_search_failures_total',
-    'Graph search failures',
-    ['error_type']
+    "graph_search_failures_total", "Graph search failures", ["error_type"]
 )
 
 # Cache Metrics
-cache_hits_total = Counter('cache_hits_total', 'Cache hits')
-cache_misses_total = Counter('cache_misses_total', 'Cache misses')
+cache_hits_total = Counter("cache_hits_total", "Cache hits")
+cache_misses_total = Counter("cache_misses_total", "Cache misses")
 
 # Database Metrics
-db_connections_active = Gauge('db_connections_active', 'Active database connections')
-db_connections_idle = Gauge('db_connections_idle', 'Idle database connections')
+db_connections_active = Gauge("db_connections_active", "Active database connections")
+db_connections_idle = Gauge("db_connections_idle", "Idle database connections")
 db_query_duration_seconds = Histogram(
-    'db_query_duration_seconds',
-    'Database query duration',
-    ['query_type']
+    "db_query_duration_seconds", "Database query duration", ["query_type"]
 )
 
 # Document Ingestion Metrics
-document_ingestion_total = Counter('document_ingestion_total', 'Documents ingested')
+document_ingestion_total = Counter("document_ingestion_total", "Documents ingested")
 document_ingestion_failures_total = Counter(
-    'document_ingestion_failures_total',
-    'Document ingestion failures',
-    ['error_type']
+    "document_ingestion_failures_total", "Document ingestion failures", ["error_type"]
 )
 
 # Embedding Metrics
 embedding_generation_duration_seconds = Histogram(
-    'embedding_generation_duration_seconds',
-    'Embedding generation duration'
+    "embedding_generation_duration_seconds", "Embedding generation duration"
 )
 
 
@@ -124,7 +93,7 @@ class OpenTelemetryConfig:
         self,
         service_name: str = "base-agent-api",
         service_version: str = "1.0.0",
-        otlp_endpoint: Optional[str] = None,
+        otlp_endpoint: str | None = None,
         enable_console_export: bool = False,
     ):
         self.service_name = service_name
@@ -134,10 +103,12 @@ class OpenTelemetryConfig:
 
     def setup_tracing(self) -> TracerProvider:
         """Set up distributed tracing."""
-        resource = Resource(attributes={
-            SERVICE_NAME: self.service_name,
-            SERVICE_VERSION: self.service_version,
-        })
+        resource = Resource(
+            attributes={
+                SERVICE_NAME: self.service_name,
+                SERVICE_VERSION: self.service_version,
+            }
+        )
 
         provider = TracerProvider(resource=resource)
 
@@ -149,6 +120,7 @@ class OpenTelemetryConfig:
         # Console exporter for development
         if self.enable_console_export:
             from opentelemetry.sdk.trace.export import ConsoleSpanExporter
+
             console_exporter = ConsoleSpanExporter()
             provider.add_span_processor(BatchSpanProcessor(console_exporter))
 
@@ -158,10 +130,12 @@ class OpenTelemetryConfig:
 
     def setup_metrics(self) -> MeterProvider:
         """Set up metrics collection."""
-        resource = Resource(attributes={
-            SERVICE_NAME: self.service_name,
-            SERVICE_VERSION: self.service_version,
-        })
+        resource = Resource(
+            attributes={
+                SERVICE_NAME: self.service_name,
+                SERVICE_VERSION: self.service_version,
+            }
+        )
 
         # Add OTLP metric exporter if endpoint is configured
         readers = []
@@ -205,7 +179,7 @@ async def metrics_middleware(request: Request, call_next: Callable) -> Response:
 
         return response
 
-    except Exception as e:
+    except Exception:
         # Record error metrics
         http_requests_total.labels(method=method, path=path, status=500).inc()
         duration = time.time() - start_time
@@ -215,7 +189,7 @@ async def metrics_middleware(request: Request, call_next: Callable) -> Response:
 
 def setup_telemetry(
     app: FastAPI,
-    otlp_endpoint: Optional[str] = None,
+    otlp_endpoint: str | None = None,
     enable_console_export: bool = False,
 ):
     """
@@ -246,15 +220,16 @@ def setup_telemetry(
 
 # ===== Convenience functions for application code =====
 
-def record_llm_request(provider: str, model: str, duration: float, success: bool, error_type: str = ""):
+
+def record_llm_request(
+    provider: str, model: str, duration: float, success: bool, error_type: str = ""
+):
     """Record LLM request metrics."""
     llm_requests_total.labels(provider=provider, model=model).inc()
     llm_request_duration_seconds.labels(provider=provider, model=model).observe(duration)
     if not success:
         llm_requests_failed_total.labels(
-            provider=provider,
-            model=model,
-            error_type=error_type
+            provider=provider, model=model, error_type=error_type
         ).inc()
 
 

@@ -34,7 +34,7 @@ scrape_configs:
         labels:
           service: 'agentic-rag'
           environment: 'development'
-    
+
     # Override global settings if needed
     scrape_interval: 10s
     scrape_timeout: 5s

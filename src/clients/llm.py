@@ -6,9 +6,9 @@ except ImportError:
     AsyncOpenAI = None
 
 try:
-    from pydantic_ai.models.openai import OpenAIModel
+    from pydantic_ai.models.openai import OpenAIChatModel
 except ImportError:
-    OpenAIModel = None
+    OpenAIChatModel = None
 
 try:
     from pydantic_ai.providers.openai import OpenAIProvider
@@ -27,10 +27,9 @@ def get_llm_client():
         # For Anthropic, we don't use AsyncOpenAI client
         # The pydantic-ai AnthropicModel handles this internally
         return None
-    
+
     llm_client = AsyncOpenAI(
-        base_url=clients_config.llm_base_url,
-        api_key=clients_config.llm_api_key
+        base_url=clients_config.llm_base_url, api_key=clients_config.llm_api_key
     )
     return llm_client
 
@@ -56,11 +55,7 @@ def get_model():
         # Use mapped name if available, otherwise use as-is
         anthropic_model = model_map.get(llm, llm)
         return AnthropicModel(anthropic_model, api_key=api_key)
-    
-    return OpenAIModel(
-        llm,
-        provider=OpenAIProvider(
-            base_url=clients_config.llm_base_url,
-            api_key=api_key
-        )
+
+    return OpenAIChatModel(
+        llm, provider=OpenAIProvider(base_url=clients_config.llm_base_url, api_key=api_key)
     )

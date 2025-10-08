@@ -12,9 +12,10 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
+from src.config import SearchStrategy
+
 from ..config import get_config
 from ..storage.connection_manager import ConnectionManager
-from src.config import SearchStrategy
 from .graph_search import GraphSearch, GraphSearchResult
 from .intent_analyzer import IntentAnalyzer, SearchIntent
 from .ranker import ResultRanker

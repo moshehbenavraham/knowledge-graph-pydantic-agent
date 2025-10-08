@@ -3,9 +3,8 @@ Integration test fixtures and configuration.
 """
 
 import asyncio
-import os
 import uuid
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 import pytest
 import pytest_asyncio
@@ -117,9 +116,7 @@ async def graphiti_client(
     """Create Graphiti client for tests."""
     settings = get_settings()
 
-    if not all(
-        [settings.neo4j_uri, settings.neo4j_user, settings.neo4j_password]
-    ):
+    if not all([settings.neo4j_uri, settings.neo4j_user, settings.neo4j_password]):
         pytest.skip("Neo4j credentials not configured")
 
     client = GraphitiClient(connection_manager)

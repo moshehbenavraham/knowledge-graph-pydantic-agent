@@ -40,15 +40,15 @@ async def chat():
         query = input("\nYou: ")
         if query.lower() == 'exit':
             break
-            
+
         result = await run_unified_agent(
             query=query,
             session_id="chat_session",
             memories="User prefers concise answers"
         )
-        
+
         print(f"\nAgent: {result['response']}")
-        
+
 asyncio.run(chat())
 ```
 
@@ -93,7 +93,7 @@ result = await run_unified_agent(
     "What is the relationship between OpenAI and Microsoft?"
 )
 
-# Similarity query → Vector search  
+# Similarity query → Vector search
 result = await run_unified_agent(
     "Find documents similar to neural networks"
 )
@@ -133,8 +133,8 @@ result = await run_unified_agent(
 
 # Then query specific data
 result = await run_unified_agent(
-    """Execute SQL: 
-    SELECT 
+    """Execute SQL:
+    SELECT
         row_data->>'category' as category,
         COUNT(*) as count,
         AVG((row_data->>'price')::numeric) as avg_price
@@ -223,31 +223,31 @@ result = await run_unified_agent(
 ```python
 async def research_topic(topic: str):
     """Comprehensive research on a topic."""
-    
+
     # Step 1: Initial search
     overview = await run_unified_agent(
         f"Provide an overview of {topic}",
         session_id="research"
     )
-    
+
     # Step 2: Find relevant documents
     docs = await run_unified_agent(
         f"Find all documents related to {topic}",
         session_id="research"
     )
-    
+
     # Step 3: Get latest information
     latest = await run_unified_agent(
         f"Search the web for latest developments in {topic}",
         session_id="research"
     )
-    
+
     # Step 4: Synthesize
     synthesis = await run_unified_agent(
         f"Based on our research, create a comprehensive summary of {topic}",
         session_id="research"
     )
-    
+
     return {
         "overview": overview["response"],
         "documents": docs["response"],
@@ -264,34 +264,34 @@ research = await research_topic("quantum computing")
 ```python
 async def analyze_dataset(dataset_id: str):
     """Complete data analysis workflow."""
-    
+
     # Step 1: Explore structure
     schema = await run_unified_agent(
         f"Show me the schema and sample data from {dataset_id}"
     )
-    
+
     # Step 2: Statistical analysis
     stats = await run_unified_agent(
         f"""Execute SQL to get statistics:
-        SELECT 
+        SELECT
             COUNT(*) as total_rows,
             COUNT(DISTINCT row_data->>'id') as unique_ids
         FROM document_rows
         WHERE dataset_id = '{dataset_id}'
         """
     )
-    
+
     # Step 3: Visualization code
     viz = await run_unified_agent(
-        f"""Write and execute Python code to create 
+        f"""Write and execute Python code to create
         a simple histogram of the data distribution for {dataset_id}"""
     )
-    
+
     # Step 4: Insights
     insights = await run_unified_agent(
         f"Based on the analysis, what insights can you provide about {dataset_id}?"
     )
-    
+
     return {
         "schema": schema["response"],
         "statistics": stats["response"],
@@ -359,9 +359,9 @@ result = await run_unified_agent(
 ```python
 async def generate_report(company: str):
     """Generate comprehensive company report."""
-    
+
     report = []
-    
+
     # Gather information
     tasks = [
         ("Overview", f"Provide overview of {company}"),
@@ -370,16 +370,16 @@ async def generate_report(company: str):
         ("Relationships", f"What companies is {company} connected to?"),
         ("Data", f"Show any data or statistics about {company}")
     ]
-    
+
     for section, query in tasks:
         result = await run_unified_agent(query)
         report.append(f"## {section}\n{result['response']}\n")
-    
+
     # Generate final report
     final = await run_unified_agent(
         f"Create an executive summary based on: {' '.join(report)}"
     )
-    
+
     return "\n".join(report) + f"\n## Executive Summary\n{final['response']}"
 
 # Generate report
@@ -489,7 +489,7 @@ except Exception as e:
    ```python
    # For simple queries - limit results
    deps.search_config["max_results"] = 5
-   
+
    # For research - comprehensive search
    deps.search_config["max_results"] = 50
    deps.search_config["use_graph"] = True

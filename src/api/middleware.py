@@ -6,8 +6,8 @@ Includes correlation IDs, timing, error handling, compression, and rate limiting
 
 import time
 import uuid
+from collections.abc import Callable
 from contextvars import ContextVar
-from typing import Callable
 
 import structlog
 from fastapi import Request, Response, status
@@ -35,23 +35,18 @@ class CorrelationIDMiddleware(BaseHTTPMiddleware):
     Extracts or generates correlation ID and propagates through logging context.
     """
 
-    async def dispatch(
-        self, request: Request, call_next: Callable
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
         """Process request with correlation ID."""
         # Extract or generate correlation ID
         correlation_id = request.headers.get(
-            "X-Correlation-ID",
-            request.headers.get("X-Request-ID", str(uuid.uuid4()))
+            "X-Correlation-ID", request.headers.get("X-Request-ID", str(uuid.uuid4()))
         )
 
         # Set in context variable for access throughout request
         correlation_id_ctx.set(correlation_id)
 
         # Bind to structured logging
-        structlog.contextvars.bind_contextvars(
-            correlation_id=correlation_id
-        )
+        structlog.contextvars.bind_contextvars(correlation_id=correlation_id)
 
         # Process request
         response = await call_next(request)
@@ -72,9 +67,7 @@ class TimingMiddleware(BaseHTTPMiddleware):
     Adds X-Process-Time header with request duration in milliseconds.
     """
 
-    async def dispatch(
-        self, request: Request, call_next: Callable
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
         """Process request with timing."""
         start_time = time.perf_counter()
 
@@ -106,9 +99,7 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
     Catches exceptions and returns structured error responses.
     """
 
-    async def dispatch(
-        self, request: Request, call_next: Callable
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
         """Process request with error handling."""
         try:
             response = await call_next(request)
@@ -138,13 +129,10 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
             error_detail = ErrorDetail(
                 code=error_code,
                 message=error_message,
-                details={"exception_type": type(exc).__name__}
+                details={"exception_type": type(exc).__name__},
             )
 
-            error_response = ErrorResponse(
-                error=error_detail,
-                request_id=get_correlation_id()
-            )
+            error_response = ErrorResponse(error=error_detail, request_id=get_correlation_id())
 
             return JSONResponse(
                 status_code=status_code,
@@ -159,9 +147,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     Adds common security headers to all responses.
     """
 
-    async def dispatch(
-        self, request: Request, call_next: Callable
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
         """Process request with security headers."""
         response = await call_next(request)
 
@@ -169,9 +155,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
-        response.headers["Strict-Transport-Security"] = (
-            "max-age=31536000; includeSubDomains"
-        )
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
 
         return response
 
@@ -202,9 +186,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
     Logs all requests with relevant metadata.
     """
 
-    async def dispatch(
-        self, request: Request, call_next: Callable
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
         """Process request with logging."""
         # Extract request info
         client_host = request.client.host if request.client else "unknown"
@@ -240,12 +222,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     For production, use Redis-backed rate limiting.
     """
 
-    def __init__(
-        self,
-        app,
-        requests_per_minute: int = 60,
-        burst_size: int = 10
-    ):
+    def __init__(self, app, requests_per_minute: int = 60, burst_size: int = 10):
         """
         Initialize rate limit middleware.
 
@@ -260,9 +237,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self._client_requests: dict = {}
         self._last_cleanup = time.time()
 
-    async def dispatch(
-        self, request: Request, call_next: Callable
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
         """Process request with rate limiting."""
         # Skip rate limiting for health endpoints
         if request.url.path.startswith("/health"):
@@ -318,8 +293,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         # Remove requests older than 1 minute
         cutoff_time = current_time - 60
         self._client_requests[client_ip] = [
-            ts for ts in self._client_requests[client_ip]
-            if ts > cutoff_time
+            ts for ts in self._client_requests[client_ip] if ts > cutoff_time
         ]
 
         # Check if under limit
@@ -336,10 +310,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             return self.requests_per_minute
 
         cutoff_time = current_time - 60
-        recent_requests = [
-            ts for ts in self._client_requests[client_ip]
-            if ts > cutoff_time
-        ]
+        recent_requests = [ts for ts in self._client_requests[client_ip] if ts > cutoff_time]
 
         return max(0, self.requests_per_minute - len(recent_requests))
 
@@ -349,8 +320,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         for client_ip in list(self._client_requests.keys()):
             self._client_requests[client_ip] = [
-                ts for ts in self._client_requests[client_ip]
-                if ts > cutoff_time
+                ts for ts in self._client_requests[client_ip] if ts > cutoff_time
             ]
 
             # Remove empty entries

@@ -4,8 +4,6 @@ Agent-specific configuration facade.
 Provides convenient access to agent and search-related settings.
 """
 
-from typing import Dict, Optional
-
 from .settings import SearchStrategy, WebSearchProvider, get_settings
 
 
@@ -62,26 +60,26 @@ class AgentConfig:
         return SearchStrategy.SMART
 
     @property
-    def web_search_provider(self) -> Optional[WebSearchProvider]:
+    def web_search_provider(self) -> WebSearchProvider | None:
         """Get web search provider."""
         return self._settings.web_search_provider
 
     @property
-    def jina_api_key(self) -> Optional[str]:
+    def jina_api_key(self) -> str | None:
         """Get Jina API key."""
         return self._settings.jina_api_key
 
     @property
-    def brave_api_key(self) -> Optional[str]:
+    def brave_api_key(self) -> str | None:
         """Get Brave API key."""
         return self._settings.brave_api_key
 
     @property
-    def searxng_base_url(self) -> Optional[str]:
+    def searxng_base_url(self) -> str | None:
         """Get SearXNG base URL."""
         return self._settings.searxng_base_url
 
-    def get_search_config(self) -> Dict[str, any]:
+    def get_search_config(self) -> dict[str, any]:
         """Get search configuration dictionary."""
         return {
             "enable_graph": self.enable_graph,
@@ -91,7 +89,7 @@ class AgentConfig:
             "default_strategy": self.default_search_strategy,
         }
 
-    def get_web_search_config(self) -> Dict[str, Optional[str]]:
+    def get_web_search_config(self) -> dict[str, str | None]:
         """Get web search configuration."""
         return {
             "provider": self.web_search_provider,
@@ -102,11 +100,7 @@ class AgentConfig:
 
     def has_web_search_configured(self) -> bool:
         """Check if any web search provider is configured."""
-        return bool(
-            self.jina_api_key
-            or self.brave_api_key
-            or self.searxng_base_url
-        )
+        return bool(self.jina_api_key or self.brave_api_key or self.searxng_base_url)
 
 
 # Singleton instance

@@ -5,8 +5,6 @@ Handles document ingestion, updates, listing, and content inspection.
 """
 
 import time
-from typing import Optional
-from uuid import uuid4
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -29,21 +27,16 @@ router = APIRouter(prefix="/api/v1/documents", tags=["documents"])
 
 # Metrics
 ingest_requests_total = Counter(
-    "ingest_requests_total",
-    "Total document ingestion requests",
-    ["status"]
+    "ingest_requests_total", "Total document ingestion requests", ["status"]
 )
-ingest_duration = Histogram(
-    "ingest_duration_seconds",
-    "Document ingestion duration"
-)
+ingest_duration = Histogram("ingest_duration_seconds", "Document ingestion duration")
 
 
 @router.post("", response_model=IngestResponse, status_code=status.HTTP_201_CREATED)
 async def ingest_document(
     request: IngestRequest,
     postgres_store: PostgresStore = Depends(get_postgres_store),
-    graphiti_client = Depends(get_graphiti_client),
+    graphiti_client=Depends(get_graphiti_client),
 ) -> IngestResponse:
     """
     Ingest new document into the system.
@@ -103,7 +96,7 @@ async def ingest_document(
 
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Document ingestion failed: {str(e)}",
+            detail=f"Document ingestion failed: {e!s}",
         )
 
 
@@ -111,7 +104,7 @@ async def ingest_document(
 async def list_documents(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Items per page"),
-    source_filter: Optional[str] = Query(None, description="Filter by source"),
+    source_filter: str | None = Query(None, description="Filter by source"),
     postgres_store: PostgresStore = Depends(get_postgres_store),
 ) -> DocumentListResponse:
     """
@@ -230,7 +223,7 @@ async def get_document(
 async def delete_document(
     document_id: str,
     postgres_store: PostgresStore = Depends(get_postgres_store),
-    graphiti_client = Depends(get_graphiti_client),
+    graphiti_client=Depends(get_graphiti_client),
 ):
     """
     Delete document and associated data.
@@ -276,8 +269,8 @@ async def delete_document(
 @router.patch("/{document_id}")
 async def update_document(
     document_id: str,
-    title: Optional[str] = None,
-    metadata: Optional[dict] = None,
+    title: str | None = None,
+    metadata: dict | None = None,
     postgres_store: PostgresStore = Depends(get_postgres_store),
 ):
     """
@@ -338,7 +331,7 @@ async def update_document(
 async def reindex_document(
     document_id: str,
     postgres_store: PostgresStore = Depends(get_postgres_store),
-    graphiti_client = Depends(get_graphiti_client),
+    graphiti_client=Depends(get_graphiti_client),
 ):
     """
     Reindex document (regenerate embeddings and knowledge extraction).
@@ -382,7 +375,7 @@ async def reindex_document(
 async def get_document_stats(
     document_id: str,
     postgres_store: PostgresStore = Depends(get_postgres_store),
-    graphiti_client = Depends(get_graphiti_client),
+    graphiti_client=Depends(get_graphiti_client),
 ):
     """
     Get statistics for document.

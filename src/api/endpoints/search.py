@@ -5,7 +5,6 @@ Provides vector, graph, hybrid, and intent-driven search capabilities.
 """
 
 import time
-from typing import List
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -19,7 +18,6 @@ from src.api.dependencies import (
     get_graphiti_client,
     get_hybrid_search,
     get_intent_analyzer,
-    get_postgres_store,
     get_vector_search,
 )
 from src.api.models import (
@@ -38,15 +36,9 @@ router = APIRouter(prefix="/api/v1/search", tags=["search"])
 
 # Metrics
 search_requests_total = Counter(
-    "search_requests_total",
-    "Total search requests",
-    ["search_type", "status"]
+    "search_requests_total", "Total search requests", ["search_type", "status"]
 )
-search_duration = Histogram(
-    "search_duration_seconds",
-    "Search duration",
-    ["search_type"]
-)
+search_duration = Histogram("search_duration_seconds", "Search duration", ["search_type"])
 
 
 @router.post("", response_model=SearchResponse)
@@ -69,10 +61,7 @@ async def search(
     cached_result = cache.get(cache_key)
     if cached_result:
         logger.info("search_cache_hit", query=request.query)
-        search_requests_total.labels(
-            search_type=request.search_type,
-            status="cache_hit"
-        ).inc()
+        search_requests_total.labels(search_type=request.search_type, status="cache_hit").inc()
         return SearchResponse(**cached_result)
 
     try:
@@ -84,28 +73,17 @@ async def search(
 
         # Execute search based on type
         if request.search_type == SearchType.VECTOR:
-            results = await _execute_vector_search(
-                vector_search,
-                request
-            )
+            results = await _execute_vector_search(vector_search, request)
         elif request.search_type == SearchType.HYBRID:
-            results = await _execute_hybrid_search(
-                hybrid_search,
-                request
-            )
+            results = await _execute_hybrid_search(hybrid_search, request)
         elif request.search_type == SearchType.ADAPTIVE:
             # Use intent analysis to select strategy
             intent = intent_analyzer.analyze(request.query)
-            results = await _execute_adaptive_search(
-                vector_search,
-                hybrid_search,
-                request,
-                intent
-            )
+            results = await _execute_adaptive_search(vector_search, hybrid_search, request, intent)
         else:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Unsupported search type: {request.search_type}"
+                detail=f"Unsupported search type: {request.search_type}",
             )
 
         # Calculate metrics
@@ -124,13 +102,8 @@ async def search(
         cache.set(cache_key, response.model_dump(), ttl=600)
 
         # Record metrics
-        search_requests_total.labels(
-            search_type=request.search_type,
-            status="success"
-        ).inc()
-        search_duration.labels(search_type=request.search_type).observe(
-            search_time_ms / 1000
-        )
+        search_requests_total.labels(search_type=request.search_type, status="success").inc()
+        search_duration.labels(search_type=request.search_type).observe(search_time_ms / 1000)
 
         logger.info(
             "search_completed",
@@ -143,14 +116,11 @@ async def search(
 
     except Exception as e:
         logger.error("search_failed", query=request.query, error=str(e))
-        search_requests_total.labels(
-            search_type=request.search_type,
-            status="error"
-        ).inc()
+        search_requests_total.labels(search_type=request.search_type, status="error").inc()
 
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Search failed: {str(e)}",
+            detail=f"Search failed: {e!s}",
         )
 
 
@@ -184,7 +154,7 @@ async def search_suggest(
 @router.get("/entities/{entity_name}")
 async def get_entity_info(
     entity_name: str,
-    graphiti_client = Depends(get_graphiti_client),
+    graphiti_client=Depends(get_graphiti_client),
 ):
     """
     Get information about specific entity from knowledge graph.
@@ -221,7 +191,7 @@ async def find_relationships(
     entity1: str = Query(..., description="First entity name"),
     entity2: str = Query(..., description="Second entity name"),
     max_depth: int = Query(3, ge=1, le=5, description="Max relationship depth"),
-    graphiti_client = Depends(get_graphiti_client),
+    graphiti_client=Depends(get_graphiti_client),
 ):
     """
     Find relationships between two entities in knowledge graph.
@@ -347,5 +317,4 @@ async def _execute_adaptive_search(
     """Execute adaptive search based on intent analysis."""
     if intent in [SearchIntent.VECTOR_HEAVY, SearchIntent.SEMANTIC]:
         return await _execute_vector_search(vector_search, request)
-    else:
-        return await _execute_hybrid_search(hybrid_search, request)
+    return await _execute_hybrid_search(hybrid_search, request)

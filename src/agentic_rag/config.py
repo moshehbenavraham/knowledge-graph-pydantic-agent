@@ -6,10 +6,8 @@ while maintaining the same interface for existing code.
 """
 
 from dataclasses import dataclass
-from typing import List
 
 from src.config import get_settings
-from src.config.clients import clients_config
 
 
 @dataclass
@@ -137,10 +135,10 @@ class Config:
         self.ingestion = IngestionConfig()
         self.api = APIConfig()
 
-    def validate(self) -> List[str]:
+    def validate(self) -> list[str]:
         """
         Validate configuration and return list of errors.
-        
+
         Returns:
             List of validation error messages
         """
@@ -155,7 +153,7 @@ class Config:
     def dict(self) -> dict:
         """
         Convert config to dictionary.
-        
+
         Returns:
             Configuration as dictionary
         """
@@ -170,7 +168,7 @@ config = Config()
 def get_config() -> Config:
     """
     Get the global configuration instance (backward compatibility).
-    
+
     Returns:
         Global configuration
     """
@@ -181,6 +179,7 @@ def reload_config():
     """Reload configuration from environment variables."""
     global config
     from src.config import reload_settings
+
     reload_settings()
     config = Config()
     return config

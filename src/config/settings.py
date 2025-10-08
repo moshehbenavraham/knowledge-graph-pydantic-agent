@@ -7,7 +7,7 @@ with automatic validation, type conversion, and environment variable loading.
 
 from enum import Enum
 from functools import lru_cache
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -76,7 +76,7 @@ class ChunkingStrategy(str, Enum):
 class Settings(BaseSettings):
     """
     Main configuration class with all application settings.
-    
+
     Loads from environment variables with automatic validation.
     """
 
@@ -102,15 +102,15 @@ class Settings(BaseSettings):
     )
 
     # Database Configuration - PostgreSQL/Supabase
-    database_url: Optional[str] = Field(
+    database_url: str | None = Field(
         default=None,
         description="PostgreSQL database URL",
     )
-    supabase_url: Optional[str] = Field(
+    supabase_url: str | None = Field(
         default=None,
         description="Supabase project URL",
     )
-    supabase_service_key: Optional[str] = Field(
+    supabase_service_key: str | None = Field(
         default=None,
         description="Supabase service role key",
     )
@@ -138,7 +138,7 @@ class Settings(BaseSettings):
     )
 
     # Database Configuration - Redis
-    redis_url: Optional[str] = Field(
+    redis_url: str | None = Field(
         default=None,
         description="Redis connection URL",
     )
@@ -220,7 +220,7 @@ class Settings(BaseSettings):
         default="text-embedding-3-small",
         description="Embedding model name",
     )
-    embedding_model_choice: Optional[str] = Field(
+    embedding_model_choice: str | None = Field(
         default=None,
         description="Alternative embedding model choice (legacy)",
     )
@@ -253,7 +253,7 @@ class Settings(BaseSettings):
         default="gpt-4o-mini",
         description="LLM model name",
     )
-    llm_choice: Optional[str] = Field(
+    llm_choice: str | None = Field(
         default=None,
         description="Alternative LLM model choice (legacy)",
     )
@@ -386,19 +386,19 @@ class Settings(BaseSettings):
     )
 
     # Web Search Configuration
-    web_search_provider: Optional[WebSearchProvider] = Field(
+    web_search_provider: WebSearchProvider | None = Field(
         default=None,
         description="Preferred web search provider",
     )
-    jina_api_key: Optional[str] = Field(
+    jina_api_key: str | None = Field(
         default=None,
         description="Jina.ai API key",
     )
-    brave_api_key: Optional[str] = Field(
+    brave_api_key: str | None = Field(
         default=None,
         description="Brave Search API key",
     )
-    searxng_base_url: Optional[str] = Field(
+    searxng_base_url: str | None = Field(
         default=None,
         description="SearXNG instance URL",
     )
@@ -432,13 +432,13 @@ class Settings(BaseSettings):
 
     @field_validator("cors_origins")
     @classmethod
-    def parse_cors_origins(cls, v: str) -> List[str]:
+    def parse_cors_origins(cls, v: str) -> list[str]:
         """Parse comma-separated CORS origins."""
         return [origin.strip() for origin in v.split(",") if origin.strip()]
 
     @field_validator("llm_choice")
     @classmethod
-    def sync_llm_choice(cls, v: Optional[str]) -> Optional[str]:
+    def sync_llm_choice(cls, v: str | None) -> str | None:
         """Sync llm_choice with llm_model for backward compatibility."""
         # Field validators in Pydantic v2 don't have access to other fields
         # This will be handled in model_validator instead
@@ -446,7 +446,7 @@ class Settings(BaseSettings):
 
     @field_validator("embedding_model_choice")
     @classmethod
-    def sync_embedding_choice(cls, v: Optional[str]) -> Optional[str]:
+    def sync_embedding_choice(cls, v: str | None) -> str | None:
         """Sync embedding_model_choice with embedding_model for backward compatibility."""
         # Field validators in Pydantic v2 don't have access to other fields
         # This will be handled in model_validator instead
@@ -460,21 +460,21 @@ class Settings(BaseSettings):
         if self.embedding_model_choice is None and self.embedding_model:
             self.embedding_model_choice = self.embedding_model
         return self
-    
+
     @model_validator(mode="after")
     def validate_database_config(self) -> "Settings":
         """Validate database configuration."""
         if not self.database_url and not self.supabase_url:
             if self.app_env == Environment.PRODUCTION:
                 raise ValueError("Either DATABASE_URL or SUPABASE_URL must be set in production")
-        
+
         if self.enable_redis_cache and not self.redis_url:
             raise ValueError("REDIS_URL is required when Redis cache is enabled")
-        
+
         if self.enable_graph and not self.neo4j_password:
             if self.app_env == Environment.PRODUCTION:
                 raise ValueError("NEO4J_PASSWORD is required when graph is enabled in production")
-        
+
         return self
 
     @model_validator(mode="after")
@@ -482,10 +482,10 @@ class Settings(BaseSettings):
         """Validate connection pool settings."""
         if self.pg_pool_min > self.pg_pool_max:
             raise ValueError("PG_POOL_MIN cannot be greater than PG_POOL_MAX")
-        
+
         if self.chunk_overlap >= self.chunk_size:
             raise ValueError("CHUNK_OVERLAP must be less than CHUNK_SIZE")
-        
+
         return self
 
     @model_validator(mode="after")
@@ -496,10 +496,10 @@ class Settings(BaseSettings):
                 raise ValueError("EMBEDDING_API_KEY is required in production")
             if not self.llm_api_key:
                 raise ValueError("LLM_API_KEY is required in production")
-        
+
         return self
 
-    def get_cors_origins_list(self) -> List[str]:
+    def get_cors_origins_list(self) -> list[str]:
         """Get CORS origins as a list."""
         if isinstance(self.cors_origins, str):
             return self.parse_cors_origins(self.cors_origins)
@@ -513,7 +513,7 @@ class Settings(BaseSettings):
         """Get the effective embedding model name."""
         return self.embedding_model_choice or self.embedding_model
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert settings to dictionary for logging/debugging."""
         data = self.model_dump()
         # Mask sensitive values
@@ -526,42 +526,44 @@ class Settings(BaseSettings):
             "brave_api_key",
         ]
         for key in sensitive_keys:
-            if key in data and data[key]:
+            if data.get(key):
                 data[key] = "***MASKED***"
         return data
 
-    def validate_for_production(self) -> List[str]:
+    def validate_for_production(self) -> list[str]:
         """
         Additional production validation.
-        
+
         Returns:
             List of warning messages
         """
         warnings = []
-        
+
         if self.debug:
             warnings.append("Debug mode is enabled in production")
-        
+
         if self.hot_reload:
             warnings.append("Hot reload is enabled in production")
-        
+
         if self.log_level == "DEBUG":
             warnings.append("Debug logging is enabled in production")
-        
+
         if not self.neo4j_encrypted:
             warnings.append("Neo4j connection is not encrypted")
-        
+
         if self.llm_temperature > 1.0:
-            warnings.append(f"High LLM temperature ({self.llm_temperature}) may produce inconsistent results")
-        
+            warnings.append(
+                f"High LLM temperature ({self.llm_temperature}) may produce inconsistent results"
+            )
+
         return warnings
 
 
-@lru_cache()
+@lru_cache
 def get_settings() -> Settings:
     """
     Get cached settings instance (singleton pattern).
-    
+
     Returns:
         Settings instance
     """
@@ -571,7 +573,7 @@ def get_settings() -> Settings:
 def reload_settings() -> Settings:
     """
     Force reload settings from environment.
-    
+
     Returns:
         Fresh Settings instance
     """

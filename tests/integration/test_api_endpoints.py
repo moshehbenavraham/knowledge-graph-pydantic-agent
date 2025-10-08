@@ -51,9 +51,7 @@ class TestDocumentEndpoints:
         assert doc_data["content"] is not None
 
         # 4. Get document with chunks
-        get_chunks_response = await client.get(
-            f"/api/v1/documents/{doc_id}?include_chunks=true"
-        )
+        get_chunks_response = await client.get(f"/api/v1/documents/{doc_id}?include_chunks=true")
         assert get_chunks_response.status_code == 200
         chunks_data = get_chunks_response.json()
         assert chunks_data["chunks"] is not None

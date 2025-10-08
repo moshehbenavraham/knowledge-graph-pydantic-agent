@@ -2,11 +2,9 @@
 
 import random
 import time
-from typing import List
 
-from locust import HttpUser, TaskSet, task, between, constant, constant_pacing
-from locust import events
 import structlog
+from locust import HttpUser, TaskSet, between, constant, constant_pacing, task
 
 logger = structlog.get_logger()
 
@@ -24,7 +22,7 @@ class StressTestScenario(TaskSet):
             "OpenAI competitors",
             "Cloud computing costs",
         ]
-        
+
         for query in random.sample(queries, 3):
             self.client.post(
                 "/api/v1/search",
@@ -55,7 +53,7 @@ class StressTestScenario(TaskSet):
         large_message = base_query + ", ".join(
             [f"{i+1}) {aspect} with detailed examples" for i, aspect in enumerate(aspects)]
         )
-        
+
         self.client.post(
             "/api/v1/chat",
             json={
@@ -70,7 +68,7 @@ class StressTestScenario(TaskSet):
     def concurrent_searches(self):
         """Simulate concurrent search requests."""
         search_types = ["vector", "graph", "hybrid"]
-        
+
         # Fire multiple searches in parallel
         for search_type in search_types:
             self.client.post(
@@ -87,7 +85,7 @@ class StressTestScenario(TaskSet):
     def cache_buster(self):
         """Test cache invalidation with unique queries."""
         unique_query = f"Random query {random.randint(1000, 9999)} at {time.time()}"
-        
+
         self.client.post(
             "/api/v1/search",
             json={
@@ -111,11 +109,11 @@ class SpikeTestScenario(TaskSet):
     def normal_load(self):
         """Normal load pattern."""
         self.normal_load_count += 1
-        
+
         # Trigger spike every 20 normal requests
         if self.normal_load_count % 20 == 0:
             self.spike_active = True
-        
+
         self.client.post(
             "/api/v1/chat",
             json={
@@ -130,7 +128,7 @@ class SpikeTestScenario(TaskSet):
         """Spike load pattern."""
         if not self.spike_active:
             return
-        
+
         # Generate 10 rapid requests
         for i in range(10):
             self.client.post(
@@ -142,7 +140,7 @@ class SpikeTestScenario(TaskSet):
                 },
                 name="/api/v1/search [spike]",
             )
-        
+
         self.spike_active = False
 
 
@@ -158,13 +156,13 @@ class EnduranceTestScenario(TaskSet):
     def steady_chat(self):
         """Steady chat requests over extended period."""
         self.request_count += 1
-        
+
         # Vary the query complexity over time
         if self.request_count % 100 == 0:
             message = "Complex: " + " AND ".join([f"topic_{i}" for i in range(10)])
         else:
             message = "Simple query about AI"
-        
+
         response = self.client.post(
             "/api/v1/chat",
             json={
@@ -173,11 +171,11 @@ class EnduranceTestScenario(TaskSet):
             },
             name="/api/v1/chat [endurance]",
         )
-        
+
         # Log every 100th request for monitoring
         if self.request_count % 100 == 0:
             logger.info(
-                f"Endurance test progress",
+                "Endurance test progress",
                 requests_completed=self.request_count,
                 session_id=self.session_id,
             )
@@ -187,7 +185,7 @@ class EnduranceTestScenario(TaskSet):
         """Steady search requests."""
         search_types = ["vector", "graph", "hybrid"]
         search_type = search_types[self.request_count % 3]
-        
+
         self.client.post(
             "/api/v1/search",
             json={
@@ -202,7 +200,7 @@ class EnduranceTestScenario(TaskSet):
     def memory_check(self):
         """Periodically check system status."""
         response = self.client.get("/api/v1/status")
-        
+
         if response.status_code == 200:
             data = response.json()
             if self.request_count % 50 == 0:
@@ -242,7 +240,7 @@ class RealisticUserScenario(TaskSet):
             },
             name="/api/v1/search [browse]",
         )
-        
+
         # Simulate reading time
         time.sleep(random.uniform(2, 5))
 
@@ -255,7 +253,7 @@ class RealisticUserScenario(TaskSet):
             f"What are the applications of {self.current_topic}?",
             f"What are the challenges in {self.current_topic}?",
         ]
-        
+
         self.client.post(
             "/api/v1/chat",
             json={
@@ -265,9 +263,9 @@ class RealisticUserScenario(TaskSet):
             },
             name="/api/v1/chat [question]",
         )
-        
+
         self.conversation_depth += 1
-        
+
         # Simulate reading response
         time.sleep(random.uniform(3, 8))
 
@@ -281,7 +279,7 @@ class RealisticUserScenario(TaskSet):
                 "How does this compare to alternatives?",
                 "What are the recent developments?",
             ]
-            
+
             self.client.post(
                 "/api/v1/chat",
                 json={
@@ -290,7 +288,7 @@ class RealisticUserScenario(TaskSet):
                 },
                 name="/api/v1/chat [follow_up]",
             )
-            
+
             # Simulate reading
             time.sleep(random.uniform(2, 6))
 
@@ -305,23 +303,27 @@ class RealisticUserScenario(TaskSet):
 # User classes with different scenarios
 class StressTestUser(HttpUser):
     """User for stress testing."""
+
     tasks = [StressTestScenario]
     wait_time = constant(0.5)  # Aggressive timing
 
 
 class SpikeTestUser(HttpUser):
     """User for spike testing."""
+
     tasks = [SpikeTestScenario]
     wait_time = between(1, 2)
 
 
 class EnduranceTestUser(HttpUser):
     """User for endurance testing."""
+
     tasks = [EnduranceTestScenario]
     wait_time = constant_pacing(2)  # Consistent pacing
 
 
 class RealisticUser(HttpUser):
     """User with realistic behavior."""
+
     tasks = [RealisticUserScenario]
     wait_time = between(1, 10)  # Variable human-like timing

@@ -253,12 +253,8 @@ def generate_markdown_report(report: dict[str, Any]) -> str:
         md.append("✅ No issues detected. System performing within targets.")
     else:
         for rec in report["recommendations"]:
-            severity_emoji = {"high": "🔴", "medium": "🟡", "low": "🟢"}.get(
-                rec["severity"], "⚪"
-            )
-            md.append(
-                f"{severity_emoji} **{rec['category'].title()}** - {rec['message']}"
-            )
+            severity_emoji = {"high": "🔴", "medium": "🟡", "low": "🟢"}.get(rec["severity"], "⚪")
+            md.append(f"{severity_emoji} **{rec['category'].title()}** - {rec['message']}")
 
     return "\n".join(md)
 

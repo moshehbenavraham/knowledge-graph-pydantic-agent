@@ -27,9 +27,7 @@ class TestPostgresStoreIntegration:
         assert doc["source"] == sample_document["source"]
 
         # Update
-        updated = await postgres_store.update_document(
-            doc_id, {"title": "Updated Title"}
-        )
+        updated = await postgres_store.update_document(doc_id, {"title": "Updated Title"})
         assert updated is True
 
         doc = await postgres_store.get_document(doc_id)
@@ -71,15 +69,9 @@ class TestPostgresStoreIntegration:
     async def test_list_documents_filtering(self, postgres_store):
         """Test document listing with source filtering."""
         # Create documents with different sources
-        await postgres_store.store_document(
-            title="PDF Doc 1", content="Content", source="doc1.pdf"
-        )
-        await postgres_store.store_document(
-            title="PDF Doc 2", content="Content", source="doc2.pdf"
-        )
-        await postgres_store.store_document(
-            title="Text Doc", content="Content", source="doc.txt"
-        )
+        await postgres_store.store_document(title="PDF Doc 1", content="Content", source="doc1.pdf")
+        await postgres_store.store_document(title="PDF Doc 2", content="Content", source="doc2.pdf")
+        await postgres_store.store_document(title="Text Doc", content="Content", source="doc.txt")
 
         # Filter by PDF
         pdf_docs = await postgres_store.list_documents(source_filter="%.pdf")
@@ -94,17 +86,11 @@ class TestPostgresStoreIntegration:
     async def test_list_documents_sorting(self, postgres_store):
         """Test document listing with different sort options."""
         # Create documents
-        await postgres_store.store_document(
-            title="Alpha", content="Content", source="a.txt"
-        )
-        await postgres_store.store_document(
-            title="Zeta", content="Content", source="z.txt"
-        )
+        await postgres_store.store_document(title="Alpha", content="Content", source="a.txt")
+        await postgres_store.store_document(title="Zeta", content="Content", source="z.txt")
 
         # Sort by title ascending
-        docs_asc = await postgres_store.list_documents(
-            sort_by="title", sort_order="asc", limit=100
-        )
+        docs_asc = await postgres_store.list_documents(sort_by="title", sort_order="asc", limit=100)
         titles_asc = [doc["title"] for doc in docs_asc]
         assert titles_asc == sorted(titles_asc)
 
@@ -116,9 +102,7 @@ class TestPostgresStoreIntegration:
         assert titles_desc == sorted(titles_desc, reverse=True)
 
     @pytest.mark.asyncio
-    async def test_get_document_chunks(
-        self, postgres_store, sample_document, sample_chunks
-    ):
+    async def test_get_document_chunks(self, postgres_store, sample_document, sample_chunks):
         """Test retrieving chunks for document."""
         # Create document with chunks
         doc_id = await postgres_store.store_document(
@@ -130,18 +114,14 @@ class TestPostgresStoreIntegration:
         assert len(chunk_ids) == len(sample_chunks)
 
         # Get chunks without embeddings
-        chunks = await postgres_store.get_document_chunks(
-            doc_id, include_embeddings=False
-        )
+        chunks = await postgres_store.get_document_chunks(doc_id, include_embeddings=False)
         assert len(chunks) == len(sample_chunks)
         assert all("embedding_1536" not in chunk for chunk in chunks)
         assert all("embedding_768" not in chunk for chunk in chunks)
         assert chunks[0]["content"] == sample_chunks[0]["content"]
 
         # Get chunks with embeddings
-        chunks_with_emb = await postgres_store.get_document_chunks(
-            doc_id, include_embeddings=True
-        )
+        chunks_with_emb = await postgres_store.get_document_chunks(doc_id, include_embeddings=True)
         assert len(chunks_with_emb) == len(sample_chunks)
         assert all("embedding_1536" in chunk for chunk in chunks_with_emb)
 
@@ -161,9 +141,7 @@ class TestPostgresStoreIntegration:
         )
 
         # Update title
-        success = await postgres_store.update_document(
-            doc_id, {"title": "New Title"}
-        )
+        success = await postgres_store.update_document(doc_id, {"title": "New Title"})
         assert success is True
 
         doc = await postgres_store.get_document(doc_id)
@@ -171,9 +149,7 @@ class TestPostgresStoreIntegration:
 
         # Update metadata
         new_metadata = {"key1": "updated", "key2": "value2"}
-        success = await postgres_store.update_document(
-            doc_id, {"metadata": new_metadata}
-        )
+        success = await postgres_store.update_document(doc_id, {"metadata": new_metadata})
         assert success is True
 
         doc = await postgres_store.get_document(doc_id)
@@ -195,9 +171,7 @@ class TestPostgresStoreIntegration:
         from uuid import uuid4
 
         fake_id = uuid4()
-        success = await postgres_store.update_document(
-            fake_id, {"title": "Should Fail"}
-        )
+        success = await postgres_store.update_document(fake_id, {"title": "Should Fail"})
         assert success is False
 
     @pytest.mark.asyncio

@@ -6,15 +6,14 @@ Handles token streaming, heartbeats, backpressure, and connection lifecycle.
 
 import asyncio
 import json
-from typing import Any, AsyncGenerator, Dict, Optional
+from collections.abc import AsyncGenerator
+from typing import Any
 from uuid import uuid4
 
 import structlog
 from fastapi import WebSocket, WebSocketDisconnect
 from pydantic_ai import Agent
 from pydantic_ai.result import StreamedRunResult
-
-from src.api.models import StreamChunk, StreamEvent
 
 logger = structlog.get_logger()
 
@@ -42,11 +41,7 @@ class SSEManager:
         self.chunk_size = chunk_size
 
     async def stream_agent_response(
-        self,
-        agent: Agent,
-        message: str,
-        deps: Any,
-        **kwargs
+        self, agent: Agent, message: str, deps: Any, **kwargs
     ) -> AsyncGenerator[str, None]:
         """
         Stream agent response as SSE events.
@@ -67,17 +62,13 @@ class SSEManager:
             async with agent.run_stream(message, deps=deps, **kwargs) as result:
                 # Send start event
                 yield self._format_event(
-                    event="start",
-                    data={"message_id": event_id},
-                    event_id=event_id
+                    event="start", data={"message_id": event_id}, event_id=event_id
                 )
 
                 # Stream content chunks
                 async for chunk in self._chunk_stream(result):
                     yield self._format_event(
-                        event="content",
-                        data={"text": chunk},
-                        event_id=event_id
+                        event="content", data={"text": chunk}, event_id=event_id
                     )
 
                 # Get final result with metadata
@@ -90,33 +81,23 @@ class SSEManager:
                         "message_id": event_id,
                         "usage": final_result.usage() if hasattr(final_result, "usage") else {},
                     },
-                    event_id=event_id
+                    event_id=event_id,
                 )
 
         except asyncio.CancelledError:
             logger.info("stream_cancelled", event_id=event_id)
             yield self._format_event(
-                event="cancelled",
-                data={"message_id": event_id},
-                event_id=event_id
+                event="cancelled", data={"message_id": event_id}, event_id=event_id
             )
             raise
 
         except Exception as e:
             logger.error("stream_error", event_id=event_id, error=str(e))
             yield self._format_event(
-                event="error",
-                data={
-                    "message_id": event_id,
-                    "error": str(e)
-                },
-                event_id=event_id
+                event="error", data={"message_id": event_id, "error": str(e)}, event_id=event_id
             )
 
-    async def _chunk_stream(
-        self,
-        result: StreamedRunResult
-    ) -> AsyncGenerator[str, None]:
+    async def _chunk_stream(self, result: StreamedRunResult) -> AsyncGenerator[str, None]:
         """
         Chunk streamed result into smaller pieces.
 
@@ -149,9 +130,9 @@ class SSEManager:
     def _format_event(
         self,
         event: str,
-        data: Dict[str, Any],
-        event_id: Optional[str] = None,
-        retry: Optional[int] = None
+        data: dict[str, Any],
+        event_id: str | None = None,
+        retry: int | None = None,
     ) -> str:
         """
         Format data as SSE event.
@@ -192,8 +173,7 @@ class SSEManager:
         while True:
             await asyncio.sleep(self.heartbeat_interval)
             yield self._format_event(
-                event="heartbeat",
-                data={"timestamp": asyncio.get_event_loop().time()}
+                event="heartbeat", data={"timestamp": asyncio.get_event_loop().time()}
             )
 
 
@@ -206,13 +186,9 @@ class WebSocketManager:
 
     def __init__(self):
         """Initialize WebSocket manager."""
-        self.active_connections: Dict[str, WebSocket] = {}
+        self.active_connections: dict[str, WebSocket] = {}
 
-    async def connect(
-        self,
-        websocket: WebSocket,
-        client_id: Optional[str] = None
-    ) -> str:
+    async def connect(self, websocket: WebSocket, client_id: str | None = None) -> str:
         """
         Accept and register WebSocket connection.
 
@@ -233,11 +209,7 @@ class WebSocketManager:
         # Send welcome message
         await self.send_message(
             connection_id,
-            {
-                "type": "connection",
-                "status": "connected",
-                "connection_id": connection_id
-            }
+            {"type": "connection", "status": "connected", "connection_id": connection_id},
         )
 
         return connection_id
@@ -255,20 +227,12 @@ class WebSocketManager:
             try:
                 await websocket.close()
             except Exception as e:
-                logger.error(
-                    "websocket_close_error",
-                    connection_id=connection_id,
-                    error=str(e)
-                )
+                logger.error("websocket_close_error", connection_id=connection_id, error=str(e))
 
             del self.active_connections[connection_id]
             logger.info("websocket_disconnected", connection_id=connection_id)
 
-    async def send_message(
-        self,
-        connection_id: str,
-        message: Dict[str, Any]
-    ):
+    async def send_message(self, connection_id: str, message: dict[str, Any]):
         """
         Send message to specific connection.
 
@@ -277,10 +241,7 @@ class WebSocketManager:
             message: Message data to send
         """
         if connection_id not in self.active_connections:
-            logger.warning(
-                "websocket_send_failed_not_found",
-                connection_id=connection_id
-            )
+            logger.warning("websocket_send_failed_not_found", connection_id=connection_id)
             return
 
         websocket = self.active_connections[connection_id]
@@ -288,15 +249,11 @@ class WebSocketManager:
         try:
             await websocket.send_json(message)
         except Exception as e:
-            logger.error(
-                "websocket_send_error",
-                connection_id=connection_id,
-                error=str(e)
-            )
+            logger.error("websocket_send_error", connection_id=connection_id, error=str(e))
             # Disconnect on error
             await self.disconnect(connection_id)
 
-    async def broadcast(self, message: Dict[str, Any]):
+    async def broadcast(self, message: dict[str, Any]):
         """
         Broadcast message to all connections.
 
@@ -309,11 +266,7 @@ class WebSocketManager:
             try:
                 await websocket.send_json(message)
             except Exception as e:
-                logger.error(
-                    "websocket_broadcast_error",
-                    connection_id=connection_id,
-                    error=str(e)
-                )
+                logger.error("websocket_broadcast_error", connection_id=connection_id, error=str(e))
                 disconnected.append(connection_id)
 
         # Clean up failed connections
@@ -321,12 +274,7 @@ class WebSocketManager:
             await self.disconnect(connection_id)
 
     async def handle_agent_stream(
-        self,
-        connection_id: str,
-        agent: Agent,
-        message: str,
-        deps: Any,
-        **kwargs
+        self, connection_id: str, agent: Agent, message: str, deps: Any, **kwargs
     ):
         """
         Stream agent response through WebSocket.
@@ -341,22 +289,14 @@ class WebSocketManager:
         try:
             # Send start message
             await self.send_message(
-                connection_id,
-                {
-                    "type": "stream_start",
-                    "message_id": str(uuid4())
-                }
+                connection_id, {"type": "stream_start", "message_id": str(uuid4())}
             )
 
             # Stream response
             async with agent.run_stream(message, deps=deps, **kwargs) as result:
                 async for text in result.stream_text(delta=True):
                     await self.send_message(
-                        connection_id,
-                        {
-                            "type": "stream_chunk",
-                            "content": text
-                        }
+                        connection_id, {"type": "stream_chunk", "content": text}
                     )
 
                 # Get final result
@@ -368,7 +308,7 @@ class WebSocketManager:
                     {
                         "type": "stream_complete",
                         "usage": final_result.usage() if hasattr(final_result, "usage") else {},
-                    }
+                    },
                 )
 
         except WebSocketDisconnect:
@@ -376,24 +316,10 @@ class WebSocketManager:
             await self.disconnect(connection_id)
 
         except Exception as e:
-            logger.error(
-                "websocket_stream_error",
-                connection_id=connection_id,
-                error=str(e)
-            )
-            await self.send_message(
-                connection_id,
-                {
-                    "type": "stream_error",
-                    "error": str(e)
-                }
-            )
+            logger.error("websocket_stream_error", connection_id=connection_id, error=str(e))
+            await self.send_message(connection_id, {"type": "stream_error", "error": str(e)})
 
-    async def receive_loop(
-        self,
-        connection_id: str,
-        message_handler: callable
-    ):
+    async def receive_loop(self, connection_id: str, message_handler: callable):
         """
         Receive messages from WebSocket in loop.
 
@@ -419,11 +345,7 @@ class WebSocketManager:
             await self.disconnect(connection_id)
 
         except Exception as e:
-            logger.error(
-                "websocket_receive_error",
-                connection_id=connection_id,
-                error=str(e)
-            )
+            logger.error("websocket_receive_error", connection_id=connection_id, error=str(e))
             await self.disconnect(connection_id)
 
 

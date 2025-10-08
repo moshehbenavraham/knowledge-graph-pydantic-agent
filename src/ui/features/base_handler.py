@@ -1,5 +1,6 @@
-from typing import Any, Dict, List, Optional
 from abc import ABC, abstractmethod
+from typing import Any
+
 from httpx import AsyncClient
 from pydantic_ai.messages import ModelRequest, ModelResponse
 
@@ -8,39 +9,37 @@ from src.clients import get_llm_client, get_supabase_client
 
 
 class BaseHandler(ABC):
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: dict[str, Any]):
         self.config = config
         self.embedding_client = None
         self.supabase = None
         self._initialized = False
-    
+
     def initialize(self):
         if not self._initialized:
             self.embedding_client = get_llm_client()
             self.supabase = get_supabase_client()
             self._initialized = True
             self._setup_hook()
-    
+
     def _setup_hook(self):
         pass
-    
+
     @abstractmethod
     async def run_agent(
         self,
         user_input: str,
-        message_history: List[ModelRequest | ModelResponse],
+        message_history: list[ModelRequest | ModelResponse],
         http_client: AsyncClient,
-        **kwargs
+        **kwargs,
     ):
         pass
-    
+
     def get_agent_deps(
-        self,
-        http_client: AsyncClient,
-        memories_str: str = "",
-        **kwargs
+        self, http_client: AsyncClient, memories_str: str = "", **kwargs
     ) -> UnifiedAgentDeps:
         import os
+
         return UnifiedAgentDeps(
             embedding_client=self.embedding_client,
             supabase=self.supabase,
@@ -57,16 +56,14 @@ class SimpleHandler(BaseHandler):
     async def run_agent(
         self,
         user_input: str,
-        message_history: List[ModelRequest | ModelResponse],
+        message_history: list[ModelRequest | ModelResponse],
         http_client: AsyncClient,
-        **kwargs
+        **kwargs,
     ):
         agent_deps = self.get_agent_deps(http_client)
-        result = await super_agent.run(
-            user_input, deps=agent_deps, message_history=message_history
-        )
+        result = await super_agent.run(user_input, deps=agent_deps, message_history=message_history)
         return {
             "response": result.output,
             "new_messages": result.new_messages(),
-            "streaming": False
+            "streaming": False,
         }
