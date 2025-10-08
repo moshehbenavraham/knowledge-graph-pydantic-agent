@@ -405,9 +405,9 @@ For enhanced capabilities, you can use the MCP (Model Context Protocol) server:
 
 #### `image_analysis`
 - **Function**: Vision model analysis of stored images
-- **Model**: Configurable via `VISION_LLM_CHOICE` (default: `gpt-4o-mini`)
+- **Model**: Configurable via `VISION_LLM_CHOICE` (default: `gpt-5-mini`)
 - **Implementation**: [`src/tools/image_analysis.py:image_analysis_tool`](../src/tools/image_analysis.py)
-- **Usage**: Analyze images based on user queries
+- **Usage**: Analyze images based on user queries (supports OCR, object detection, scene analysis)
 
 ### Code Execution Tool
 
@@ -437,7 +437,7 @@ LLM_MODEL=gpt-4o-mini
 LLM_API_KEY=your_openai_key
 
 # Vision model for images
-VISION_LLM_MODEL=gpt-4o-mini
+VISION_LLM_MODEL=gpt-5-mini
 
 # Embedding model
 EMBEDDING_PROVIDER=openai

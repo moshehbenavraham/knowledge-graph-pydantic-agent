@@ -53,21 +53,35 @@ async def image_analysis_tool(supabase: Client, document_id: str, query: str) ->
         )
 
         # Get the binary of the file from the database
+        # Try to find by source field (filename) or by id
+        # First try exact match on source field
         result = (
             supabase.from_("documents")
-            .select("metadata")
-            .eq("metadata->>file_id", document_id)
+            .select("metadata, source")
+            .eq("source", document_id)
             .limit(1)
             .execute()
         )
+
+        # If not found, try by id
+        if not result.data:
+            result = (
+                supabase.from_("documents")
+                .select("metadata, source")
+                .eq("id", document_id)
+                .limit(1)
+                .execute()
+            )
 
         if not result.data:
             return f"No content found for document: {document_id}"
 
         # Get the binary and mime_type from the metadata
         metadata = result.data[0]["metadata"]
-        binary_str = metadata["file_contents"]
-        mime_type = metadata["mime_type"]
+
+        # Support both upload formats: file_contents or image_data
+        binary_str = metadata.get("file_contents") or metadata.get("image_data")
+        mime_type = metadata.get("mime_type") or metadata.get("file_type", "image/png")
 
         if not binary_str:
             return f"No file contents found for document: {document_id}"
@@ -76,7 +90,7 @@ async def image_analysis_tool(supabase: Client, document_id: str, query: str) ->
         binary = base64.b64decode(binary_str.encode("utf-8"))
         result = await vision_agent.run([query, BinaryContent(data=binary, media_type=mime_type)])
 
-        return result.data
+        return result.output
 
     except Exception as e:
         print(f"Error analyzing image: {e}")

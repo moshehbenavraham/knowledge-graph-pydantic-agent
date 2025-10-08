@@ -6,7 +6,7 @@ from pydantic_ai.messages import ModelRequest, ModelResponse
 
 from src.config import UIMode
 from src.config.ui import ui_config as config
-from src.ui.features import BaseHandler, MCPHandler, StreamingHandler
+from src.ui.features import BaseHandler, MCPHandler, StreamingHandler, render_upload_section
 from src.ui.features.base_handler import SimpleHandler
 
 
@@ -154,6 +154,25 @@ def render_sidebar():
         with col2:
             if st.button("💾 Export Chat"):
                 export_conversation()
+
+        st.divider()
+
+        # File Upload Section
+        if hasattr(st.session_state.handler, "deps") and hasattr(
+            st.session_state.handler.deps, "supabase"
+        ):
+            # Get clients from handler
+            supabase_client = st.session_state.handler.deps.supabase
+            embedding_client = st.session_state.handler.deps.embedding_client
+            render_upload_section(supabase_client, embedding_client)
+        else:
+            # Fallback: get clients from base handler
+            from src.clients.database import get_supabase_client
+            from src.clients.llm import get_llm_client
+
+            supabase_client = get_supabase_client()
+            embedding_client = get_llm_client()  # Same client for embeddings
+            render_upload_section(supabase_client, embedding_client)
 
         # Metrics Display
         if st.session_state.config.features.get("metrics"):
