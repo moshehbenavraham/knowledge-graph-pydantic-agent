@@ -6,12 +6,13 @@ maintaining the zero duplication principle.
 """
 
 import asyncio
+import json
 import logging
 import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any
+from typing import Any, ClassVar
 
 from pydantic_ai import Agent
 
@@ -147,7 +148,7 @@ class KnowledgeExtractor:
     """
 
     # Relationship patterns for pattern matching
-    RELATIONSHIP_PATTERNS = {
+    RELATIONSHIP_PATTERNS: ClassVar[dict[RelationshipType, list[str]]] = {
         RelationshipType.WORKS_AT: [
             r"(\w+(?:\s+\w+)*)\s+(?:works?\s+at|employed\s+by|joined)\s+(\w+(?:\s+\w+)*)",
             r"(\w+(?:\s+\w+)*),?\s+(?:CEO|CTO|founder|president|director)\s+(?:of|at)\s+(\w+(?:\s+\w+)*)",
@@ -250,8 +251,6 @@ class KnowledgeExtractor:
             # Parse response
             entities = []
             try:
-                import json
-
                 entity_data = json.loads(response.data)
                 if not isinstance(entity_data, list):
                     entity_data = [entity_data]
@@ -275,9 +274,7 @@ class KnowledgeExtractor:
 
             # Merge with pattern-based entities
             entity_names = {e.name.lower() for e in entities}
-            for pe in pattern_entities:
-                if pe.name.lower() not in entity_names:
-                    entities.append(pe)
+            entities.extend([pe for pe in pattern_entities if pe.name.lower() not in entity_names])
 
             return entities[: self.config.ingestion.max_entities_per_chunk]
 
@@ -301,15 +298,21 @@ class KnowledgeExtractor:
         company_pattern = (
             r"\b([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)*)\s+(?:Inc|Corp|LLC|Ltd|Company|Corporation)\b"
         )
-        for match in re.finditer(company_pattern, text):
-            entities.append(Entity(name=match.group(1), type=EntityType.COMPANY, confidence=0.9))
+        entities.extend(
+            [
+                Entity(name=match.group(1), type=EntityType.COMPANY, confidence=0.9)
+                for match in re.finditer(company_pattern, text)
+            ]
+        )
 
         # Technology patterns
         tech_pattern = r"\b(GPT-\d+|DALL-E|LaMDA|PaLM|Claude|Gemini|LLaMA)\b"
-        for match in re.finditer(tech_pattern, text, re.IGNORECASE):
-            entities.append(
+        entities.extend(
+            [
                 Entity(name=match.group(1), type=EntityType.TECHNOLOGY, confidence=0.95)
-            )
+                for match in re.finditer(tech_pattern, text, re.IGNORECASE)
+            ]
+        )
 
         return entities
 
@@ -366,8 +369,6 @@ class KnowledgeExtractor:
 
             try:
                 response = await self.llm_agent.run(prompt)
-                import json
-
                 rel_data = json.loads(response.data)
 
                 for item in rel_data[:10]:  # Limit relationships
@@ -423,8 +424,6 @@ class KnowledgeExtractor:
 
             facts = []
             try:
-                import json
-
                 fact_data = json.loads(response.data)
 
                 for item in fact_data[:5]:  # Max 5 facts

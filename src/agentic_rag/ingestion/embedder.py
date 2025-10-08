@@ -10,6 +10,8 @@ import hashlib
 import logging
 from typing import Any
 
+import openai
+
 from src.agentic_rag.config import get_config
 
 logger = logging.getLogger(__name__)
@@ -133,8 +135,6 @@ class EmbeddingGenerator:
     def _create_client(self):
         """Create embedding client based on provider."""
         if self.config["provider"] == "openai":
-            import openai
-
             config = get_config()
             return openai.AsyncOpenAI(
                 api_key=config.embedding.api_key, base_url=config.embedding.base_url
@@ -349,27 +349,33 @@ class MultiDimensionEmbedder:
         config = get_config()
 
         # Primary embedder (1536-dim)
-        self.primary_config = EmbeddingConfig(
-            provider=config.embedding.provider,
-            model=config.embedding.model,
-            dimension=1536,
-            batch_size=config.embedding.batch_size,
-        )
+        self.primary_config = {
+            "provider": config.embedding.provider,
+            "model": config.embedding.model,
+            "dimension": 1536,
+            "batch_size": config.embedding.batch_size,
+            "enable_cache": config.performance.enable_caching,
+            "max_retries": 3,
+            "retry_delay": 1.0,
+        }
         self.primary_embedder = EmbeddingGenerator(self.primary_config)
 
         # Secondary embedder (768-dim) if needed
         self.secondary_embedder = None
         if config.embedding.dimension == 768:
-            self.secondary_config = EmbeddingConfig(
-                provider="nomic",
-                model="nomic-embed-text",
-                dimension=768,
-                batch_size=config.embedding.batch_size,
-            )
+            self.secondary_config = {
+                "provider": "nomic",
+                "model": "nomic-embed-text",
+                "dimension": 768,
+                "batch_size": config.embedding.batch_size,
+                "enable_cache": config.performance.enable_caching,
+                "max_retries": 3,
+                "retry_delay": 1.0,
+            }
             # Only initialize if Nomic is available
             try:
                 self.secondary_embedder = EmbeddingGenerator(self.secondary_config)
-            except:
+            except Exception:
                 logger.info("Secondary embedder (768-dim) not available")
 
     async def embed_multi(

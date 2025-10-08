@@ -448,10 +448,6 @@ async def comprehensive_search(
             )
         )
 
-    # Graph search would be added here when available
-    # if use_graph:
-    #     tasks.append(("graph", graph_search(query)))
-
     # Execute searches in parallel
     if tasks:
         search_results = await asyncio.gather(*[task[1] for task in tasks], return_exceptions=True)

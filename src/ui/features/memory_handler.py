@@ -28,7 +28,7 @@ class MemoryHandler(StreamingHandler):
         )
         return "\n".join(f"- {entry['memory']}" for entry in relevant_memories.get("results", []))
 
-    def add_memory(self, user_input: str, agent_response: str = None):
+    def add_memory(self, user_input: str, agent_response: str | None = None):
         if not self.memory_client:
             return
 

@@ -143,18 +143,6 @@ class GraphitiClient:
 
         if self.llm_client:
             # Use LLM to identify relationships
-            prompt = """
-            Identify relationships between the entities in this text.
-
-            Entities: {entities}
-
-            Text: {text}
-
-            Return relationships as:
-            {{"entity1_id": "id1", "entity2_id": "id2", "type": "RELATIONSHIP_TYPE", "confidence": 0.8}}
-
-            Relationship types: WORKS_AT, FOUNDED, INVESTED_IN, PARTNERS_WITH, COMPETES_WITH, ACQUIRED
-            """
 
             try:
                 # For simplicity, create potential relationships between first few entities

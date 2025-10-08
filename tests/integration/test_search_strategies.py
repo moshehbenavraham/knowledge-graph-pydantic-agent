@@ -137,7 +137,7 @@ class TestHybridSearch:
 
         # Time hybrid search
         start = time.perf_counter()
-        results = await search.search("test query", limit=5)
+        await search.search("test query", limit=5)
         hybrid_time = time.perf_counter() - start
 
         # Verify it completes reasonably quickly

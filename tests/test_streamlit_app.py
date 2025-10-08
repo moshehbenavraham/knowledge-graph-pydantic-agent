@@ -23,10 +23,10 @@ sys.modules["streamlit.elements.chat"] = MagicMock()
 sys.path.append(str(Path(__file__).parent.parent.resolve() / "src"))
 
 # Import after mocking and path setup
-from ui.features.base_handler import SimpleHandler  # noqa: E402
-from ui.features.mcp_handler import MCPHandler  # noqa: E402
-from ui.features.streaming_handler import StreamingHandler  # noqa: E402
-from ui.streamlit_app import (  # noqa: E402
+from ui.features.base_handler import SimpleHandler
+from ui.features.mcp_handler import MCPHandler
+from ui.features.streaming_handler import StreamingHandler
+from ui.streamlit_app import (
     UIConfig,
     UIMode,
     display_message_part,
@@ -35,7 +35,7 @@ from ui.streamlit_app import (  # noqa: E402
     initialize_session_state,
     render_sidebar,
 )
-from ui.streamlit_app import main as streamlit_main  # noqa: E402
+from ui.streamlit_app import main as streamlit_main
 
 
 class TestUIConfig:
@@ -260,7 +260,7 @@ class TestStreamlitApp:
         mock_st.session_state.theme = "light"
 
         with patch("ui.streamlit_app.initialize_session_state") as mock_init:
-            with patch("ui.streamlit_app.render_sidebar") as mock_sidebar:
+            with patch("ui.streamlit_app.render_sidebar"):
                 await streamlit_main()
 
                 # Verify page configuration

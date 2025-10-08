@@ -3,7 +3,7 @@
 import hashlib
 import json
 import os
-import pickle
+import pickle  # nosec B403 - Used only for internal cache, not user input
 from collections.abc import Callable
 from functools import wraps
 from typing import Any
@@ -73,7 +73,7 @@ class RedisCache:
             "kwargs": sorted(kwargs.items()),
         }
         key_str = json.dumps(key_data, sort_keys=True, default=str)
-        key_hash = hashlib.md5(key_str.encode()).hexdigest()
+        key_hash = hashlib.md5(key_str.encode(), usedforsecurity=False).hexdigest()
         return f"{prefix}:{key_hash}"
 
     def get(self, key: str) -> Any | None:
@@ -82,7 +82,7 @@ class RedisCache:
             if self._redis_client:
                 value = self._redis_client.get(key)
                 if value:
-                    return pickle.loads(value)
+                    return pickle.loads(value)  # nosec B301 - Internal cache only
         except (RedisError, Exception) as e:
             logger.debug("Redis get failed", key=key, error=str(e))
             if self.enable_fallback:

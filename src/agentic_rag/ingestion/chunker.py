@@ -9,6 +9,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
+from pydantic_ai import Agent
+
 from src.agentic_rag.config import get_config
 from src.config import ChunkingStrategy
 
@@ -89,8 +91,6 @@ class SemanticChunker:
     def llm_client(self):
         """Lazy load LLM client."""
         if self._llm_client is None:
-            from pydantic_ai import Agent
-
             llm_config = get_config().llm
             self._llm_client = Agent(
                 model=f"{llm_config.provider}:{llm_config.extraction_model}",
@@ -258,10 +258,11 @@ class SemanticChunker:
             chunks = [c.strip() for c in response.data.split("---CHUNK---")]
 
             # Validate chunk sizes
-            valid_chunks = []
-            for chunk in chunks:
-                if self.config["min_chunk_size"] <= len(chunk) <= self.config["max_chunk_size"]:
-                    valid_chunks.append(chunk)
+            valid_chunks = [
+                chunk
+                for chunk in chunks
+                if self.config["min_chunk_size"] <= len(chunk) <= self.config["max_chunk_size"]
+            ]
 
             return valid_chunks if valid_chunks else self._simple_split(section)
 
@@ -387,8 +388,8 @@ class SimpleChunker:
         current_pos = 0
         chunk_index = 0
 
-        for paragraph in paragraphs:
-            paragraph = paragraph.strip()
+        for para in paragraphs:
+            paragraph = para.strip()
             if not paragraph:
                 continue
 

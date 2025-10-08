@@ -6,11 +6,11 @@ from .base import AgentResponse, BaseAgent
 from .unified_agent import UnifiedAgentDeps, run_unified_agent, super_agent
 
 __all__ = [
-    # The ONE agent to rule them all
-    "super_agent",
-    "UnifiedAgentDeps",
-    "run_unified_agent",
     # Base classes for typing
     "AgentResponse",
     "BaseAgent",
+    "UnifiedAgentDeps",
+    "run_unified_agent",
+    # The ONE agent to rule them all
+    "super_agent",
 ]

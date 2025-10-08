@@ -126,6 +126,7 @@ class PostgresStore:
             embedding_dim = len(embedding)
             embedding_column = "embedding_1536" if embedding_dim == 1536 else "embedding_768"
 
+            # embedding_column is validated above to be either 'embedding_1536' or 'embedding_768'
             results = await conn.fetch(
                 f"""
                 SELECT
@@ -144,7 +145,7 @@ class PostgresStore:
                     AND 1 - (c.{embedding_column} <=> $1::vector) >= $2
                 ORDER BY c.{embedding_column} <=> $1::vector
                 LIMIT $3
-            """,
+            """,  # nosec B608
                 embedding,
                 similarity_threshold,
                 limit,
@@ -165,6 +166,7 @@ class PostgresStore:
             embedding_dim = len(query_embedding)
             embedding_column = "embedding_1536" if embedding_dim == 1536 else "embedding_768"
 
+            # embedding_column is validated above to be either 'embedding_1536' or 'embedding_768'
             # Call the hybrid search function
             results = await conn.fetch(
                 f"""
@@ -177,7 +179,7 @@ class PostgresStore:
                     TRUE,  -- use_cache
                     0.7    -- similarity_threshold
                 )
-            """,
+            """,  # nosec B608
                 query_embedding,
                 query_text,
                 entity_ids,
@@ -426,6 +428,7 @@ class PostgresStore:
             # Build dynamic ORDER BY clause
             order_clause = f"d.{sort_by} {sort_order.upper()}"
 
+            # sort_by and sort_order are validated against whitelists above
             query = f"""
                 SELECT
                     d.id,
@@ -442,7 +445,7 @@ class PostgresStore:
                 GROUP BY d.id, d.title, d.source, d.created_at, d.updated_at, d.metadata
                 ORDER BY {order_clause}
                 LIMIT $1 OFFSET $2
-            """
+            """  # nosec B608
 
             rows = await conn.fetch(query, limit, offset, source_filter)
             return [dict(row) for row in rows]
@@ -546,12 +549,13 @@ class PostgresStore:
             # Always update the updated_at timestamp
             set_clauses.append("updated_at = NOW()")
 
+            # set_clauses built from allowed_fields whitelist above
             query = f"""
                 UPDATE documents
                 SET {', '.join(set_clauses)}
                 WHERE id = $1 AND is_deleted = FALSE
                 RETURNING id
-            """
+            """  # nosec B608
 
             result = await conn.fetchrow(query, *values)
             success = result is not None

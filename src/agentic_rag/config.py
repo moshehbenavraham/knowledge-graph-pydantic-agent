@@ -7,7 +7,7 @@ while maintaining the same interface for existing code.
 
 from dataclasses import dataclass
 
-from src.config import get_settings
+from src.config import get_settings, reload_settings
 
 
 @dataclass
@@ -142,7 +142,7 @@ class Config:
         Returns:
             List of validation error messages
         """
-        settings = get_settings()
+        get_settings()
         # Delegate to new validation
         try:
             # Settings validates on instantiation
@@ -177,9 +177,9 @@ def get_config() -> Config:
 
 def reload_config():
     """Reload configuration from environment variables."""
-    global config
-    from src.config import reload_settings
-
     reload_settings()
+    # Note: global config is maintained for backward compatibility
+    # pylint: disable=global-statement
+    global config
     config = Config()
     return config

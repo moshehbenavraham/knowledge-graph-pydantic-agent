@@ -240,15 +240,15 @@ class ResultRanker:
         # Get chunk entities
         chunk_entities = set()
         if hasattr(chunk, "entities"):
-            chunk_entities = set(e.lower() for e in chunk.entities)
+            chunk_entities = {e.lower() for e in chunk.entities}
         elif hasattr(chunk, "metadata") and "entity_refs" in chunk.metadata:
-            chunk_entities = set(e.lower() for e in chunk.metadata["entity_refs"])
+            chunk_entities = {e.lower() for e in chunk.metadata["entity_refs"]}
 
         if not chunk_entities:
             return 0.0
 
         # Calculate overlap
-        query_entities_lower = set(e.lower() for e in query_entities)
+        query_entities_lower = {e.lower() for e in query_entities}
         overlap = chunk_entities & query_entities_lower
 
         if not query_entities_lower:
@@ -461,14 +461,12 @@ class ResultRanker:
             chunk_id = str(getattr(chunk, "chunk_id", ""))
 
             # Boost positive examples
-            if chunk_id in positive_examples:
-                if hasattr(chunk, "similarity"):
-                    chunk.similarity = min(1.0, chunk.similarity * 1.5)
+            if chunk_id in positive_examples and hasattr(chunk, "similarity"):
+                chunk.similarity = min(1.0, chunk.similarity * 1.5)
 
             # Penalize negative examples
-            if chunk_id in negative_examples:
-                if hasattr(chunk, "similarity"):
-                    chunk.similarity = chunk.similarity * 0.5
+            if chunk_id in negative_examples and hasattr(chunk, "similarity"):
+                chunk.similarity = chunk.similarity * 0.5
 
         # Re-rank with updated scores
         return self.rank_chunks(chunks, len(chunks))

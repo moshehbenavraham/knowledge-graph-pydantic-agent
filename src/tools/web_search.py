@@ -190,10 +190,10 @@ async def searxng_web_search(query: str, http_client: AsyncClient, searxng_base_
 async def web_search_tool(
     query: str,
     http_client: AsyncClient,
-    brave_api_key: str = None,
-    searxng_base_url: str = None,
-    jina_api_key: str = None,
-    search_provider: str = None,
+    brave_api_key: str | None = None,
+    searxng_base_url: str | None = None,
+    jina_api_key: str | None = None,
+    search_provider: str | None = None,
 ) -> str:
     """
     Search the web with a specific query and get a summary of the top search results.

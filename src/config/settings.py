@@ -365,7 +365,7 @@ class Settings(BaseSettings):
 
     # API Configuration
     api_host: str = Field(
-        default="0.0.0.0",
+        default="0.0.0.0",  # nosec B104 - Binding to all interfaces is required for containerized deployment
         description="API server host",
     )
     api_port: int = Field(
