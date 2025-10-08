@@ -242,8 +242,8 @@ class GraphitiClient:
         return facts[:5]
 
     async def search(
-        self, query: str, search_type: str = "hybrid", limit: int = 10
-    ) -> dict[str, Any]:
+        self, query: str, search_type: str = "hybrid", limit: int = 10, return_dict: bool = False
+    ) -> list[dict[str, Any]] | dict[str, Any]:
         """
         Search the knowledge graph.
 
@@ -251,8 +251,13 @@ class GraphitiClient:
             query: Search query
             search_type: 'entities', 'episodes', 'relationships', or 'hybrid'
             limit: Maximum number of results
+            return_dict: If True, return dict format; if False, return list of results
+
+        Returns:
+            List of result objects (default) or dict with categorized results
         """
-        results = {
+        collected_results = []
+        metadata = {
             "query": query,
             "search_type": search_type,
             "timestamp": datetime.utcnow().isoformat(),
@@ -260,11 +265,27 @@ class GraphitiClient:
 
         if search_type in ["entities", "hybrid"]:
             entities = await self.neo4j_store.search_entities(query, limit)
-            results["entities"] = entities
+            for entity in entities:
+                collected_results.append({
+                    "type": "entity",
+                    "content": entity.get("name", ""),
+                    "entity_name": entity.get("name", ""),
+                    **entity
+                })
 
         if search_type in ["episodes", "hybrid"]:
             episodes = await self.neo4j_store.search_episodes(query, limit=limit)
-            results["episodes"] = episodes
+            for episode in episodes:
+                collected_results.append({
+                    "type": "episode",
+                    "content": episode.get("content", episode.get("description", "")),
+                    "fact": episode.get("content", episode.get("description", "")),
+                    "timestamp": episode.get("timestamp"),
+                    "confidence": episode.get("confidence", 0.8),
+                    "source_chunk": episode.get("source_id", ""),
+                    "entities": episode.get("entity_ids", []),
+                    **episode
+                })
 
         if search_type == "relationships":
             # First find relevant entities
@@ -273,13 +294,32 @@ class GraphitiClient:
                 # Get relationships for top entity
                 entity_id = entities[0]["id"]
                 rel_data = await self.neo4j_store.get_entity_relationships(entity_id)
-                results["relationships"] = rel_data
+                collected_results.append({
+                    "type": "relationships",
+                    "entity_id": entity_id,
+                    **rel_data
+                })
 
-        if search_type == "hybrid":
-            # Combine all results intelligently
-            results["relevance_score"] = self._calculate_relevance(results)
+        # Return in requested format
+        if return_dict:
+            # Legacy dict format
+            results = metadata.copy()
+            entities_list = [r for r in collected_results if r.get("type") == "entity"]
+            episodes_list = [r for r in collected_results if r.get("type") == "episode"]
+            rels_list = [r for r in collected_results if r.get("type") == "relationships"]
 
-        return results
+            if entities_list:
+                results["entities"] = entities_list
+            if episodes_list:
+                results["episodes"] = episodes_list
+            if rels_list:
+                results["relationships"] = rels_list
+            if search_type == "hybrid":
+                results["relevance_score"] = self._calculate_relevance(results)
+            return results
+        else:
+            # Return list for iteration
+            return collected_results[:limit]
 
     def _calculate_relevance(self, results: dict[str, Any]) -> float:
         """Calculate overall relevance score for hybrid search results."""

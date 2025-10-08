@@ -6,7 +6,7 @@ Provides both semantic (LLM-powered) and simple (rule-based) chunking approaches
 
 import logging
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from ..config import get_config

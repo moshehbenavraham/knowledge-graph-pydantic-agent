@@ -1,0 +1,300 @@
+name: Security & Supply Chain
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    - cron: '0 0 * * *'  # Daily at midnight UTC
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  secret-scanning:
+    name: Secret Scanning with Gitleaks
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Full history for comprehensive scan
+
+    - name: Run Gitleaks
+      uses: gitleaks/gitleaks-action@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+
+    - name: Upload Gitleaks report
+      uses: actions/upload-artifact@v4
+      if: failure()
+      with:
+        name: gitleaks-report
+        path: gitleaks-report.json
+
+  dependency-scanning:
+    name: Dependency Vulnerability Scan
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -e .[security]
+
+    - name: Run pip-audit
+      run: |
+        pip-audit --format=json --output=pip-audit-report.json
+      continue-on-error: true
+
+    - name: Run Safety
+      run: |
+        safety check --json --output safety-report.json
+      continue-on-error: true
+
+    - name: Trivy Filesystem Scan
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-fs-results.sarif'
+        severity: 'CRITICAL,HIGH'
+
+    - name: Upload Trivy results to GitHub Security
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-fs-results.sarif'
+
+    - name: Upload security reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: dependency-scan-reports
+        path: |
+          pip-audit-report.json
+          safety-report.json
+          trivy-fs-results.sarif
+
+  container-security:
+    name: Container Image Security Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build production image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: docker/Dockerfile.production
+        target: runtime
+        push: false
+        load: true
+        tags: base-agent:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'base-agent:latest'
+        format: 'sarif'
+        output: 'trivy-image-results.sarif'
+        severity: 'CRITICAL,HIGH,MEDIUM'
+        exit-code: '0'  # Don't fail on vulnerabilities (report only)
+
+    - name: Upload Trivy results to GitHub Security
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-image-results.sarif'
+
+    - name: Run Trivy JSON report
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'base-agent:latest'
+        format: 'json'
+        output: 'trivy-image-report.json'
+        severity: 'CRITICAL,HIGH,MEDIUM,LOW'
+
+    - name: Check for CRITICAL vulnerabilities
+      run: |
+        CRITICAL_COUNT=$(jq '[.Results[].Vulnerabilities[]? | select(.Severity=="CRITICAL")] | length' trivy-image-report.json)
+        echo "Critical vulnerabilities found: $CRITICAL_COUNT"
+        if [ "$CRITICAL_COUNT" -gt 0 ]; then
+          echo "::error::Found $CRITICAL_COUNT CRITICAL vulnerabilities. Deployment blocked."
+          exit 1
+        fi
+
+    - name: Upload Trivy image report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: trivy-image-report
+        path: trivy-image-report.json
+
+  sbom-generation:
+    name: Generate SBOM
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build production image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: docker/Dockerfile.production
+        target: runtime
+        push: false
+        load: true
+        tags: base-agent:latest
+        cache-from: type=gha
+
+    - name: Generate SBOM with Syft
+      uses: anchore/sbom-action@v0
+      with:
+        image: base-agent:latest
+        format: spdx-json
+        output-file: sbom.spdx.json
+
+    - name: Generate CycloneDX SBOM
+      uses: anchore/sbom-action@v0
+      with:
+        image: base-agent:latest
+        format: cyclonedx-json
+        output-file: sbom.cyclonedx.json
+
+    - name: Upload SBOM artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: sbom-reports
+        path: |
+          sbom.spdx.json
+          sbom.cyclonedx.json
+        retention-days: 90
+
+  image-signing:
+    name: Sign Container Image
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [secret-scanning, dependency-scanning, container-security]
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=sha,prefix={{branch}}-
+
+    - name: Build and push image
+      uses: docker/build-push-action@v5
+      id: build-push
+      with:
+        context: .
+        file: docker/Dockerfile.production
+        target: runtime
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Install Cosign
+      uses: sigstore/cosign-installer@v3
+
+    - name: Sign the container image
+      env:
+        DIGEST: ${{ steps.build-push.outputs.digest }}
+        TAGS: ${{ steps.meta.outputs.tags }}
+      run: |
+        echo "${TAGS}" | xargs -I {} cosign sign --yes {}@${DIGEST}
+
+    - name: Generate provenance
+      uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@v1.9.0
+      with:
+        image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        digest: ${{ steps.build-push.outputs.digest }}
+
+  security-summary:
+    name: Security Summary Report
+    runs-on: ubuntu-latest
+    needs: [secret-scanning, dependency-scanning, container-security, sbom-generation]
+    if: always()
+
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+
+    - name: Generate security summary
+      run: |
+        echo "# Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "## Scan Results" >> $GITHUB_STEP_SUMMARY
+        echo "- Secret Scanning: ${{ needs.secret-scanning.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Dependency Scanning: ${{ needs.dependency-scanning.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Container Security: ${{ needs.container-security.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- SBOM Generation: ${{ needs.sbom-generation.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        if [ -f "trivy-image-report/trivy-image-report.json" ]; then
+          echo "## Vulnerability Summary" >> $GITHUB_STEP_SUMMARY
+          CRITICAL=$(jq '[.Results[].Vulnerabilities[]? | select(.Severity=="CRITICAL")] | length' trivy-image-report/trivy-image-report.json)
+          HIGH=$(jq '[.Results[].Vulnerabilities[]? | select(.Severity=="HIGH")] | length' trivy-image-report/trivy-image-report.json)
+          MEDIUM=$(jq '[.Results[].Vulnerabilities[]? | select(.Severity=="MEDIUM")] | length' trivy-image-report/trivy-image-report.json)
+
+          echo "- **Critical**: $CRITICAL" >> $GITHUB_STEP_SUMMARY
+          echo "- **High**: $HIGH" >> $GITHUB_STEP_SUMMARY
+          echo "- **Medium**: $MEDIUM" >> $GITHUB_STEP_SUMMARY
+        fi

@@ -172,13 +172,8 @@ nav:
     - Troubleshooting: TROUBLESHOOTING.md
   - Advanced:
     - Database & RAG: DB_AND_RAG.md
-    - Agentic RAG:
-      - Overview: projects_ongoing/AGENTIC_RAG_HIGH_LEVEL.md
-      - Phase 1: projects_ongoing/AGENTIC_RAG_PHASE_01.md
-      - Phase 2: projects_ongoing/AGENTIC_RAG_PHASE_02.md
-      - Phase 3: projects_ongoing/AGENTIC_RAG_PHASE_03.md
-      - Phase 4: projects_ongoing/AGENTIC_RAG_PHASE_04.md
-    - Dev Tools: projects_ongoing/DEV_TOOLS.md
+    - Agentic RAG: AGENTIC_RAG.md
+    - Dev Tools: DEV_TOOLING.md
   - Resources:
     - Changelog: CHANGELOG.md
     - FAQ: faq.md

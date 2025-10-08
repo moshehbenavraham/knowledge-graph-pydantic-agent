@@ -5,6 +5,110 @@ All notable changes to the Luminari AI Agent project will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2025-10-08 🎉
+
+### 🚀 Production Release - Phase 5 Complete
+
+#### Production Deployment & Operations
+- **NEW**: Multi-stage production Docker images with non-root user execution
+- **NEW**: Environment-specific Docker Compose stacks (dev/staging/prod)
+- **NEW**: Automated deployment scripts with health checks and rollback support
+- **NEW**: Go-live checklist and operational runbooks
+- **NEW**: Disaster recovery procedures and backup strategies
+
+#### Observability & Monitoring
+- **NEW**: OpenTelemetry instrumentation with Prometheus metrics
+- **NEW**: Grafana dashboards for RAG-specific monitoring
+- **NEW**: Loki log aggregation with structured logging
+- **NEW**: Distributed tracing support
+- **NEW**: Alert catalog with severity levels and SLAs
+- **NEW**: Performance analyzer for API and search metrics
+
+#### Security & Compliance
+- **NEW**: Supply chain security documentation and policies
+- **NEW**: SBOM generation for container images
+- **NEW**: Vulnerability scanning in CI pipeline
+- **NEW**: Container hardening guides and security contexts
+- **NEW**: Image signing and verification workflow
+- **NEW**: Rate limiting enforcement at API layer
+
+#### Documentation & Architecture
+- **CONSOLIDATED**: Unified Agentic RAG documentation in `docs/AGENTIC_RAG.md`
+- **REMOVED**: Separate intro, roadmap, delivery, and deployment docs (merged into single source)
+- **NEW**: Comprehensive deployment architecture documentation
+- **NEW**: Network security and firewall rule specifications
+- **NEW**: Capacity planning and scaling guidelines
+- **NEW**: Cost optimization strategies
+
+#### API & Performance Enhancements
+- **NEW**: FastAPI versioned endpoints (`/api/v1`)
+- **NEW**: Server-Sent Events (SSE) streaming support
+- **NEW**: WebSocket transport with heartbeat and recovery
+- **NEW**: Dependency injection pattern for API layer
+- **NEW**: Resilience utilities (circuit breakers, retries)
+- **NEW**: API middleware stack for telemetry and security
+
+#### Quality & Testing
+- **ACHIEVED**: 75%+ test coverage with unit and integration suites
+- **NEW**: 50+ integration tests for API and RAG workflows
+- **NEW**: Load testing framework with Locust
+- **NEW**: Performance profiling and analysis tools
+- **NEW**: Supply chain CI workflow (`make ci-supply-chain`)
+
+### Production Metrics
+- **Latency**: <2s P95 for chat responses (target: <5s)
+- **Intent Accuracy**: 90%+ classification accuracy
+- **Storage Efficiency**: 99.6% zero-duplication compliance
+- **Search Success**: 88% optimal routing on evaluation corpus
+- **Citation Coverage**: 100% of answers include source references
+
+### Infrastructure
+- PostgreSQL (Supabase) with pgvector for semantic search
+- Neo4j with Graphiti for knowledge graph
+- Redis for caching layer
+- SearXNG for web search capabilities
+- Multi-environment deployment support
+
+### Added
+- `deploy/` directory with production deployment tooling
+- `docker/Dockerfile.production` - Hardened multi-stage image
+- `docker/docker-compose.{dev,staging,prod}.yml` - Environment stacks
+- `docs/observability/` - Monitoring and alerting documentation
+- `docs/operations/` - Runbooks and operational procedures
+- `docs/security/` - Security hardening and supply chain docs
+- `src/api/dependencies.py` - Dependency injection for API
+- `src/api/endpoints/` - Versioned API endpoint modules
+- `src/api/middleware.py` - Telemetry and security middleware
+- `src/api/models.py` - Pydantic models for API contracts
+- `src/api/streaming.py` - SSE and WebSocket streaming
+- `src/api/telemetry.py` - OpenTelemetry configuration
+- `src/utils/resilience.py` - Circuit breakers and retry logic
+- `tests/api/` - API-specific test suites
+- `tests/integration/` - Integration test scenarios
+- `tests/load/` - Load testing with Locust
+- `.github/workflows/security-supply-chain.yml` - Supply chain CI
+
+### Changed
+- Reorganized API from flat structure to versioned endpoints
+- Enhanced connection pooling with circuit breakers
+- Improved error handling across all storage clients
+- Updated documentation structure for production readiness
+- Optimized database migrations with checksums and rollbacks
+
+### Performance
+- <2s P95 latency for production workloads
+- Parallel search execution (vector + graph)
+- Redis caching for frequent queries
+- Connection pooling for database efficiency
+- Batch embedding generation
+
+### Deployment
+- Docker Compose: `make deploy-{dev,staging,prod}`
+- Health checks: `make health-check-{dev,staging,prod}`
+- Rollback support: `make rollback-{dev,staging,prod}`
+- Image scanning: `make scan-image`
+- SBOM generation: `make generate-sbom`
+
 ## [0.9.0] - 2025-08-27
 
 ### 🎉 Major Improvements

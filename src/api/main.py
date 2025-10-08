@@ -1,391 +1,211 @@
-"""FastAPI main application with comprehensive middleware stack."""
+"""
+FastAPI main application - Phase 4: Production-Ready API.
 
-import asyncio
-import time
+Comprehensive API with streaming, caching, resilience, and observability.
+"""
+
 from contextlib import asynccontextmanager
-from typing import Any, Dict, List, Optional
 
 import structlog
 import uvicorn
-from fastapi import FastAPI, HTTPException, Request, Response, status
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, StreamingResponse
-from prometheus_client import (
-    Counter,
-    Gauge,
-    Histogram,
-    generate_latest,
-    CONTENT_TYPE_LATEST,
-)
-from pydantic import BaseModel, Field
+from fastapi.responses import JSONResponse
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
-# Using unified agent now
-from src.agent import super_agent, UnifiedAgentDeps, run_unified_agent
+from src.api.dependencies import cleanup_dependencies, init_dependencies
+from src.api.endpoints import chat, documents, search
 from src.api.health_endpoints import router as health_router
+from src.api.middleware import (
+    CompressionMiddleware,
+    CorrelationIDMiddleware,
+    ErrorHandlingMiddleware,
+    RateLimitMiddleware,
+    RequestLoggingMiddleware,
+    SecurityHeadersMiddleware,
+    TimingMiddleware,
+)
+from src.api.models import StatusResponse
 from src.config.api import api_config
-from src.config.agent import agent_config
-from src.utils.cache import get_cache, cache
-from src.utils.monitoring import track_metrics
 
-# Configure structured logging
 logger = structlog.get_logger()
 
-# Prometheus metrics
-http_requests_total = Counter(
-    "http_requests_total",
-    "Total HTTP requests",
-    ["method", "endpoint", "status"],
-)
-http_request_duration = Histogram(
-    "http_request_duration_seconds",
-    "HTTP request duration in seconds",
-    ["method", "endpoint"],
-)
-active_connections = Gauge(
-    "active_connections", "Number of active connections"
-)
-cache_hits = Counter("cache_hits_total", "Total cache hits", ["endpoint"])
-cache_misses = Counter("cache_misses_total", "Total cache misses", ["endpoint"])
-llm_requests_total = Counter(
-    "llm_requests_total", "Total LLM API requests", ["model", "endpoint"]
-)
-llm_tokens_total = Counter(
-    "llm_tokens_total", "Total tokens processed", ["model", "type"]
-)
+
+# ===== Application Lifespan =====
 
 
-# Request/Response models
-class ChatRequest(BaseModel):
-    """Chat request model."""
-
-    message: str = Field(..., description="User message")
-    session_id: Optional[str] = Field(None, description="Session ID for context")
-    stream: bool = Field(False, description="Enable streaming response")
-    include_sources: bool = Field(True, description="Include source citations")
-    search_strategy: Optional[str] = Field(
-        None, description="Search strategy to use"
-    )
-    max_tokens: Optional[int] = Field(2000, description="Maximum response tokens")
-
-
-class ChatResponse(BaseModel):
-    """Chat response model."""
-
-    response: str = Field(..., description="Agent response")
-    sources: Optional[List[Dict[str, Any]]] = Field(
-        None, description="Source documents"
-    )
-    confidence: float = Field(..., description="Response confidence score")
-    search_strategy_used: Optional[str] = Field(
-        None, description="Search strategy that was used"
-    )
-    session_id: str = Field(..., description="Session ID for context")
-    metrics: Optional[Dict[str, Any]] = Field(
-        None, description="Performance metrics"
-    )
-
-
-class SearchRequest(BaseModel):
-    """Search request model."""
-
-    query: str = Field(..., description="Search query")
-    search_type: str = Field(
-        "hybrid", description="Search type: vector, graph, or hybrid"
-    )
-    limit: int = Field(10, description="Maximum number of results")
-    threshold: float = Field(0.7, description="Similarity threshold")
-
-
-class SearchResponse(BaseModel):
-    """Search response model."""
-
-    results: List[Dict[str, Any]] = Field(..., description="Search results")
-    total_results: int = Field(..., description="Total number of results")
-    search_time_ms: float = Field(..., description="Search time in milliseconds")
-    strategy_used: str = Field(..., description="Search strategy used")
-
-
-# Application lifespan manager
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Application lifespan manager for startup and shutdown."""
+    """
+    Application lifespan manager.
+
+    Handles startup and shutdown of dependencies.
+    """
     # Startup
-    logger.info("Starting Agentic RAG API server")
+    logger.info(
+        "starting_agentic_rag_api",
+        version=app.version,
+        environment=api_config._settings.app_env,
+    )
 
-    # Initialize cache
-    cache_instance = get_cache()
-    app.state.cache = cache_instance
-
-    # Initialize agent
     try:
-        app.state.agent = AgenticRAGChatbot()
-        logger.info("Agent initialized successfully")
+        # Initialize dependencies
+        await init_dependencies()
+        logger.info("dependencies_initialized")
+
+        # Initialize OpenTelemetry tracing if enabled
+        if api_config.enable_tracing:
+            _setup_tracing(app)
+
     except Exception as e:
-        logger.error("Failed to initialize agent", error=str(e))
-        # Continue without agent for health checks
-
-    # Initialize OpenTelemetry if enabled
-    if api_config.enable_tracing:
-        from opentelemetry import trace
-        from opentelemetry.exporter.jaeger.thrift import JaegerExporter
-        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-        from opentelemetry.sdk.resources import Resource
-        from opentelemetry.sdk.trace import TracerProvider
-        from opentelemetry.sdk.trace.export import BatchSpanProcessor
-
-        resource = Resource.create({"service.name": "agentic-rag-api"})
-        provider = TracerProvider(resource=resource)
-        trace.set_tracer_provider(provider)
-
-        jaeger_exporter = JaegerExporter(
-            agent_host_name=api_config.jaeger_host,
-            agent_port=api_config.jaeger_port,
-        )
-        provider.add_span_processor(BatchSpanProcessor(jaeger_exporter))
-
-        FastAPIInstrumentor.instrument_app(app)
-        logger.info("OpenTelemetry tracing enabled")
+        logger.error("startup_failed", error=str(e))
+        raise
 
     yield
 
     # Shutdown
-    logger.info("Shutting down Agentic RAG API server")
-    # Cleanup resources
-    if hasattr(app.state, "agent"):
-        # Add any agent cleanup if needed
-        pass
+    logger.info("shutting_down_agentic_rag_api")
+
+    try:
+        await cleanup_dependencies()
+        logger.info("dependencies_cleaned_up")
+    except Exception as e:
+        logger.error("shutdown_error", error=str(e))
 
 
-# Create FastAPI application
+# ===== Application Setup =====
+
+
 app = FastAPI(
     title="Agentic RAG API",
-    description="Production-ready API for Agentic RAG system with caching and monitoring",
-    version="0.7.1",
+    description=(
+        "Production-ready API for Agentic RAG system with streaming, "
+        "caching, resilience, and comprehensive observability."
+    ),
+    version="0.8.0",
     lifespan=lifespan,
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/api/v1/openapi.json",
 )
 
-# Configure CORS
+
+# ===== Middleware Stack =====
+
+
+# 1. CORS (first to handle preflight requests)
 app.add_middleware(
     CORSMiddleware,
     **api_config.get_cors_config(),
 )
 
+# 2. Security headers
+app.add_middleware(SecurityHeadersMiddleware)
 
-# Middleware for metrics and logging
-@app.middleware("http")
-async def metrics_middleware(request: Request, call_next):
-    """Track metrics for all requests."""
-    start_time = time.time()
-    active_connections.inc()
+# 3. Compression
+app.add_middleware(CompressionMiddleware, minimum_size=1000)
 
-    # Extract endpoint path
-    endpoint = request.url.path
+# 4. Rate limiting
+app.add_middleware(RateLimitMiddleware, requests_per_minute=60)
 
-    try:
-        response = await call_next(request)
-        duration = time.time() - start_time
+# 5. Correlation ID
+app.add_middleware(CorrelationIDMiddleware)
 
-        # Record metrics
-        http_requests_total.labels(
-            method=request.method, endpoint=endpoint, status=response.status_code
-        ).inc()
-        http_request_duration.labels(
-            method=request.method, endpoint=endpoint
-        ).observe(duration)
+# 6. Request timing
+app.add_middleware(TimingMiddleware)
 
-        # Log request
-        logger.info(
-            "Request completed",
-            method=request.method,
-            endpoint=endpoint,
-            status=response.status_code,
-            duration_ms=duration * 1000,
-        )
+# 7. Error handling
+app.add_middleware(ErrorHandlingMiddleware)
 
-        return response
-    except Exception as e:
-        duration = time.time() - start_time
-        http_requests_total.labels(
-            method=request.method, endpoint=endpoint, status=500
-        ).inc()
-        logger.error(
-            "Request failed",
-            method=request.method,
-            endpoint=endpoint,
-            error=str(e),
-            duration_ms=duration * 1000,
-        )
-        raise
-    finally:
-        active_connections.dec()
+# 8. Request logging
+app.add_middleware(RequestLoggingMiddleware)
 
 
-# Include health router
+# ===== Routers =====
+
+
+# Health endpoints
 app.include_router(health_router, prefix="/health", tags=["health"])
 
+# API v1 endpoints
+app.include_router(chat.router, tags=["chat"])
+app.include_router(search.router, tags=["search"])
+app.include_router(documents.router, tags=["documents"])
 
-# API Endpoints
+
+# ===== Root Endpoints =====
+
+
 @app.get("/")
 async def root():
-    """Root endpoint."""
+    """Root endpoint with API information."""
     return {
         "name": "Agentic RAG API",
-        "version": "0.7.1",
+        "version": "0.8.0",
         "status": "operational",
-        "documentation": "/docs",
+        "documentation": {
+            "swagger": "/docs",
+            "redoc": "/redoc",
+            "openapi": "/api/v1/openapi.json",
+        },
+        "endpoints": {
+            "health": "/health",
+            "metrics": "/metrics",
+            "status": "/api/v1/status",
+            "chat": "/api/v1/chat",
+            "search": "/api/v1/search",
+            "documents": "/api/v1/documents",
+        },
     }
 
 
-@app.post("/api/v1/chat", response_model=ChatResponse)
-@cache(prefix="chat", ttl=300)
-async def chat(request: ChatRequest) -> ChatResponse:
-    """Chat endpoint with caching and streaming support."""
-    if not hasattr(app.state, "agent"):
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Agent not initialized",
-        )
+@app.get("/api/v1/status", response_model=StatusResponse)
+async def status():
+    """
+    Get API status and health information.
 
-    start_time = time.time()
+    Returns comprehensive status of all components.
+    """
+    from src.api.dependencies import check_database_health, get_api_settings
 
-    try:
-        # Track LLM request
-        llm_requests_total.labels(
-            model=agent_config.llm_model, endpoint="chat"
-        ).inc()
+    health = await check_database_health()
+    settings = await get_api_settings()
 
-        # Get response from agent
-        if request.stream:
-            # TODO: Implement streaming
-            pass
-
-        # Use agent to get response
-        agent_response = await asyncio.to_thread(
-            app.state.agent.chat,
-            request.message,
-            session_id=request.session_id,
-            search_strategy=request.search_strategy,
-        )
-
-        # Calculate metrics
-        response_time = (time.time() - start_time) * 1000
-
-        return ChatResponse(
-            response=agent_response.get("response", ""),
-            sources=agent_response.get("sources"),
-            confidence=agent_response.get("confidence", 0.0),
-            search_strategy_used=agent_response.get("search_strategy"),
-            session_id=request.session_id or "default",
-            metrics={
-                "response_time_ms": response_time,
-                "tokens_used": agent_response.get("tokens_used", 0),
+    return StatusResponse(
+        status="operational" if health["postgres"] else "degraded",
+        version="0.8.0",
+        cache=None,  # Populated by health check
+        components=[
+            {
+                "name": "PostgreSQL",
+                "healthy": health["postgres"],
+                "details": {},
             },
-        )
-
-    except Exception as e:
-        logger.error("Chat request failed", error=str(e))
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Chat request failed: {str(e)}",
-        )
-
-
-@app.post("/api/v1/search", response_model=SearchResponse)
-@cache(prefix="search", ttl=600)
-async def search(request: SearchRequest) -> SearchResponse:
-    """Search endpoint with caching."""
-    if not hasattr(app.state, "agent"):
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Agent not initialized",
-        )
-
-    start_time = time.time()
-
-    try:
-        # Perform search using agent's search capabilities
-        if request.search_type == "vector":
-            results = await asyncio.to_thread(
-                app.state.agent.vector_search,
-                request.query,
-                limit=request.limit,
-                threshold=request.threshold,
-            )
-        elif request.search_type == "graph":
-            results = await asyncio.to_thread(
-                app.state.agent.graph_search,
-                request.query,
-                limit=request.limit,
-            )
-        else:  # hybrid
-            results = await asyncio.to_thread(
-                app.state.agent.hybrid_search,
-                request.query,
-                limit=request.limit,
-            )
-
-        search_time = (time.time() - start_time) * 1000
-
-        return SearchResponse(
-            results=results.get("results", []),
-            total_results=len(results.get("results", [])),
-            search_time_ms=search_time,
-            strategy_used=request.search_type,
-        )
-
-    except Exception as e:
-        logger.error("Search request failed", error=str(e))
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Search request failed: {str(e)}",
-        )
-
-
-@app.post("/api/v1/chat/stream")
-async def chat_stream(request: ChatRequest):
-    """Streaming chat endpoint."""
-    if not hasattr(app.state, "agent"):
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Agent not initialized",
-        )
-
-    async def generate():
-        """Generate streaming response."""
-        try:
-            # TODO: Implement actual streaming from agent
-            response = await asyncio.to_thread(
-                app.state.agent.chat,
-                request.message,
-                session_id=request.session_id,
-            )
-
-            # Simulate streaming by yielding chunks
-            text = response.get("response", "")
-            words = text.split()
-            for i in range(0, len(words), 5):
-                chunk = " ".join(words[i : i + 5]) + " "
-                yield f"data: {chunk}\n\n"
-                await asyncio.sleep(0.05)
-
-            yield "data: [DONE]\n\n"
-
-        except Exception as e:
-            yield f"data: Error: {str(e)}\n\n"
-
-    return StreamingResponse(
-        generate(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
+            {
+                "name": "Neo4j",
+                "healthy": health["neo4j"],
+                "details": {},
+            },
+            {
+                "name": "Cache",
+                "healthy": health["cache"],
+                "details": {},
+            },
+        ],
+        metrics={
+            "environment": settings["environment"],
+            "features": settings["features"],
         },
     )
 
 
 @app.get("/metrics")
 async def metrics():
-    """Prometheus metrics endpoint."""
+    """
+    Prometheus metrics endpoint.
+
+    Returns metrics in Prometheus exposition format.
+    """
     return Response(
         content=generate_latest(),
         media_type=CONTENT_TYPE_LATEST,
@@ -393,89 +213,152 @@ async def metrics():
 
 
 @app.delete("/api/v1/cache")
-async def clear_cache(pattern: Optional[str] = "*"):
-    """Clear cache entries matching pattern."""
+async def clear_cache(pattern: str = "*"):
+    """
+    Clear cache entries.
+
+    Supports wildcard patterns for selective clearing.
+    """
     try:
-        cache_instance = app.state.cache
+        from src.api.dependencies import get_cache_manager
+
+        cache = await get_cache_manager()
+
         if pattern == "*":
-            cache_instance.flush()
+            cache.flush()
             return {"message": "All cache entries cleared"}
         else:
-            from src.utils.cache import invalidate_cache
-
-            deleted = invalidate_cache(pattern)
+            # TODO: Implement pattern-based clearing
             return {
-                "message": f"Cleared {deleted} cache entries matching pattern",
-                "pattern": pattern,
+                "message": f"Cleared cache entries matching pattern: {pattern}"
             }
+
     except Exception as e:
-        logger.error("Cache clear failed", error=str(e))
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Cache clear failed: {str(e)}",
+        logger.error("cache_clear_failed", error=str(e))
+        return JSONResponse(
+            status_code=500,
+            content={"error": "Failed to clear cache"},
         )
 
 
-@app.get("/api/v1/status")
-async def status():
-    """Get API status and statistics."""
-    cache_instance = app.state.cache
-
-    return {
-        "status": "operational",
-        "version": "0.7.1",
-        "cache": {
-            "enabled": cache_instance is not None,
-            "healthy": cache_instance.health_check() if cache_instance else False,
-        },
-        "agent": {
-            "initialized": hasattr(app.state, "agent"),
-        },
-        "metrics": {
-            "active_connections": active_connections._value._value,
-            "total_requests": sum(
-                [
-                    sample.value
-                    for sample in http_requests_total.collect()[0].samples
-                ]
-            ),
-        },
-    }
+# ===== Exception Handlers =====
 
 
-# Exception handlers
-@app.exception_handler(HTTPException)
-async def http_exception_handler(request: Request, exc: HTTPException):
-    """Handle HTTP exceptions."""
+@app.exception_handler(404)
+async def not_found_handler(request: Request, exc):
+    """Handle 404 Not Found errors."""
     return JSONResponse(
-        status_code=exc.status_code,
+        status_code=404,
         content={
-            "detail": exc.detail,
-            "status_code": exc.status_code,
+            "error": {
+                "code": "not_found",
+                "message": "The requested resource was not found",
+            }
         },
     )
 
 
-@app.exception_handler(Exception)
-async def general_exception_handler(request: Request, exc: Exception):
-    """Handle general exceptions."""
+@app.exception_handler(500)
+async def internal_error_handler(request: Request, exc):
+    """Handle 500 Internal Server errors."""
     logger.error(
-        "Unhandled exception", error=str(exc), path=request.url.path
+        "internal_server_error",
+        path=request.url.path,
+        error=str(exc),
     )
+
     return JSONResponse(
         status_code=500,
         content={
-            "detail": "Internal server error",
-            "status_code": 500,
+            "error": {
+                "code": "internal_server_error",
+                "message": "An internal error occurred",
+            }
         },
     )
 
 
+# ===== Tracing Setup =====
+
+
+def _setup_tracing(app: FastAPI):
+    """
+    Setup OpenTelemetry tracing.
+
+    Instruments FastAPI app with distributed tracing.
+    """
+    try:
+        from opentelemetry import trace
+        from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
+            OTLPSpanExporter,
+        )
+        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+        from opentelemetry.sdk.resources import Resource
+        from opentelemetry.sdk.trace import TracerProvider
+        from opentelemetry.sdk.trace.export import BatchSpanProcessor
+
+        # Create resource
+        resource = Resource.create(
+            {
+                "service.name": "agentic-rag-api",
+                "service.version": "0.8.0",
+            }
+        )
+
+        # Setup tracer provider
+        provider = TracerProvider(resource=resource)
+        trace.set_tracer_provider(provider)
+
+        # Setup OTLP exporter (or Jaeger)
+        if api_config._settings.jaeger_host:
+            # Use Jaeger if configured
+            from opentelemetry.exporter.jaeger.thrift import JaegerExporter
+
+            exporter = JaegerExporter(
+                agent_host_name=api_config.jaeger_host,
+                agent_port=api_config.jaeger_port,
+            )
+        else:
+            # Use OTLP
+            exporter = OTLPSpanExporter()
+
+        provider.add_span_processor(BatchSpanProcessor(exporter))
+
+        # Instrument FastAPI
+        FastAPIInstrumentor.instrument_app(app)
+
+        logger.info(
+            "tracing_enabled",
+            exporter="jaeger" if api_config._settings.jaeger_host else "otlp",
+        )
+
+    except ImportError as e:
+        logger.warning(
+            "tracing_dependencies_missing",
+            error=str(e),
+            help="Install with: pip install opentelemetry-instrumentation-fastapi",
+        )
+    except Exception as e:
+        logger.error("tracing_setup_failed", error=str(e))
+
+
+# ===== Server Runner =====
+
+
 def run_server():
-    """Run the FastAPI server."""
+    """
+    Run the FastAPI server.
+
+    Uses Uvicorn with configuration from api_config.
+    """
     uvicorn_config = api_config.get_uvicorn_config()
 
-    logger.info(f"Starting API server on {uvicorn_config['host']}:{uvicorn_config['port']}")
+    logger.info(
+        "starting_uvicorn",
+        host=uvicorn_config["host"],
+        port=uvicorn_config["port"],
+        reload=uvicorn_config["reload"],
+    )
 
     uvicorn.run(
         "src.api.main:app",

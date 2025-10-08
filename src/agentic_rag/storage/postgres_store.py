@@ -59,20 +59,21 @@ class PostgresStore:
                     )
                 )
 
-            # Batch insert chunks
-            result = await conn.fetch(
-                """
-                INSERT INTO chunks (
-                    document_id, content, embedding_1536, embedding_768,
-                    chunk_index, start_char, end_char, metadata, token_count
+            # Batch insert chunks using executemany
+            chunk_ids = []
+            for chunk_data in insert_data:
+                row = await conn.fetchrow(
+                    """
+                    INSERT INTO chunks (
+                        document_id, content, embedding_1536, embedding_768,
+                        chunk_index, start_char, end_char, metadata, token_count
+                    )
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                    RETURNING id
+                    """,
+                    *chunk_data,
                 )
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-                RETURNING id
-            """,
-                *zip(*insert_data, strict=False),
-            )
-
-            chunk_ids = [row["id"] for row in result]
+                chunk_ids.append(row["id"])
 
             logger.info(f"Stored {len(chunk_ids)} chunks for document {document_id}")
 
@@ -381,6 +382,206 @@ class PostgresStore:
 
             if deleted:
                 logger.info(f"Cleaned {deleted} expired cache entries")
+
+    async def list_documents(
+        self,
+        limit: int = 20,
+        offset: int = 0,
+        source_filter: str | None = None,
+        sort_by: str = "created_at",
+        sort_order: str = "desc",
+    ) -> list[dict[str, Any]]:
+        """
+        List documents with pagination and filtering.
+
+        Args:
+            limit: Maximum number of documents to return
+            offset: Number of documents to skip (for pagination)
+            source_filter: Optional source filter (exact match or pattern)
+            sort_by: Field to sort by (created_at, title, updated_at)
+            sort_order: Sort order (asc or desc)
+
+        Returns:
+            List of document dictionaries with metadata
+
+        Example:
+            documents = await store.list_documents(
+                limit=20,
+                offset=0,
+                source_filter="%.pdf",
+                sort_by="created_at",
+                sort_order="desc"
+            )
+        """
+        async with self.connection_manager.get_pg_connection() as conn:
+            # Validate sort parameters
+            valid_sort_fields = {"created_at", "title", "updated_at"}
+            if sort_by not in valid_sort_fields:
+                sort_by = "created_at"
+
+            valid_sort_orders = {"asc", "desc"}
+            if sort_order.lower() not in valid_sort_orders:
+                sort_order = "desc"
+
+            # Build dynamic ORDER BY clause
+            order_clause = f"d.{sort_by} {sort_order.upper()}"
+
+            query = f"""
+                SELECT
+                    d.id,
+                    d.title,
+                    d.source,
+                    d.created_at,
+                    d.updated_at,
+                    d.metadata,
+                    COUNT(c.id) as chunk_count
+                FROM documents d
+                LEFT JOIN chunks c ON c.document_id = d.id
+                WHERE d.is_deleted = FALSE
+                    AND ($3::text IS NULL OR d.source LIKE $3)
+                GROUP BY d.id, d.title, d.source, d.created_at, d.updated_at, d.metadata
+                ORDER BY {order_clause}
+                LIMIT $1 OFFSET $2
+            """
+
+            rows = await conn.fetch(query, limit, offset, source_filter)
+            return [dict(row) for row in rows]
+
+    async def count_documents(self, source_filter: str | None = None) -> int:
+        """
+        Count total documents with optional filtering.
+
+        Args:
+            source_filter: Optional source filter (exact match or pattern)
+
+        Returns:
+            Total count of matching documents
+        """
+        async with self.connection_manager.get_pg_connection() as conn:
+            query = """
+                SELECT COUNT(*) as total
+                FROM documents
+                WHERE is_deleted = FALSE
+                    AND ($1::text IS NULL OR source LIKE $1)
+            """
+
+            row = await conn.fetchrow(query, source_filter)
+            return row["total"] if row else 0
+
+    async def get_document_chunks(
+        self, document_id: UUID, include_embeddings: bool = False
+    ) -> list[dict[str, Any]]:
+        """
+        Get all chunks for a document.
+
+        Args:
+            document_id: Document UUID
+            include_embeddings: Whether to include embedding vectors
+
+        Returns:
+            List of chunk dictionaries
+        """
+        async with self.connection_manager.get_pg_connection() as conn:
+            if include_embeddings:
+                query = """
+                    SELECT
+                        id, document_id, content,
+                        embedding_1536, embedding_768,
+                        chunk_index, metadata, token_count,
+                        start_char, end_char, entity_refs,
+                        created_at
+                    FROM chunks
+                    WHERE document_id = $1
+                    ORDER BY chunk_index ASC
+                """
+            else:
+                query = """
+                    SELECT
+                        id, document_id, content, chunk_index,
+                        metadata, token_count,
+                        start_char, end_char, entity_refs,
+                        created_at
+                    FROM chunks
+                    WHERE document_id = $1
+                    ORDER BY chunk_index ASC
+                """
+
+            rows = await conn.fetch(query, document_id)
+            return [dict(row) for row in rows]
+
+    async def update_document(self, document_id: UUID, updates: dict[str, Any]) -> bool:
+        """
+        Update document metadata.
+
+        Args:
+            document_id: Document UUID
+            updates: Dictionary of fields to update (title, metadata)
+
+        Returns:
+            True if updated, False if not found
+        """
+        async with self.connection_manager.get_pg_connection() as conn:
+            # Build dynamic UPDATE query based on provided fields
+            allowed_fields = {"title", "metadata"}
+            update_fields = {k: v for k, v in updates.items() if k in allowed_fields}
+
+            if not update_fields:
+                logger.warning(f"No valid fields to update for document {document_id}")
+                return False
+
+            set_clauses = []
+            values = [document_id]
+            param_idx = 2
+
+            for field, value in update_fields.items():
+                if field == "metadata":
+                    # Handle metadata as JSONB
+                    set_clauses.append(f"{field} = ${param_idx}::jsonb")
+                    values.append(json.dumps(value))
+                else:
+                    set_clauses.append(f"{field} = ${param_idx}")
+                    values.append(value)
+                param_idx += 1
+
+            # Always update the updated_at timestamp
+            set_clauses.append(f"updated_at = NOW()")
+
+            query = f"""
+                UPDATE documents
+                SET {', '.join(set_clauses)}
+                WHERE id = $1 AND is_deleted = FALSE
+                RETURNING id
+            """
+
+            result = await conn.fetchrow(query, *values)
+            success = result is not None
+
+            if success:
+                logger.info(f"Updated document {document_id}: {list(update_fields.keys())}")
+            else:
+                logger.warning(f"Document {document_id} not found for update")
+
+            return success
+
+    async def count_chunks(self, document_id: UUID) -> int:
+        """
+        Count chunks for a document.
+
+        Args:
+            document_id: Document UUID
+
+        Returns:
+            Number of chunks
+        """
+        async with self.connection_manager.get_pg_connection() as conn:
+            query = """
+                SELECT COUNT(*) as total
+                FROM chunks
+                WHERE document_id = $1
+            """
+
+            row = await conn.fetchrow(query, document_id)
+            return row["total"] if row else 0
 
     async def get_statistics(self) -> dict[str, Any]:
         """Get database statistics."""
