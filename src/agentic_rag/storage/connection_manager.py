@@ -54,8 +54,12 @@ class ConnectionManager:
     Centralized connection management with pooling, monitoring, and resilience.
     """
 
-    def __init__(self, config: dict[str, Any]):
-        self.config = config
+    def __init__(self, config: dict[str, Any] | None = None):
+        if config is None:
+            from ..config import get_config
+            self.config = get_config().dict()
+        else:
+            self.config = config
         self.pg_pool: asyncpg.Pool | None = None
         self.neo4j_driver: AsyncGraphDatabase.driver | None = None
         self.redis_client: redis.Redis | None = None

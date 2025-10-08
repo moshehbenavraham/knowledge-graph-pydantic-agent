@@ -1,0 +1,316 @@
+groups:
+  - name: base_agent_alerts
+    interval: 30s
+    rules:
+      # ========================================
+      # Critical Alerts (Page Immediately)
+      # ========================================
+
+      - alert: ServiceDown
+        expr: up{job=~"base-agent.*"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: infrastructure
+        annotations:
+          summary: "Service {{ $labels.job }} is down"
+          description: "{{ $labels.job }} has been down for more than 1 minute."
+
+      - alert: HighErrorRate
+        expr: |
+          (
+            rate(http_requests_total{status=~"5.."}[5m])
+            /
+            rate(http_requests_total[5m])
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          component: api
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value | humanizePercentage }} for {{ $labels.job }}"
+
+      - alert: DatabaseConnectionFailure
+        expr: db_connections_failed_total > 10
+        for: 2m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "Database connection failures"
+          description: "{{ $value }} database connection failures in the last 2 minutes"
+
+      - alert: MemoryUsageCritical
+        expr: |
+          (
+            container_memory_usage_bytes{name=~"base-agent.*"}
+            /
+            container_spec_memory_limit_bytes{name=~"base-agent.*"}
+          ) > 0.90
+        for: 5m
+        labels:
+          severity: critical
+          component: infrastructure
+        annotations:
+          summary: "Critical memory usage on {{ $labels.name }}"
+          description: "Memory usage is at {{ $value | humanizePercentage }}"
+
+      - alert: DiskSpaceCritical
+        expr: |
+          (
+            node_filesystem_avail_bytes{mountpoint="/"}
+            /
+            node_filesystem_size_bytes{mountpoint="/"}
+          ) < 0.10
+        for: 5m
+        labels:
+          severity: critical
+          component: infrastructure
+        annotations:
+          summary: "Critical disk space"
+          description: "Disk space is below 10% ({{ $value | humanizePercentage }} remaining)"
+
+      # ========================================
+      # High Priority Alerts (Page During Business Hours)
+      # ========================================
+
+      - alert: HighLatency
+        expr: |
+          histogram_quantile(0.95,
+            rate(http_request_duration_seconds_bucket[5m])
+          ) > 2
+        for: 10m
+        labels:
+          severity: high
+          component: api
+        annotations:
+          summary: "High API latency detected"
+          description: "95th percentile latency is {{ $value }}s for {{ $labels.job }}"
+
+      - alert: LLMProviderErrors
+        expr: rate(llm_requests_failed_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: high
+          component: llm
+        annotations:
+          summary: "LLM provider errors detected"
+          description: "{{ $value }} LLM request failures per second"
+
+      - alert: Neo4jConnectionIssues
+        expr: neo4j_bolt_connections_idle < 1
+        for: 5m
+        labels:
+          severity: high
+          component: database
+        annotations:
+          summary: "Neo4j connection pool exhausted"
+          description: "No idle Neo4j connections available"
+
+      - alert: RedisConnectionFailures
+        expr: rate(redis_connection_errors_total[5m]) > 0
+        for: 5m
+        labels:
+          severity: high
+          component: cache
+        annotations:
+          summary: "Redis connection errors"
+          description: "{{ $value }} Redis connection errors per second"
+
+      - alert: HighCPUUsage
+        expr: |
+          (
+            rate(container_cpu_usage_seconds_total{name=~"base-agent.*"}[5m])
+            /
+            container_spec_cpu_quota{name=~"base-agent.*"} * 100000
+          ) > 80
+        for: 15m
+        labels:
+          severity: high
+          component: infrastructure
+        annotations:
+          summary: "High CPU usage on {{ $labels.name }}"
+          description: "CPU usage is {{ $value }}%"
+
+      # ========================================
+      # Medium Priority Alerts (Slack/Email)
+      # ========================================
+
+      - alert: SlowDatabaseQueries
+        expr: |
+          histogram_quantile(0.95,
+            rate(db_query_duration_seconds_bucket[5m])
+          ) > 1
+        for: 10m
+        labels:
+          severity: medium
+          component: database
+        annotations:
+          summary: "Slow database queries detected"
+          description: "95th percentile query time is {{ $value }}s"
+
+      - alert: EmbeddingGenerationSlow
+        expr: |
+          histogram_quantile(0.95,
+            rate(embedding_generation_duration_seconds_bucket[5m])
+          ) > 5
+        for: 10m
+        labels:
+          severity: medium
+          component: rag
+        annotations:
+          summary: "Slow embedding generation"
+          description: "95th percentile embedding time is {{ $value }}s"
+
+      - alert: MemoryUsageHigh
+        expr: |
+          (
+            container_memory_usage_bytes{name=~"base-agent.*"}
+            /
+            container_spec_memory_limit_bytes{name=~"base-agent.*"}
+          ) > 0.75
+        for: 15m
+        labels:
+          severity: medium
+          component: infrastructure
+        annotations:
+          summary: "High memory usage on {{ $labels.name }}"
+          description: "Memory usage is at {{ $value | humanizePercentage }}"
+
+      - alert: CacheHitRateLow
+        expr: |
+          (
+            rate(cache_hits_total[5m])
+            /
+            (rate(cache_hits_total[5m]) + rate(cache_misses_total[5m]))
+          ) < 0.5
+        for: 30m
+        labels:
+          severity: medium
+          component: cache
+        annotations:
+          summary: "Low cache hit rate"
+          description: "Cache hit rate is {{ $value | humanizePercentage }}"
+
+      # ========================================
+      # Low Priority Alerts (Informational)
+      # ========================================
+
+      - alert: ContainerRestarted
+        expr: rate(container_restarts_total{name=~"base-agent.*"}[15m]) > 0
+        for: 5m
+        labels:
+          severity: low
+          component: infrastructure
+        annotations:
+          summary: "Container {{ $labels.name }} restarted"
+          description: "Container has restarted {{ $value }} times in the last 15 minutes"
+
+      - alert: HighRequestVolume
+        expr: rate(http_requests_total[5m]) > 100
+        for: 10m
+        labels:
+          severity: low
+          component: api
+        annotations:
+          summary: "High request volume"
+          description: "Receiving {{ $value }} requests per second"
+
+      - alert: SlowHealthChecks
+        expr: |
+          histogram_quantile(0.95,
+            rate(health_check_duration_seconds_bucket[5m])
+          ) > 0.5
+        for: 10m
+        labels:
+          severity: low
+          component: monitoring
+        annotations:
+          summary: "Slow health check responses"
+          description: "95th percentile health check time is {{ $value }}s"
+
+  # ========================================
+  # RAG-Specific Alerts
+  # ========================================
+  - name: rag_alerts
+    interval: 30s
+    rules:
+      - alert: DocumentIngestionFailing
+        expr: rate(document_ingestion_failures_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: high
+          component: rag
+        annotations:
+          summary: "Document ingestion failures"
+          description: "{{ $value }} document ingestion failures per second"
+
+      - alert: VectorSearchSlow
+        expr: |
+          histogram_quantile(0.95,
+            rate(vector_search_duration_seconds_bucket[5m])
+          ) > 3
+        for: 10m
+        labels:
+          severity: medium
+          component: rag
+        annotations:
+          summary: "Slow vector search performance"
+          description: "95th percentile vector search time is {{ $value }}s"
+
+      - alert: GraphSearchFailing
+        expr: rate(graph_search_failures_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: high
+          component: rag
+        annotations:
+          summary: "Graph search failures"
+          description: "{{ $value }} graph search failures per second"
+
+      - alert: LowRetrievalQuality
+        expr: avg(retrieval_relevance_score) < 0.6
+        for: 15m
+        labels:
+          severity: medium
+          component: rag
+        annotations:
+          summary: "Low retrieval quality scores"
+          description: "Average relevance score is {{ $value }}"
+
+  # ========================================
+  # Business Metrics Alerts
+  # ========================================
+  - name: business_alerts
+    interval: 60s
+    rules:
+      - alert: UserSessionDropoff
+        expr: |
+          (
+            rate(user_sessions_started_total[1h])
+            -
+            rate(user_sessions_ended_total[1h])
+          ) / rate(user_sessions_started_total[1h]) > 0.5
+        for: 30m
+        labels:
+          severity: medium
+          component: business
+        annotations:
+          summary: "High user session dropoff rate"
+          description: "{{ $value | humanizePercentage }} of sessions are being dropped"
+
+      - alert: QueryCompletionRateLow
+        expr: |
+          (
+            rate(queries_completed_total[1h])
+            /
+            rate(queries_started_total[1h])
+          ) < 0.90
+        for: 30m
+        labels:
+          severity: medium
+          component: business
+        annotations:
+          summary: "Low query completion rate"
+          description: "Only {{ $value | humanizePercentage }} of queries are completing"

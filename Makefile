@@ -486,4 +486,176 @@ full-monitoring: monitoring-up redis-commander-up
 	@echo "- Jaeger: http://localhost:16686"
 	@echo "- Redis Commander: http://localhost:8081"
 
-.PHONY: setup check format test test-coverage lint security run-ui run-rag run-mcp run-api run-agentic-rag dev docker-build docker-run docker-stop db-setup db-migrate neo4j-init ingest ingest-clean clean clean-all requirements install-dev load-test load-test-headless stress-test monitoring-up monitoring-down monitoring-logs profile profile-memory db-migrate db-rollback db-history db-revision redis-cli redis-flush redis-stats redis-monitor api-test api-search api-metrics api-status full-stack-up full-stack-down benchmark poetry-install poetry-update poetry-lock poetry-export poetry-build poetry-shell poetry-check poetry-show tox tox-py311 tox-py312 tox-lint tox-security tox-parallel tox-recreate http-test http-chat http-search http-status http-metrics profile-api profile-ui profile-rag profile-tests profile-top profile-memory-api profile-memory-ui redis-commander-up redis-commander-down redis-commander-logs dev-setup dev-check dev-format dev-clean pre-commit-install pre-commit-run pre-commit-update full-test full-profile full-monitoring
+# ============================================================================
+# PHASE 5: PRODUCTION DEPLOYMENT & OPERATIONS
+# ============================================================================
+
+# Registry and Image Configuration
+REGISTRY ?= ghcr.io/aiwithapex
+IMAGE_NAME ?= base-agent
+IMAGE_TAG ?= $(shell git rev-parse --short HEAD)
+IMAGE_FULL = $(REGISTRY)/$(IMAGE_NAME):$(IMAGE_TAG)
+
+# ===== Container Image Build & Management =====
+
+image-build:
+	@echo "Building production image: $(IMAGE_FULL)"
+	docker build \
+		-f docker/Dockerfile.production \
+		-t $(IMAGE_NAME):latest \
+		-t $(IMAGE_NAME):$(IMAGE_TAG) \
+		-t $(IMAGE_FULL) \
+		--build-arg BUILD_DATE=$(shell date -u +'%Y-%m-%dT%H:%M:%SZ') \
+		--build-arg VCS_REF=$(shell git rev-parse HEAD) \
+		--target runtime \
+		.
+
+image-build-api:
+	@echo "Building API server image: $(IMAGE_FULL)-api"
+	docker build \
+		-f docker/Dockerfile.production \
+		-t $(IMAGE_NAME)-api:latest \
+		-t $(IMAGE_NAME)-api:$(IMAGE_TAG) \
+		-t $(REGISTRY)/$(IMAGE_NAME)-api:$(IMAGE_TAG) \
+		--target api \
+		.
+
+image-push:
+	@echo "Pushing image to registry: $(IMAGE_FULL)"
+	docker push $(IMAGE_FULL)
+	docker push $(REGISTRY)/$(IMAGE_NAME):latest
+
+image-push-api:
+	@echo "Pushing API image to registry"
+	docker push $(REGISTRY)/$(IMAGE_NAME)-api:$(IMAGE_TAG)
+	docker push $(REGISTRY)/$(IMAGE_NAME)-api:latest
+
+image-tag-release:
+	@echo "Tagging release version $(VERSION)"
+	docker tag $(IMAGE_NAME):latest $(REGISTRY)/$(IMAGE_NAME):$(VERSION)
+	docker push $(REGISTRY)/$(IMAGE_NAME):$(VERSION)
+
+# ===== Security Scanning & SBOM =====
+
+image-scan:
+	@echo "Scanning image for vulnerabilities with Trivy..."
+	trivy image --severity HIGH,CRITICAL --exit-code 1 $(IMAGE_NAME):latest
+
+image-scan-full:
+	@echo "Full vulnerability scan (all severities)..."
+	trivy image \
+		--severity CRITICAL,HIGH,MEDIUM,LOW \
+		--format json \
+		--output trivy-report.json \
+		$(IMAGE_NAME):latest
+	@echo "Scan report saved to trivy-report.json"
+
+image-sbom:
+	@echo "Generating SBOM with Syft..."
+	syft packages $(IMAGE_NAME):latest -o spdx-json > sbom.spdx.json
+	syft packages $(IMAGE_NAME):latest -o cyclonedx-json > sbom.cyclonedx.json
+	@echo "SBOM generated: sbom.spdx.json, sbom.cyclonedx.json"
+
+image-sign:
+	@echo "Signing image with Cosign..."
+	cosign sign --yes $(IMAGE_FULL)
+
+image-verify:
+	@echo "Verifying image signature..."
+	cosign verify --key cosign.pub $(IMAGE_FULL)
+
+# ===== Environment-Specific Deployments =====
+
+deploy-dev:
+	@echo "Deploying to DEV environment..."
+	docker-compose -f docker/docker-compose.dev.yml up -d
+	@echo "DEV environment running"
+
+deploy-dev-down:
+	docker-compose -f docker/docker-compose.dev.yml down
+
+deploy-staging:
+	@echo "Deploying to STAGING environment..."
+	export REGISTRY=$(REGISTRY) && \
+	export IMAGE_TAG=$(IMAGE_TAG) && \
+	docker-compose -f docker/docker-compose.staging.yml up -d
+	@echo "STAGING environment running"
+
+deploy-staging-down:
+	docker-compose -f docker/docker-compose.staging.yml down
+
+deploy-prod:
+	@echo "Deploying to PRODUCTION environment..."
+	@echo "WARNING: This will deploy to production. Continue? [y/N]"
+	@read confirm && [ "$$confirm" = "y" ] || exit 1
+	export REGISTRY=$(REGISTRY) && \
+	export IMAGE_TAG=$(IMAGE_TAG) && \
+	bash deploy/scripts/deploy.sh production
+	@echo "PRODUCTION deployment initiated"
+
+deploy-prod-down:
+	docker-compose -f docker/docker-compose.prod.yml down
+
+# ===== Health Checks & Validation =====
+
+health-check:
+	@echo "Checking service health..."
+	@curl -f http://localhost:8501/_stcore/health || echo "UI health check failed"
+	@curl -f http://localhost:8058/health || echo "API health check failed"
+
+health-check-staging:
+	@echo "Checking STAGING health..."
+	bash deploy/scripts/health-check.sh staging
+
+health-check-prod:
+	@echo "Checking PRODUCTION health..."
+	bash deploy/scripts/health-check.sh production
+
+# ===== Rollback & Recovery =====
+
+rollback-staging:
+	@echo "Rolling back STAGING to previous version..."
+	bash deploy/scripts/rollback.sh staging
+
+rollback-prod:
+	@echo "Rolling back PRODUCTION to previous version..."
+	@echo "WARNING: This will rollback production. Continue? [y/N]"
+	@read confirm && [ "$$confirm" = "y" ] || exit 1
+	bash deploy/scripts/rollback.sh production
+
+# ===== Full Supply Chain Workflow =====
+
+ci-supply-chain: image-build image-scan image-sbom
+	@echo "Supply chain security checks complete"
+
+ci-deploy: ci-supply-chain image-sign image-push
+	@echo "CI deployment pipeline complete"
+
+# ===== Monitoring & Observability =====
+
+logs-app:
+	docker logs -f base-agent-prod
+
+logs-api:
+	docker logs -f base-agent-api-prod
+
+logs-all:
+	docker-compose -f docker/docker-compose.prod.yml logs -f
+
+metrics-export:
+	@echo "Exporting metrics..."
+	curl http://localhost:8000/metrics > metrics-export.txt
+	@echo "Metrics saved to metrics-export.txt"
+
+# ===== Cleanup =====
+
+image-clean:
+	@echo "Cleaning up old images..."
+	docker image prune -a -f --filter "until=168h"
+
+deploy-clean-all:
+	docker-compose -f docker/docker-compose.dev.yml down -v
+	docker-compose -f docker/docker-compose.staging.yml down -v
+	docker-compose -f docker/docker-compose.prod.yml down -v
+
+.PHONY: setup check format test test-coverage lint security run-ui run-rag run-mcp run-api run-agentic-rag dev docker-build docker-run docker-stop db-setup db-migrate neo4j-init ingest ingest-clean clean clean-all requirements install-dev load-test load-test-headless stress-test monitoring-up monitoring-down monitoring-logs profile profile-memory db-migrate db-rollback db-history db-revision redis-cli redis-flush redis-stats redis-monitor api-test api-search api-metrics api-status full-stack-up full-stack-down benchmark poetry-install poetry-update poetry-lock poetry-export poetry-build poetry-shell poetry-check poetry-show tox tox-py311 tox-py312 tox-lint tox-security tox-parallel tox-recreate http-test http-chat http-search http-status http-metrics profile-api profile-ui profile-rag profile-tests profile-top profile-memory-api profile-memory-ui redis-commander-up redis-commander-down redis-commander-logs dev-setup dev-check dev-format dev-clean pre-commit-install pre-commit-run pre-commit-update full-test full-profile full-monitoring image-build image-build-api image-push image-push-api image-tag-release image-scan image-scan-full image-sbom image-sign image-verify deploy-dev deploy-dev-down deploy-staging deploy-staging-down deploy-prod deploy-prod-down health-check health-check-staging health-check-prod rollback-staging rollback-prod ci-supply-chain ci-deploy logs-app logs-api logs-all metrics-export image-clean deploy-clean-all

@@ -17,9 +17,8 @@ from ..storage.connection_manager import ConnectionManager
 from ..storage.graphiti_client import GraphitiClient
 from ..storage.neo4j_store import Neo4jStore
 from ..storage.postgres_store import PostgresStore
-from .chunker import ChunkingConfig, DocumentChunk, SemanticChunker, SimpleChunker
-from .embedder import EmbeddingConfig as EmbedConfig
-from .embedder import EmbeddingGenerator
+from .chunker import DocumentChunk, SemanticChunker, SimpleChunker, get_chunking_config
+from .embedder import EmbeddingGenerator, get_embedding_config
 from .knowledge_extractor import KnowledgeExtractor
 
 logger = logging.getLogger(__name__)
@@ -88,17 +87,17 @@ class DocumentIngestionPipeline:
         self.connection_manager = ConnectionManager()
         self.pg_store = PostgresStore(self.connection_manager)
         self.neo4j_store = Neo4jStore(self.connection_manager)
-        self.graphiti_client = GraphitiClient()
+        self.graphiti_client = GraphitiClient(self.neo4j_store)
 
         # Configure chunking
-        self.chunking_config = ChunkingConfig()
-        if self.chunking_config.use_semantic_splitting:
+        self.chunking_config = get_chunking_config()
+        if self.chunking_config.get("use_semantic_splitting"):
             self.chunker = SemanticChunker(self.chunking_config)
         else:
             self.chunker = SimpleChunker(self.chunking_config)
 
         # Configure embedding
-        self.embedder = EmbeddingGenerator(EmbedConfig.from_config())
+        self.embedder = EmbeddingGenerator(get_embedding_config())
 
         # Configure extraction
         self.extractor = KnowledgeExtractor()

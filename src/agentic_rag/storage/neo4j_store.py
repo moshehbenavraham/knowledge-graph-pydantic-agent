@@ -183,6 +183,29 @@ class Neo4jStore:
         logger.info(f"Added {len(episode_ids)} episodes from chunk {source_chunk_id}")
         return episode_ids
 
+    async def execute_query(
+        self, cypher: str, parameters: dict[str, Any] | None = None
+    ) -> list[dict[str, Any]]:
+        """
+        Execute a custom Cypher query and return results.
+
+        Args:
+            cypher: Cypher query string
+            parameters: Query parameters
+
+        Returns:
+            List of result records as dictionaries
+        """
+        async with self.connection_manager.get_neo4j_session() as session:
+            result = await session.run(cypher, **(parameters or {}))
+
+            records = []
+            async for record in result:
+                # Convert record to dict
+                records.append(dict(record))
+
+            return records
+
     async def search_entities(self, query: str, limit: int = 10) -> list[dict[str, Any]]:
         """Search for entities by name or type."""
         async with self.connection_manager.get_neo4j_session() as session:
