@@ -12,10 +12,10 @@ from datetime import datetime, timedelta
 from typing import Any
 from uuid import UUID
 
-from ..config import get_config
-from ..ingestion.embedder import EmbeddingGenerator
-from ..storage.connection_manager import ConnectionManager
-from ..storage.postgres_store import PostgresStore
+from src.agentic_rag.config import get_config
+from src.agentic_rag.ingestion.embedder import EmbeddingGenerator
+from src.agentic_rag.storage.connection_manager import ConnectionManager
+from src.agentic_rag.storage.postgres_store import PostgresStore
 
 logger = logging.getLogger(__name__)
 
@@ -223,6 +223,7 @@ class VectorSearch:
             embedding_column = f"embedding_{embedding_dim}"
 
             # Optimized query with IVFFlat index
+            # embedding_column is validated to be 'embedding_768' or 'embedding_1536'
             query = f"""
             SELECT
                 c.id as chunk_id,
@@ -241,7 +242,7 @@ class VectorSearch:
                 AND ($3::jsonb IS NULL OR c.metadata @> $3::jsonb)
             ORDER BY c.{embedding_column} <=> $1::vector
             LIMIT $4
-            """
+            """  # nosec B608
 
             # Execute query
             rows = await conn.fetch(

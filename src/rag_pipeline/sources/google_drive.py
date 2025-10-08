@@ -285,7 +285,7 @@ class GoogleDriveWatcher:
             downloader = MediaIoBaseDownload(file_content, request)
             done = False
             while not done:
-                status, done = downloader.next_chunk()
+                _status, done = downloader.next_chunk()
 
             # Reset the pointer to the beginning of the file
             file_content.seek(0)

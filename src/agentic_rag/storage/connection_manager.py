@@ -56,7 +56,7 @@ class ConnectionManager:
 
     def __init__(self, config: dict[str, Any] | None = None):
         if config is None:
-            from ..config import get_config
+            from src.agentic_rag.config import get_config
 
             self.config = get_config().dict()
         else:
@@ -428,7 +428,7 @@ async def get_connection_manager() -> ConnectionManager:
     global _connection_manager
 
     if _connection_manager is None:
-        from ..config import config  # Import config when needed
+        from src.agentic_rag.config import config  # Import config when needed
 
         _connection_manager = ConnectionManager(config.dict())
         await _connection_manager.initialize()

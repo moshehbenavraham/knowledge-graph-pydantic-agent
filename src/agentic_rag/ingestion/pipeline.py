@@ -399,7 +399,6 @@ class DocumentIngestionPipeline:
         """
         try:
             # Aggregate all entities
-            all_entities = []
             entity_map = {}  # name -> entity_id
 
             for result, chunk_id in zip(extraction_results, chunk_ids, strict=False):

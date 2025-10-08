@@ -17,11 +17,11 @@ from dotenv import load_dotenv
 load_dotenv(override=True)
 
 # Reload settings to pick up new environment variables
-from src.config import reload_settings  # noqa: E402
+from src.config import reload_settings
 
 reload_settings()
 
-from .pipeline import DocumentIngestionPipeline  # noqa: E402
+from .pipeline import DocumentIngestionPipeline
 
 # Configure logging
 logging.basicConfig(

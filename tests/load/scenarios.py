@@ -23,7 +23,7 @@ class StressTestScenario(TaskSet):
             "Cloud computing costs",
         ]
 
-        for query in random.sample(queries, 3):
+        for query in random.sample(queries, 3):  # nosec B311
             self.client.post(
                 "/api/v1/search",
                 json={
@@ -84,7 +84,7 @@ class StressTestScenario(TaskSet):
     @task(1)
     def cache_buster(self):
         """Test cache invalidation with unique queries."""
-        unique_query = f"Random query {random.randint(1000, 9999)} at {time.time()}"
+        unique_query = f"Random query {random.randint(1000, 9999)} at {time.time()}"  # nosec B311
 
         self.client.post(
             "/api/v1/search",
@@ -163,7 +163,7 @@ class EnduranceTestScenario(TaskSet):
         else:
             message = "Simple query about AI"
 
-        response = self.client.post(
+        self.client.post(
             "/api/v1/chat",
             json={
                 "message": message,
@@ -216,7 +216,7 @@ class RealisticUserScenario(TaskSet):
 
     def on_start(self):
         """Initialize realistic user session."""
-        self.session_id = f"user_{random.randint(1000, 9999)}"
+        self.session_id = f"user_{random.randint(1000, 9999)}"  # nosec B311
         self.conversation_depth = 0
         self.topics = [
             "artificial intelligence",
@@ -225,7 +225,7 @@ class RealisticUserScenario(TaskSet):
             "cloud computing",
             "cybersecurity",
         ]
-        self.current_topic = random.choice(self.topics)
+        self.current_topic = random.choice(self.topics)  # nosec B311
 
     @task(10)
     def browse_and_search(self):
@@ -242,7 +242,7 @@ class RealisticUserScenario(TaskSet):
         )
 
         # Simulate reading time
-        time.sleep(random.uniform(2, 5))
+        time.sleep(random.uniform(2, 5))  # nosec B311
 
     @task(5)
     def ask_question(self):
@@ -257,7 +257,7 @@ class RealisticUserScenario(TaskSet):
         self.client.post(
             "/api/v1/chat",
             json={
-                "message": random.choice(questions),
+                "message": random.choice(questions),  # nosec B311
                 "session_id": self.session_id,
                 "include_sources": True,
             },
@@ -267,7 +267,7 @@ class RealisticUserScenario(TaskSet):
         self.conversation_depth += 1
 
         # Simulate reading response
-        time.sleep(random.uniform(3, 8))
+        time.sleep(random.uniform(3, 8))  # nosec B311
 
     @task(3)
     def follow_up_question(self):
@@ -283,19 +283,19 @@ class RealisticUserScenario(TaskSet):
             self.client.post(
                 "/api/v1/chat",
                 json={
-                    "message": random.choice(follow_ups),
+                    "message": random.choice(follow_ups),  # nosec B311
                     "session_id": self.session_id,
                 },
                 name="/api/v1/chat [follow_up]",
             )
 
             # Simulate reading
-            time.sleep(random.uniform(2, 6))
+            time.sleep(random.uniform(2, 6))  # nosec B311
 
     @task(2)
     def change_topic(self):
         """Switch to a different topic."""
-        self.current_topic = random.choice(self.topics)
+        self.current_topic = random.choice(self.topics)  # nosec B311
         self.conversation_depth = 0
         logger.debug(f"User switched topic to: {self.current_topic}")
 

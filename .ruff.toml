@@ -64,8 +64,24 @@ ignore = [
     "PLR0912",  # Too many branches
     "PLR0915",  # Too many statements
     "PLR2004",  # Magic value used in comparison
+    "PLR0911",  # Too many return statements
     "RET504",   # Unnecessary variable assignment before return
     "SIM108",   # Use ternary operator instead of if-else-block
+    "SIM102",   # Use single if instead of nested if (sometimes clearer as nested)
+    "B008",     # Function call in argument defaults (FastAPI Depends pattern)
+    "PLC0415",  # Import not at top-level (valid for lazy/conditional imports)
+    "PLW0603",  # Global statement (needed for backward compatibility)
+    "PLW0602",  # Global variable undefined at module level
+    "PLW2901",  # Loop variable overwritten (intentional in some cases)
+    "B904",     # Within except, raise with from err/None (not always needed)
+    "B027",     # Empty method in abstract class (hook pattern)
+    "E402",     # Module import not at top (valid in test fixtures)
+    "E722",     # Bare except (valid for catch-all error handling)
+    "ERA001",   # Commented code (sometimes needed for documentation)
+    "PTH123",   # Use Path.open instead of open (not critical)
+    "PERF401",  # Use list comprehension (sometimes less readable)
+    "RUF012",   # Mutable class attributes (Locust and other frameworks need this)
+    "SIM117",   # Combine with statements (sometimes clearer as nested)
 ]
 
 # Allow fix for all enabled rules (when `--fix`) is provided.

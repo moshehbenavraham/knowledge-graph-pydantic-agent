@@ -8,7 +8,7 @@ from src.config.clients import clients_config
 
 def get_mem0_config():
     # Get configuration from centralized settings
-    settings = get_settings()
+    get_settings()
 
     # Initialize config dictionary
     config = {}

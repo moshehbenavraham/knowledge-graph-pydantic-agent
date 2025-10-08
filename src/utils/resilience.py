@@ -66,16 +66,15 @@ class CircuitBreaker:
     def state(self) -> CircuitState:
         """Get current circuit state."""
         # Check if circuit should transition to half-open
-        if self._state == CircuitState.OPEN:
-            if (
-                self._last_failure_time
-                and time.time() - self._last_failure_time >= self.recovery_timeout
-            ):
-                logger.info(
-                    "circuit_breaker_half_open",
-                    circuit=self.name,
-                )
-                self._state = CircuitState.HALF_OPEN
+        if self._state == CircuitState.OPEN and (
+            self._last_failure_time
+            and time.time() - self._last_failure_time >= self.recovery_timeout
+        ):
+            logger.info(
+                "circuit_breaker_half_open",
+                circuit=self.name,
+            )
+            self._state = CircuitState.HALF_OPEN
 
         return self._state
 
@@ -253,7 +252,7 @@ class RetryStrategy:
         if self.jitter:
             import random
 
-            delay *= 0.5 + random.random()
+            delay *= 0.5 + random.random()  # nosec B311
 
         return delay
 
