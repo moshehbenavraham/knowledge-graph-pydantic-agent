@@ -12,15 +12,20 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from ..config import get_config
-from ..storage.connection_manager import ConnectionManager
-from ..storage.graphiti_client import GraphitiClient
-from ..storage.neo4j_store import Neo4jStore
-from ..storage.postgres_store import PostgresStore
-from ..storage.supabase_rest_store import SupabaseRestStore
-from .chunker import DocumentChunk, SemanticChunker, SimpleChunker, get_chunking_config
-from .embedder import EmbeddingGenerator, get_embedding_config
-from .knowledge_extractor import KnowledgeExtractor
+from src.agentic_rag.config import get_config
+from src.agentic_rag.ingestion.chunker import (
+    DocumentChunk,
+    SemanticChunker,
+    SimpleChunker,
+    get_chunking_config,
+)
+from src.agentic_rag.ingestion.embedder import EmbeddingGenerator, get_embedding_config
+from src.agentic_rag.ingestion.knowledge_extractor import KnowledgeExtractor
+from src.agentic_rag.storage.connection_manager import ConnectionManager
+from src.agentic_rag.storage.graphiti_client import GraphitiClient
+from src.agentic_rag.storage.neo4j_store import Neo4jStore
+from src.agentic_rag.storage.postgres_store import PostgresStore
+from src.agentic_rag.storage.supabase_rest_store import SupabaseRestStore
 
 logger = logging.getLogger(__name__)
 

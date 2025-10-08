@@ -15,7 +15,7 @@ from typing import Any
 
 from pydantic_ai import Agent
 
-from ..config import get_config
+from src.agentic_rag.config import get_config
 
 logger = logging.getLogger(__name__)
 
