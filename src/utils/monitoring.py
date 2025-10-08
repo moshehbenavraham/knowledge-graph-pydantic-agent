@@ -61,10 +61,12 @@ def _get_or_create_metric(
     metric_class, name, description, labelnames=None, buckets=None, registry=REGISTRY
 ):
     """Get existing metric or create new one to avoid duplicates."""
+    # Try to find existing collector
     try:
-        # Try to get existing metric
         for collector in list(registry._collector_to_names.keys()):
-            if hasattr(collector, "_name") and collector._name == name:
+            # Check various name attributes that different metric types use
+            collector_name = getattr(collector, "_name", None) or getattr(collector, "name", None)
+            if collector_name == name:
                 return collector
     except (AttributeError, KeyError):
         pass
@@ -76,7 +78,20 @@ def _get_or_create_metric(
     if buckets and metric_class == Histogram:
         kwargs["buckets"] = buckets
 
-    return metric_class(**kwargs)
+    try:
+        return metric_class(**kwargs)
+    except ValueError as e:
+        # Metric already registered (happens with Streamlit reloads)
+        # Find and return the existing metric
+        if "Duplicated timeseries" in str(e):
+            for collector in list(registry._collector_to_names.keys()):
+                collector_name = getattr(collector, "_name", None) or getattr(
+                    collector, "name", None
+                )
+                if collector_name == name:
+                    return collector
+        # If we still can't find it, re-raise the error
+        raise
 
 
 # Prometheus metrics

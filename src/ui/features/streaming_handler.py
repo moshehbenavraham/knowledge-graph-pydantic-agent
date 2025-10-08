@@ -1,4 +1,6 @@
-from typing import Any, AsyncIterator, Dict, List
+from collections.abc import AsyncIterator
+from typing import Any
+
 from httpx import AsyncClient
 from pydantic_ai import Agent
 from pydantic_ai.messages import (
@@ -9,20 +11,21 @@ from pydantic_ai.messages import (
     TextPartDelta,
 )
 
-from .base_handler import BaseHandler
 from src.agent import super_agent
+
+from .base_handler import BaseHandler
 
 
 class StreamingHandler(BaseHandler):
     async def run_agent(
         self,
         user_input: str,
-        message_history: List[ModelRequest | ModelResponse],
+        message_history: list[ModelRequest | ModelResponse],
         http_client: AsyncClient,
-        **kwargs
-    ) -> AsyncIterator[Dict[str, Any]]:
+        **kwargs,
+    ) -> AsyncIterator[dict[str, Any]]:
         agent_deps = self.get_agent_deps(http_client, **kwargs)
-        
+
         async with super_agent.iter(
             user_input, deps=agent_deps, message_history=message_history
         ) as run:
@@ -36,9 +39,5 @@ class StreamingHandler(BaseHandler):
                                 event.delta, TextPartDelta
                             ):
                                 yield {"type": "delta", "content": event.delta.content_delta}
-        
-        yield {
-            "type": "complete",
-            "new_messages": run.result.new_messages(),
-            "streaming": True
-        }
+
+        yield {"type": "complete", "new_messages": run.result.new_messages(), "streaming": True}

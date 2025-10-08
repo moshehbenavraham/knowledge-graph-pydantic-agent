@@ -4,9 +4,8 @@ Chat endpoints for conversational interaction.
 Provides synchronous, SSE streaming, and WebSocket interfaces.
 """
 
-import asyncio
 import time
-from typing import Any, Dict
+from typing import Any
 from uuid import uuid4
 
 import structlog
@@ -17,7 +16,6 @@ from prometheus_client import Counter, Histogram
 from src.agent.unified_agent import UnifiedAgentDeps, super_agent
 from src.api.dependencies import get_agent_deps, get_cache_manager
 from src.api.models import (
-    ChatMessage,
     ChatMetrics,
     ChatRequest,
     ChatResponse,
@@ -33,16 +31,8 @@ logger = structlog.get_logger()
 router = APIRouter(prefix="/api/v1/chat", tags=["chat"])
 
 # Metrics
-chat_requests_total = Counter(
-    "chat_requests_total",
-    "Total chat requests",
-    ["endpoint", "status"]
-)
-chat_duration = Histogram(
-    "chat_duration_seconds",
-    "Chat request duration",
-    ["endpoint"]
-)
+chat_requests_total = Counter("chat_requests_total", "Total chat requests", ["endpoint", "status"])
+chat_duration = Histogram("chat_duration_seconds", "Chat request duration", ["endpoint"])
 
 
 @router.post("", response_model=ChatResponse)
@@ -86,11 +76,7 @@ async def chat(
             agent_params["temperature"] = request.temperature
 
         # Execute agent
-        result = await super_agent.run(
-            request.message,
-            deps=deps,
-            **agent_params
-        )
+        result = await super_agent.run(request.message, deps=deps, **agent_params)
 
         # Extract response data
         response_text = result.data if hasattr(result, "data") else str(result)
@@ -148,7 +134,7 @@ async def chat(
 
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Chat request failed: {str(e)}",
+            detail=f"Chat request failed: {e!s}",
         )
 
 
@@ -175,10 +161,7 @@ async def chat_stream(
         # Stream response
         async def event_generator():
             async for event in sse_manager.stream_agent_response(
-                agent=super_agent,
-                message=request.message,
-                deps=deps,
-                **agent_params
+                agent=super_agent, message=request.message, deps=deps, **agent_params
             ):
                 yield event
 
@@ -200,7 +183,7 @@ async def chat_stream(
 
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Stream failed: {str(e)}",
+            detail=f"Stream failed: {e!s}",
         )
 
 
@@ -222,7 +205,7 @@ async def chat_websocket(
         logger.info("websocket_chat_started", connection_id=connection_id)
 
         # Message handler
-        async def handle_message(conn_id: str, data: Dict[str, Any]):
+        async def handle_message(conn_id: str, data: dict[str, Any]):
             """Handle received WebSocket messages."""
             message_type = data.get("type", "chat")
 
@@ -241,10 +224,7 @@ async def chat_websocket(
                 )
 
             elif message_type == "ping":
-                await websocket_manager.send_message(
-                    conn_id,
-                    {"type": "pong"}
-                )
+                await websocket_manager.send_message(conn_id, {"type": "pong"})
 
         # Start receive loop
         await websocket_manager.receive_loop(connection_id, handle_message)

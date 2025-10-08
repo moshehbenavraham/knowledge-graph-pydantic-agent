@@ -4,8 +4,6 @@ API-specific configuration facade.
 Provides convenient access to API-related settings.
 """
 
-from typing import List
-
 from .settings import get_settings
 
 
@@ -27,7 +25,7 @@ class APIConfig:
         return self._settings.api_port
 
     @property
-    def cors_origins(self) -> List[str]:
+    def cors_origins(self) -> list[str]:
         """Get CORS allowed origins."""
         return self._settings.get_cors_origins_list()
 

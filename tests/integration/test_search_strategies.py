@@ -13,9 +13,7 @@ class TestVectorSearch:
     """Integration tests for vector search."""
 
     @pytest.mark.asyncio
-    async def test_vector_search_accuracy(
-        self, postgres_store, sample_document_with_chunks
-    ):
+    async def test_vector_search_accuracy(self, postgres_store, sample_document_with_chunks):
         """Test vector search returns relevant results."""
         from src.agentic_rag.ingestion.embedder import EmbeddingGenerator
 
@@ -35,9 +33,7 @@ class TestVectorSearch:
         assert similarities == sorted(similarities, reverse=True)
 
     @pytest.mark.asyncio
-    async def test_vector_search_threshold(
-        self, postgres_store, sample_document_with_chunks
-    ):
+    async def test_vector_search_threshold(self, postgres_store, sample_document_with_chunks):
         """Test vector search respects similarity threshold."""
         from src.agentic_rag.ingestion.embedder import EmbeddingGenerator
 
@@ -203,9 +199,7 @@ class TestIntentAnalyzer:
         """Test intent analyzer identifies queries needing hybrid search."""
         analyzer = IntentAnalyzer()
 
-        query = (
-            "What is the relationship between machine learning and OpenAI's products?"
-        )
+        query = "What is the relationship between machine learning and OpenAI's products?"
         intent = await analyzer.analyze(query)
 
         # Complex query should suggest hybrid approach
@@ -250,9 +244,7 @@ class TestSearchIntegration:
         assert isinstance(results.chunks, list)
 
     @pytest.mark.asyncio
-    async def test_search_with_filters(
-        self, postgres_store, sample_document_with_chunks
-    ):
+    async def test_search_with_filters(self, postgres_store, sample_document_with_chunks):
         """Test search with source filters."""
         from src.agentic_rag.ingestion.embedder import EmbeddingGenerator
 
@@ -260,17 +252,13 @@ class TestSearchIntegration:
         search = VectorSearch(postgres_store, embedder)
 
         # Search with metadata filters
-        results = await search.search(
-            "machine learning", limit=5, filters={"source": "test.txt"}
-        )
+        results = await search.search("machine learning", limit=5, filters={"source": "test.txt"})
 
         # Should respect filters
         assert isinstance(results.chunks, list)
 
     @pytest.mark.asyncio
-    async def test_search_performance(
-        self, postgres_store, sample_document_with_chunks
-    ):
+    async def test_search_performance(self, postgres_store, sample_document_with_chunks):
         """Test search meets performance targets."""
         import time
 
@@ -288,9 +276,7 @@ class TestSearchIntegration:
         assert duration < 2.0  # Less than 2 seconds
 
     @pytest.mark.asyncio
-    async def test_search_result_ranking(
-        self, postgres_store, sample_document_with_chunks
-    ):
+    async def test_search_result_ranking(self, postgres_store, sample_document_with_chunks):
         """Test that search results are properly ranked."""
         from src.agentic_rag.ingestion.embedder import EmbeddingGenerator
 
@@ -307,9 +293,7 @@ class TestSearchIntegration:
                 assert similarities[i] >= similarities[i + 1]
 
     @pytest.mark.asyncio
-    async def test_concurrent_searches(
-        self, postgres_store, sample_document_with_chunks
-    ):
+    async def test_concurrent_searches(self, postgres_store, sample_document_with_chunks):
         """Test concurrent search operations."""
         import asyncio
 

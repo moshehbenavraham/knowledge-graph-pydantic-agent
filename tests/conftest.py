@@ -12,24 +12,20 @@ def setup_test_environment():
         "SUPABASE_URL": "https://test.supabase.co",
         "SUPABASE_KEY": "test_key_for_testing_only",
         "SUPABASE_SERVICE_KEY": "test_service_key_for_testing_only",
-        
         # Neo4j Configuration (test values)
         "NEO4J_URI": "bolt://localhost:7687",
         "NEO4J_USER": "neo4j",
         "NEO4J_PASSWORD": "test_password",
         "NEO4J_DATABASE": "test",
-        
         # LLM Configuration (test values)
         "LLM_PROVIDER": "openai",
         "LLM_API_KEY": "test_openai_key",
         "LLM_CHOICE": "gpt-3.5-turbo",
         "LLM_BASE_URL": "https://api.openai.com/v1",
-        
         # Embedding Configuration (test values)
         "EMBEDDING_PROVIDER": "openai",
         "EMBEDDING_API_KEY": "test_openai_key",
         "EMBEDDING_MODEL_CHOICE": "text-embedding-3-small",
-        
         # Other test configurations
         "LOG_LEVEL": "DEBUG",
         "ENVIRONMENT": "test",
@@ -37,7 +33,6 @@ def setup_test_environment():
         "BRAVE_API_KEY": "test_brave_key",
         "SEARXNG_BASE_URL": "http://localhost:8080",
         "DATABASE_URL": "postgresql://test:test@localhost:5432/test_db",
-        
         # Feature flags for testing
         "ENABLE_CODE_EXECUTION": "false",
         "ENABLE_WEB_SEARCH": "false",
@@ -46,7 +41,6 @@ def setup_test_environment():
         "ENABLE_RAG": "false",
         "ENABLE_AGENTIC_RAG": "false",
         "ENABLE_GRAPH_SEARCH": "false",
-        
         # Test-specific settings
         "TESTING": "true",
         "TEST_MODE": "true",

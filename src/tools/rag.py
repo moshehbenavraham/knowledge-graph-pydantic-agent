@@ -65,18 +65,19 @@ async def list_documents_tool(supabase: Client) -> list[str]:
     This is called by the list_documents tool for the agent.
 
     Returns:
-        List[str]: List of documents including their metadata (URL/path, schema if applicable, etc.)
+        List[str]: List of documents including their metadata (URL/path, source, etc.)
     """
     try:
-        # Query Supabase for unique documents
-        result = supabase.from_("document_metadata").select("id, title, schema, url").execute()
+        # Query Supabase for unique documents from the documents table
+        result = supabase.from_("documents").select("id, title, source, created_at").execute()
+
+        if not result.data:
+            return []
 
         # Format the data as a list of strings
         documents = []
         for doc in result.data:
-            doc_str = f"ID: {doc['id']}, Title: {doc['title']}, URL: {doc.get('url', 'N/A')}"
-            if doc.get("schema"):
-                doc_str += f", Schema: {doc['schema']}"
+            doc_str = f"Title: {doc.get('title', 'Untitled')}, Source: {doc.get('source', 'N/A')}"
             documents.append(doc_str)
 
         return documents

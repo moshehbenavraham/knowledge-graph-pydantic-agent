@@ -4,8 +4,6 @@ Clients configuration facade.
 Provides convenient access to database and API client settings.
 """
 
-from typing import Dict, Optional
-
 from .settings import EmbeddingProvider, LLMProvider, get_settings
 
 
@@ -65,17 +63,17 @@ class ClientsConfig:
 
     # Database Client Configuration
     @property
-    def database_url(self) -> Optional[str]:
+    def database_url(self) -> str | None:
         """Get database URL."""
         return self._settings.database_url
 
     @property
-    def supabase_url(self) -> Optional[str]:
+    def supabase_url(self) -> str | None:
         """Get Supabase URL."""
         return self._settings.supabase_url
 
     @property
-    def supabase_service_key(self) -> Optional[str]:
+    def supabase_service_key(self) -> str | None:
         """Get Supabase service key."""
         return self._settings.supabase_service_key
 
@@ -100,7 +98,7 @@ class ClientsConfig:
         return self._settings.neo4j_database
 
     @property
-    def redis_url(self) -> Optional[str]:
+    def redis_url(self) -> str | None:
         """Get Redis URL."""
         return self._settings.redis_url
 
@@ -109,7 +107,7 @@ class ClientsConfig:
         """Check if Redis cache is enabled."""
         return self._settings.enable_redis_cache
 
-    def get_llm_config(self) -> Dict[str, any]:
+    def get_llm_config(self) -> dict[str, any]:
         """Get LLM client configuration."""
         return {
             "provider": self.llm_provider,
@@ -120,7 +118,7 @@ class ClientsConfig:
             "max_tokens": self._settings.llm_max_tokens,
         }
 
-    def get_embedding_config(self) -> Dict[str, any]:
+    def get_embedding_config(self) -> dict[str, any]:
         """Get embedding client configuration."""
         return {
             "provider": self.embedding_provider,
@@ -131,7 +129,7 @@ class ClientsConfig:
             "batch_size": self._settings.embedding_batch_size,
         }
 
-    def get_postgres_config(self) -> Dict[str, any]:
+    def get_postgres_config(self) -> dict[str, any]:
         """Get PostgreSQL configuration."""
         return {
             "database_url": self.database_url,
@@ -142,7 +140,7 @@ class ClientsConfig:
             "command_timeout": self._settings.pg_command_timeout,
         }
 
-    def get_neo4j_config(self) -> Dict[str, any]:
+    def get_neo4j_config(self) -> dict[str, any]:
         """Get Neo4j configuration."""
         return {
             "uri": self.neo4j_uri,
@@ -154,7 +152,7 @@ class ClientsConfig:
             "connection_timeout": self._settings.neo4j_connection_timeout,
         }
 
-    def get_redis_config(self) -> Dict[str, any]:
+    def get_redis_config(self) -> dict[str, any]:
         """Get Redis configuration."""
         return {
             "url": self.redis_url,

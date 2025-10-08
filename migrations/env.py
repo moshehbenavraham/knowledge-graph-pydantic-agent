@@ -6,8 +6,8 @@ from logging.config import fileConfig
 from pathlib import Path
 
 from alembic import context
-from sqlalchemy import engine_from_config, pool
 from dotenv import load_dotenv
+from sqlalchemy import engine_from_config, pool
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -39,7 +39,7 @@ if DATABASE_URL:
             project_id = match.group(1)
             password = os.getenv("SUPABASE_SERVICE_KEY", "")
             DATABASE_URL = f"postgresql://postgres.{project_id}:{password}@aws-0-us-west-1.pooler.supabase.com:5432/postgres"
-    
+
     config.set_main_option("sqlalchemy.url", DATABASE_URL)
 else:
     # Fallback to constructing URL from individual components
@@ -48,7 +48,7 @@ else:
     DB_HOST = os.getenv("DB_HOST", "localhost")
     DB_PORT = os.getenv("DB_PORT", "5432")
     DB_NAME = os.getenv("DB_NAME", "postgres")
-    
+
     DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     config.set_main_option("sqlalchemy.url", DATABASE_URL)
 
@@ -89,7 +89,7 @@ def run_migrations_online() -> None:
     """
     configuration = config.get_section(config.config_ini_section)
     configuration["sqlalchemy.url"] = DATABASE_URL
-    
+
     connectable = engine_from_config(
         configuration,
         prefix="sqlalchemy.",

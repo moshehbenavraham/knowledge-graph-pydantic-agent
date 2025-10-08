@@ -256,7 +256,7 @@ See: `docs/projects_ongoing/AGENTIC_RAG_PHASE_04_5.md`
 - **Tox Configuration**: Multi-environment testing for Python 3.11 and 3.12
 - **Redis Commander**: Web-based cache management UI at port 8081
 - **Enhanced Makefile**: 40+ new commands for all Tier 2 tools
-- **Testing Scripts**: 
+- **Testing Scripts**:
   - API testing examples (`tests/api_examples/httpie_examples.sh`)
   - Performance profiling (`scripts/profile.py`)
 - **Development Workflows**: Combined commands for setup, testing, and monitoring

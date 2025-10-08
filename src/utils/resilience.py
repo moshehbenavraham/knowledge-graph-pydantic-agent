@@ -6,9 +6,10 @@ Implements circuit breaker pattern and retry logic with exponential backoff.
 
 import asyncio
 import time
+from collections.abc import Callable
 from enum import Enum
 from functools import wraps
-from typing import Any, Callable, Optional, Type
+from typing import Any
 
 import structlog
 
@@ -41,7 +42,7 @@ class CircuitBreaker:
         failure_threshold: int = 5,
         recovery_timeout: float = 60.0,
         expected_exceptions: tuple = (Exception,),
-        name: Optional[str] = None,
+        name: str | None = None,
     ):
         """
         Initialize circuit breaker.
@@ -58,7 +59,7 @@ class CircuitBreaker:
         self.name = name or "unnamed"
 
         self._failure_count = 0
-        self._last_failure_time: Optional[float] = None
+        self._last_failure_time: float | None = None
         self._state = CircuitState.CLOSED
 
     @property
@@ -106,7 +107,7 @@ class CircuitBreaker:
             self._on_success()
             return result
 
-        except self.expected_exceptions as e:
+        except self.expected_exceptions:
             self._on_failure()
             raise
 
@@ -138,7 +139,7 @@ class CircuitBreaker:
             self._on_success()
             return result
 
-        except self.expected_exceptions as e:
+        except self.expected_exceptions:
             self._on_failure()
             raise
 
@@ -178,7 +179,7 @@ def circuit_breaker(
     failure_threshold: int = 5,
     recovery_timeout: float = 60.0,
     expected_exceptions: tuple = (Exception,),
-    name: Optional[str] = None,
+    name: str | None = None,
 ):
     """
     Circuit breaker decorator.
@@ -206,8 +207,7 @@ def circuit_breaker(
 
         if asyncio.iscoroutinefunction(func):
             return async_wrapper
-        else:
-            return sync_wrapper
+        return sync_wrapper
 
     return decorator
 
@@ -248,13 +248,11 @@ class RetryStrategy:
 
     def calculate_delay(self, attempt: int) -> float:
         """Calculate delay for given attempt number."""
-        delay = min(
-            self.base_delay * (self.exponential_base ** attempt),
-            self.max_delay
-        )
+        delay = min(self.base_delay * (self.exponential_base**attempt), self.max_delay)
 
         if self.jitter:
             import random
+
             delay *= 0.5 + random.random()
 
         return delay
@@ -400,8 +398,7 @@ def retry(
 
         if asyncio.iscoroutinefunction(func):
             return async_wrapper
-        else:
-            return sync_wrapper
+        return sync_wrapper
 
     return decorator
 

@@ -4,8 +4,9 @@ import hashlib
 import json
 import os
 import pickle
+from collections.abc import Callable
 from functools import wraps
-from typing import Any, Callable, Optional, Union
+from typing import Any
 
 import redis
 import structlog
@@ -20,7 +21,7 @@ class RedisCache:
 
     def __init__(
         self,
-        redis_url: Optional[str] = None,
+        redis_url: str | None = None,
         ttl: int = 3600,
         max_connections: int = 50,
         socket_timeout: int = 5,
@@ -38,7 +39,7 @@ class RedisCache:
         self.ttl = ttl
         self.enable_fallback = enable_fallback
         self._memory_cache: dict = {}
-        self._redis_client: Optional[redis.Redis] = None
+        self._redis_client: redis.Redis | None = None
 
         redis_url = redis_url or os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
@@ -75,7 +76,7 @@ class RedisCache:
         key_hash = hashlib.md5(key_str.encode()).hexdigest()
         return f"{prefix}:{key_hash}"
 
-    def get(self, key: str) -> Optional[Any]:
+    def get(self, key: str) -> Any | None:
         """Get value from cache."""
         try:
             if self._redis_client:
@@ -88,9 +89,7 @@ class RedisCache:
                 return self._memory_cache.get(key)
         return None
 
-    def set(
-        self, key: str, value: Any, ttl: Optional[int] = None
-    ) -> bool:
+    def set(self, key: str, value: Any, ttl: int | None = None) -> bool:
         """Set value in cache with optional TTL."""
         ttl = ttl or self.ttl
         try:
@@ -143,7 +142,7 @@ class RedisCache:
                 return key in self._memory_cache
         return False
 
-    def incr(self, key: str, amount: int = 1) -> Optional[int]:
+    def incr(self, key: str, amount: int = 1) -> int | None:
         """Increment counter in cache."""
         try:
             if self._redis_client:
@@ -167,7 +166,7 @@ class RedisCache:
 
 
 # Global cache instance
-_cache_instance: Optional[RedisCache] = None
+_cache_instance: RedisCache | None = None
 
 
 def get_cache() -> RedisCache:
@@ -181,7 +180,7 @@ def get_cache() -> RedisCache:
 def cache(
     prefix: str = "func",
     ttl: int = 3600,
-    key_func: Optional[Callable] = None,
+    key_func: Callable | None = None,
 ):
     """Decorator for caching function results.
 
@@ -200,16 +199,12 @@ def cache(
             if key_func:
                 cache_key = key_func(*args, **kwargs)
             else:
-                cache_key = cache_obj._generate_key(
-                    f"{prefix}:{func.__name__}", *args, **kwargs
-                )
+                cache_key = cache_obj._generate_key(f"{prefix}:{func.__name__}", *args, **kwargs)
 
             # Try to get from cache
             cached_value = cache_obj.get(cache_key)
             if cached_value is not None:
-                logger.debug(
-                    "Cache hit", function=func.__name__, key=cache_key
-                )
+                logger.debug("Cache hit", function=func.__name__, key=cache_key)
                 return cached_value
 
             # Execute function
@@ -217,9 +212,7 @@ def cache(
 
             # Store in cache
             cache_obj.set(cache_key, result, ttl)
-            logger.debug(
-                "Cache miss, stored", function=func.__name__, key=cache_key
-            )
+            logger.debug("Cache miss, stored", function=func.__name__, key=cache_key)
 
             return result
 
@@ -231,16 +224,12 @@ def cache(
             if key_func:
                 cache_key = key_func(*args, **kwargs)
             else:
-                cache_key = cache_obj._generate_key(
-                    f"{prefix}:{func.__name__}", *args, **kwargs
-                )
+                cache_key = cache_obj._generate_key(f"{prefix}:{func.__name__}", *args, **kwargs)
 
             # Try to get from cache
             cached_value = cache_obj.get(cache_key)
             if cached_value is not None:
-                logger.debug(
-                    "Cache hit", function=func.__name__, key=cache_key
-                )
+                logger.debug("Cache hit", function=func.__name__, key=cache_key)
                 return cached_value
 
             # Execute function
@@ -248,9 +237,7 @@ def cache(
 
             # Store in cache
             cache_obj.set(cache_key, result, ttl)
-            logger.debug(
-                "Cache miss, stored", function=func.__name__, key=cache_key
-            )
+            logger.debug("Cache miss, stored", function=func.__name__, key=cache_key)
 
             return result
 
@@ -259,8 +246,7 @@ def cache(
 
         if asyncio.iscoroutinefunction(func):
             return async_wrapper
-        else:
-            return sync_wrapper
+        return sync_wrapper
 
     return decorator
 
@@ -282,9 +268,7 @@ def invalidate_cache(pattern: str) -> int:
             keys = cache_obj._redis_client.keys(pattern)
             if keys:
                 deleted = cache_obj._redis_client.delete(*keys)
-                logger.info(
-                    "Cache invalidated", pattern=pattern, keys_deleted=deleted
-                )
+                logger.info("Cache invalidated", pattern=pattern, keys_deleted=deleted)
     except (RedisError, Exception) as e:
         logger.error("Cache invalidation failed", pattern=pattern, error=str(e))
 

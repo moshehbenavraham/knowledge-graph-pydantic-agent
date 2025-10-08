@@ -4,9 +4,10 @@ Test suite for Phase 4 API endpoints.
 Tests chat, search, and document management endpoints with various scenarios.
 """
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import AsyncMock, MagicMock, patch
 
 from src.api.main import app
 

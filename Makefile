@@ -30,28 +30,28 @@ security:
 
 # Running Services
 run-ui:
-	UI_MODE=$(or $(MODE),standard) streamlit run src/ui/streamlit_app.py
+	bash -c "source .venv/bin/activate && PYTHONPATH=$(PWD):$$PYTHONPATH UI_MODE=$(or $(MODE),standard) streamlit run src/ui/streamlit_app.py"
 
 run-ui-simple:
-	UI_MODE=simple streamlit run src/ui/streamlit_app.py
+	bash -c "source .venv/bin/activate && PYTHONPATH=$(PWD):$$PYTHONPATH UI_MODE=simple streamlit run src/ui/streamlit_app.py"
 
 run-ui-advanced:
-	UI_MODE=advanced streamlit run src/ui/streamlit_app.py
+	bash -c "source .venv/bin/activate && PYTHONPATH=$(PWD):$$PYTHONPATH UI_MODE=advanced streamlit run src/ui/streamlit_app.py"
 
 run-rag:
-	python -m src.rag_pipeline.pipeline
+	bash -c "source .venv/bin/activate && PYTHONPATH=$(PWD):$$PYTHONPATH python -m src.rag_pipeline.pipeline"
 
 run-mcp:
-	python -m mcp
+	bash -c "source .venv/bin/activate && PYTHONPATH=$(PWD):$$PYTHONPATH python -m mcp"
 
 run-api:
-	python -m src.api.main
+	bash -c "source .venv/bin/activate && PYTHONPATH=$(PWD):$$PYTHONPATH python -m src.api.main"
 
 run-agentic-rag:
-	python -m src.agentic_rag.agent.agent
+	bash -c "source .venv/bin/activate && PYTHONPATH=$(PWD):$$PYTHONPATH python -m src.agentic_rag.agent.agent"
 
 dev:
-	UI_MODE=$(or $(MODE),standard) streamlit run src/ui/streamlit_app.py --server.runOnSave true
+	bash -c "source .venv/bin/activate && PYTHONPATH=$(PWD):$$PYTHONPATH UI_MODE=$(or $(MODE),standard) streamlit run src/ui/streamlit_app.py --server.runOnSave true"
 
 # Docker
 docker-build:
@@ -73,13 +73,13 @@ db-migrate:
 	echo "Database migrations handled through Supabase dashboard or CLI"
 
 neo4j-init:
-	python -m src.agentic_rag.storage.neo4j_store init
+	bash -c "source .venv/bin/activate && PYTHONPATH=$(PWD):$$PYTHONPATH python -m src.agentic_rag.storage.neo4j_store init"
 
 ingest:
-	python -m src.agentic_rag.ingestion.pipeline ingest
+	bash -c "source .venv/bin/activate && PYTHONPATH=$(PWD):$$PYTHONPATH python -m src.agentic_rag.ingestion.pipeline ingest"
 
 ingest-clean:
-	python -m src.agentic_rag.ingestion.pipeline --clean
+	bash -c "source .venv/bin/activate && PYTHONPATH=$(PWD):$$PYTHONPATH python -m src.agentic_rag.ingestion.pipeline --clean"
 
 # Development utilities
 clean:

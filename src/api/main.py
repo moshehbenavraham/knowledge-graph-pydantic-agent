@@ -227,11 +227,8 @@ async def clear_cache(pattern: str = "*"):
         if pattern == "*":
             cache.flush()
             return {"message": "All cache entries cleared"}
-        else:
-            # TODO: Implement pattern-based clearing
-            return {
-                "message": f"Cleared cache entries matching pattern: {pattern}"
-            }
+        # TODO: Implement pattern-based clearing
+        return {"message": f"Cleared cache entries matching pattern: {pattern}"}
 
     except Exception as e:
         logger.error("cache_clear_failed", error=str(e))

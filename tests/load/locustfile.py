@@ -1,13 +1,10 @@
 """Locust load testing scenarios for Agentic RAG API."""
 
-import json
 import random
 import time
-from typing import Dict, List
 
-from locust import HttpUser, task, between, events
-from locust.stats import stats_printer, stats_history
 import structlog
+from locust import HttpUser, between, events, task
 
 logger = structlog.get_logger()
 
@@ -32,7 +29,7 @@ class AgenticRAGUser(HttpUser):
     """Simulated user for load testing the Agentic RAG API."""
 
     wait_time = between(1, 3)  # Wait 1-3 seconds between tasks
-    
+
     def on_start(self):
         """Initialize user session."""
         self.session_id = f"test_session_{self.environment.runner.user_count}_{time.time()}"
@@ -43,7 +40,7 @@ class AgenticRAGUser(HttpUser):
     def chat_simple(self):
         """Simple chat request without streaming."""
         query = random.choice(SAMPLE_QUERIES)
-        
+
         with self.client.post(
             "/api/v1/chat",
             json={
@@ -58,12 +55,12 @@ class AgenticRAGUser(HttpUser):
             if response.status_code == 200:
                 data = response.json()
                 self.query_history.append(query)
-                
+
                 # Validate response structure
                 if "response" in data and "confidence" in data:
                     response.success()
                     logger.debug(
-                        f"Chat successful",
+                        "Chat successful",
                         session_id=self.session_id,
                         confidence=data.get("confidence"),
                         response_time=response.elapsed.total_seconds(),
@@ -77,7 +74,7 @@ class AgenticRAGUser(HttpUser):
     def search_vector(self):
         """Vector search request."""
         query = random.choice(SAMPLE_QUERIES)
-        
+
         with self.client.post(
             "/api/v1/search",
             json={
@@ -90,12 +87,12 @@ class AgenticRAGUser(HttpUser):
         ) as response:
             if response.status_code == 200:
                 data = response.json()
-                
+
                 # Validate response
                 if "results" in data and "search_time_ms" in data:
                     response.success()
                     logger.debug(
-                        f"Vector search successful",
+                        "Vector search successful",
                         query=query[:50],
                         results_count=data.get("total_results"),
                         search_time_ms=data.get("search_time_ms"),
@@ -109,7 +106,7 @@ class AgenticRAGUser(HttpUser):
     def search_hybrid(self):
         """Hybrid search request."""
         query = random.choice(SAMPLE_QUERIES)
-        
+
         with self.client.post(
             "/api/v1/search",
             json={
@@ -122,7 +119,7 @@ class AgenticRAGUser(HttpUser):
         ) as response:
             if response.status_code == 200:
                 data = response.json()
-                
+
                 # Validate response
                 if "results" in data and "search_time_ms" in data:
                     # Check performance SLO
@@ -139,7 +136,7 @@ class AgenticRAGUser(HttpUser):
     def search_graph(self):
         """Graph search request."""
         query = random.choice(SAMPLE_QUERIES)
-        
+
         with self.client.post(
             "/api/v1/search",
             json={
@@ -152,12 +149,12 @@ class AgenticRAGUser(HttpUser):
         ) as response:
             if response.status_code == 200:
                 data = response.json()
-                
+
                 # Validate response
                 if "results" in data:
                     response.success()
                     logger.debug(
-                        f"Graph search successful",
+                        "Graph search successful",
                         query=query[:50],
                         results_count=data.get("total_results"),
                     )
@@ -173,11 +170,13 @@ class AgenticRAGUser(HttpUser):
             # No history yet, do a simple chat first
             self.chat_simple()
             return
-        
+
         # Create a follow-up question
-        previous_query = random.choice(self.query_history[-3:] if len(self.query_history) > 3 else self.query_history)
+        previous_query = random.choice(
+            self.query_history[-3:] if len(self.query_history) > 3 else self.query_history
+        )
         follow_up = f"Tell me more about that. Specifically regarding: {previous_query}"
-        
+
         with self.client.post(
             "/api/v1/chat",
             json={
@@ -213,7 +212,7 @@ class AgenticRAGUser(HttpUser):
     def streaming_chat(self):
         """Test streaming chat endpoint."""
         query = random.choice(SAMPLE_QUERIES)
-        
+
         with self.client.post(
             "/api/v1/chat/stream",
             json={
@@ -231,7 +230,7 @@ class AgenticRAGUser(HttpUser):
                         chunks_received += 1
                         if line.startswith(b"data: [DONE]"):
                             break
-                
+
                 if chunks_received > 0:
                     response.success()
                 else:
@@ -246,9 +245,9 @@ class AgenticRAGUser(HttpUser):
 
 class AdminUser(HttpUser):
     """Admin user for testing administrative endpoints."""
-    
+
     wait_time = between(10, 30)  # Less frequent admin operations
-    
+
     @task(1)
     def check_metrics(self):
         """Check Prometheus metrics endpoint."""
@@ -261,12 +260,12 @@ class AdminUser(HttpUser):
                     response.failure("Invalid metrics format")
             else:
                 response.failure(f"Status code: {response.status_code}")
-    
+
     @task(1)
     def check_health(self):
         """Check health endpoints."""
         endpoints = ["/health", "/health/ready", "/health/live"]
-        
+
         for endpoint in endpoints:
             with self.client.get(endpoint, catch_response=True) as response:
                 if response.status_code == 200:
@@ -298,18 +297,20 @@ def on_test_stop(environment, **kwargs):
 
 
 @events.request.add_listener
-def on_request(request_type, name, response_time, response_length, response, context, exception, **kwargs):
+def on_request(
+    request_type, name, response_time, response_length, response, context, exception, **kwargs
+):
     """Track custom metrics for each request."""
     if exception:
         logger.warning(
-            f"Request failed",
+            "Request failed",
             request_type=request_type,
             name=name,
             exception=str(exception),
         )
     elif response_time > 1000:  # Log slow requests (>1s)
         logger.warning(
-            f"Slow request detected",
+            "Slow request detected",
             request_type=request_type,
             name=name,
             response_time_ms=response_time,

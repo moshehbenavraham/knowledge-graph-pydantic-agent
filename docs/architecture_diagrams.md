@@ -11,33 +11,33 @@ graph TB
         CLI[CLI Interface]
         API_Client[API Clients]
     end
-    
+
     subgraph "API Layer"
         FastAPI[FastAPI Server]
         Auth[Authentication]
         RateLimiter[Rate Limiter]
     end
-    
+
     subgraph "Agent Layer"
         Agent[Pydantic AI Agent]
         Intent[Intent Analyzer]
         Router[Query Router]
         Tools[Tool System]
     end
-    
+
     subgraph "Storage Layer"
         PG[(PostgreSQL/Supabase)]
         Neo4j[(Neo4j Graph)]
         Redis[(Redis Cache)]
         Mem0[(Memory Store)]
     end
-    
+
     subgraph "Search Strategies"
         Vector[Vector Search]
         Graph[Graph Search]
         Hybrid[Hybrid Search]
     end
-    
+
     UI --> FastAPI
     CLI --> FastAPI
     API_Client --> FastAPI
@@ -70,7 +70,7 @@ sequenceDiagram
     participant Search
     participant Storage
     participant ResponseGen
-    
+
     User->>API: Send Query
     API->>Agent: Process Request
     Agent->>IntentAnalyzer: Analyze Intent
@@ -96,20 +96,20 @@ flowchart LR
         PDFs[PDFs]
         Text[Text Files]
     end
-    
+
     subgraph "Processing"
         Load[Document Loader]
         Chunk[Semantic Chunker]
         Embed[Embedder]
         Extract[Knowledge Extractor]
     end
-    
+
     subgraph "Storage"
         PG_Store[PostgreSQL Storage]
         Neo4j_Store[Neo4j Storage]
         Cache_Store[Redis Cache]
     end
-    
+
     Docs --> Load
     PDFs --> Load
     Text --> Load
@@ -127,17 +127,17 @@ flowchart LR
 graph TD
     Query[User Query]
     Analyze[Analyze Query Intent]
-    
+
     Analyze --> IsEntity{Entity-focused?}
     IsEntity -->|Yes| GraphSearch[Graph Search]
     IsEntity -->|No| IsConcept{Concept/Topic?}
-    
+
     IsConcept -->|Yes| VectorSearch[Vector Search]
     IsConcept -->|No| IsComplex{Complex Query?}
-    
+
     IsComplex -->|Yes| HybridSearch[Hybrid Search]
     IsComplex -->|No| SmartSearch[Smart Search]
-    
+
     GraphSearch --> Neo4j[(Neo4j)]
     VectorSearch --> PG[(PostgreSQL)]
     HybridSearch --> Both[Both DBs]
@@ -152,27 +152,27 @@ graph LR
         Agent[Agent Core]
         ToolManager[Tool Manager]
     end
-    
+
     subgraph "Search Tools"
         VectorTool[Vector Search]
         GraphTool[Graph Search]
         HybridTool[Hybrid Search]
         SmartTool[Smart Search]
     end
-    
+
     subgraph "External Tools"
         WebSearch[Web Search]
         CodeExec[Code Execution]
         ImageAnalysis[Image Analysis]
         SQLQuery[SQL Query]
     end
-    
+
     subgraph "Utility Tools"
         Memory[Memory Tool]
         Cache[Cache Tool]
         Logger[Logging Tool]
     end
-    
+
     Agent --> ToolManager
     ToolManager --> VectorTool
     ToolManager --> GraphTool
@@ -196,20 +196,20 @@ graph TB
         Metrics[Metrics Endpoint]
         Traces[OpenTelemetry]
     end
-    
+
     subgraph "Collection"
         Prometheus[Prometheus]
         Jaeger[Jaeger]
         NodeExporter[Node Exporter]
         RedisExporter[Redis Exporter]
     end
-    
+
     subgraph "Visualization"
         Grafana[Grafana]
         JaegerUI[Jaeger UI]
         RedisCommander[Redis Commander]
     end
-    
+
     App --> Metrics
     App --> Traces
     Metrics --> Prometheus
@@ -232,7 +232,7 @@ erDiagram
     ENTITIES ||--o{ FACTS : related_to
     SESSIONS ||--o{ MESSAGES : contains
     SESSIONS ||--o{ MEMORY : stores
-    
+
     DOCUMENTS {
         uuid id PK
         string title
@@ -240,7 +240,7 @@ erDiagram
         timestamp created_at
         jsonb metadata
     }
-    
+
     CHUNKS {
         uuid id PK
         uuid document_id FK
@@ -249,7 +249,7 @@ erDiagram
         vector embedding
         jsonb metadata
     }
-    
+
     ENTITIES {
         uuid id PK
         string name
@@ -257,7 +257,7 @@ erDiagram
         jsonb properties
         uuid chunk_id FK
     }
-    
+
     RELATIONSHIPS {
         uuid id PK
         uuid source_entity FK
@@ -274,28 +274,28 @@ graph TB
     subgraph "Load Balancer"
         LB[Nginx/HAProxy]
     end
-    
+
     subgraph "Application Tier"
         App1[App Instance 1]
         App2[App Instance 2]
         App3[App Instance 3]
     end
-    
+
     subgraph "Cache Tier"
         Redis1[Redis Primary]
         Redis2[Redis Replica]
     end
-    
+
     subgraph "Database Tier"
         PG_Primary[(PostgreSQL Primary)]
         PG_Replica[(PostgreSQL Replica)]
         Neo4j_Cluster[(Neo4j Cluster)]
     end
-    
+
     subgraph "Monitoring"
         Monitor[Monitoring Stack]
     end
-    
+
     LB --> App1
     LB --> App2
     LB --> App3
@@ -321,18 +321,18 @@ graph TB
 flowchart TD
     Request[Incoming Request]
     CacheCheck{Cache Hit?}
-    
+
     Request --> CacheCheck
     CacheCheck -->|Yes| ReturnCached[Return Cached Result]
     CacheCheck -->|No| ProcessRequest[Process Request]
-    
+
     ProcessRequest --> Parallel{Can Parallelize?}
     Parallel -->|Yes| ParallelExec[Parallel Execution]
     Parallel -->|No| SequentialExec[Sequential Execution]
-    
+
     ParallelExec --> Aggregate[Aggregate Results]
     SequentialExec --> Aggregate
-    
+
     Aggregate --> CacheResult[Cache Result]
     CacheResult --> ReturnResult[Return Result]
     ReturnCached --> End[End]

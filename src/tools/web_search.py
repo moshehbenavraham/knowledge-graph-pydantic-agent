@@ -9,26 +9,26 @@ from src.utils.rate_limiting import rate_limit
 async def jina_read_url(url: str, http_client: AsyncClient, jina_api_key: str) -> str:
     """
     Helper function to read and extract content from a specific URL using Jina Reader API.
-    
+
     Args:
         url: The URL to read and parse
         http_client: HTTP client for making requests
         jina_api_key: Jina.ai API key
-    
+
     Returns:
         Clean, formatted content from the URL
     """
     from urllib.parse import quote
-    
+
     headers = {
         "Authorization": f"Bearer {jina_api_key}",
         "Accept": "application/json",
     }
-    
+
     # Jina.ai Reader API - for specific URL reading
-    encoded_url = quote(url, safe='')
+    encoded_url = quote(url, safe="")
     reader_url = f"https://r.jina.ai/{encoded_url}"
-    
+
     try:
         response = await http_client.get(
             reader_url,
@@ -36,24 +36,24 @@ async def jina_read_url(url: str, http_client: AsyncClient, jina_api_key: str) -
             timeout=30.0,
         )
         response.raise_for_status()
-        
+
         # Parse JSON response
         data = response.json()
-        
+
         # Extract content from the response structure
         if isinstance(data, dict) and "data" in data:
             content = data["data"].get("content", "")
             title = data["data"].get("title", "")
-            
+
             if content:
                 result = f"**{title}**\n\n{content}"
                 # Truncate if too long
                 if len(result) > 3000:
                     result = result[:3000] + "..."
                 return result
-        
+
         return "Could not extract content from the URL."
-            
+
     except Exception as e:
         logger.error(f"Jina Reader failed for URL {url}: {e}")
         raise
@@ -65,26 +65,26 @@ async def jina_web_search(query: str, http_client: AsyncClient, jina_api_key: st
     """
     Helper function for web_search_tool - searches the web with the Jina.ai Search API
     and returns clean, formatted content from top search results.
-    
+
     Args:
         query: The search query
         http_client: HTTP client for making requests
         jina_api_key: Jina.ai API key
-    
+
     Returns:
         Formatted search results from Jina.ai
     """
     from urllib.parse import quote
-    
+
     headers = {
         "Authorization": f"Bearer {jina_api_key}",
         "Accept": "application/json",
     }
-    
+
     # Jina.ai Search API - properly encode the query
     encoded_query = quote(query)
     search_url = f"https://s.jina.ai/{encoded_query}"
-    
+
     try:
         response = await http_client.get(
             search_url,
@@ -92,10 +92,10 @@ async def jina_web_search(query: str, http_client: AsyncClient, jina_api_key: st
             timeout=30.0,
         )
         response.raise_for_status()
-        
+
         # Parse JSON response - search mode returns a list of results
         data = response.json()
-        
+
         # Format the search results
         if isinstance(data, list) and len(data) > 0:
             results = []
@@ -103,17 +103,16 @@ async def jina_web_search(query: str, http_client: AsyncClient, jina_api_key: st
                 title = item.get("title", "No title")
                 content = item.get("content", "No content")
                 url = item.get("url", "")
-                
+
                 # Truncate content if too long
                 if len(content) > 500:
                     content = content[:500] + "..."
-                
+
                 results.append(f"{i}. **{title}**\n   URL: {url}\n   {content}\n")
-            
+
             return "Jina.ai Search Results:\n\n" + "\n".join(results)
-        else:
-            return "No results found for the query."
-            
+        return "No results found for the query."
+
     except Exception as e:
         logger.error(f"Jina.ai search failed: {e}")
         raise
@@ -189,12 +188,12 @@ async def searxng_web_search(query: str, http_client: AsyncClient, searxng_base_
 
 @track_performance(tool_name="web_search_tool")
 async def web_search_tool(
-    query: str, 
-    http_client: AsyncClient, 
+    query: str,
+    http_client: AsyncClient,
     brave_api_key: str = None,
     searxng_base_url: str = None,
     jina_api_key: str = None,
-    search_provider: str = None
+    search_provider: str = None,
 ) -> str:
     """
     Search the web with a specific query and get a summary of the top search results.

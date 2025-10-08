@@ -13,7 +13,7 @@ src/config/
 ├── settings.py          # Main Settings class with Pydantic BaseSettings
 ├── __init__.py         # Exports get_settings() singleton
 ├── api.py              # API-specific configuration facade
-├── agent.py            # Agent and search configuration facade  
+├── agent.py            # Agent and search configuration facade
 ├── clients.py          # Database and client configurations
 └── ui.py               # UI configuration facade
 ```
@@ -53,7 +53,7 @@ LLM_PROVIDER=openai              # openai, anthropic, ollama, openrouter
 LLM_API_KEY=your_api_key
 LLM_MODEL=gpt-4o-mini           # Model to use
 
-# Embedding Configuration  
+# Embedding Configuration
 EMBEDDING_PROVIDER=openai        # openai, nomic, ollama, cohere
 EMBEDDING_API_KEY=your_api_key
 EMBEDDING_MODEL=text-embedding-3-small
@@ -327,7 +327,7 @@ from pydantic import Field
 
 class CustomSettings(Settings):
     """Extended settings with custom fields."""
-    
+
     my_custom_field: str = Field(
         default="default_value",
         description="My custom configuration"
