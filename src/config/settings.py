@@ -513,21 +513,33 @@ class Settings(BaseSettings):
         """Get the effective embedding model name."""
         return self.embedding_model_choice or self.embedding_model
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert settings to dictionary for logging/debugging."""
+    def to_dict(self, mask_sensitive: bool = True) -> dict[str, Any]:
+        """
+        Convert settings to dictionary.
+
+        Args:
+            mask_sensitive: If True, mask sensitive values for logging/debugging.
+                           If False, return actual values for internal use.
+
+        Returns:
+            Settings as dictionary
+        """
         data = self.model_dump()
-        # Mask sensitive values
-        sensitive_keys = [
-            "supabase_service_key",
-            "neo4j_password",
-            "embedding_api_key",
-            "llm_api_key",
-            "jina_api_key",
-            "brave_api_key",
-        ]
-        for key in sensitive_keys:
-            if data.get(key):
-                data[key] = "***MASKED***"
+
+        if mask_sensitive:
+            # Mask sensitive values for logging/debugging
+            sensitive_keys = [
+                "supabase_service_key",
+                "neo4j_password",
+                "embedding_api_key",
+                "llm_api_key",
+                "jina_api_key",
+                "brave_api_key",
+            ]
+            for key in sensitive_keys:
+                if data.get(key):
+                    data[key] = "***MASKED***"
+
         return data
 
     def validate_for_production(self) -> list[str]:

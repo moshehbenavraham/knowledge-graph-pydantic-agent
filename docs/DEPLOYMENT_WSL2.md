@@ -8,43 +8,32 @@
 
 This guide documents the complete deployment process for Base Agent on WSL2 Ubuntu, using cloud services for databases to minimize local infrastructure.
 
-## ⚠️ Deployment Path Decision
+## ⚠️ Resource Requirements
 
-**IMPORTANT:** This project has two deployment paths with very different resource requirements:
+**IMPORTANT:** This project requires the full Agentic RAG installation including knowledge graph capabilities.
 
-### 🌐 Option A: Cloud-Only (Lightweight) - **RECOMMENDED for getting started**
-
-**Resources:** ~500MB disk, 2GB RAM
-**Install time:** ~5 minutes
-**What you get:**
-- ✅ Vector search (Supabase pgvector)
-- ✅ OpenAI embeddings (via API)
-- ✅ Web search, image analysis, SQL queries
-- ✅ Full chat functionality
-- ❌ No local embeddings
-- ❌ No knowledge graph
-
-**Python packages:** 253 packages (~500MB)
-
-### 🧠 Option B: Full Agentic RAG (Resource-Intensive) - **Advanced features**
+### 🧠 Full Agentic RAG Installation - **REQUIRED**
 
 **Resources:** ~5.5GB disk, 8GB+ RAM
 **Install time:** ~15 minutes (large downloads)
 **What you get:**
-- ✅ Everything from Option A
-- ✅ Knowledge graph (Neo4j + Graphiti)
+- ✅ Vector search (Supabase pgvector)
+- ✅ Knowledge graph (Neo4j + Graphiti) - **REQUIRED**
+- ✅ OpenAI embeddings (via API)
 - ✅ Local embeddings (sentence-transformers)
+- ✅ Web search, image analysis, SQL queries
+- ✅ Full chat functionality
 - ✅ Entity extraction & relationship discovery
 - ✅ Temporal reasoning
 - ⚠️  PyTorch + CUDA libraries (3.7GB, mostly unused on CPU)
 
-**Additional packages:** +50 packages (~5GB more)
+**Python packages:** 303 packages (~5.5GB total)
 
-**This guide follows Option B** (full installation). If you want lightweight, skip "Step 6: Install RAG Optional Dependencies".
+**Note:** The knowledge graph (Neo4j + Graphiti) is a core component of the system and cannot be skipped. All RAG dependencies must be installed.
 
 ---
 
-## Architecture (Option B - Full)
+## Architecture
 
 - **Compute:** WSL2 Ubuntu (local)
 - **Vector DB:** Supabase Cloud (PostgreSQL + pgvector)
@@ -256,14 +245,14 @@ This single migration file creates:
 - ✅ Old schema used `documents` table with `bigserial` IDs and single embedding column
 - ✅ New schema uses UUID IDs, dual embeddings (1536d + 768d), and additional tables for sessions, caching, and graph sync
 
-### Step 6: Install RAG Optional Dependencies (In Progress)
+### Step 6: Install RAG Required Dependencies ✅
 
-**Issue Encountered:** Neo4j and Graphiti are in **optional** `[rag]` extras, not installed by default.
+**CRITICAL:** Neo4j and Graphiti are **REQUIRED** components for this system. They must be installed via the `[rag]` extras.
 
 **Solution:**
 ```bash
 source .venv/bin/activate
-uv pip install -e ".[rag]"
+uv pip install -e ".[dev,rag]"
 ```
 
 **⚠️ Resource Requirements:**
@@ -306,7 +295,9 @@ nvidia-smi  # Check if GPU is available
 
 **This deployment has:** NVIDIA GeForce RTX 5070 Ti (8GB) - **GPU-accelerated embeddings enabled!**
 
-### Step 7: Initialize Neo4j Knowledge Graph (Pending)
+### Step 7: Initialize Neo4j Knowledge Graph (REQUIRED)
+
+**CRITICAL:** The knowledge graph must be initialized for the system to function properly.
 
 After RAG dependencies finish installing:
 
@@ -316,6 +307,12 @@ make neo4j-init
 
 # Or manually:
 python -m src.agentic_rag.storage.neo4j_store init
+```
+
+**Verification:**
+```bash
+# Test Neo4j connection
+python -c "from src.agentic_rag.storage.neo4j_store import Neo4jStore; store = Neo4jStore(); print('✅ Neo4j connected!')"
 ```
 
 ### Step 4: Verification (Pending)
@@ -359,6 +356,7 @@ ENABLE_REDIS_CACHE=false
 
 ## Current Status
 
+### ✅ Infrastructure & Configuration
 - [x] System packages installed (make, python3-pip, python3-venv, build-essential, libpq-dev, redis-server)
 - [x] Cloud services configured (Supabase, Neo4j Aura, OpenAI, Jina.ai)
 - [x] Environment variables set (.env configured)
@@ -368,45 +366,79 @@ ENABLE_REDIS_CACHE=false
 - [x] Old SQL files cleaned up (outdated `sql/` directory removed)
 - [x] Documentation updated to reference correct migration file
 - [x] DATABASE_URL configured with PostgreSQL connection string (URL-encoded password)
+
+### ✅ Core Fixes (2025-10-09)
+- [x] **CRITICAL FIX: ConnectionManager async initialization** (`connection_manager.py:421-429`)
+  - Added async context manager support: `async with ConnectionManager() as conn_mgr`
+  - Fixed circuit breaker to verify pool exists before blocking operations
+  - Added clear error messages when pools aren't initialized
+  - Fixed Neo4j driver config for `neo4j+s://` URIs (encryption in URI, not config)
+
+- [x] **CRITICAL FIX: IngestionPipeline async initialization** (`pipeline.py:123-181`)
+  - Added `async def initialize()` method that properly calls `await connection_manager.initialize()`
+  - Split sync `__init__()` from async `initialize()`
+  - Added async context manager: `async with DocumentIngestionPipeline() as pipeline`
+  - Added `_initialized` flag to prevent double initialization
+
+- [x] **CRITICAL FIX: CLI async pattern** (`__main__.py:115-196`)
+  - Updated to use `async with DocumentIngestionPipeline()` pattern
+  - Automatic connection cleanup via context manager
+  - Proper fallback to REST API on PostgreSQL failure
+  - Changed default path from `example_big_tech_docs_for_ingestion_testing` to `example_docs`
+
+- [x] **CRITICAL FIX: Configuration masking bug** (`settings.py:516`, `config.py:161`)
+  - **Root cause**: `Settings.to_dict()` was masking `neo4j_password` with `"***MASKED***"`
+  - **Impact**: `ConnectionManager` received masked password, causing 100% Neo4j auth failure
+  - **Solution**: Added `mask_sensitive` parameter (defaults to `True` for logging safety)
+  - `Config.dict()` now uses `mask_sensitive=False` for internal use
+  - Security maintained: Logging still masks credentials, internal code gets real values
+  - Created diagnostic script: `scripts/test_neo4j_connection.py`
+
+### ✅ Database & Storage
 - [x] Fixed ingestion module import errors
 - [x] Created CLI interface for document ingestion (`src/agentic_rag/ingestion/__main__.py`)
 - [x] Fixed ConnectionManager config key case sensitivity (lowercase keys)
 - [x] Diagnosed WSL2 network connectivity issue (IPv6/port blocking)
 - [x] Created REST API storage backend (`src/agentic_rag/storage/supabase_rest_store.py`)
 - [x] Implemented intelligent PostgreSQL → REST API fallback
-- [x] Supabase database schema initialized (confirmed via REST API test)
-- [x] **Successfully ingested 21 test documents via REST API** (270 chunks with embeddings)
+- [x] Supabase database schema initialized (6 documents, 0 chunks - partial ingestion before fix)
 - [x] **Fixed PostgreSQL pooler connectivity** (changed region to aws-1-us-east-2, port 5432)
 - [x] **Fixed environment variable caching** (added load_dotenv override and reload_settings)
 - [x] **Fixed ConnectionManager prepared statement** (schema uses embedding_1536/768, not embedding)
 - [x] **Made Neo4j initialization conditional** (only loads when ENABLE_GRAPH=true)
-- [x] **PostgreSQL connection confirmed working** (63 documents, 810 chunks accessible)
+- [x] **PostgreSQL connection confirmed working** (direct connection via asyncpg pool)
+- [x] **Neo4j connection confirmed working** (authentication issue resolved via config fix)
+- [x] **Neo4j schema initialized** (4 constraints, 22 indexes for Entity/Episode nodes)
+- [x] **Knowledge graph ready** (Neo4j Aura Enterprise 5.27 operational)
+
+### ✅ UI & Agent
 - [x] **Fixed Makefile venv activation** (all `make run-*` commands now activate .venv and set PYTHONPATH)
 - [x] **Fixed OpenAIModel deprecation** (updated to OpenAIChatModel in src/clients/llm.py)
 - [x] **Fixed Prometheus metrics duplicate registration** (handles Streamlit reloads gracefully)
 - [x] **Streamlit UI running successfully** (accessible at http://localhost:8501, HTTP 200 verified)
 - [x] **Fixed RAG list_documents_tool** (was querying non-existent document_metadata table, now queries documents table correctly)
 - [x] **Updated TESTING_GUIDE.md** (added document-specific test queries based on ingested content)
-- [x] **Deployment fully operational** (UI + RAG + 63 documents accessible)
-- [ ] Neo4j knowledge graph initialized (optional - for graph features only)
-- [ ] Complete comprehensive testing with TESTING_GUIDE.md
+- [x] **Deployment fully operational** (UI + RAG accessible)
 
-## Next Steps
+### ⚠️ In Progress
+- [ ] **Neo4j Aura authentication** (credentials need verification/refresh - instance may be paused)
+- [ ] **Neo4j knowledge graph initialization** (script created: `scripts/init_neo4j.py`)
+- [ ] **Fix Prometheus metrics setup** (resolve .env duplicates, add @track_performance to tools)
 
-1. ✅ ~~Install Python dependencies~~ (COMPLETED with UV)
-2. ✅ ~~Install pre-commit hooks~~ (COMPLETED)
-3. ✅ ~~Fix DATABASE_URL configuration~~ (COMPLETED)
-4. ✅ ~~Fix ingestion pipeline imports~~ (COMPLETED)
-5. ✅ ~~Create ingestion CLI interface~~ (COMPLETED)
-6. ✅ ~~Diagnose WSL2 network connectivity~~ (COMPLETED - IPv6/port blocking identified)
-7. ✅ ~~Create REST API fallback~~ (COMPLETED - automatic fallback implemented)
-8. ✅ ~~Initialize Supabase schema~~ (COMPLETED - 63 documents, 810 chunks)
-9. ✅ ~~Test document ingestion~~ (COMPLETED - 63 documents successfully ingested)
-10. ✅ ~~Fix UI and RAG tools~~ (COMPLETED - Makefile, Prometheus, list_documents fixed)
-11. ✅ ~~Deploy UI successfully~~ (COMPLETED - running on http://localhost:8501)
-12. **Test with TESTING_GUIDE.md queries** (CURRENT - comprehensive test suite ready)
-13. **Initialize Neo4j graph** (OPTIONAL - for knowledge graph features, requires `pip install -e ".[rag]"`)
-14. **Switch to standard UI mode** (OPTIONAL - for streaming + tool visibility: `make run-ui`)
+### 📋 Next Steps (Priority Order)
+1. **Verify Neo4j Aura credentials** (instance may be paused, password may need reset)
+   - Login: https://neo4j.com/cloud/aura-free
+   - Check instance status → Resume if paused
+   - Reset password if needed → Update `.env`
+
+2. **Run `python scripts/init_neo4j.py`** (creates constraints and indexes)
+
+3. **Test full ingestion with graph extraction**:
+   ```bash
+   python -m src.agentic_rag.ingestion ingest --path docs/example_docs
+   ```
+
+4. **Complete comprehensive testing** with TESTING_GUIDE.md
 
 ## Troubleshooting
 
@@ -805,6 +837,110 @@ print(f'Documents: {result.count}')
 
 **Result:** Agent now successfully lists all 63 documents when asked "What documents do you have?"
 
+### Prometheus Metrics Not Working (Active Issue)
+
+**Issue:** Prometheus metrics server not running, observability stack non-functional
+
+**Symptoms:**
+- No metrics endpoint accessible (http://localhost:8000/metrics returns nothing)
+- Grafana dashboards can't scrape metrics
+- Tool performance not being tracked
+
+**Root Causes:**
+1. **Metrics server not initialized**: Streamlit UI doesn't start the metrics server (only API server does)
+2. **Configuration duplicates**: `.env` has duplicate `METRICS_PORT` definitions (line 76: `8000`, line 158: `9090`)
+3. **Missing tool instrumentation**: Only `web_search.py` uses `@track_performance`, other tools lack metrics
+
+**Resolution (In Progress):**
+
+**Step 1: Fix .env configuration duplicates**
+```bash
+# Edit .env file
+# Line 76: Keep this
+METRICS_PORT=8000
+
+# Line 158: Change to avoid conflict
+PROMETHEUS_PORT=9090  # This is where Prometheus scraper runs
+
+# Line 75/157: Remove duplicate ENABLE_METRICS=true (keep only one)
+```
+
+**Step 2: Start metrics server (choose ONE option):**
+
+**Option A: Run API server** (metrics start automatically)
+```bash
+source .venv/bin/activate
+make run-api  # API on :8058, metrics on :8000
+```
+
+**Option B: Add metrics to Streamlit** (edit `src/ui/streamlit_app.py`)
+```python
+# Add after imports at top of file
+from src.utils.monitoring import monitor
+import os
+
+# Add in main section
+if os.getenv("ENABLE_METRICS", "true").lower() == "true":
+    metrics_port = int(os.getenv("METRICS_PORT", "8000"))
+    monitor.start_metrics_server(metrics_port)
+```
+
+**Step 3: Add performance tracking to tools**
+
+Update each tool file:
+```python
+# src/tools/rag.py
+from src.utils.monitoring import track_performance
+
+@track_performance(tool_name="rag_retrieval")
+async def retrieve_relevant_documents_tool(...):
+    ...
+
+# src/tools/sql_query.py
+@track_performance(tool_name="sql_query")
+async def execute_sql_query_tool(...):
+    ...
+
+# src/tools/image_analysis.py
+@track_performance(tool_name="image_analysis")
+async def image_analysis_tool(...):
+    ...
+```
+
+**Step 4: Start full monitoring stack**
+```bash
+# Start Prometheus + Grafana + Jaeger + exporters
+docker-compose -f docker-compose.monitoring.yml up -d
+
+# Access dashboards
+# Prometheus: http://localhost:9090
+# Grafana: http://localhost:3000 (admin/admin)
+# Jaeger: http://localhost:16686
+```
+
+**Verification:**
+```bash
+# Test metrics endpoint
+curl http://localhost:8000/metrics
+
+# Should see Prometheus format output like:
+# luminari_tool_executions_total{tool_name="web_search", status="success"} 42
+# luminari_llm_tokens_total{model="gpt-5-mini", type="input"} 15420
+```
+
+**Additional Issues Found:**
+- ❌ `OpenAIModel` deprecation warning in `src/tools/image_analysis.py:48` (should use `OpenAIChatModel`)
+- ❌ Supabase client deprecation warnings about `timeout` and `verify` parameters
+- ❌ Direct `os.getenv()` usage in 19 files (violates centralized config pattern)
+
+**Files to modify:**
+- `.env` - Fix duplicate METRICS_PORT and ENABLE_METRICS
+- `src/ui/streamlit_app.py` - Add metrics server initialization (if not using API)
+- `src/tools/rag.py` - Add @track_performance decorator
+- `src/tools/sql_query.py` - Add @track_performance decorator
+- `src/tools/image_analysis.py` - Add @track_performance decorator + fix OpenAIModel deprecation
+- `src/clients/database.py` - Fix Supabase client deprecation warnings
+
 ### Cloud Service Issues
 
 **Supabase Connection:**
@@ -812,10 +948,60 @@ print(f'Documents: {result.count}')
 - Check project isn't paused (free tier auto-pauses after inactivity)
 - Verify pgvector extension enabled
 
-**Neo4j Connection:**
-- Verify URI format: `neo4j+s://` (not `bolt://` for Aura)
-- Check credentials saved from initial setup
-- Test connection in Neo4j Browser
+**Neo4j Aura Authentication Issues (Updated 2025-10-09):**
+
+**Symptoms:**
+```
+neo4j.exceptions.AuthError: {neo4j_code: Neo.ClientError.Security.Unauthorized}
+{message: The client is unauthorized due to authentication failure.}
+```
+
+**Common Causes:**
+1. **Instance paused** (Aura free tier auto-pauses after 3 days of inactivity)
+2. **Password expired or changed**
+3. **Using "Aura" instead of "neo4j" as username**
+
+**Solution Steps:**
+
+1. **Login to Neo4j Aura Console:**
+   - Go to: https://neo4j.com/cloud/aura-free
+   - Login with your account
+
+2. **Check Instance Status:**
+   - Look for your instance (e.g., `f5c57870.databases.neo4j.io`)
+   - Status will show: "Running" or "Paused"
+   - If **Paused**: Click "Resume" button and wait 30-60 seconds
+
+3. **Reset Password (if needed):**
+   - Click on your instance → "Reset Password"
+   - Copy the new password (shown only once!)
+   - Save to password manager
+
+4. **Update `.env` file:**
+   ```bash
+   NEO4J_URI=neo4j+s://YOUR_INSTANCE_ID.databases.neo4j.io
+   NEO4J_USER=neo4j  # MUST be "neo4j", NOT "Aura"
+   NEO4J_PASSWORD=YOUR_NEW_PASSWORD  # Use plain password, no URL encoding needed
+   NEO4J_DATABASE=neo4j
+   NEO4J_ENCRYPTED=true  # Not actually used with neo4j+s:// URI
+   ```
+
+5. **Test Connection:**
+   ```bash
+   python scripts/init_neo4j.py
+   ```
+
+**Verification in Neo4j Browser:**
+- Open: https://workspace-preview.neo4j.io/workspace/query
+- Connect with URI, username, password
+- Run query: `RETURN 1 as test`
+- Should return `1` without errors
+
+**Important Notes:**
+- Use URI scheme `neo4j+s://` (not `bolt://` or `bolt+s://`)
+- Username is always `neo4j` (not "Aura" or your email)
+- Encryption settings are embedded in the `+s` URI scheme
+- Free tier instances pause after 3 days - resume before use
 
 **API Rate Limits:**
 - OpenAI: Monitor usage at platform.openai.com

@@ -6,6 +6,7 @@ from pydantic_ai.messages import ModelRequest, ModelResponse
 
 from src.agent import UnifiedAgentDeps, super_agent
 from src.clients import get_llm_client, get_supabase_client
+from src.config import get_settings
 
 
 class BaseHandler(ABC):
@@ -38,16 +39,16 @@ class BaseHandler(ABC):
     def get_agent_deps(
         self, http_client: AsyncClient, memories_str: str = "", **kwargs
     ) -> UnifiedAgentDeps:
-        import os
+        settings = get_settings()
 
         return UnifiedAgentDeps(
             embedding_client=self.embedding_client,
             supabase=self.supabase,
             http_client=http_client,
-            brave_api_key=os.getenv("BRAVE_API_KEY", ""),
-            searxng_base_url=os.getenv("SEARXNG_BASE_URL", ""),
-            jina_api_key=os.getenv("JINA_API_KEY", ""),
-            web_search_provider=os.getenv("WEB_SEARCH_PROVIDER", ""),
+            brave_api_key=settings.brave_api_key or "",
+            searxng_base_url=settings.searxng_base_url or "",
+            jina_api_key=settings.jina_api_key or "",
+            web_search_provider=settings.web_search_provider or "",
             memories=memories_str,
         )
 

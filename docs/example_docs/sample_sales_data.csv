@@ -1,0 +1,26 @@
+date,product,category,region,sales,quantity,cost,customer_type
+2024-01-15,Laptop Pro,Electronics,North,1299.99,1,850.00,Enterprise
+2024-01-16,Wireless Mouse,Electronics,South,29.99,3,12.00,Retail
+2024-01-16,Office Chair,Furniture,East,349.99,2,180.00,Retail
+2024-01-17,Standing Desk,Furniture,West,599.99,1,320.00,Enterprise
+2024-01-18,USB-C Hub,Electronics,North,49.99,5,18.00,Retail
+2024-01-19,Monitor 27",Electronics,South,399.99,2,220.00,Enterprise
+2024-01-20,Keyboard Mechanical,Electronics,East,129.99,4,55.00,Retail
+2024-01-21,Desk Lamp,Furniture,West,79.99,6,28.00,Retail
+2024-01-22,Laptop Pro,Electronics,North,1299.99,2,850.00,Enterprise
+2024-01-23,Ergonomic Mouse,Electronics,South,59.99,3,22.00,Retail
+2024-01-24,Bookshelf,Furniture,East,249.99,1,130.00,Retail
+2024-01-25,Webcam HD,Electronics,West,89.99,4,35.00,Enterprise
+2024-01-26,Office Chair,Furniture,North,349.99,3,180.00,Enterprise
+2024-01-27,USB Drive 128GB,Electronics,South,24.99,10,8.00,Retail
+2024-01-28,Standing Desk,Furniture,East,599.99,1,320.00,Enterprise
+2024-01-29,Headphones Wireless,Electronics,West,199.99,2,85.00,Retail
+2024-01-30,Desk Organizer,Furniture,North,34.99,5,12.00,Retail
+2024-02-01,Monitor 27",Electronics,South,399.99,3,220.00,Enterprise
+2024-02-02,Laptop Bag,Electronics,East,79.99,4,32.00,Retail
+2024-02-03,Conference Table,Furniture,West,1299.99,1,680.00,Enterprise
+2024-02-04,Wireless Mouse,Electronics,North,29.99,8,12.00,Retail
+2024-02-05,Task Light,Furniture,South,64.99,3,24.00,Retail
+2024-02-06,Laptop Pro,Electronics,East,1299.99,1,850.00,Enterprise
+2024-02-07,Docking Station,Electronics,West,189.99,2,95.00,Enterprise
+2024-02-08,Mesh Chair,Furniture,North,449.99,2,235.00,Enterprise

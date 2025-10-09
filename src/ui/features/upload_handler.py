@@ -174,10 +174,11 @@ async def process_tabular_upload(file, supabase_client: Client) -> dict[str, Any
 
         # Store individual rows
         rows_data = []
-        for _, row in df.iterrows():
+        for idx, row in df.iterrows():
             row_doc = {
                 "dataset_id": dataset_id,
                 "row_data": row.to_dict(),
+                "row_index": int(idx),
             }
             rows_data.append(row_doc)
 
