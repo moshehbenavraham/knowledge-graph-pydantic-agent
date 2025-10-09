@@ -500,7 +500,137 @@ python test_db_connection.py
 - `--clean` - Clean existing data before ingestion
 - `--verbose` / `-v` - Enable debug logging
 
-#### 3. Document Ingestion Failing
+#### 3. ConnectionManager Not Initialized (CRITICAL - FIXED 2025-10-09)
+
+**Error:** `ConnectionError: PostgreSQL pool not initialized. Call await connection_manager.initialize() first.`
+
+**Root Cause:**
+The ingestion pipeline was creating `ConnectionManager()` but never calling `await connection_manager.initialize()`, leaving all connection pools as `None`.
+
+**Status:** ✅ **FIXED** in Phase 2 core infrastructure updates.
+
+**Solution (already applied):**
+- `DocumentIngestionPipeline` now has proper async initialization
+- Use `async with DocumentIngestionPipeline() as pipeline` pattern
+- Automatic cleanup via context manager
+
+**Verification:**
+```bash
+python -m src.agentic_rag.ingestion ingest --path docs/example_docs
+```
+
+If you still see this error, ensure you're using the latest code with the async context manager pattern.
+
+#### 4. Neo4j Authentication Failure (Updated 2025-10-09)
+
+**Error:**
+```
+neo4j.exceptions.AuthError: {neo4j_code: Neo.ClientError.Security.Unauthorized}
+{message: The client is unauthorized due to authentication failure.}
+```
+
+**Common Causes:**
+1. **Instance paused** - Neo4j Aura free tier auto-pauses after 3 days of inactivity
+2. **Password expired or changed**
+3. **Using "Aura" instead of "neo4j" as username**
+4. **Configuration masking bug** - `ConnectionManager` receiving masked password (FIXED in 2025-10-09)
+
+**Solution Steps:**
+
+1. **Login to Neo4j Aura Console:**
+   ```
+   https://neo4j.com/cloud/aura-free
+   ```
+
+2. **Check Instance Status:**
+   - Find your instance (e.g., `f5c57870.databases.neo4j.io`)
+   - If status shows "Paused" → Click "Resume" button
+   - Wait 30-60 seconds for instance to start
+
+3. **Reset Password (if needed):**
+   - Click instance → "Reset Password"
+   - Copy new password (shown only once!)
+   - Save to password manager
+
+4. **Update `.env` file:**
+   ```bash
+   NEO4J_URI=neo4j+s://YOUR_INSTANCE_ID.databases.neo4j.io
+   NEO4J_USER=neo4j  # MUST be "neo4j", NOT "Aura"
+   NEO4J_PASSWORD=YOUR_NEW_PASSWORD
+   NEO4J_DATABASE=neo4j
+   ```
+
+5. **Test Connection:**
+   ```bash
+   python scripts/init_neo4j.py
+   ```
+
+**Important Notes:**
+- Use URI scheme `neo4j+s://` (encryption embedded in URI)
+- Username is always `neo4j` for Aura instances
+- Free tier instances auto-pause after 3 days - resume before use
+
+**Diagnostic Tool:**
+Run the comprehensive connection test to identify specific issues:
+```bash
+python scripts/test_neo4j_connection.py
+```
+
+This will perform 7 validation steps and provide specific troubleshooting guidance.
+
+#### 4a. Configuration Masking Bug (FIXED 2025-10-09)
+
+**Error:** Neo4j authentication fails even with correct credentials
+
+**Root Cause:**
+The `Settings.to_dict()` method in `src/config/settings.py` was masking sensitive values (including `neo4j_password`) by replacing them with `"***MASKED***"` for security. When `ConnectionManager` called `get_config().dict()`, it received the masked password instead of the actual password, causing authentication to always fail.
+
+**Symptoms:**
+- Direct Neo4j driver test works (using `os.getenv()`)
+- `ConnectionManager` initialization fails with auth error
+- Password is correct in `.env` file
+- Simple scripts succeed, but ingestion pipeline fails
+
+**Diagnosis:**
+```python
+# Check if you have the fix
+from src.config import get_settings
+
+settings = get_settings()
+
+# This should show masked values (for logging safety)
+masked = settings.to_dict(mask_sensitive=True)
+print(f"Masked password: {masked['neo4j_password']}")  # Should be "***MASKED***"
+
+# This should show real values (for internal use)
+unmasked = settings.to_dict(mask_sensitive=False)
+print(f"Real password length: {len(unmasked['neo4j_password'])}")  # Should be actual length
+```
+
+**Solution:**
+This was fixed on 2025-10-09. Update to the latest code:
+
+1. **File: `src/config/settings.py:516-543`**
+   - Added `mask_sensitive` parameter to `to_dict()` method
+   - Defaults to `True` for logging safety
+   - Can be set to `False` for internal use
+
+2. **File: `src/agentic_rag/config.py:161`**
+   - Updated `Config.dict()` to use `mask_sensitive=False`
+   - Ensures `ConnectionManager` gets real credentials
+
+3. **Verify the fix:**
+   ```bash
+   # Should work now
+   python scripts/init_neo4j.py
+   ```
+
+**Impact:**
+- Security maintained: Logging still masks sensitive values
+- Internal code gets actual credentials: ConnectionManager can authenticate
+- No `.env` changes needed: Fix is in the code, not configuration
+
+#### 5. Document Ingestion Failing
 
 **Error:** Various errors during document ingestion
 
@@ -509,22 +639,22 @@ python test_db_connection.py
 # Check if databases are accessible
 python test_db_connection.py
 
-# Test with single document
+# Test with single document (using proper async pattern)
 python -c "
 import asyncio
 from pathlib import Path
 from src.agentic_rag.ingestion.pipeline import DocumentIngestionPipeline
 
 async def test():
-    pipeline = DocumentIngestionPipeline()
-    result = await pipeline.ingest_document(
-        content='Test content',
-        title='Test',
-        source='test.md'
-    )
-    print(f'Success: {result.success}')
-    print(f'Chunks: {result.chunks_created}')
-    print(f'Entities: {result.entities_extracted}')
+    async with DocumentIngestionPipeline() as pipeline:
+        result = await pipeline.ingest_document(
+            content='Test content',
+            title='Test',
+            source='test.md'
+        )
+        print(f'Success: {result.success}')
+        print(f'Chunks: {result.chunks_created}')
+        print(f'Entities: {result.entities_extracted}')
 
 asyncio.run(test())
 "

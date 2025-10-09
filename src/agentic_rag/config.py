@@ -155,10 +155,11 @@ class Config:
         Convert config to dictionary.
 
         Returns:
-            Configuration as dictionary
+            Configuration as dictionary with actual (unmasked) values for internal use
         """
         settings = get_settings()
-        return settings.to_dict()
+        # Use mask_sensitive=False for internal use (connection managers, etc.)
+        return settings.to_dict(mask_sensitive=False)
 
 
 # Global configuration instance (backward compatibility)

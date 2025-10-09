@@ -695,8 +695,18 @@ all_memories = await memory.get_all(user_id="user_123")
 
 3. **Initialize Knowledge Graph**
    ```bash
-   python -m src.agentic_rag.storage.neo4j_store init
+   # Use the dedicated initialization script
+   python scripts/init_neo4j.py
+
+   # Or test connection first
+   python scripts/test_neo4j_connection.py
    ```
+
+**Important Notes (Updated 2025-10-09):**
+- Configuration masking bug was fixed - Neo4j authentication now works correctly
+- Use `neo4j+s://` URI scheme for Aura instances (encryption embedded in URI)
+- Username must be `neo4j` (not "Aura" or your email)
+- See `docs/TROUBLESHOOTING.md` section 4a for config masking details if needed
 
 ### 3. Environment Configuration
 

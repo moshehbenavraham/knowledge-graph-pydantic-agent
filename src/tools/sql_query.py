@@ -59,7 +59,7 @@ async def execute_sql_query_tool(supabase: Client, sql_query: str) -> str:
                 )
 
         # Execute the query using the RPC function
-        result = supabase.rpc("execute_custom_sql", {"sql_query": sql_query}).execute()
+        result = supabase.rpc("execute_sql", {"query": sql_query}).execute()
 
         # Check for errors in the response
         if result.data and "error" in result.data:

@@ -82,7 +82,9 @@ class DocumentIngestionPipeline:
 
     def __init__(self, config: dict[str, Any] | None = None, use_rest_api: bool = False):
         """
-        Initialize ingestion pipeline.
+        Initialize ingestion pipeline (sync initialization only).
+
+        IMPORTANT: Call `await pipeline.initialize()` before using!
 
         Args:
             config: Optional configuration overrides
@@ -91,40 +93,20 @@ class DocumentIngestionPipeline:
         self.config = get_config()
         self.use_rest_api = use_rest_api
 
-        # Initialize storage - use REST API if forced or if PostgreSQL unavailable
-        if use_rest_api:
-            logger.info("Using Supabase REST API for storage (forced)")
-            from src.config import get_settings
+        # Storage components - will be initialized in async initialize()
+        self.connection_manager: ConnectionManager | None = None
+        self.pg_store = None
+        self.neo4j_store = None
+        self.graphiti_client = None
 
-            settings = get_settings()
-            self.pg_store = SupabaseRestStore(settings.supabase_url, settings.supabase_service_key)
-            self.connection_manager = None
-        else:
-            logger.info("Initializing direct PostgreSQL connection")
-            self.connection_manager = ConnectionManager()
-            self.pg_store = PostgresStore(self.connection_manager)
-
-        # Initialize Neo4j if enabled (skip for REST-only mode)
-        if not use_rest_api and self.config.performance.enable_graph:
-            self.neo4j_store = Neo4jStore(self.connection_manager)
-            self.graphiti_client = GraphitiClient(self.neo4j_store)
-        else:
-            if use_rest_api:
-                logger.info("Skipping Neo4j initialization (REST API mode)")
-            self.neo4j_store = None
-            self.graphiti_client = None
-
-        # Configure chunking
+        # Processing components - can be initialized synchronously
         self.chunking_config = get_chunking_config()
         if self.chunking_config.get("use_semantic_splitting"):
             self.chunker = SemanticChunker(self.chunking_config)
         else:
             self.chunker = SimpleChunker(self.chunking_config)
 
-        # Configure embedding
         self.embedder = EmbeddingGenerator(get_embedding_config())
-
-        # Configure extraction
         self.extractor = KnowledgeExtractor()
 
         # Statistics
@@ -135,6 +117,68 @@ class DocumentIngestionPipeline:
             "facts_extracted": 0,
             "errors": 0,
         }
+
+        self._initialized = False
+
+    async def initialize(self):
+        """
+        Async initialization of storage connections.
+
+        CRITICAL: This MUST be called before using the pipeline!
+        """
+        if self._initialized:
+            logger.warning("Pipeline already initialized")
+            return
+
+        # Initialize storage - use REST API if forced or if PostgreSQL unavailable
+        if self.use_rest_api:
+            logger.info("Using Supabase REST API for storage (forced)")
+            from src.config import get_settings
+
+            settings = get_settings()
+            self.pg_store = SupabaseRestStore(settings.supabase_url, settings.supabase_service_key)
+            self.connection_manager = None
+        else:
+            logger.info("Initializing direct PostgreSQL and Neo4j connections")
+            self.connection_manager = ConnectionManager()
+
+            # CRITICAL FIX: Initialize the ConnectionManager!
+            await self.connection_manager.initialize()
+            logger.info("✅ ConnectionManager initialized successfully")
+
+            self.pg_store = PostgresStore(self.connection_manager)
+
+        # Initialize Neo4j if enabled (skip for REST-only mode)
+        if not self.use_rest_api and self.config.performance.enable_graph:
+            self.neo4j_store = Neo4jStore(self.connection_manager)
+            self.graphiti_client = GraphitiClient(self.neo4j_store)
+            logger.info("✅ Neo4j and Graphiti initialized")
+        else:
+            if self.use_rest_api:
+                logger.info("Skipping Neo4j initialization (REST API mode)")
+            else:
+                logger.info("Skipping Neo4j initialization (ENABLE_GRAPH=false)")
+            self.neo4j_store = None
+            self.graphiti_client = None
+
+        self._initialized = True
+        logger.info("✅ Ingestion pipeline fully initialized")
+
+    async def close(self):
+        """Close all connections gracefully."""
+        if self.connection_manager:
+            await self.connection_manager.close()
+            logger.info("Connections closed")
+
+    async def __aenter__(self):
+        """Async context manager entry."""
+        await self.initialize()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Async context manager exit."""
+        await self.close()
+        return False  # Don't suppress exceptions
 
     async def ingest_document(
         self, content: str, title: str, source: str, metadata: dict[str, Any] | None = None

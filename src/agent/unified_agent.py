@@ -26,7 +26,6 @@ from httpx import AsyncClient
 from openai import AsyncOpenAI
 from pydantic_ai import Agent, RunContext
 
-from src.agentic_rag.search.intent_analyzer import IntentAnalyzer, SearchIntent
 from src.clients.llm import get_model
 from src.config.agent import agent_config
 from src.tools import (
@@ -38,6 +37,7 @@ from src.tools import (
     retrieve_relevant_documents_tool,
     web_search_tool,
 )
+from src.tools.rag import graph_query_tool, smart_search_tool
 from supabase.client import Client
 
 # Load environment
@@ -101,12 +101,31 @@ Core Principles:
 - Acknowledge limitations when information is incomplete
 
 Tool Selection Strategy:
-- **Factual queries**: Use smart_search for intelligent routing
-- **Data analysis**: Use SQL for structured data, code execution for calculations
-- **Current events**: Use web_search for real-time information
-- **Visual content**: Use image_analysis for images
-- **Document exploration**: Use list_documents and get_document_content
-- **Complex queries**: Combine multiple tools for comprehensive answers
+
+**Search & Retrieval:**
+- **smart_search** (PRIMARY): Use for most queries - automatically selects best strategy
+  - Handles semantic search, entity queries, temporal queries, relationships
+  - Returns chunks + entities + facts with intent analysis
+  - Examples: "What does X say about Y?", "Find documents about Z"
+
+- **retrieve_documents**: Simple vector search for straightforward content retrieval
+  - Use when you just need similar content without graph context
+  - Faster than smart_search but less comprehensive
+
+- **query_knowledge_graph**: Direct graph queries for entity exploration
+  - Use for: "How is X related to Y?", "What facts do we have about Z?"
+  - Requires entity names, returns facts and relationships
+  - Only works when knowledge graph is enabled
+
+- **list_all_documents**: Get inventory of available documents
+- **get_full_document**: Retrieve complete document by ID
+
+**Other Tools:**
+- **search_web**: Real-time information from the internet (current events)
+- **execute_sql** / **query_tabular_data**: Analyze uploaded CSV/Excel datasets
+- **analyze_image**: Extract information from images using vision models
+- **execute_python_code**: Calculations, data transformation, algorithms
+- **comprehensive_search**: Parallel multi-strategy search for complex queries
 
 Response Format:
 - Start with a direct answer when possible
@@ -135,93 +154,89 @@ def add_memories(ctx: RunContext[UnifiedAgentDeps]) -> str:
 
 
 # ========== Smart Search Tool (Intelligent Routing) ==========
-# Initialize intent analyzer (reused across calls for better performance)
-_intent_analyzer = IntentAnalyzer()
-
-
 @super_agent.tool
-async def smart_search(ctx: RunContext[UnifiedAgentDeps], query: str) -> dict[str, Any]:
+async def smart_search(
+    ctx: RunContext[UnifiedAgentDeps], query: str, limit: int = 10
+) -> dict[str, Any]:
     """
-    Intelligent search that analyzes intent and routes to optimal strategy.
+    Intelligent search using the full Agentic RAG stack.
 
-    This is the primary search tool that orchestrates:
-    - Vector search for semantic similarity
-    - Graph search for relationships and entities
-    - Hybrid search for comprehensive results
+    This is the PRIMARY search tool that automatically:
+    - Analyzes query intent (semantic, entity, temporal, relationship)
+    - Selects optimal strategy (vector, graph, hybrid)
+    - Combines results from multiple sources
+    - Returns comprehensive results with entities and facts
 
-    Automatically selects the best approach based on query analysis.
+    Use this for most search queries - it will intelligently route to the best approach.
+
+    Args:
+        query: User's search query
+        limit: Maximum number of results (default 10)
+
+    Returns:
+        Rich search results with chunks, entities, facts, and metadata
     """
-    logger.info(f"Smart search for: {query}")
+    logger.info(f"Smart search (Agentic RAG) for: {query}")
 
-    # Use IntentAnalyzer for sophisticated intent detection
-    intent_result = _intent_analyzer.analyze(query)
+    try:
+        # Use the new smart_search_tool from rag.py
+        result = await smart_search_tool(user_query=query, analyze_intent=True, limit=limit)
+        return result
 
-    results = {
-        "query": query,
-        "intent": intent_result.primary_intent.value,
-        "confidence": intent_result.confidence,
-        "entities": intent_result.entities_mentioned,
-        "strategy": "hybrid",
-        "results": [],
-    }
+    except Exception as e:
+        logger.error(f"Smart search failed: {e}")
+        return {
+            "query": query,
+            "error": str(e),
+            "chunks": [],
+            "entities": [],
+            "facts": [],
+        }
 
-    # Route based on analyzed intent
-    if intent_result.primary_intent == SearchIntent.GRAPH_HEAVY:
-        results["strategy"] = "graph_focused"
-        logger.info(f"Using graph-focused strategy (confidence: {intent_result.confidence:.2f})")
-        # Would call graph search here if implemented
-        # For now, fall back to vector search
-        vector_results = await retrieve_relevant_documents_tool(
-            ctx.deps.supabase, ctx.deps.embedding_client, query
-        )
-        results["results"] = vector_results
 
-    elif intent_result.primary_intent == SearchIntent.VECTOR_HEAVY:
-        results["strategy"] = "vector_focused"
-        logger.info(f"Using vector-focused strategy (confidence: {intent_result.confidence:.2f})")
-        # Call vector search
-        vector_results = await retrieve_relevant_documents_tool(
-            ctx.deps.supabase, ctx.deps.embedding_client, query
-        )
-        results["results"] = vector_results
+# ========== Graph Query Tool ==========
+@super_agent.tool
+async def query_knowledge_graph(
+    ctx: RunContext[UnifiedAgentDeps],
+    entity_name: str,
+    query_type: str = "entity_facts",
+    limit: int = 10,
+) -> dict[str, Any]:
+    """
+    Query the knowledge graph directly for entity and relationship exploration.
 
-    elif intent_result.primary_intent == SearchIntent.ENTITY_FOCUSED:
-        results["strategy"] = "entity_focused"
-        logger.info(f"Entity-focused search for: {intent_result.entities_mentioned}")
-        # Entity-specific search
-        vector_results = await retrieve_relevant_documents_tool(
-            ctx.deps.supabase, ctx.deps.embedding_client, query
-        )
-        results["results"] = vector_results
+    Use when you need to:
+    - Find relationships between entities ("How is X related to Y?")
+    - Get facts about specific entities ("Tell me about OpenAI")
+    - Explore temporal information ("What happened with X in 2024?")
+    - Discover entity connections
 
-    elif intent_result.primary_intent == SearchIntent.TEMPORAL:
-        results["strategy"] = "temporal_focused"
-        logger.info(f"Temporal search with markers: {intent_result.temporal_markers}")
-        # Timeline/history search
-        vector_results = await retrieve_relevant_documents_tool(
-            ctx.deps.supabase, ctx.deps.embedding_client, query
-        )
-        results["results"] = vector_results
+    Query types:
+    - entity_facts: Get all facts about an entity
+    - entity_relationships: Get relationships for an entity
+    - temporal_facts: Get facts in chronological order
 
-    else:  # HYBRID or default
-        results["strategy"] = "hybrid"
-        logger.info(f"Using hybrid strategy (intent: {intent_result.primary_intent.value})")
-        # Default to hybrid approach for comprehensive coverage
-        try:
-            # Parallel execution of vector and graph search
-            vector_task = retrieve_relevant_documents_tool(
-                ctx.deps.supabase, ctx.deps.embedding_client, query
-            )
+    Args:
+        entity_name: Name of the entity to query
+        query_type: Type of graph query to perform
+        limit: Maximum number of results
 
-            # For now, just use vector search (graph search would be added when available)
-            vector_results = await vector_task
-            results["results"] = vector_results
+    Returns:
+        Dictionary with facts, entities, and relationships from the graph
+    """
+    logger.info(f"Graph query for entity: {entity_name}, type: {query_type}")
 
-        except Exception as e:
-            logger.error(f"Smart search failed: {e}")
-            results["error"] = str(e)
+    try:
+        result = await graph_query_tool(entity_name=entity_name, query_type=query_type, limit=limit)
+        return result
 
-    return results
+    except Exception as e:
+        logger.error(f"Graph query failed: {e}")
+        return {
+            "entity": entity_name,
+            "query_type": query_type,
+            "error": str(e),
+        }
 
 
 # ========== Core RAG Tools ==========
@@ -396,6 +411,46 @@ async def execute_python_code(ctx: RunContext[UnifiedAgentDeps], code: str) -> s
     """
     logger.info(f"Executing Python code: {code[:100]}...")
     return execute_safe_code_tool(code)
+
+
+# ========== SQL Query Tool ==========
+@super_agent.tool
+async def query_tabular_data(ctx: RunContext[UnifiedAgentDeps], sql_query: str) -> str:
+    """
+    Execute SQL queries on uploaded CSV/Excel datasets stored in document_rows table.
+
+    **IMPORTANT**: First use list_documents to find CSV/Excel files and their dataset_ids.
+    Then query the document_rows table using the dataset_id.
+
+    The document_rows table structure:
+    - dataset_id: UUID of the parent document (get from list_documents)
+    - row_data: JSONB containing all column data
+    - row_index: Original row number
+
+    Query pattern for CSV data:
+    ```sql
+    SELECT
+        row_data->>'column_name' as column_name,
+        SUM((row_data->>'sales')::float) as total
+    FROM document_rows
+    WHERE dataset_id = 'uuid-from-list-documents'
+    GROUP BY row_data->>'column_name'
+    ```
+
+    Use for:
+    - Analyzing uploaded CSV/Excel files
+    - Aggregations (SUM, AVG, COUNT, etc.)
+    - Filtering and grouping tabular data
+    - Statistical analysis
+
+    Args:
+        sql_query: READ-ONLY SQL query (SELECT statements only)
+
+    Returns:
+        JSON formatted query results
+    """
+    logger.info("Executing SQL query on tabular data")
+    return await execute_sql_query_tool(ctx.deps.supabase, sql_query)
 
 
 # ========== Advanced Search Tools ==========

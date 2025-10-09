@@ -60,16 +60,27 @@ logger = configure_logging()
 def _get_or_create_metric(
     metric_class, name, description, labelnames=None, buckets=None, registry=REGISTRY
 ):
-    """Get existing metric or create new one to avoid duplicates."""
-    # Try to find existing collector
+    """Get existing metric or create new one to avoid duplicates.
+
+    This function is essential for Streamlit compatibility where module reloading
+    would otherwise cause Prometheus metric re-registration errors.
+    """
+    # First, comprehensively check if the metric already exists
     try:
+        # Method 1: Check _collector_to_names registry
         for collector in list(registry._collector_to_names.keys()):
-            # Check various name attributes that different metric types use
-            collector_name = getattr(collector, "_name", None) or getattr(collector, "name", None)
+            collector_name = getattr(collector, "_name", None)
             if collector_name == name:
                 return collector
-    except (AttributeError, KeyError):
-        pass
+
+        # Method 2: Check _names_to_collectors registry (reverse lookup)
+        if hasattr(registry, "_names_to_collectors"):
+            for registered_name, collector in registry._names_to_collectors.items():
+                if registered_name == name:
+                    return collector
+    except (AttributeError, KeyError, RuntimeError) as e:
+        # Registry might be changing during iteration, continue to creation
+        logger.debug(f"Error checking for existing metric {name}: {e}")
 
     # Create new metric
     kwargs = {"name": name, "documentation": description, "registry": registry}
@@ -81,16 +92,30 @@ def _get_or_create_metric(
     try:
         return metric_class(**kwargs)
     except ValueError as e:
-        # Metric already registered (happens with Streamlit reloads)
-        # Find and return the existing metric
-        if "Duplicated timeseries" in str(e):
+        # Metric already exists - this is the Streamlit reload scenario
+        error_msg = str(e)
+        if "Duplicated" in error_msg:
+            # Try one more time to find it with a more thorough search
             for collector in list(registry._collector_to_names.keys()):
-                collector_name = getattr(collector, "_name", None) or getattr(
-                    collector, "name", None
-                )
-                if collector_name == name:
-                    return collector
-        # If we still can't find it, re-raise the error
+                # Check all possible name attributes
+                for attr in ["_name", "name", "_metric_name"]:
+                    collector_name = getattr(collector, attr, None)
+                    if collector_name == name:
+                        return collector
+
+            # If still not found, this is likely a partial registration issue
+            # Return None and let calling code handle it gracefully
+            logger.error(
+                f"Metric '{name}' collision detected but cannot retrieve existing instance. "
+                f"Error: {error_msg}"
+            )
+            # Rather than crash, we'll re-raise with a more helpful message
+            raise RuntimeError(
+                f"Prometheus metric '{name}' registration conflict. "
+                f"This usually happens during Streamlit hot-reload. "
+                f"Try restarting the Streamlit server completely. Original error: {error_msg}"
+            ) from e
+        # Re-raise other ValueErrors
         raise
 
 

@@ -37,9 +37,15 @@ async def ingest_directory(pipeline: DocumentIngestionPipeline, directory: Path)
     Ingest all markdown files from a directory.
 
     Args:
-        pipeline: DocumentIngestionPipeline instance
+        pipeline: DocumentIngestionPipeline instance (must be initialized)
         directory: Directory containing documents
     """
+    # Ensure pipeline is initialized
+    if not pipeline._initialized:
+        raise RuntimeError(
+            "Pipeline not initialized! Call await pipeline.initialize() first or use async with."
+        )
+
     # Find all markdown files
     md_files = list(directory.glob("**/*.md"))
 
@@ -107,7 +113,7 @@ async def ingest_directory(pipeline: DocumentIngestionPipeline, directory: Path)
 
 
 async def main():
-    """Main CLI entry point."""
+    """Main CLI entry point with proper async initialization."""
     parser = argparse.ArgumentParser(description="Document ingestion pipeline")
     parser.add_argument(
         "command",
@@ -117,7 +123,7 @@ async def main():
     parser.add_argument(
         "--path",
         type=str,
-        default="docs/example_big_tech_docs_for_ingestion_testing",
+        default="docs/example_docs",
         help="Path to directory containing documents",
     )
     parser.add_argument(
@@ -143,24 +149,6 @@ async def main():
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
 
-    # Initialize pipeline - try PostgreSQL first, fallback to REST API on failure
-    logger.info("Initializing ingestion pipeline...")
-
-    if args.rest_api:
-        # User explicitly requested REST API
-        logger.info("→ Using Supabase REST API (forced by --rest-api flag)")
-        pipeline = DocumentIngestionPipeline(use_rest_api=True)
-    else:
-        # Try PostgreSQL first, fallback to REST API on connection failure
-        logger.info("→ Attempting direct PostgreSQL connection...")
-        try:
-            pipeline = DocumentIngestionPipeline(use_rest_api=False)
-            logger.info("✅ PostgreSQL mode initialized (will test connection on first query)")
-        except Exception as e:
-            logger.warning(f"⚠️  PostgreSQL initialization failed: {e}")
-            logger.info("→ Falling back to Supabase REST API...")
-            pipeline = DocumentIngestionPipeline(use_rest_api=True)
-
     if args.command == "ingest":
         # Resolve path
         path = Path(args.path)
@@ -172,10 +160,40 @@ async def main():
             logger.error(f"Path is not a directory: {path}")
             sys.exit(1)
 
-        # Run ingestion
-        await ingest_directory(pipeline, path)
+        # Initialize pipeline with proper async pattern
+        logger.info("Initializing ingestion pipeline...")
 
-        logger.info("\nIngestion complete!")
+        if args.rest_api:
+            # User explicitly requested REST API
+            logger.info("→ Using Supabase REST API (forced by --rest-api flag)")
+            use_rest_api = True
+        else:
+            # Try PostgreSQL + Neo4j (full Agentic RAG)
+            logger.info("→ Attempting direct PostgreSQL + Neo4j connections...")
+            use_rest_api = False
+
+        # Use async context manager for automatic cleanup
+        try:
+            async with DocumentIngestionPipeline(use_rest_api=use_rest_api) as pipeline:
+                logger.info("✅ Pipeline initialized successfully")
+
+                # Run ingestion
+                await ingest_directory(pipeline, path)
+
+                logger.info("\n✅ Ingestion complete!")
+
+        except Exception as e:
+            if not use_rest_api:
+                # PostgreSQL failed, fallback to REST API
+                logger.warning(f"⚠️  PostgreSQL initialization failed: {e}")
+                logger.info("→ Falling back to Supabase REST API...")
+
+                async with DocumentIngestionPipeline(use_rest_api=True) as pipeline:
+                    logger.info("✅ Pipeline initialized with REST API fallback")
+                    await ingest_directory(pipeline, path)
+                    logger.info("\n✅ Ingestion complete!")
+            else:
+                raise
 
 
 if __name__ == "__main__":

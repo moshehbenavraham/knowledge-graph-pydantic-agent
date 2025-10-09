@@ -158,19 +158,32 @@ class ConnectionManager:
     async def _init_neo4j(self):
         """Initialize Neo4j driver with connection pooling."""
         try:
+            neo4j_uri = self.config["neo4j_uri"]
+
+            # Build driver config
+            driver_config = {
+                "max_connection_pool_size": self.config.get("neo4j_pool_size", 50),
+                "connection_acquisition_timeout": 30,
+                "max_transaction_retry_time": 30,
+                "database": self.config.get("neo4j_database", "neo4j"),
+                "connection_timeout": 30.0,
+                "keep_alive": True,
+            }
+
+            # Only add encryption settings if using basic URIs (bolt://, neo4j://)
+            # For neo4j+s:// or bolt+s://, encryption is in the URI itself
+            if "+s" not in neo4j_uri and "+ssc" not in neo4j_uri:
+                from neo4j import TrustSystemCAs
+
+                # Only add encryption config for basic URIs
+                if self.config.get("neo4j_encrypted", False):
+                    driver_config["encrypted"] = True
+                    driver_config["trusted_certificates"] = TrustSystemCAs()
+
             self.neo4j_driver = AsyncGraphDatabase.driver(
-                self.config["neo4j_uri"],
+                neo4j_uri,
                 auth=(self.config["neo4j_user"], self.config["neo4j_password"]),
-                max_connection_pool_size=self.config.get("neo4j_pool_size", 50),
-                connection_acquisition_timeout=30,
-                max_transaction_retry_time=30,
-                encrypted=self.config.get("neo4j_encrypted", True),
-                trusted_certificates=self.config.get("neo4j_trusted_certs"),
-                database=self.config.get("neo4j_database", "neo4j"),
-                # Connection pool configuration
-                connection_timeout=30.0,
-                keep_alive=True,
-                resolver=None,  # Use default resolver
+                **driver_config,
             )
 
             # Verify connectivity
@@ -216,8 +229,18 @@ class ConnectionManager:
         """
         Get PostgreSQL connection from pool with circuit breaker.
         """
+        # Check if pool is initialized
+        if self.pg_pool is None:
+            raise ConnectionError(
+                "PostgreSQL pool not initialized. "
+                "Call await connection_manager.initialize() first."
+            )
+
         if not self._check_circuit_breaker("pg"):
-            raise ConnectionError("PostgreSQL circuit breaker is open")
+            raise ConnectionError(
+                f"PostgreSQL circuit breaker is {self.pg_state.value}. "
+                f"Last error: {self.pg_metrics.last_error}"
+            )
 
         start_time = asyncio.get_event_loop().time()
 
@@ -230,6 +253,7 @@ class ConnectionManager:
             if self.pg_state == ConnectionState.HALF_OPEN:
                 self.pg_failures = 0
                 self.pg_state = ConnectionState.OPEN
+                logger.info("PostgreSQL circuit breaker closed - connection recovered")
 
         except Exception as e:
             self._record_failure("pg", e)
@@ -245,8 +269,18 @@ class ConnectionManager:
         """
         Get Neo4j session with circuit breaker.
         """
+        # Check if driver is initialized
+        if self.neo4j_driver is None:
+            raise ConnectionError(
+                "Neo4j driver not initialized. "
+                "Call await connection_manager.initialize() first or set ENABLE_GRAPH=true."
+            )
+
         if not self._check_circuit_breaker("neo4j"):
-            raise ConnectionError("Neo4j circuit breaker is open")
+            raise ConnectionError(
+                f"Neo4j circuit breaker is {self.neo4j_state.value}. "
+                f"Last error: {self.neo4j_metrics.last_error}"
+            )
 
         start_time = asyncio.get_event_loop().time()
 
@@ -259,6 +293,7 @@ class ConnectionManager:
             if self.neo4j_state == ConnectionState.HALF_OPEN:
                 self.neo4j_failures = 0
                 self.neo4j_state = ConnectionState.OPEN
+                logger.info("Neo4j circuit breaker closed - connection recovered")
 
         except Exception as e:
             self._record_failure("neo4j", e)
@@ -417,6 +452,16 @@ class ConnectionManager:
 
         await asyncio.gather(*close_tasks, return_exceptions=True)
         logger.info("All connections closed")
+
+    async def __aenter__(self):
+        """Async context manager entry - initialize connections."""
+        await self.initialize()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Async context manager exit - close connections."""
+        await self.close()
+        return False  # Don't suppress exceptions
 
 
 # Global connection manager instance
