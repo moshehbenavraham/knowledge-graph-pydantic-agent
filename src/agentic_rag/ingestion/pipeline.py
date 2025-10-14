@@ -442,57 +442,59 @@ class DocumentIngestionPipeline:
             chunk_ids: Chunk IDs
         """
         try:
-            # Aggregate all entities
-            entity_map = {}  # name -> entity_id
-
+            # Process each chunk's extractions
             for result, chunk_id in zip(extraction_results, chunk_ids, strict=False):
-                for entity in result["entities"]:
-                    if entity.name not in entity_map:
-                        # Store entity in Neo4j (name and type only)
-                        entity_id = await self.neo4j_store.create_entity(
-                            name=entity.name,
-                            entity_type=(
+                # Prepare entities for batch insert
+                if result["entities"]:
+                    entity_dicts = [
+                        {
+                            "name": entity.name,
+                            "type": (
                                 entity.type.value if hasattr(entity.type, "value") else entity.type
                             ),
-                            chunk_refs=[str(chunk_id)],
-                            confidence=entity.confidence,
-                        )
-                        entity_map[entity.name] = entity_id
-                    else:
-                        # Update existing entity with new chunk reference
-                        await self.neo4j_store.add_chunk_reference(
-                            entity_map[entity.name], str(chunk_id)
-                        )
-
-            # Store relationships
-            for result, chunk_id in zip(extraction_results, chunk_ids, strict=False):
-                for rel in result["relationships"]:
-                    if rel.source in entity_map and rel.target in entity_map:
-                        await self.neo4j_store.create_relationship(
-                            source_id=entity_map[rel.source],
-                            target_id=entity_map[rel.target],
-                            rel_type=rel.type.value if hasattr(rel.type, "value") else rel.type,
-                            properties={
-                                "confidence": rel.confidence,
-                                "source_chunk": str(chunk_id),
-                                "temporal_marker": rel.temporal_marker,
-                            },
-                        )
-
-            # Store facts as episodes (via Graphiti)
-            for result, chunk_id in zip(extraction_results, chunk_ids, strict=False):
-                for fact in result["facts"]:
-                    # Get entity IDs for fact
-                    fact_entity_ids = [
-                        entity_map[name] for name in fact.entities if name in entity_map
+                        }
+                        for entity in result["entities"]
                     ]
-
-                    await self.graphiti_client.add_episode(
-                        content=fact.text[:500],  # Enforce limit
-                        timestamp=fact.timestamp or datetime.now(),
-                        entity_ids=fact_entity_ids,
-                        source_id=str(chunk_id),
+                    # Add entities in batch
+                    await self.neo4j_store.add_entities(
+                        entities=entity_dicts, source_chunk_id=str(chunk_id)
                     )
+
+                # Prepare relationships for batch insert
+                if result["relationships"]:
+                    relationship_dicts = [
+                        {
+                            "source": rel.source,
+                            "target": rel.target,
+                            "type": rel.type.value if hasattr(rel.type, "value") else rel.type,
+                            "confidence": rel.confidence,
+                            "temporal_marker": rel.temporal_marker,
+                        }
+                        for rel in result["relationships"]
+                    ]
+                    # Add relationships in batch
+                    await self.neo4j_store.add_relationships(
+                        relationships=relationship_dicts, source_chunk_id=str(chunk_id)
+                    )
+
+                # Store facts as episodes
+                if result["facts"]:
+                    # Collect all facts for this chunk
+                    fact_texts = [fact.text[:500] for fact in result["facts"]]
+                    # Extract entity names from facts
+                    fact_entity_names = []
+                    for fact in result["facts"]:
+                        fact_entity_names.extend(fact.entities)
+
+                    # Add episodes to Neo4j
+                    await self.neo4j_store.add_episodes(
+                        facts=fact_texts,
+                        entity_ids=list(set(fact_entity_names)),  # Deduplicate
+                        source_chunk_id=str(chunk_id),
+                        source_document_id=str(document_id),
+                    )
+
+            logger.info(f"Updated knowledge graph for document {document_id}")
 
         except Exception as e:
             logger.error(f"Failed to update knowledge graph: {e}")

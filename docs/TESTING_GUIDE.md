@@ -415,7 +415,47 @@ pytest tests/ -v
 
 # Run RAG-specific tests
 pytest tests/rag_pipeline/ -v
+
+# Run Phase 1 infrastructure tests (requires real databases)
+unset TESTING  # Use real environment, not test overrides
+pytest tests/test_phase1_infrastructure.py -v --no-cov
+
+# Run integration tests only
+pytest tests/integration/ -v
 ```
+
+### Event Loop Configuration (IMPORTANT for async tests)
+
+**Issue Resolved (2025-10-13)**: If you encounter `RuntimeError: Task attached to a different loop` errors when running async tests, the following configuration is required:
+
+**Required Configuration:**
+
+1. **`pyproject.toml`** - Add these settings:
+   ```toml
+   [tool.pytest.ini_options]
+   asyncio_default_fixture_loop_scope = "module"
+   asyncio_mode = "auto"
+   ```
+
+2. **Test files with async database operations** - Use module-scoped loop:
+   ```python
+   @pytest.mark.asyncio(loop_scope="module")
+   class TestDatabaseOperations:
+       async def test_something(self):
+           # Your test here
+   ```
+
+3. **`conftest.py`** - Module-scoped event loop fixture:
+   ```python
+   @pytest.fixture(scope="module")
+   def event_loop():
+       loop = asyncio.new_event_loop()
+       asyncio.set_event_loop(loop)
+       yield loop
+       loop.close()
+   ```
+
+**Why This Matters**: asyncpg connection pools bind to the event loop at creation time. If tests run in different loops than where the pool was created, you'll get "Task attached to a different loop" errors. Module-scoped loops ensure the pool and tests share the same loop.
 
 ### Performance Profiling
 ```bash

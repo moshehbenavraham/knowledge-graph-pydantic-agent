@@ -122,7 +122,7 @@ class GraphSearch:
         self.config = get_config()
         self.connection_manager = connection_manager or ConnectionManager()
         self.neo4j_store = Neo4jStore(self.connection_manager)
-        self.graphiti_client = GraphitiClient()
+        self.graphiti_client = GraphitiClient(self.neo4j_store)
 
         self._stats = {
             "searches": 0,
@@ -353,8 +353,8 @@ class GraphSearch:
 
             entity_id = result[0]["entity_id"]
 
-            # Get timeline from Graphiti
-            facts = await self.graphiti_client.get_entity_timeline(entity_id, limit=limit)
+            # Get timeline from Neo4j
+            facts = await self.neo4j_store.get_entity_timeline(entity_id, limit=limit)
 
             return [
                 GraphFact(

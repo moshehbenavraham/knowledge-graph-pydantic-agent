@@ -113,7 +113,7 @@ async def demo_advanced_features():
     print("-" * 40)
 
     result = await super_agent.run(complex_query, deps=deps)
-    print(f"✅ Response: {result.data}")
+    print(f"✅ Response: {result.output}")
 
     # Demonstrate smart search routing
     relationship_query = "What is the relationship between OpenAI and Microsoft?"
@@ -122,7 +122,7 @@ async def demo_advanced_features():
     print("-" * 40)
 
     result = await super_agent.run(relationship_query, deps=deps)
-    print(f"✅ Response: {result.data}")
+    print(f"✅ Response: {result.output}")
 
     await http_client.aclose()
 
@@ -162,7 +162,7 @@ async def demo_tool_specific():
 
         try:
             result = await super_agent.run(query, deps=deps)
-            print(f"✅ Success: {str(result.data)[:200]}...")
+            print(f"✅ Success: {str(result.output)[:200]}...")
         except Exception as e:
             print(f"❌ Error: {e}")
 

@@ -103,6 +103,11 @@ class ConnectionManager:
     async def _init_postgresql(self):
         """Initialize PostgreSQL connection pool with optimized settings."""
         try:
+            # Get current event loop to bind the pool to
+            import asyncio
+
+            loop = asyncio.get_running_loop()
+
             self.pg_pool = await asyncpg.create_pool(
                 dsn=self.config["database_url"],
                 min_size=self.config.get("pg_pool_min", 5),
@@ -119,6 +124,7 @@ class ConnectionManager:
                     "lock_timeout": "10s",
                     "idle_in_transaction_session_timeout": "60s",
                 },
+                loop=loop,  # Explicitly bind to current event loop
             )
 
             self.pg_state = ConnectionState.OPEN

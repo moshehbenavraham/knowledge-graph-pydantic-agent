@@ -45,12 +45,19 @@ class PostgresStore:
             # Prepare batch insert data
             insert_data = []
             for i, chunk in enumerate(chunks):
+                # Convert embeddings to PostgreSQL vector format
+                emb_1536 = chunk.get("embedding_1536")
+                emb_768 = chunk.get("embedding_768")
+                # PostgreSQL vector expects string format like '[1.0, 2.0, 3.0]'
+                emb_1536_str = f"[{','.join(map(str, emb_1536))}]" if emb_1536 else None
+                emb_768_str = f"[{','.join(map(str, emb_768))}]" if emb_768 else None
+
                 insert_data.append(
                     (
                         document_id,
                         chunk["content"],
-                        chunk.get("embedding_1536"),
-                        chunk.get("embedding_768"),
+                        emb_1536_str,
+                        emb_768_str,
                         i,  # chunk_index
                         chunk.get("start_char", i * 1000),
                         chunk.get("end_char", (i + 1) * 1000),

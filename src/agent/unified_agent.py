@@ -611,7 +611,7 @@ async def run_unified_agent(
         return {
             "status": "success",
             "query": query,
-            "response": result.data,
+            "response": result.output,
             "metadata": {
                 "session_id": session_id,
                 "user_id": user_id,

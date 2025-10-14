@@ -1,3 +1,4 @@
+import asyncio
 import os
 from unittest.mock import MagicMock
 
@@ -61,6 +62,87 @@ pytest_plugins = ["pytest_asyncio"]
 # Mark all async tests with asyncio by default
 def pytest_configure(config):
     config.addinivalue_line("markers", "asyncio: mark test as requiring asyncio")
+
+
+# Configure pytest-asyncio to use module-scoped event loops
+@pytest.fixture(scope="module")
+def event_loop():
+    """
+    Create a module-scoped event loop for async tests.
+
+    This ensures all tests in a module share the same event loop,
+    avoiding "Event loop is closed" and "Task attached to different loop" errors.
+    """
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    yield loop
+    # Cleanup: close the loop after all tests in the module
+    try:
+        loop.close()
+    except Exception as e:
+        print(f"Warning: Error closing event loop: {e}")
+
+
+@pytest.fixture(scope="module")
+async def connection_manager_module(event_loop):
+    """
+    Module-scoped connection manager for tests.
+
+    This creates a fresh connection manager for each test module,
+    avoiding event loop conflicts between test files.
+    """
+    # Reset global singleton to ensure clean state
+    import src.agentic_rag.storage.connection_manager as cm_module
+    from src.agentic_rag.storage.connection_manager import ConnectionManager
+
+    cm_module._connection_manager = None
+
+    # Create and initialize connection manager in the current event loop
+    manager = ConnectionManager()
+    await manager.initialize()
+
+    yield manager
+
+    # Cleanup: close connections after all tests in the module
+    try:
+        await manager.close()
+    except Exception as e:
+        print(f"Warning: Error closing connection manager: {e}")
+
+    # Reset global singleton again
+    cm_module._connection_manager = None
+
+
+@pytest.fixture
+async def connection_manager(connection_manager_module):
+    """
+    Function-scoped connection manager fixture.
+
+    Reuses the module-scoped connection manager but ensures
+    it's in a good state for each test.
+    """
+    # Verify connection manager is in good state
+    manager = connection_manager_module
+
+    # Reset circuit breaker state before each test
+    from src.agentic_rag.storage.connection_manager import ConnectionState
+
+    manager.pg_state = ConnectionState.OPEN
+    manager.neo4j_state = ConnectionState.OPEN
+    manager.pg_failures = 0
+    manager.neo4j_failures = 0
+
+    yield manager
+
+    # No cleanup needed here - handled by module fixture
+
+
+@pytest.fixture(scope="session")
+def test_database_url():
+    """Provide test database URL."""
+    return os.getenv(
+        "DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/agentic_rag_test"
+    )
 
 
 @pytest.fixture
