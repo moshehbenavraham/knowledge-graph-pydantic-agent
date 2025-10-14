@@ -244,10 +244,19 @@ class VectorSearch:
             LIMIT $4
             """  # nosec B608
 
+            # Convert embedding to PostgreSQL vector format
+            # asyncpg needs vector as string format: "[1.0,2.0,3.0]"
+            if isinstance(query_embedding, str):
+                # Already in string format (from DB)
+                embedding_str = query_embedding
+            else:
+                # Convert list to string format
+                embedding_str = "[" + ",".join(str(x) for x in query_embedding) + "]"
+
             # Execute query
             rows = await conn.fetch(
                 query,
-                query_embedding,
+                embedding_str,
                 similarity_threshold,
                 json.dumps(filters) if filters else None,
                 limit,

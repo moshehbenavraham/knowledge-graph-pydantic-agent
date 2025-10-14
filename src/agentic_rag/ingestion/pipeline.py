@@ -443,61 +443,86 @@ class DocumentIngestionPipeline:
         """
         try:
             # Process each chunk's extractions
-            for result, chunk_id in zip(extraction_results, chunk_ids, strict=False):
-                # Prepare entities for batch insert
-                if result["entities"]:
-                    entity_dicts = [
-                        {
-                            "name": entity.name,
-                            "type": (
-                                entity.type.value if hasattr(entity.type, "value") else entity.type
-                            ),
-                        }
-                        for entity in result["entities"]
-                    ]
-                    # Add entities in batch
-                    await self.neo4j_store.add_entities(
-                        entities=entity_dicts, source_chunk_id=str(chunk_id)
-                    )
+            for idx, (result, chunk_id) in enumerate(
+                zip(extraction_results, chunk_ids, strict=False)
+            ):
+                try:
+                    # Prepare entities for batch insert
+                    if result["entities"]:
+                        entity_dicts = [
+                            {
+                                "name": entity.name,
+                                "type": (
+                                    entity.type.value
+                                    if hasattr(entity.type, "value")
+                                    else entity.type
+                                ),
+                            }
+                            for entity in result["entities"]
+                        ]
+                        # Add entities in batch
+                        await self.neo4j_store.add_entities(
+                            entities=entity_dicts, source_chunk_id=str(chunk_id)
+                        )
+                        logger.debug(
+                            f"Added {len(entity_dicts)} entities for chunk {idx+1}/{len(chunk_ids)}"
+                        )
 
-                # Prepare relationships for batch insert
-                if result["relationships"]:
-                    relationship_dicts = [
-                        {
-                            "source": rel.source,
-                            "target": rel.target,
-                            "type": rel.type.value if hasattr(rel.type, "value") else rel.type,
-                            "confidence": rel.confidence,
-                            "temporal_marker": rel.temporal_marker,
-                        }
-                        for rel in result["relationships"]
-                    ]
-                    # Add relationships in batch
-                    await self.neo4j_store.add_relationships(
-                        relationships=relationship_dicts, source_chunk_id=str(chunk_id)
-                    )
+                    # Prepare relationships for batch insert
+                    if result["relationships"]:
+                        relationship_dicts = [
+                            {
+                                "source": rel.source,
+                                "target": rel.target,
+                                "type": rel.type.value if hasattr(rel.type, "value") else rel.type,
+                                "confidence": rel.confidence,
+                                "temporal_marker": rel.temporal_marker,
+                            }
+                            for rel in result["relationships"]
+                        ]
+                        # Add relationships in batch
+                        await self.neo4j_store.add_relationships(
+                            relationships=relationship_dicts, source_chunk_id=str(chunk_id)
+                        )
+                        logger.debug(
+                            f"Added {len(relationship_dicts)} relationships for chunk {idx+1}/{len(chunk_ids)}"
+                        )
 
-                # Store facts as episodes
-                if result["facts"]:
-                    # Collect all facts for this chunk
-                    fact_texts = [fact.text[:500] for fact in result["facts"]]
-                    # Extract entity names from facts
-                    fact_entity_names = []
-                    for fact in result["facts"]:
-                        fact_entity_names.extend(fact.entities)
+                    # Store facts as episodes
+                    if result["facts"]:
+                        # Collect all facts for this chunk
+                        fact_texts = [fact.text[:500] for fact in result["facts"]]
+                        # Extract entity names from facts
+                        fact_entity_names = []
+                        for fact in result["facts"]:
+                            fact_entity_names.extend(fact.entities)
 
-                    # Add episodes to Neo4j
-                    await self.neo4j_store.add_episodes(
-                        facts=fact_texts,
-                        entity_ids=list(set(fact_entity_names)),  # Deduplicate
-                        source_chunk_id=str(chunk_id),
-                        source_document_id=str(document_id),
+                        # Add episodes to Neo4j
+                        await self.neo4j_store.add_episodes(
+                            facts=fact_texts,
+                            entity_names=list(set(fact_entity_names)),  # Deduplicate
+                            source_chunk_id=str(chunk_id),
+                            source_document_id=str(document_id),
+                        )
+                        logger.debug(
+                            f"Added {len(fact_texts)} episodes for chunk {idx+1}/{len(chunk_ids)}"
+                        )
+
+                except Exception as chunk_error:
+                    logger.error(
+                        f"Failed to update knowledge graph for chunk {idx+1}/{len(chunk_ids)} "
+                        f"(chunk_id={chunk_id}, doc_id={document_id}): {chunk_error}",
+                        exc_info=True,
                     )
+                    # Continue with next chunk even if this one fails
 
             logger.info(f"Updated knowledge graph for document {document_id}")
 
         except Exception as e:
-            logger.error(f"Failed to update knowledge graph: {e}")
+            logger.error(
+                f"Failed to update knowledge graph for document {document_id}: {e}",
+                exc_info=True,
+            )
             # Continue processing even if graph update fails
 
     async def _update_cross_references(

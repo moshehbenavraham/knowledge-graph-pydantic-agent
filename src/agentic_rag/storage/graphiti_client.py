@@ -3,7 +3,7 @@ Graphiti client wrapper for enhanced graph operations.
 """
 
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -248,7 +248,7 @@ class GraphitiClient:
         metadata = {
             "query": query,
             "search_type": search_type,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         }
 
         if search_type in ["entities", "hybrid"]:

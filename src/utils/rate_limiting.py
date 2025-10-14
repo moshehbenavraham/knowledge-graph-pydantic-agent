@@ -3,7 +3,7 @@
 import asyncio
 import time
 from collections import defaultdict, deque
-from datetime import datetime
+from datetime import UTC, datetime
 
 from .monitoring import ERROR_COUNT, logger
 
@@ -86,6 +86,7 @@ class APIRateLimiter:
         self.limiters = {
             "openai": RateLimiter(max_requests=60, window_seconds=60),  # 60 RPM
             "brave": RateLimiter(max_requests=100, window_seconds=3600),  # 100 per hour
+            "jina": RateLimiter(max_requests=200, window_seconds=60),  # 200 RPM (generous)
             "supabase": RateLimiter(max_requests=1000, window_seconds=60),  # 1000 RPM
             "mem0": RateLimiter(max_requests=100, window_seconds=60),  # 100 RPM
         }
@@ -227,7 +228,7 @@ class RateLimitMiddleware:
             limiter = self.api_limiter.limiters[service]
             api_stats[service] = limiter.get_stats(f"{service}_{user_id}")
 
-        return {"user": user_stats, "apis": api_stats, "timestamp": datetime.utcnow().isoformat()}
+        return {"user": user_stats, "apis": api_stats, "timestamp": datetime.now(UTC).isoformat()}
 
 
 class RateLimitExceededError(Exception):

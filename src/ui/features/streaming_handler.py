@@ -33,8 +33,22 @@ class StreamingHandler(BaseHandler):
                 if Agent.is_model_request_node(node):
                     async with node.stream(run.ctx) as request_stream:
                         async for event in request_stream:
-                            if isinstance(event, PartStartEvent) and event.part.part_kind == "text":
-                                yield {"type": "start", "content": event.part.content}
+                            if isinstance(event, PartStartEvent):
+                                # Yield all part start events (text, tool-call, tool-return)
+                                if event.part.part_kind == "text":
+                                    yield {"type": "start", "content": event.part.content}
+                                elif event.part.part_kind == "tool-call":
+                                    yield {
+                                        "type": "tool-call",
+                                        "tool_name": event.part.tool_name,
+                                        "args": event.part.args,
+                                    }
+                                elif event.part.part_kind == "tool-return":
+                                    yield {
+                                        "type": "tool-return",
+                                        "tool_name": event.part.tool_name,
+                                        "content": event.part.content,
+                                    }
                             elif isinstance(event, PartDeltaEvent) and isinstance(
                                 event.delta, TextPartDelta
                             ):

@@ -266,6 +266,16 @@ async def handle_user_input(user_input: str):
                             first_chunk_received = True
                         full_response += chunk["content"]
                         message_placeholder.markdown(full_response + "▌")
+                    elif chunk.get("type") == "tool-call":
+                        # Display tool call in real-time
+                        if config.features["tools_visibility"]:
+                            with st.expander(f"🔧 Tool: {chunk['tool_name']}", expanded=True):
+                                st.json(chunk["args"])
+                    elif chunk.get("type") == "tool-return":
+                        # Display tool return in real-time
+                        if config.features["tools_visibility"]:
+                            with st.expander("📥 Tool Result", expanded=False):
+                                st.code(str(chunk["content"])[:500])
                     elif chunk.get("type") == "complete":
                         status_placeholder.empty()
                         message_placeholder.markdown(full_response)

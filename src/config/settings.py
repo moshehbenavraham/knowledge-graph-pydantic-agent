@@ -430,12 +430,6 @@ class Settings(BaseSettings):
         description="Jaeger agent port",
     )
 
-    @field_validator("cors_origins")
-    @classmethod
-    def parse_cors_origins(cls, v: str) -> list[str]:
-        """Parse comma-separated CORS origins."""
-        return [origin.strip() for origin in v.split(",") if origin.strip()]
-
     @field_validator("llm_choice")
     @classmethod
     def sync_llm_choice(cls, v: str | None) -> str | None:
@@ -502,7 +496,7 @@ class Settings(BaseSettings):
     def get_cors_origins_list(self) -> list[str]:
         """Get CORS origins as a list."""
         if isinstance(self.cors_origins, str):
-            return self.parse_cors_origins(self.cors_origins)
+            return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
         return self.cors_origins
 
     def get_effective_llm_model(self) -> str:

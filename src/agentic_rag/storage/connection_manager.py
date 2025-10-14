@@ -6,7 +6,7 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from typing import Any
 
@@ -136,7 +136,7 @@ class ConnectionManager:
         except Exception as e:
             self.pg_state = ConnectionState.CLOSED
             self.pg_metrics.last_error = str(e)
-            self.pg_metrics.last_error_time = datetime.utcnow()
+            self.pg_metrics.last_error_time = datetime.now(UTC)
             raise
 
     async def _setup_postgres_connection(self, connection):
@@ -203,7 +203,7 @@ class ConnectionManager:
         except Exception as e:
             self.neo4j_state = ConnectionState.CLOSED
             self.neo4j_metrics.last_error = str(e)
-            self.neo4j_metrics.last_error_time = datetime.utcnow()
+            self.neo4j_metrics.last_error_time = datetime.now(UTC)
             raise
 
     async def _init_redis(self):
@@ -228,7 +228,7 @@ class ConnectionManager:
         except Exception as e:
             logger.warning(f"Redis initialization failed (non-critical): {e}")
             self.redis_metrics.last_error = str(e)
-            self.redis_metrics.last_error_time = datetime.utcnow()
+            self.redis_metrics.last_error_time = datetime.now(UTC)
 
     @asynccontextmanager
     async def get_pg_connection(self):
@@ -325,7 +325,7 @@ class ConnectionManager:
         if state == ConnectionState.CLOSED:
             if (
                 last_failure
-                and datetime.utcnow() - last_failure > self.circuit_config.recovery_timeout
+                and datetime.now(UTC) - last_failure > self.circuit_config.recovery_timeout
             ):
                 # Try half-open state
                 if service == "pg":
@@ -344,22 +344,22 @@ class ConnectionManager:
             self.pg_failures += 1
             self.pg_metrics.failed_connections += 1
             self.pg_metrics.last_error = str(error)
-            self.pg_metrics.last_error_time = datetime.utcnow()
+            self.pg_metrics.last_error_time = datetime.now(UTC)
 
             if self.pg_failures >= self.circuit_config.failure_threshold:
                 self.pg_state = ConnectionState.CLOSED
-                self.pg_last_failure_time = datetime.utcnow()
+                self.pg_last_failure_time = datetime.now(UTC)
                 logger.error(f"PostgreSQL circuit breaker opened after {self.pg_failures} failures")
 
         else:
             self.neo4j_failures += 1
             self.neo4j_metrics.failed_connections += 1
             self.neo4j_metrics.last_error = str(error)
-            self.neo4j_metrics.last_error_time = datetime.utcnow()
+            self.neo4j_metrics.last_error_time = datetime.now(UTC)
 
             if self.neo4j_failures >= self.circuit_config.failure_threshold:
                 self.neo4j_state = ConnectionState.CLOSED
-                self.neo4j_last_failure_time = datetime.utcnow()
+                self.neo4j_last_failure_time = datetime.now(UTC)
                 logger.error(f"Neo4j circuit breaker opened after {self.neo4j_failures} failures")
 
     def _update_query_metrics(self, service: str, elapsed_ms: float):
@@ -382,7 +382,7 @@ class ConnectionManager:
 
     async def health_check(self) -> dict[str, Any]:
         """Perform health check on all connections."""
-        health = {"timestamp": datetime.utcnow().isoformat(), "services": {}}
+        health = {"timestamp": datetime.now(UTC).isoformat(), "services": {}}
 
         # PostgreSQL health check
         pg_healthy = False

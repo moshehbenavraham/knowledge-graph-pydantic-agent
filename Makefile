@@ -69,8 +69,7 @@ db-setup:
 	echo "Configure your Supabase project and set SUPABASE_URL and SUPABASE_SERVICE_KEY"
 	echo "For Neo4j, ensure NEO4J_URI, NEO4J_USER, and NEO4J_PASSWORD are set"
 
-db-migrate:
-	echo "Database migrations handled through Supabase dashboard or CLI"
+# db-migrate is defined later in the file (line 141)
 
 neo4j-init:
 	bash -c "source .venv/bin/activate && PYTHONPATH=$(PWD):$$PYTHONPATH python -m src.agentic_rag.storage.neo4j_store init"
