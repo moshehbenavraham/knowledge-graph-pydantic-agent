@@ -676,7 +676,112 @@ asyncio.run(test())
    MAX_CONCURRENT_EXTRACTIONS=5
    ```
 
-#### 4. Storage Backend Selection (PostgreSQL vs REST API)
+#### 6. Entity Extraction JSON Parsing Error (FIXED 2025-10-14)
+
+**Error:** `KeyError: '"name"'` during entity extraction
+
+**Root Cause:**
+JSON example in prompt had unescaped curly braces: `{"name": "...", "type": "..."}` caused Python f-string to try interpolating variables.
+
+**Status:** ✅ **FIXED** in Phase 7 entity extraction updates.
+
+**Solution (already applied):**
+```python
+# src/agentic_rag/ingestion/knowledge_extractor.py:248
+# Escaped curly braces by doubling them
+{{\"name\": \"Company\", \"type\": \"ORGANIZATION\"}}
+```
+
+**Verification:**
+Entity extraction now working perfectly - extracting 50-100+ entities per document.
+
+#### 7. Relationship Storage KeyError (FIXED 2025-10-14)
+
+**Error:** `KeyError: 'entity1_id'` when storing relationships
+
+**Root Cause:**
+Key mismatch - pipeline passed entity names (`source`, `target`) but Neo4j store expected entity IDs (`entity1_id`, `entity2_id`).
+
+**Status:** ✅ **FIXED** in Phase 7 relationship linking fix.
+
+**Solution (already applied):**
+- Modified `add_relationships()` to accept entity names and lookup IDs internally
+- Added backward compatibility for both naming conventions
+- Changed Cypher: `MATCH (e1:Entity) WHERE e1.name = $entity1_name`
+- Location: `src/agentic_rag/storage/neo4j_store.py:65-141`
+
+**Verification:**
+```bash
+# Test ingestion now works without KeyError
+python -m src.agentic_rag.ingestion ingest --path docs/example_docs/light
+```
+
+#### 8. Neo4j v5+ Deprecated size() Function (FIXED 2025-10-14)
+
+**Error:** `A pattern expression should only be used... an alternative is to replace size() with COUNT {}`
+
+**Root Cause:**
+`size()` function deprecated in Neo4j v5+ for pattern expressions.
+
+**Status:** ✅ **FIXED** in Phase 7 Neo4j compatibility update.
+
+**Solution (already applied):**
+```cypher
+# Before (Neo4j v4):
+size((e)-[:RELATED_TO]-())
+
+# After (Neo4j v5+):
+COUNT { (e)-[:RELATED_TO]-() }
+```
+
+**Locations:** `src/agentic_rag/storage/neo4j_store.py:134, 371-372`
+
+#### 9. Vector Search Embedding Format (FIXED 2025-10-14)
+
+**Error:** `TypeError: expected str, got list` during vector search
+
+**Root Cause:**
+PostgreSQL pgvector expects embeddings as strings `"[1.0,2.0,3.0]"`, but embedder returns Python lists.
+
+**Status:** ✅ **FIXED** in Phase 7 vector search validation.
+
+**Solution (already applied):**
+```python
+# src/agentic_rag/search/vector_search.py:247-254
+if isinstance(query_embedding, list):
+    query_embedding = "[" + ",".join(str(x) for x in query_embedding) + "]"
+```
+
+**Verification:**
+```bash
+# Test vector search
+python scripts/test_search_strategies.py
+# Should show: Vector Search: ✅ PASS
+```
+
+#### 10. Event Loop Compatibility Issues (FIXED 2025-10-13)
+
+**Error:** `RuntimeError: Task <Task pending> attached to a different loop` or similar event loop errors
+
+**Root Cause:**
+asyncpg pool created in module-scoped loop, tests ran in function-scoped loops.
+
+**Status:** ✅ **FIXED** in Phase 7 testing infrastructure.
+
+**Solution (already applied - 5 parts):**
+1. Added `@pytest.mark.asyncio(loop_scope="module")` to test class
+2. Set `asyncio_default_fixture_loop_scope = "module"` in pyproject.toml
+3. Module-scoped `event_loop` fixture in conftest.py
+4. Module-scoped `connection_manager` fixture
+5. Explicit loop binding in `asyncpg.create_pool()`
+
+**Verification:**
+```bash
+pytest tests/test_phase1_infrastructure.py -v
+# Previously failing event loop tests now run correctly
+```
+
+#### 11. Storage Backend Selection (PostgreSQL vs REST API)
 
 **Issue:** Confused about which storage backend to use
 

@@ -778,8 +778,8 @@ gunicorn ... -w 9
 
 **Documentation**:
 - API Docs: http://localhost:8058/docs
-- Architecture: `docs/projects_ongoing/AGENTIC_RAG_HIGH_LEVEL.md`
-- Phase 4 Details: `docs/projects_ongoing/AGENTIC_RAG_PHASE_04_COMPLETE.md`
+- Architecture: `docs/AGENTIC_RAG.md`
+- System Documentation: `docs/ARCHITECTURE.md`
 
 ---
 

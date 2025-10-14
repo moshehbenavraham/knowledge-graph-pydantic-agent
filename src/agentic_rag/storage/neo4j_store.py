@@ -65,16 +65,29 @@ class Neo4jStore:
     async def add_relationships(
         self, relationships: list[dict[str, Any]], source_chunk_id: str
     ) -> int:
-        """Add relationships between entities."""
+        """Add relationships between entities.
+
+        Accepts entity names (source/target) and looks up entity IDs internally.
+        """
         relationship_count = 0
 
         async with self.connection_manager.get_neo4j_session() as session:
             for rel in relationships:
-                # Create relationship
+                # Get entity names (support both 'source'/'target' and 'entity1_id'/'entity2_id')
+                entity1_name = rel.get("source") or rel.get("entity1_id")
+                entity2_name = rel.get("target") or rel.get("entity2_id")
+
+                if not entity1_name or not entity2_name:
+                    logger.warning(f"Skipping relationship with missing entity names: {rel}")
+                    continue
+
+                # Create relationship using entity names (Neo4j will lookup by name)
                 result = await session.run(
                     """
-                    MATCH (e1:Entity {id: $entity1_id})
-                    MATCH (e2:Entity {id: $entity2_id})
+                    MATCH (e1:Entity)
+                    WHERE e1.name = $entity1_name
+                    MATCH (e2:Entity)
+                    WHERE e2.name = $entity2_name
                     MERGE (e1)-[r:RELATED_TO {
                         type: $rel_type,
                         subtype: $rel_subtype
@@ -100,8 +113,8 @@ class Neo4jStore:
                         r.last_verified = datetime()
                     RETURN r.id as rel_id
                 """,
-                    entity1_id=rel["entity1_id"],
-                    entity2_id=rel["entity2_id"],
+                    entity1_name=entity1_name,
+                    entity2_name=entity2_name,
                     rel_type=rel.get("type", "RELATED_TO"),
                     rel_subtype=rel.get("subtype", "general"),
                     rel_id=f"rel_{uuid4()}",
@@ -117,20 +130,31 @@ class Neo4jStore:
                 await session.run(
                     """
                     MATCH (e:Entity)
-                    WHERE e.id IN [$entity1_id, $entity2_id]
-                    SET e.relationship_count = size((e)-[:RELATED_TO]-())
+                    WHERE e.name IN [$entity1_name, $entity2_name]
+                    SET e.relationship_count = COUNT { (e)-[:RELATED_TO]-() }
                 """,
-                    entity1_id=rel["entity1_id"],
-                    entity2_id=rel["entity2_id"],
+                    entity1_name=entity1_name,
+                    entity2_name=entity2_name,
                 )
 
         logger.info(f"Added {relationship_count} relationships from chunk {source_chunk_id}")
         return relationship_count
 
     async def add_episodes(
-        self, facts: list[str], entity_ids: list[str], source_chunk_id: str, source_document_id: str
+        self,
+        facts: list[str],
+        entity_names: list[str],
+        source_chunk_id: str,
+        source_document_id: str,
     ) -> list[str]:
-        """Add temporal facts/episodes (brief summaries, not full content)."""
+        """Add temporal facts/episodes (brief summaries, not full content).
+
+        Args:
+            facts: List of fact strings (max 500 chars each)
+            entity_names: List of entity names mentioned in the facts
+            source_chunk_id: ID of the chunk containing these facts
+            source_document_id: ID of the source document
+        """
         episode_ids = []
 
         async with self.connection_manager.get_neo4j_session() as session:
@@ -151,7 +175,7 @@ class Neo4jStore:
                         source_chunk: $chunk_id,
                         source_document: $document_id,
                         confidence: 0.8,
-                        entities: $entity_ids,
+                        entities: $entity_names,
                         fact_type: 'extracted',
                         temporal_type: 'point'
                     })
@@ -161,24 +185,25 @@ class Neo4jStore:
                     fact=fact,
                     chunk_id=source_chunk_id,
                     document_id=source_document_id,
-                    entity_ids=entity_ids,
+                    entity_names=entity_names,
                 )
 
                 record = await result.single()
                 if record:
                     episode_ids.append(record["episode_id"])
 
-                    # Link episode to entities
-                    await session.run(
-                        """
-                        MATCH (ep:Episode {id: $episode_id})
-                        MATCH (e:Entity)
-                        WHERE e.id IN $entity_ids
-                        CREATE (e)-[:MENTIONED_IN]->(ep)
-                    """,
-                        episode_id=episode_id,
-                        entity_ids=entity_ids,
-                    )
+                    # Link episode to entities (by name)
+                    if entity_names:
+                        await session.run(
+                            """
+                            MATCH (ep:Episode {id: $episode_id})
+                            MATCH (e:Entity)
+                            WHERE e.name IN $entity_names
+                            CREATE (e)-[:MENTIONED_IN]->(ep)
+                        """,
+                            episode_id=episode_id,
+                            entity_names=entity_names,
+                        )
 
         logger.info(f"Added {len(episode_ids)} episodes from chunk {source_chunk_id}")
         return episode_ids
@@ -197,7 +222,7 @@ class Neo4jStore:
             List of result records as dictionaries
         """
         async with self.connection_manager.get_neo4j_session() as session:
-            result = await session.run(cypher, **(parameters or {}))
+            result = await session.run(cypher, parameters or {})
 
             records = []
             async for record in result:
@@ -219,8 +244,7 @@ class Neo4jStore:
                 ORDER BY e.importance_score DESC, e.mention_count DESC
                 LIMIT $limit
             """,
-                query=query,
-                limit=limit,
+                {"query": query, "limit": limit},
             )
 
             entities = []
@@ -238,8 +262,7 @@ class Neo4jStore:
                     ORDER BY score DESC
                     LIMIT $limit
                 """,
-                    query=query,
-                    limit=limit,
+                    {"query": query, "limit": limit},
                 )
 
                 async for record in result:
@@ -310,7 +333,7 @@ class Neo4jStore:
                 ORDER BY score DESC, ep.timestamp DESC
                 LIMIT $limit
             """,
-                **params,
+                params,
             )
 
             episodes = []
@@ -348,8 +371,8 @@ class Neo4jStore:
                 """
                 MATCH (e:Entity {id: $entity_id})
                 WITH e,
-                     size((e)-[:RELATED_TO]-()) as rel_count,
-                     size((e)-[:MENTIONED_IN]->()) as mention_count
+                     COUNT { (e)-[:RELATED_TO]-() } as rel_count,
+                     COUNT { (e)-[:MENTIONED_IN]->() } as mention_count
                 SET e.importance_score =
                     CASE
                         WHEN rel_count + mention_count = 0 THEN 0.1

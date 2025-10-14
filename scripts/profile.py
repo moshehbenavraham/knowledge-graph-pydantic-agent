@@ -6,13 +6,13 @@ This script provides various profiling options for the Agentic RAG application.
 """
 import argparse
 import os
-import subprocess
+import subprocess  # nosec B404 - dev profiling script
 import sys
 
 
 def run_pyspy_command(args):
     """Run py-spy with the given arguments"""
-    cmd = ["py-spy"] + args
+    cmd = ["py-spy"] + args  # noqa: RUF005
     print(f"Running: {' '.join(cmd)}")
     return subprocess.run(cmd, check=False)
 
@@ -115,10 +115,10 @@ def profile_memory(component="api", duration=60):
         return 1
 
     cmd = f"mprof run -T {duration} python -m {components[component]}"
-    subprocess.run(cmd, check=False, shell=True)
+    subprocess.run(cmd, check=False, shell=True)  # nosec B602 - dev script with trusted input
 
     # Generate the plot
-    subprocess.run("mprof plot", check=False, shell=True)
+    subprocess.run("mprof plot", check=False, shell=True)  # nosec B602,B607 - dev script
     return 0
 
 
@@ -158,7 +158,7 @@ while time.time() - start < {duration}:
         ]
         result = run_pyspy_command(args)
     finally:
-        os.remove("temp_profile.py")
+        os.remove("temp_profile.py")  # noqa: PTH107
 
     return result
 

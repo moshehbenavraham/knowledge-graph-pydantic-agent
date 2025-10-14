@@ -12,6 +12,7 @@ Architecture:
 - Intelligent fallback when graph is unavailable
 """
 
+import asyncio
 import logging
 from typing import Any
 from uuid import UUID
@@ -26,9 +27,11 @@ from supabase.client import Client
 logger = logging.getLogger(__name__)
 
 # Global instances (initialized once per application lifecycle)
+
 _connection_manager: ConnectionManager | None = None
 _hybrid_search: HybridSearch | None = None
 _intent_analyzer: IntentAnalyzer | None = None
+_current_loop: asyncio.AbstractEventLoop | None = None
 
 
 async def get_hybrid_search() -> HybridSearch:
@@ -38,7 +41,16 @@ async def get_hybrid_search() -> HybridSearch:
     Returns:
         Initialized HybridSearch instance
     """
-    global _connection_manager, _hybrid_search
+    global _connection_manager, _hybrid_search, _current_loop
+
+    # Check if we're in a different event loop (Streamlit can switch loops)
+    current_loop = asyncio.get_running_loop()
+    if _current_loop is not current_loop:
+        # Different loop - reset everything
+        _connection_manager = None
+        _hybrid_search = None
+        _current_loop = current_loop
+        logger.info("Event loop changed - resetting connection manager")
 
     if _hybrid_search is None:
         if _connection_manager is None:
@@ -149,7 +161,7 @@ async def smart_search_tool(
                     "content": c.content,
                     "document_id": str(c.document_id),
                     "document_title": c.document_title,
-                    "source": c.source,
+                    "source": c.document_source,
                     "similarity": c.similarity,
                     "entities": c.entities,
                 }
@@ -383,7 +395,7 @@ def _format_search_results(result: HybridSearchResult) -> str:
     # Add document chunks
     for i, chunk in enumerate(result.chunks, 1):
         chunk_text = f"""### Chunk {i} - {chunk.document_title}
-**Source:** {chunk.source}
+**Source:** {chunk.document_source}
 **Relevance Score:** {chunk.similarity:.2f}
 {f"**Entities:** {', '.join(chunk.entities)}" if chunk.entities else ""}
 
