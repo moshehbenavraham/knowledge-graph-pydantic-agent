@@ -153,7 +153,7 @@ class TestGraphSearch:
         with patch.object(search.neo4j_store, "execute_query") as mock_query:
             mock_query.return_value = [{"entity_id": "entity-123"}]
 
-            with patch.object(search.graphiti_client, "get_entity_timeline") as mock_timeline:
+            with patch.object(search.neo4j_store, "get_entity_timeline") as mock_timeline:
                 mock_timeline.return_value = [
                     {
                         "fact": "Founded in 2015",
@@ -488,9 +488,33 @@ class TestResultRanking:
         ranker = ResultRanker()
 
         chunks = [
-            Mock(chunk_id="1", similarity=0.7),
-            Mock(chunk_id="2", similarity=0.8),
-            Mock(chunk_id="3", similarity=0.6),
+            Mock(
+                chunk_id="1",
+                similarity=0.7,
+                document_source="test1.md",
+                created_at=None,
+                entities=[],
+                content="test content 1",
+                metadata={},
+            ),
+            Mock(
+                chunk_id="2",
+                similarity=0.8,
+                document_source="test2.md",
+                created_at=None,
+                entities=[],
+                content="test content 2",
+                metadata={},
+            ),
+            Mock(
+                chunk_id="3",
+                similarity=0.6,
+                document_source="test3.md",
+                created_at=None,
+                entities=[],
+                content="test content 3",
+                metadata={},
+            ),
         ]
 
         # Apply feedback

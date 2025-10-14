@@ -3,7 +3,6 @@ Comprehensive tests for Phase 1 database infrastructure.
 """
 
 import asyncio
-import os
 import time
 from datetime import datetime, timedelta
 from uuid import uuid4
@@ -14,7 +13,6 @@ import pytest
 from src.agentic_rag.storage.connection_manager import (
     ConnectionManager,
     ConnectionState,
-    get_connection_manager,
 )
 from src.agentic_rag.storage.graphiti_client import GraphitiClient
 from src.agentic_rag.storage.migrations.postgres_migrations import PostgreSQLMigration
@@ -22,7 +20,7 @@ from src.agentic_rag.storage.neo4j_store import Neo4jStore
 from src.agentic_rag.storage.postgres_store import PostgresStore
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="module")
 class TestDatabaseInfrastructure:
     """Test suite for database infrastructure."""
 
@@ -445,42 +443,33 @@ class TestDatabaseInfrastructure:
         assert "recommendations" in summary
 
 
-@pytest.fixture
-async def connection_manager():
-    """Provide connection manager for tests."""
-    manager = await get_connection_manager()
-    yield manager
-    # Connection manager cleanup is handled globally
-
-
-@pytest.fixture
-async def test_database_url():
-    """Provide test database URL."""
-    return os.getenv(
-        "DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/agentic_rag_test"
-    )
-
-
 @pytest.fixture(autouse=True)
-async def cleanup_test_data(connection_manager):
-    """Clean up test data after each test."""
+async def cleanup_test_data(request, connection_manager):
+    """
+    Clean up test data after each test.
+
+    Runs after test completion but before connection manager teardown.
+    """
+    # Let the test run first
     yield
 
-    # Clean up PostgreSQL test data
-    try:
-        async with connection_manager.get_pg_connection() as conn:
-            await conn.execute(
-                "DELETE FROM documents WHERE title LIKE 'Test%' OR title LIKE '%Test'"
-            )
-            await conn.execute("DELETE FROM search_cache WHERE query_text LIKE 'test%'")
-    except Exception as e:
-        print(f"PostgreSQL cleanup error: {e}")
+    # Only cleanup if connection manager is still valid
+    if connection_manager and connection_manager.pg_pool and connection_manager.neo4j_driver:
+        # Clean up PostgreSQL test data
+        try:
+            async with connection_manager.get_pg_connection() as conn:
+                await conn.execute(
+                    "DELETE FROM documents WHERE title LIKE 'Test%' OR title LIKE '%Test'"
+                )
+                await conn.execute("DELETE FROM search_cache WHERE query_text LIKE 'test%'")
+        except Exception as e:
+            print(f"PostgreSQL cleanup error: {e}")
 
-    # Clean up Neo4j test data
-    try:
-        async with connection_manager.get_neo4j_session() as session:
-            await session.run(
-                "MATCH (n) WHERE n.name STARTS WITH 'Test' OR n.name STARTS WITH 'Entity' DETACH DELETE n"
-            )
-    except Exception as e:
-        print(f"Neo4j cleanup error: {e}")
+        # Clean up Neo4j test data
+        try:
+            async with connection_manager.get_neo4j_session() as session:
+                await session.run(
+                    "MATCH (n) WHERE n.name STARTS WITH 'Test' OR n.name STARTS WITH 'Entity' DETACH DELETE n"
+                )
+        except Exception as e:
+            print(f"Neo4j cleanup error: {e}")

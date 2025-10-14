@@ -255,7 +255,7 @@ class SemanticChunker:
             """
 
             response = await self.llm_client.run(prompt)
-            chunks = [c.strip() for c in response.data.split("---CHUNK---")]
+            chunks = [c.strip() for c in response.output.split("---CHUNK---")]
 
             # Validate chunk sizes
             valid_chunks = [

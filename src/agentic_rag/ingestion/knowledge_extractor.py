@@ -15,6 +15,8 @@ from enum import Enum
 from typing import Any, ClassVar
 
 from pydantic_ai import Agent
+from pydantic_ai.models.openai import OpenAIChatModel
+from pydantic_ai.providers.openai import OpenAIProvider
 
 from src.agentic_rag.config import get_config
 
@@ -176,10 +178,12 @@ class KnowledgeExtractor:
     def llm_agent(self) -> Agent:
         """Lazy load LLM agent."""
         if self._llm_agent is None:
-            self._llm_agent = Agent(
-                model=f"{self.config.llm.provider}:{self.config.llm.extraction_model}",
-                api_key=self.config.llm.api_key,
+            # Create provider with API key
+            provider = OpenAIProvider(
+                base_url=self.config.llm.base_url, api_key=self.config.llm.api_key
             )
+            model = OpenAIChatModel(model_name=self.config.llm.extraction_model, provider=provider)
+            self._llm_agent = Agent(model=model)
         return self._llm_agent
 
     async def extract(self, text: str, chunk_id: str | None = None) -> dict[str, Any]:
@@ -237,7 +241,7 @@ class KnowledgeExtractor:
             Valid types: company, person, technology, product, location, event, organization
 
             Format each entity as:
-            {"name": "...", "type": "...", "confidence": 0.0-1.0}
+            {{"name": "...", "type": "...", "confidence": 0.0-1.0}}
 
             Return as JSON array. Maximum 10 entities.
 
@@ -251,9 +255,22 @@ class KnowledgeExtractor:
             # Parse response
             entities = []
             try:
-                entity_data = json.loads(response.data)
+                # Check if output is already parsed or needs parsing
+                if isinstance(response.output, str):
+                    print(f"DEBUG Entity response (string): {response.output[:200]!r}")
+                    entity_data = json.loads(response.output)
+                else:
+                    print(
+                        f"DEBUG Entity response (parsed): {type(response.output)} = {str(response.output)[:200]!r}"
+                    )
+                    entity_data = response.output
+
                 if not isinstance(entity_data, list):
-                    entity_data = [entity_data]
+                    # If it's a dict with 'entities' key, extract that
+                    if isinstance(entity_data, dict) and "entities" in entity_data:
+                        entity_data = entity_data["entities"]
+                    else:
+                        entity_data = [entity_data]
 
                 for item in entity_data[:10]:  # Limit to 10 entities
                     if isinstance(item, dict) and "name" in item and "type" in item:
@@ -269,8 +286,8 @@ class KnowledgeExtractor:
                                 confidence=item.get("confidence", 0.8),
                             )
                         )
-            except json.JSONDecodeError:
-                logger.warning("Failed to parse entity extraction response")
+            except (json.JSONDecodeError, TypeError, KeyError) as e:
+                logger.warning(f"Failed to parse entity extraction response: {e}")
 
             # Merge with pattern-based entities
             entity_names = {e.name.lower() for e in entities}
@@ -369,7 +386,11 @@ class KnowledgeExtractor:
 
             try:
                 response = await self.llm_agent.run(prompt)
-                rel_data = json.loads(response.data)
+                # Check if output is already parsed or needs parsing
+                if isinstance(response.output, str):
+                    rel_data = json.loads(response.output)
+                else:
+                    rel_data = response.output
 
                 for item in rel_data[:10]:  # Limit relationships
                     if self._validate_relationship(item, entity_names):
@@ -424,7 +445,11 @@ class KnowledgeExtractor:
 
             facts = []
             try:
-                fact_data = json.loads(response.data)
+                # Check if output is already parsed or needs parsing
+                if isinstance(response.output, str):
+                    fact_data = json.loads(response.output)
+                else:
+                    fact_data = response.output
 
                 for item in fact_data[:5]:  # Max 5 facts
                     if isinstance(item, dict) and "text" in item:

@@ -489,6 +489,41 @@ netstat -ano | findstr :8501
 taskkill /PID <process_id> /F
 ```
 
+**Issue:** `RuntimeError: Task attached to a different loop` in async tests (RESOLVED 2025-10-13)
+```
+Error: RuntimeError: Task <Task pending> got Future <Future pending> attached to a different loop
+```
+
+**Root Cause**: asyncpg connection pools bind to event loops at creation time. pytest-asyncio was creating function-scoped loops while connection pools were created in module-scoped fixtures.
+
+**Solution**: Configure module-scoped event loops for all async tests:
+
+1. **`pyproject.toml`**:
+```toml
+[tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "module"
+```
+
+2. **Test files with database operations**:
+```python
+@pytest.mark.asyncio(loop_scope="module")
+class TestDatabaseInfrastructure:
+    async def test_something(self, connection_manager):
+        # Test code
+```
+
+3. **`conftest.py`** - Module-scoped fixtures:
+```python
+@pytest.fixture(scope="module")
+def event_loop():
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    yield loop
+    loop.close()
+```
+
+See `docs/TESTING_GUIDE.md` for complete configuration details.
+
 ### Schema Cleanup Issues (Resolved)
 
 **Issue:** Found conflicting SQL schemas
