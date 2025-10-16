@@ -14,7 +14,7 @@ from fastapi.responses import JSONResponse
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from src.api.dependencies import cleanup_dependencies, init_dependencies
-from src.api.endpoints import chat, documents, search
+from src.api.endpoints import analytics, chat, documents, search
 from src.api.health_endpoints import router as health_router
 from src.api.middleware import (
     CompressionMiddleware,
@@ -131,6 +131,7 @@ app.include_router(health_router, prefix="/health", tags=["health"])
 app.include_router(chat.router, tags=["chat"])
 app.include_router(search.router, tags=["search"])
 app.include_router(documents.router, tags=["documents"])
+app.include_router(analytics.router, tags=["analytics"])
 
 
 # ===== Root Endpoints =====
@@ -155,6 +156,7 @@ async def root():
             "chat": "/api/v1/chat",
             "search": "/api/v1/search",
             "documents": "/api/v1/documents",
+            "analytics": "/api/v1/analytics",
         },
     }
 

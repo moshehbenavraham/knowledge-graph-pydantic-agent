@@ -147,6 +147,11 @@ class HybridSearch:
             f"{len(result.chunks)} chunks, {len(result.facts)} facts"
         )
 
+        # Log analytics event (async, non-blocking)
+        await self._log_search_analytics(
+            query, strategy, intent, result, start_time, datetime.now()
+        )
+
         return result
 
     def _select_strategy(self, intent_result) -> SearchStrategy:
@@ -432,3 +437,84 @@ class HybridSearch:
             stats["avg_entity_boosts"] = stats["entity_boosts"] / stats["searches"]
 
         return stats
+
+    async def _log_search_analytics(
+        self,
+        query: str,
+        strategy: SearchStrategy,
+        intent: SearchIntent | None,
+        result: HybridSearchResult,
+        start_time: datetime,
+        end_time: datetime,
+    ) -> None:
+        """
+        Log search analytics event (async, non-blocking).
+
+        Args:
+            query: Search query
+            strategy: Search strategy used
+            intent: Detected intent
+            result: Search result
+            start_time: Search start time
+            end_time: Search end time
+        """
+        try:
+            from src.agentic_rag.analytics import SearchAnalyticsEvent, get_analytics_logger
+
+            # Calculate latency
+            total_latency_ms = (end_time - start_time).total_seconds() * 1000
+
+            # Map strategy to analytics format
+            strategy_map = {
+                SearchStrategy.VECTOR_ONLY: "VECTOR_HEAVY",
+                SearchStrategy.GRAPH_ONLY: "GRAPH_HEAVY",
+                SearchStrategy.HYBRID: "HYBRID",
+                SearchStrategy.ADAPTIVE: "HYBRID",
+            }
+
+            intent_map = {
+                SearchIntent.VECTOR_HEAVY: "VECTOR_HEAVY",
+                SearchIntent.GRAPH_HEAVY: "GRAPH_HEAVY",
+                SearchIntent.HYBRID: "HYBRID",
+                SearchIntent.TEMPORAL: "TEMPORAL",
+                SearchIntent.ENTITY_FOCUSED: "ENTITY_FOCUSED",
+            }
+
+            # Get latencies from metadata if available
+            metadata = result.metadata or {}
+            vector_latency = metadata.get("vector_latency_ms", 0)
+            graph_latency = metadata.get("graph_latency_ms", 0)
+            intent_latency = metadata.get("intent_analysis_latency_ms", 0)
+            ranking_latency = metadata.get("ranking_latency_ms", 0)
+
+            # Create analytics event
+            event = SearchAnalyticsEvent(
+                query_text=query,
+                detected_intent=intent_map.get(intent, "HYBRID") if intent else "HYBRID",
+                strategy_used=strategy_map.get(strategy, "HYBRID"),
+                total_latency_ms=total_latency_ms,
+                vector_latency_ms=vector_latency,
+                graph_latency_ms=graph_latency,
+                intent_analysis_latency_ms=intent_latency,
+                ranking_latency_ms=ranking_latency,
+                chunks_returned=len(result.chunks),
+                cache_hit=metadata.get("cache_hit", False),
+                entities_found=len(result.entities),
+                relationships_found=len(result.relationships),
+                facts_found=len(result.facts),
+                graph_boost_applied=bool(result.entities or result.facts),
+                entity_boost_applied=bool(result.entities),
+                source="api",  # Will be overridden by caller if needed
+                metadata={
+                    "search_type": metadata.get("search_type", "hybrid"),
+                    "limit": metadata.get("limit", 10),
+                },
+            )
+
+            # Log event (non-blocking)
+            analytics_logger = get_analytics_logger()
+            await analytics_logger.log_search(event)
+
+        except Exception as e:
+            # Never let analytics errors break search
+            logger.warning(f"Failed to log search analytics: {e}")

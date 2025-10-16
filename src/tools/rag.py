@@ -436,6 +436,7 @@ async def cleanup_rag_tools():
 __all__ = [
     "cleanup_rag_tools",
     "get_document_content_tool",
+    "get_hybrid_search",
     "graph_query_tool",
     "list_documents_tool",
     "retrieve_relevant_documents_tool",

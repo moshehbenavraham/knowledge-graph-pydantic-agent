@@ -46,11 +46,11 @@ def make_json_safe(obj: any, max_depth: int = 10, _current_depth: int = 0) -> an
         return "<max depth reached>"
 
     # Handle None, bool, int, float, str - already JSON-safe
-    if obj is None or isinstance(obj, (bool, int, float, str)):
+    if obj is None or isinstance(obj, bool | int | float | str):
         return obj
 
     # Handle lists/tuples recursively
-    if isinstance(obj, (list, tuple)):
+    if isinstance(obj, list | tuple):
         return [make_json_safe(item, max_depth, _current_depth + 1) for item in obj]
 
     # Handle dicts recursively
@@ -374,7 +374,51 @@ async def _render_dashboard_content(handler: DashboardHandler):
 
     st.divider()
 
-    # Section B: Intent Analysis (full width)
+    # Section B: Trends Over Time (full width)
+    st.header("📈 Trends Over Time")
+    try:
+        col1, col2 = st.columns(2)
+        with col1:
+            selected_window = st.selectbox(
+                "Time Window", ["24h", "7d", "30d"], index=1, key="trend_window"
+            )
+        with col2:
+            selected_metric = st.selectbox(
+                "Metric",
+                ["searches", "latency", "cache_hits", "graph_boosts"],
+                format_func=lambda x: x.replace("_", " ").title(),
+                index=0,
+                key="trend_metric",
+            )
+
+        series = await handler.get_time_series_data(window=selected_window, metric=selected_metric)
+
+        if series:
+            df_series = pd.DataFrame(series)
+            fig = px.line(
+                df_series,
+                x="timestamp",
+                y=selected_metric,
+                title=f"{selected_metric.replace('_', ' ').title()} Over {selected_window}",
+                labels={
+                    "timestamp": "Time",
+                    selected_metric: selected_metric.replace("_", " ").title(),
+                },
+            )
+            fig.update_traces(mode="lines+markers")
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info(
+                f"No time-series data available for {selected_window} window. Run searches to populate analytics."
+            )
+
+    except Exception as e:
+        logger.exception("Error rendering time-series data")
+        st.error(f"Error loading trends: {e}")
+
+    st.divider()
+
+    # Section C: Intent Analysis (full width)
     st.header("🎯 Intent Analysis")
     try:
         intent_dist = await handler.get_intent_distribution()
@@ -603,6 +647,114 @@ async def _render_dashboard_content(handler: DashboardHandler):
         except Exception as e:
             logger.exception("Error rendering performance metrics")
             st.error(f"Error loading performance data: {e}")
+
+    st.divider()
+
+    # Section F: Tool Usage Analytics (full width)
+    st.header("🔧 Tool Usage Analytics")
+    try:
+        tool_metrics = await handler.get_tool_usage_metrics()
+
+        if tool_metrics.get("total_calls", 0) > 0:
+            # Summary metrics
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Total Tool Calls", tool_metrics["total_calls"])
+            with col2:
+                st.metric("Unique Tools", tool_metrics["unique_tools"])
+            with col3:
+                st.metric("Average Success Rate", f"{tool_metrics['avg_success_rate'] * 100:.1f}%")
+
+            # Tool performance table
+            if tool_metrics.get("tools"):
+                st.subheader("Tool Performance Breakdown")
+                df_tools = pd.DataFrame(tool_metrics["tools"])
+
+                # Format columns
+                if "success_rate" in df_tools.columns:
+                    df_tools["success_rate"] = df_tools["success_rate"].apply(
+                        lambda x: f"{x * 100:.1f}%"
+                    )
+                if "avg_execution_time_ms" in df_tools.columns:
+                    df_tools["avg_execution_time_ms"] = df_tools["avg_execution_time_ms"].apply(
+                        lambda x: f"{x:.1f}ms"
+                    )
+                if "p95_execution_time_ms" in df_tools.columns:
+                    df_tools["p95_execution_time_ms"] = df_tools["p95_execution_time_ms"].apply(
+                        lambda x: f"{x:.1f}ms"
+                    )
+
+                st.dataframe(
+                    df_tools,
+                    width="stretch",
+                    hide_index=True,
+                    column_config={
+                        "tool_name": st.column_config.TextColumn("Tool Name", width="medium"),
+                        "total_calls": st.column_config.NumberColumn("Calls", width="small"),
+                        "success_rate": st.column_config.TextColumn("Success Rate", width="small"),
+                        "avg_execution_time_ms": st.column_config.TextColumn(
+                            "Avg Time", width="small"
+                        ),
+                        "p95_execution_time_ms": st.column_config.TextColumn(
+                            "P95 Time", width="small"
+                        ),
+                    },
+                )
+        else:
+            st.info(
+                "No tool usage data available yet. Tools will be tracked automatically as they're used."
+            )
+
+    except Exception as e:
+        logger.exception("Error rendering tool analytics")
+        st.error(f"Error loading tool usage analytics: {e}")
+
+    st.divider()
+
+    # Section G: Agent Interactions (full width)
+    st.header("💬 Agent Interactions")
+    try:
+        agent_metrics = await handler.get_agent_interaction_metrics()
+
+        if agent_metrics.get("total_interactions", 0) > 0:
+            # Summary metrics
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Total Interactions", agent_metrics["total_interactions"])
+            with col2:
+                st.metric("Unique Sessions", agent_metrics["unique_sessions"])
+            with col3:
+                st.metric("Avg Response Time", f"{agent_metrics['avg_response_time_ms']:.0f}ms")
+            with col4:
+                st.metric("RAG Usage Rate", f"{agent_metrics['rag_usage_rate'] * 100:.1f}%")
+
+            # User feedback metrics
+            st.subheader("User Feedback")
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("👍 Thumbs Up", agent_metrics["thumbs_up"])
+            with col2:
+                st.metric("👎 Thumbs Down", agent_metrics["thumbs_down"])
+            with col3:
+                st.metric("Feedback Rate", f"{agent_metrics['feedback_rate'] * 100:.1f}%")
+
+            # Feedback visualization
+            if agent_metrics["thumbs_up"] > 0 or agent_metrics["thumbs_down"] > 0:
+                fig = px.pie(
+                    values=[agent_metrics["thumbs_up"], agent_metrics["thumbs_down"]],
+                    names=["Positive", "Negative"],
+                    title="User Feedback Distribution",
+                    color_discrete_map={"Positive": "#4CAF50", "Negative": "#F44336"},
+                )
+                st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info(
+                "No agent interaction data available yet. Interactions will be tracked automatically."
+            )
+
+    except Exception as e:
+        logger.exception("Error rendering agent interaction analytics")
+        st.error(f"Error loading agent interaction data: {e}")
 
 
 def export_conversation():

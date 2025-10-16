@@ -486,6 +486,15 @@ async def get_connection_manager() -> ConnectionManager:
         _connection_manager = ConnectionManager(config.dict())
         await _connection_manager.initialize()
 
+        # Initialize analytics logger after connection manager is ready
+        try:
+            from src.agentic_rag.analytics import initialize_analytics_logger
+
+            await initialize_analytics_logger(_connection_manager)
+            logger.info("Analytics logger initialized successfully")
+        except Exception as e:
+            logger.warning(f"Analytics logger initialization failed (non-critical): {e}")
+
     return _connection_manager
 
 
@@ -494,5 +503,14 @@ async def close_connections():
     global _connection_manager
 
     if _connection_manager:
+        # Shutdown analytics logger first
+        try:
+            from src.agentic_rag.analytics import shutdown_analytics_logger
+
+            await shutdown_analytics_logger()
+            logger.info("Analytics logger shutdown successfully")
+        except Exception as e:
+            logger.warning(f"Analytics logger shutdown failed: {e}")
+
         await _connection_manager.close()
         _connection_manager = None

@@ -5,7 +5,7 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Pydantic AI](https://img.shields.io/badge/Pydantic-AI-blue)](https://ai.pydantic.dev/)
 
-**Version 1.0.1** | **API Version 0.8.0** | **Package:** `luminari-ai-agent`
+**Version 1.1.0** | **API Version 0.8.0** | **Package:** `luminari-ai-agent`
 
 Base Agent is a unified AI assistant built on [Pydantic-AI](https://github.com/pydantic/pydantic-ai)
 that combines retrieval augmented generation, knowledge graph search, long-term memory, and
@@ -15,7 +15,7 @@ can run in multiple contexts.
 
 ## Table of Contents
 - [Highlights](#highlights)
-- [What's New in v0.9.0](#whats-new-in-v090)
+- [What's New in v1.1.0](#whats-new-in-v110)
 - [Architecture Overview](#architecture-overview)
 - [Prerequisites](#prerequisites)
 - [Quick Start](#quick-start)
@@ -50,45 +50,38 @@ The graph component is **REQUIRED**, not optional. Without it, you lose:
 - **Agentic Graph RAG stack** with Supabase pgvector + Graphiti-powered Neo4j knowledge graph + intelligent hybrid routing (BOTH databases required)
 - **Production-ready FastAPI** with versioned routes (`/api/v1`), SSE/WebSocket streaming, circuit breakers, and comprehensive middleware
 - **Flexible Streamlit UI** with runtime-configurable modes (simple/standard/advanced) and CLI utilities
-- **📊 GraphRAG Analytics Dashboard** - Real-time visualization of search patterns, knowledge graph structure, entity relationships, and system performance (NEW!)
+- **📊 GraphRAG Analytics Dashboard** - Real-time visualization of search patterns, knowledge graph structure, entity relationships, and system performance
+- **📈 Persistent Analytics System (v1.1.0)** - Foundational observability infrastructure with PostgreSQL-backed event logging, performance tracking, and dashboard-ready queries (NEW!)
 - **Type-safe centralized configuration** via Pydantic settings with full validation, supporting OpenAI, Anthropic, Ollama, and OpenRouter
 - **Full observability stack**: Redis caching, structured logging, Prometheus metrics, OpenTelemetry tracing, and monitoring (Grafana + Jaeger)
 - **mem0-powered memory**: Long-term and session memory for contextual conversations
 - **Enterprise resilience**: Circuit breakers, retry logic with exponential backoff, rate limiting, and graceful degradation
 
-## What's New in v0.9.0
+## What's New in v1.1.0
 
-Version 0.9.0 represents a major architectural consolidation focused on maintainability and developer experience:
+Version 1.1.0 introduces **foundational observability infrastructure** for comprehensive system monitoring and analytics.
 
-🎯 **Unified Agent Architecture**
-- Consolidated 15+ duplicate agent files into a single `unified_agent.py`
-- Single source of truth for all agent capabilities
-- 70% improvement in code maintainability
+📈 **Persistent Analytics System** (Core Infrastructure)
+- **Always-on event logging** to PostgreSQL with async, non-blocking architecture (<5ms overhead)
+- **5 analytics tables** with monthly partitioning: search operations, tool usage, agent interactions, ingestion metrics, system health
+- **Batched writes** (100 events or 5 seconds) with automatic retry and error handling
+- **Materialized views** for dashboard-ready queries with pre-computed aggregations
+- **Automatic initialization** with connection manager - zero configuration needed
+- **Comprehensive monitoring**: latency tracking, cache hit rates, graph boost detection, error tracking
+- **Maintenance functions** for partition management and view refreshes
+- **Production-ready**: 30+ unit tests, complete documentation, graceful degradation
 
-⚙️ **Type-Safe Centralized Configuration**
-- Beautiful Pydantic-based configuration system with full validation
-- Eliminated all scattered `os.getenv()` calls (60% code reduction)
-- Module-specific facades for cleaner imports
-- Production safety checks and environment warnings
+**Key Features**:
+- Search analytics with intent detection and strategy usage
+- Tool execution metrics with error tracking
+- User-agent interaction logging with feedback
+- Document ingestion performance tracking
+- System health snapshots (database, cache, application metrics)
 
-🎨 **Modular UI System**
-- Single Streamlit UI with runtime-configurable modes (simple/standard/advanced)
-- Feature handlers in `src/ui/features/` for clean separation
-- Removed duplicate UI implementations
+See `docs/analytics_system.md` for complete documentation.
 
-🧠 **Intelligent Search Routing**
-- 5-strategy intent analysis (VECTOR_HEAVY, GRAPH_HEAVY, HYBRID, TEMPORAL, ENTITY_FOCUSED)
-- Consolidated IntentAnalyzer implementations
-- 90%+ query routing accuracy
-
-📊 **GraphRAG Analytics Dashboard** (v1.0.2)
-- Real-time visualization of search analytics and performance metrics
-- **Interactive knowledge graph with draggable nodes** - pyvis-powered Neo4j-style visualization
-- Entity explorer with temporal fact timelines
-- Intent distribution and strategy usage charts
-- Database health monitoring and cache statistics
-
-See `CHANGELOG.md` for complete release notes.
+**Previous Major Release: v0.9.0** - Unified agent architecture, centralized configuration, modular UI
+See `CHANGELOG.md` for complete release history.
 
 ## 📊 Implementation Status (2025-10-14)
 

@@ -1,7 +1,7 @@
 [project]
 name = "luminari-ai-agent"
-version = "1.0.2"
-description = "Unified Super AI Agent with intelligent routing, comprehensive tooling, configurable UI, interactive GraphRAG analytics dashboard with draggable knowledge graph, and enterprise monitoring"
+version = "1.1.0"
+description = "Unified Super AI Agent with intelligent routing, comprehensive tooling, configurable UI, interactive GraphRAG analytics dashboard with draggable knowledge graph, persistent analytics system, and enterprise monitoring"
 requires-python = ">=3.11"
 dependencies = [
     "pydantic-ai[anthropic]>=0.1.2",
