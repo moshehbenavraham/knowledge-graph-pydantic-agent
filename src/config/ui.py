@@ -4,7 +4,21 @@ UI-specific configuration facade.
 Provides convenient access to UI-related settings.
 """
 
+from dataclasses import dataclass
+
 from .settings import UIMode, get_settings
+
+
+@dataclass
+class DashboardConfig:
+    """Dashboard-specific configuration."""
+
+    enabled: bool = True
+    refresh_interval_seconds: int = 30
+    max_entities_display: int = 50
+    default_time_window: str = "7d"  # 24h, 7d, 30d
+    enable_export: bool = True
+    cache_ttl_seconds: int = 30
 
 
 class UIConfig:
@@ -13,6 +27,7 @@ class UIConfig:
     def __init__(self):
         """Initialize with current settings."""
         self._settings = get_settings()
+        self.dashboard = DashboardConfig()
 
     @property
     def mode(self) -> UIMode:

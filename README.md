@@ -5,7 +5,7 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Pydantic AI](https://img.shields.io/badge/Pydantic-AI-blue)](https://ai.pydantic.dev/)
 
-**Version 0.9.0** | **API Version 0.8.0** | **Package:** `luminari-ai-agent`
+**Version 1.0.1** | **API Version 0.8.0** | **Package:** `luminari-ai-agent`
 
 Base Agent is a unified AI assistant built on [Pydantic-AI](https://github.com/pydantic/pydantic-ai)
 that combines retrieval augmented generation, knowledge graph search, long-term memory, and
@@ -50,6 +50,7 @@ The graph component is **REQUIRED**, not optional. Without it, you lose:
 - **Agentic Graph RAG stack** with Supabase pgvector + Graphiti-powered Neo4j knowledge graph + intelligent hybrid routing (BOTH databases required)
 - **Production-ready FastAPI** with versioned routes (`/api/v1`), SSE/WebSocket streaming, circuit breakers, and comprehensive middleware
 - **Flexible Streamlit UI** with runtime-configurable modes (simple/standard/advanced) and CLI utilities
+- **📊 GraphRAG Analytics Dashboard** - Real-time visualization of search patterns, knowledge graph structure, entity relationships, and system performance (NEW!)
 - **Type-safe centralized configuration** via Pydantic settings with full validation, supporting OpenAI, Anthropic, Ollama, and OpenRouter
 - **Full observability stack**: Redis caching, structured logging, Prometheus metrics, OpenTelemetry tracing, and monitoring (Grafana + Jaeger)
 - **mem0-powered memory**: Long-term and session memory for contextual conversations
@@ -79,6 +80,13 @@ Version 0.9.0 represents a major architectural consolidation focused on maintain
 - 5-strategy intent analysis (VECTOR_HEAVY, GRAPH_HEAVY, HYBRID, TEMPORAL, ENTITY_FOCUSED)
 - Consolidated IntentAnalyzer implementations
 - 90%+ query routing accuracy
+
+📊 **GraphRAG Analytics Dashboard** (v1.0.2)
+- Real-time visualization of search analytics and performance metrics
+- **Interactive knowledge graph with draggable nodes** - pyvis-powered Neo4j-style visualization
+- Entity explorer with temporal fact timelines
+- Intent distribution and strategy usage charts
+- Database health monitoring and cache statistics
 
 See `CHANGELOG.md` for complete release notes.
 
@@ -307,6 +315,62 @@ The unified agent (`src/agent/unified_agent.py`) provides comprehensive tooling 
 - **Knowledge extraction** – Graphiti-powered entity, relationship, and temporal fact extraction feeding the knowledge graph
 
 All tools include comprehensive error handling, input validation, and structured logging for production use.
+
+## UI Features
+
+### Interactive Streamlit Dashboard
+
+The Streamlit UI (`src/ui/streamlit_app.py`) provides two main interfaces accessible via sidebar navigation:
+
+#### 💬 Chat Interface
+- Runtime-configurable modes: Simple, Standard, Advanced
+- Real-time streaming responses with tool visibility
+- File upload support (documents, images, tabular data)
+- Conversation export (JSON format)
+- mem0 memory integration (Advanced mode)
+
+#### 📊 GraphRAG Analytics Dashboard (Available in Standard/Advanced modes)
+
+Real-time visualization and analytics for your Agentic RAG system:
+
+**Search Analytics**
+- Total searches, average latency, top strategy metrics
+- Search strategy distribution charts (VECTOR_HEAVY, GRAPH_HEAVY, HYBRID, etc.)
+- Graph boost rate tracking
+
+**Intent Analysis**
+- Query intent distribution pie charts
+- Strategy usage visualizations
+- Real-time updates from IntentAnalyzer
+
+**Knowledge Graph Visualization**
+- **Interactive network graph with pyvis** - Neo4j Enterprise-style visualization
+- **Draggable nodes** - Click and drag individual nodes to reposition and explore relationships
+- **Pan and zoom** - Click-drag background to pan, scroll to zoom in/out
+- **Physics simulation** - ForceAtlas2 algorithm with natural node repulsion and spring forces
+- **Multiple layouts** - Force-directed (default), hierarchical, and circular via dropdown
+- **Color-coded entities** - 8 distinct colors by type (person, company, organization, location, event, technology, product, concept)
+- **Dynamic node sizing** - Node size scales with connection count (15-50px range)
+- **Adjustable entity limit** - 10-200 entities with optimized rendering
+- **Rich tooltips** - Hover to see entity name, type, connections, and interaction hints
+- **Navigation controls** - Built-in pan/zoom buttons and keyboard navigation
+
+**Entity Explorer**
+- Top 20 most connected entities in sortable table
+- Entity timeline viewer showing temporal facts
+- Click-through navigation for detailed entity information
+
+**Performance Metrics**
+- Query latency breakdown (Vector, Graph, Total)
+- Cache hit rate and database connection pool stats
+- Detailed PostgreSQL and Neo4j metrics
+- Real-time monitoring with 30-second cache refresh
+
+**Access:** Navigate to "📊 Dashboard" in the sidebar after starting the UI:
+```bash
+make run-ui              # Standard mode (recommended)
+make run-ui-advanced     # Advanced mode with all features
+```
 
 ## Development Workflow
 

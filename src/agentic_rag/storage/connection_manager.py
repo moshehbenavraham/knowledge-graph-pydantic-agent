@@ -248,7 +248,8 @@ class ConnectionManager:
                 f"Last error: {self.pg_metrics.last_error}"
             )
 
-        start_time = asyncio.get_event_loop().time()
+        loop = asyncio.get_running_loop()
+        start_time = loop.time()
 
         try:
             async with self.pg_pool.acquire() as conn:
@@ -267,7 +268,7 @@ class ConnectionManager:
 
         finally:
             self.pg_metrics.active_connections -= 1
-            elapsed_ms = (asyncio.get_event_loop().time() - start_time) * 1000
+            elapsed_ms = (loop.time() - start_time) * 1000
             self._update_query_metrics("pg", elapsed_ms)
 
     @asynccontextmanager
@@ -288,7 +289,8 @@ class ConnectionManager:
                 f"Last error: {self.neo4j_metrics.last_error}"
             )
 
-        start_time = asyncio.get_event_loop().time()
+        loop = asyncio.get_running_loop()
+        start_time = loop.time()
 
         try:
             async with self.neo4j_driver.session(database=database) as session:
@@ -307,7 +309,7 @@ class ConnectionManager:
 
         finally:
             self.neo4j_metrics.active_connections -= 1
-            elapsed_ms = (asyncio.get_event_loop().time() - start_time) * 1000
+            elapsed_ms = (loop.time() - start_time) * 1000
             self._update_query_metrics("neo4j", elapsed_ms)
 
     def _check_circuit_breaker(self, service: str) -> bool:
@@ -454,7 +456,7 @@ class ConnectionManager:
             close_tasks.append(self.neo4j_driver.close())
 
         if self.redis_client:
-            close_tasks.append(self.redis_client.close())
+            close_tasks.append(self.redis_client.aclose())
 
         await asyncio.gather(*close_tasks, return_exceptions=True)
         logger.info("All connections closed")
