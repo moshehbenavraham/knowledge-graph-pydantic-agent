@@ -16,20 +16,20 @@ SUPABASE_SERVICE_KEY=your_supabase_service_role_key
 DATABASE_URL=postgresql://user:pass@localhost:5432/db
 ```
 
-**SUPABASE_URL**: Your Supabase project URL
+**SUPABASE_URL**: Supabase project URL
 - **Required**: Yes (if not using DATABASE_URL)
 - **Format**: `https://your-project.supabase.co`
-- **Security**: Service key has admin privileges
+- **Security**: Has admin privileges
 
 **SUPABASE_SERVICE_KEY**: Supabase service role key
 - **Required**: Yes (if not using DATABASE_URL)
 - **Format**: Long alphanumeric string
-- **Security**: Keep secret, never commit to version control
+- **Security**: Keep secret, never commit
 
 **DATABASE_URL**: Direct PostgreSQL connection string
 - **Required**: Yes (alternative to Supabase)
 - **Format**: `postgresql://user:password@host:port/database`
-- **Note**: Requires PostgreSQL 14+ with pgvector extension
+- **Note**: Requires PostgreSQL 14+ with pgvector
 
 ### AI Models Configuration
 

@@ -1,10 +1,10 @@
 # Architecture Overview
 
-This section provides a comprehensive view of the Luminari AI Agent's technical architecture, design principles, and system components.
+Comprehensive view of Luminari AI Agent's technical architecture, design principles, and system components.
 
 ## System Overview
 
-Luminari AI Agent is built on a **unified agent architecture** that consolidates multiple AI capabilities into a single, intelligent system. The design emphasizes modularity, scalability, and production readiness.
+Built on **unified agent architecture** consolidating multiple AI capabilities into a single intelligent system. Emphasizes modularity, scalability, and production readiness.
 
 ## Core Architecture Principles
 

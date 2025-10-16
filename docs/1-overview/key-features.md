@@ -4,28 +4,28 @@
 
 ### 🧠 Unified Intelligence
 - **Single Agent Architecture**: One `unified_agent.py` handles all capabilities
-- **Intent-Aware Routing**: 5-strategy intelligent routing (VECTOR_HEAVY, GRAPH_HEAVY, HYBRID, TEMPORAL, ENTITY_FOCUSED)
-- **Parallel Tool Execution**: Concurrent execution of multiple tools for comprehensive results
-- **Context Preservation**: Memory systems maintain conversation context across sessions
+- **Intent-Aware Routing**: 5 strategies (VECTOR_HEAVY, GRAPH_HEAVY, HYBRID, TEMPORAL, ENTITY_FOCUSED)
+- **Parallel Execution**: Concurrent tool execution for comprehensive results
+- **Context Preservation**: Memory systems maintain conversation context
 
 ### 🔍 Advanced Search & Retrieval
-- **Agentic Graph RAG**: Combines vector search (Supabase) + knowledge graph (Neo4j)
+- **Agentic Graph RAG**: Vector search (Supabase) + knowledge graph (Neo4j)
 - **Semantic Chunking**: LLM-powered text segmentation for optimal retrieval
 - **Entity Extraction**: Automatic identification of people, organizations, locations, concepts
 - **Temporal Reasoning**: Time-aware fact extraction and relationship mapping
-- **Hybrid Search**: Intelligent combination of vector and graph search strategies
+- **Hybrid Search**: Intelligent vector + graph search combination
 
-### 🛠️ Comprehensive Tool Suite
+### 🛠️ Tool Suite
 
 #### Data Access & Analysis
 - **SQL Query Execution**: Natural language to SQL with validation and security
-- **Code Execution**: Sandboxed Python execution with RestrictedPython
+- **Code Execution**: Sandboxed Python with RestrictedPython
 - **File Processing**: PDF, image, and document analysis
 
 #### External Integration
-- **Web Search**: Multi-provider search (Jina → Brave → SearXNG) with failover
+- **Web Search**: Multi-provider (Jina → Brave → SearXNG) with failover
 - **Image Analysis**: Vision model integration for OCR and visual understanding
-- **API Integration**: RESTful APIs with WebSocket streaming support
+- **API Integration**: RESTful APIs with WebSocket streaming
 
 #### Knowledge & Memory
 - **Long-term Memory**: mem0-powered persistent conversation memory
@@ -36,12 +36,12 @@
 
 ### 🌐 Streamlit Web Interface
 - **Runtime Modes**: Simple, Standard, Advanced configurations
-- **Interactive Dashboard**: Real-time GraphRAG analytics with draggable knowledge graph visualization
-- **File Upload**: Support for documents, images, and tabular data
+- **Interactive Dashboard**: Real-time GraphRAG analytics with draggable knowledge graph
+- **File Upload**: Documents, images, and tabular data support
 - **Export Capabilities**: JSON conversation export and data visualization
 
 ### 🔌 REST API
-- **Versioned Endpoints**: `/api/v1` with comprehensive OpenAPI documentation
+- **Versioned Endpoints**: `/api/v1` with OpenAPI documentation
 - **Streaming Support**: Server-Sent Events and WebSocket connections
 - **Circuit Breakers**: Automatic failure detection and recovery
 - **Rate Limiting**: Configurable request throttling
@@ -60,13 +60,13 @@
 - **Access Controls**: Configurable permission systems
 
 ### 📊 Monitoring & Observability
-- **Prometheus Metrics**: Comprehensive performance and usage metrics
+- **Prometheus Metrics**: Performance and usage metrics
 - **Structured Logging**: JSON logging with correlation IDs
-- **Distributed Tracing**: OpenTelemetry integration for request tracing
+- **Distributed Tracing**: OpenTelemetry integration
 - **Health Checks**: Comprehensive system health monitoring
 
 ### 🚀 Performance & Scalability
-- **Async Architecture**: Full asynchronous processing throughout
+- **Async Architecture**: Full asynchronous processing
 - **Connection Pooling**: Efficient database connection management
 - **Caching Layer**: Redis-powered query result caching
 - **Circuit Breakers**: Automatic failure detection and graceful degradation
@@ -82,7 +82,7 @@
 ### Performance Benchmarks
 - **Query Latency**: P50 < 500ms, P95 < 1500ms for chat responses
 - **Search Performance**: P50 < 200ms for document retrieval
-- **Concurrent Users**: Support for 10+ simultaneous users
+- **Concurrent Users**: 10+ simultaneous users
 - **Memory Usage**: Optimized for 8GB+ RAM deployments
 
 ### Scalability Limits

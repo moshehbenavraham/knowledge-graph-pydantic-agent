@@ -1,15 +1,15 @@
 # Complete Installation Guide
 
-This guide provides detailed instructions for setting up Luminari AI Agent with all features enabled.
+Detailed setup instructions for Luminari AI Agent with all features enabled.
 
 ## System Requirements
 
-### Hardware Requirements
+### Hardware
 - **RAM**: 8GB minimum, 16GB recommended
 - **Storage**: 2GB base + 5GB for full RAG features
 - **Network**: Internet connection for API services
 
-### Software Prerequisites
+### Software
 - **Python 3.11+** (3.12 recommended)
 - **Git** for version control
 - **Make** for build automation
@@ -20,33 +20,22 @@ This guide provides detailed instructions for setting up Luminari AI Agent with 
 ### Option 1: Full Installation (Recommended)
 
 ```bash
-# Clone the repository
 git clone <repository-url>
 cd luminari-ai-agent
-
-# Install with all features including RAG capabilities
-pip install -e .[dev,rag]
-
-# Or use the Makefile for consistent setup
-make setup
+pip install -e .[dev,rag]  # Or: make setup
 ```
 
-**What's included:**
-- All runtime dependencies
-- Development tools (pytest, black, ruff, mypy)
-- RAG pipeline components (PyTorch, sentence-transformers)
-- Documentation building tools
+**Includes:** Runtime dependencies, development tools, RAG components, documentation tools
 
 ### Option 2: Lightweight Installation
 
 For testing without knowledge graph features:
 
 ```bash
-# Install core functionality only
 pip install -e .[dev]
 ```
 
-**Note:** This excludes local embeddings and knowledge graph features. Use for initial testing, upgrade later if needed.
+**Note:** Excludes local embeddings and knowledge graph features. Upgrade later if needed.
 
 ## Environment Configuration
 
@@ -93,11 +82,10 @@ LLM_MODEL=claude-3-5-sonnet-20241022
 ```bash
 LLM_PROVIDER=ollama
 LLM_BASE_URL=http://localhost:11434/v1
-LLM_MODEL=llama2:7b  # or your preferred model
+LLM_MODEL=llama2:7b  # your installed model
 ```
 
 #### Embedding Provider
-
 ```bash
 EMBEDDING_PROVIDER=openai  # or ollama for local
 EMBEDDING_API_KEY=your-openai-api-key

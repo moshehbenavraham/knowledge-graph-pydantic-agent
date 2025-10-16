@@ -2,62 +2,56 @@
 
 ## What is Luminari AI Agent?
 
-Luminari AI Agent is an enterprise-grade unified artificial intelligence platform that combines multiple AI capabilities into a single, intelligent system. Built on [Pydantic AI](https://ai.pydantic.dev/), it provides a comprehensive suite of tools and services for intelligent automation, data processing, and decision support.
+Enterprise-grade unified AI platform built on [Pydantic AI](https://ai.pydantic.dev/). Consolidates multiple AI capabilities into a single intelligent agent with intelligent routing, parallel execution, and enterprise-grade resilience.
 
 ## Core Philosophy
 
-**One Agent, All Tools** - Luminari consolidates traditionally separate AI capabilities into a single, intelligent agent that can:
-
-- **Understand Intent**: Automatically route queries to the most appropriate tools
-- **Execute in Parallel**: Run multiple tools simultaneously for comprehensive results
-- **Learn and Adapt**: Maintain context through memory systems and knowledge graphs
-- **Scale Enterprise**: Handle production workloads with monitoring and resilience features
+**One Agent, All Tools** - Single agent (`src/agent/unified_agent.py`) that:
+- Routes queries intelligently to optimal tools
+- Executes tools in parallel for comprehensive results
+- Maintains context via memory systems and knowledge graphs
+- Scales for production workloads with monitoring and resilience
 
 ## Key Differentiators
 
 ### Unified Architecture
-Unlike fragmented AI solutions, Luminari provides a single agent (`src/agent/unified_agent.py`) that intelligently orchestrates all available tools based on query intent and context.
+Single agent intelligently orchestrates all tools based on query intent and context.
 
 ### Agentic Graph RAG
-Combines vector search (PostgreSQL/Supabase) with knowledge graph capabilities (Neo4j + Graphiti) for superior retrieval accuracy and contextual understanding.
+Combines vector search (PostgreSQL/Supabase) with knowledge graph (Neo4j + Graphiti) for superior accuracy and understanding.
 
 ### Production-Ready
-Enterprise features including circuit breakers, structured logging, Prometheus metrics, OpenTelemetry tracing, and comprehensive error handling.
+Circuit breakers, structured logging, Prometheus metrics, OpenTelemetry tracing, comprehensive error handling.
 
 ### Multiple Interfaces
-Access the same agent through:
-- **Streamlit UI** - Interactive web interface with analytics dashboard
-- **FastAPI** - REST API with WebSocket streaming support
-- **CLI** - Command-line utilities and scripts
+Access via Streamlit UI (interactive dashboard), FastAPI (REST + WebSocket), and CLI utilities.
 
 ## Target Use Cases
 
 ### Enterprise Knowledge Management
-- **Intelligent Document Search**: Find relevant information across vast document collections
-- **Knowledge Graph Navigation**: Explore entity relationships and temporal facts
-- **Automated Q&A**: Answer complex questions with context and evidence
+- Intelligent document search across large collections
+- Knowledge graph navigation with entity relationships
+- Automated Q&A with contextual evidence
 
 ### Data Analysis & Automation
-- **SQL Query Generation**: Natural language to SQL conversion
-- **Code Execution**: Safe Python code execution for data processing
-- **Web Research**: Automated web search and content analysis
+- Natural language to SQL conversion
+- Safe Python code execution for data processing
+- Automated web research and content analysis
 
 ### Conversational AI
-- **Long-term Memory**: Persistent conversation context
-- **Multi-turn Dialogues**: Maintain context across sessions
-- **Personalized Responses**: Adapt to user preferences and history
+- Persistent conversation context across sessions
+- Multi-turn dialogues with personalization
 
 ## Technology Stack
 
 ### Core Framework
 - **Pydantic AI 0.1.2+** - Agent framework with type-safe tooling
-- **Python 3.11+** - Modern Python with full type hints
-- **Async/Await** - Full asynchronous architecture
+- **Python 3.11+** - Modern Python with full async architecture
 
 ### AI & ML Services
 - **OpenAI/Anthropic APIs** - Primary LLM providers
-- **Local Models** - Ollama integration for private deployments
-- **Embedding Models** - Multiple provider support (OpenAI, local)
+- **Local Models** - Ollama for private deployments
+- **Multi-Provider Embeddings** - OpenAI and local models
 - **Vision Models** - Image analysis capabilities
 
 ### Data Storage
@@ -74,8 +68,6 @@ Access the same agent through:
 
 ## Getting Started
 
-Choose your path based on your needs:
-
 ### Quick Start (5 minutes)
 ```bash
 git clone <repository-url>
@@ -88,25 +80,23 @@ make run-ui
 
 ### Production Deployment
 ```bash
-# Full installation with all features
-pip install -e .[dev,rag]
+pip install -e .[dev,rag]  # Full installation
 # Configure production settings
 # Deploy with Docker/Kubernetes
 ```
 
 ### Development Setup
 ```bash
-make setup          # Install development environment
-make check          # Run all quality checks
-make run-ui         # Start development UI
+make setup    # Install environment
+make check    # Run quality checks
+make run-ui   # Start development UI
 ```
 
 ## Next Steps
 
-- **[Getting Started Guide](../2-getting-started/)** - Complete setup instructions
-- **[Architecture Overview](../3-architecture/)** - Technical system design
-- **[Configuration Reference](../4-configuration/)** - All configuration options
-- **[User Guides](../8-user-guides/)** - How to use specific features
+- **[Getting Started Guide](../2-getting-started/)** - Complete setup
+- **[Architecture Overview](../3-architecture/)** - Technical design
+- **[Configuration Reference](../4-configuration/)** - All options
 
 ---
 

@@ -1,15 +1,14 @@
 # Configuration Guide
 
-This guide explains how to configure Luminari AI Agent for your specific requirements using the centralized Pydantic settings system.
+Configure Luminari AI Agent using the centralized Pydantic settings system with type safety and runtime validation.
 
 ## Configuration Architecture
 
-Luminari uses a **centralized configuration system** with these key benefits:
-
+**Centralized system** providing:
 - **Type Safety**: Full Pydantic validation with helpful error messages
 - **Environment-based**: Loads from `.env` files and environment variables
 - **Module-specific Facades**: Clean interfaces for each subsystem
-- **Runtime Validation**: Settings validated at startup with clear error reporting
+- **Runtime Validation**: Settings validated at startup
 
 ## Configuration Files
 
@@ -25,23 +24,20 @@ Luminari uses a **centralized configuration system** with these key benefits:
 
 ### 1. Database Setup (Required)
 
-Choose one database option:
+Choose one:
 
-#### Option A: Supabase (Recommended)
+#### Supabase (Recommended)
 ```bash
-# In .env
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_KEY=your_service_role_key
 ```
 
-#### Option B: Direct PostgreSQL
+#### Direct PostgreSQL
 ```bash
 DATABASE_URL=postgresql://username:password@localhost:5432/luminari_db
 ```
 
-**Requirements:**
-- PostgreSQL 14+ with pgvector extension
-- Sufficient permissions for table creation and indexing
+**Requirements:** PostgreSQL 14+ with pgvector extension
 
 ### 2. LLM Provider Setup (Required)
 
@@ -51,7 +47,7 @@ Choose one LLM provider:
 ```bash
 LLM_PROVIDER=openai
 LLM_API_KEY=sk-your-openai-api-key
-LLM_MODEL=gpt-4o-mini  # or gpt-4, gpt-4o, etc.
+LLM_MODEL=gpt-4o-mini
 ```
 
 #### Anthropic Claude
@@ -65,32 +61,23 @@ LLM_MODEL=claude-3-5-sonnet-20241022
 ```bash
 LLM_PROVIDER=ollama
 LLM_BASE_URL=http://localhost:11434/v1
-LLM_MODEL=llama2:7b  # your installed model
+LLM_MODEL=llama2:7b
 ```
 
 ### 3. Embedding Configuration (Required)
-
 ```bash
-EMBEDDING_PROVIDER=openai  # or ollama
+EMBEDDING_PROVIDER=openai
 EMBEDDING_API_KEY=your-openai-api-key
 EMBEDDING_MODEL=text-embedding-3-small
-EMBEDDING_DIMENSION=1536  # matches the model
 ```
 
 ## Feature Configuration
 
 ### Knowledge Graph Features (Optional)
-
-For enhanced entity recognition and relationship mapping:
-
 ```bash
-# Neo4j Configuration
 NEO4J_URI=neo4j+s://your-instance.databases.neo4j.io
 NEO4J_USER=neo4j
 NEO4J_PASSWORD=your_password
-NEO4J_DATABASE=neo4j
-
-# Enable Graph Features
 ENABLE_GRAPH_SEARCH=true
 ENABLE_AGENTIC_RAG=true
 ```
@@ -109,25 +96,15 @@ RATE_LIMIT_PER_MINUTE=60
 ```
 
 ### Web Search Integration (Optional)
-
 ```bash
-# Choose one or more providers (priority order)
 JINA_API_KEY=your-jina-api-key
 BRAVE_API_KEY=your-brave-api-key
 SEARXNG_BASE_URL=http://localhost:8080
-
-WEB_SEARCH_PROVIDER=jina  # or brave, searxng
 ```
 
 ## UI Configuration
-
-### Interface Modes
-
 ```bash
-# UI Mode: simple, standard, advanced
 UI_MODE=standard
-
-# Feature Toggles
 ENABLE_CODE_EXECUTION=true
 ENABLE_WEB_SEARCH=true
 ENABLE_IMAGE_ANALYSIS=true
@@ -135,17 +112,11 @@ ENABLE_LONG_TERM_MEMORY=true
 ```
 
 ## Advanced Configuration
-
-### Chunking and Processing
-
 ```bash
-# Document Processing
 CHUNK_SIZE=1000
 CHUNK_OVERLAP=200
 USE_SEMANTIC_CHUNKING=true
 SEMANTIC_CHUNKING_MODEL=gpt-4o-mini
-
-# Entity Extraction
 EXTRACT_ENTITIES=true
 EXTRACT_RELATIONSHIPS=true
 EXTRACT_FACTS=true

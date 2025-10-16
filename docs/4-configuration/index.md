@@ -97,9 +97,9 @@ make run-ui  # Will show validation errors if any
 
 ### Common Issues
 
-- **[Missing Variables](./troubleshooting.md#missing-environment-variables)** - Required settings not found
-- **[Invalid Values](./troubleshooting.md#invalid-configuration-values)** - Settings with wrong format
-- **[Connection Errors](./troubleshooting.md#database-connection-issues)** - Cannot connect to services
+- **[Missing Variables](../9-troubleshooting/common-issues.md#missing-environment-variables)** - Required settings not found
+- **[Invalid Values](../9-troubleshooting/common-issues.md#invalid-configuration-values)** - Settings with wrong format
+- **[Connection Errors](../9-troubleshooting/common-issues.md#database-connection-issues)** - Cannot connect to services
 
 ## Environment-Specific Configuration
 
@@ -139,7 +139,7 @@ CORS_ORIGINS=https://yourdomain.com
 
 - **[Environment Variables](./environment.md)** - Complete reference for all settings
 - **[Settings System](./settings.md)** - Technical details about Pydantic configuration
-- **[Troubleshooting Guide](../9-troubleshooting/)** - Solutions for common configuration issues
+- **[Troubleshooting Guide](../9-troubleshooting/)** - Solutions for common issues
 
 ---
 
