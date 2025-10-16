@@ -1,13 +1,75 @@
 import asyncio
+import json
+import logging
+import tempfile
+from pathlib import Path
 
+import pandas as pd
+import plotly.express as px
 import streamlit as st
+import streamlit.components.v1 as components
 from httpx import AsyncClient
 from pydantic_ai.messages import ModelRequest, ModelResponse
 
 from src.config import UIMode
 from src.config.ui import ui_config as config
-from src.ui.features import BaseHandler, MCPHandler, StreamingHandler, render_upload_section
+from src.ui.features import (
+    BaseHandler,
+    DashboardHandler,
+    MCPHandler,
+    StreamingHandler,
+    create_pyvis_graph,
+    render_upload_section,
+)
 from src.ui.features.base_handler import SimpleHandler
+
+logger = logging.getLogger(__name__)
+
+
+def make_json_safe(obj: any, max_depth: int = 10, _current_depth: int = 0) -> any:
+    """
+    Recursively convert an object to a JSON-serializable format.
+
+    Handles non-serializable types by converting them to strings.
+    Prevents infinite recursion with max_depth limit.
+
+    Args:
+        obj: Object to make JSON-safe
+        max_depth: Maximum recursion depth
+        _current_depth: Current recursion level (internal)
+
+    Returns:
+        JSON-serializable version of the object
+    """
+    # Prevent infinite recursion
+    if _current_depth >= max_depth:
+        return "<max depth reached>"
+
+    # Handle None, bool, int, float, str - already JSON-safe
+    if obj is None or isinstance(obj, (bool, int, float, str)):
+        return obj
+
+    # Handle lists/tuples recursively
+    if isinstance(obj, (list, tuple)):
+        return [make_json_safe(item, max_depth, _current_depth + 1) for item in obj]
+
+    # Handle dicts recursively
+    if isinstance(obj, dict):
+        return {
+            str(key): make_json_safe(value, max_depth, _current_depth + 1)
+            for key, value in obj.items()
+        }
+
+    # For everything else, try JSON serialization
+    try:
+        json.dumps(obj)
+        return obj
+    except (TypeError, ValueError):
+        # Not serializable - convert to string
+        try:
+            return str(obj)
+        except Exception:
+            return f"<{type(obj).__name__} object>"
 
 
 class UIConfig:
@@ -67,7 +129,40 @@ def display_message_part(part):
             st.markdown(part.content)
     elif part.part_kind == "tool-call" and st.session_state.config.features["tools_visibility"]:
         with st.expander(f"🔧 Tool: {part.tool_name}"):
-            st.json(part.args)
+            try:
+                # Get args
+                args = part.args
+                logger.debug(
+                    f"Tool {part.tool_name} args type: {type(args)}, value preview: {str(args)[:200]}"
+                )
+
+                # If string, try to parse it
+                if isinstance(args, str):
+                    try:
+                        args = json.loads(args)
+                        logger.debug("Successfully parsed args from JSON string")
+                    except json.JSONDecodeError as e:
+                        # Invalid JSON string - show as code
+                        logger.warning(f"Tool {part.tool_name} args is invalid JSON string: {e!s}")
+                        st.warning("Tool arguments could not be parsed")
+                        st.code(str(args))
+                        return  # Exit this function since we showed the error
+
+                # If we still have args (either original dict or successfully parsed), display it
+                if args and not isinstance(args, str):
+                    # Make it JSON-safe and display
+                    safe_args = make_json_safe(args)
+                    if safe_args != args:
+                        logger.debug(f"Tool {part.tool_name} args contained non-serializable data")
+                    st.json(safe_args)
+                elif args and isinstance(args, str):
+                    # Still a string after parse attempt - show as code
+                    st.code(args)
+
+            except Exception as e:
+                # Ultimate fallback - show raw args
+                logger.error(f"Failed to display tool {part.tool_name} args: {e}")
+                st.code(str(part.args))
     elif part.part_kind == "tool-return" and st.session_state.config.features["tools_visibility"]:
         with st.expander("📥 Tool Result"):
             st.code(str(part.content)[:500])
@@ -87,10 +182,29 @@ def initialize_session_state():
     if "theme" not in st.session_state:
         st.session_state.theme = "light"
 
+    if "current_page" not in st.session_state:
+        st.session_state.current_page = "Chat"
+
 
 def render_sidebar():
     with st.sidebar:
         st.title("⚙️ Settings")
+
+        # Page Navigation (only show in Standard/Advanced mode)
+        if st.session_state.config.mode != UIMode.SIMPLE:
+            page = st.radio(
+                "Navigation",
+                options=["💬 Chat", "📊 Dashboard"],
+                index=0 if st.session_state.current_page == "Chat" else 1,
+                label_visibility="collapsed",
+            )
+            # Extract page name (remove emoji)
+            selected_page = page.split(" ", 1)[1]
+            if selected_page != st.session_state.current_page:
+                st.session_state.current_page = selected_page
+                st.rerun()
+
+            st.divider()
 
         # UI Mode Selector
         st.subheader("UI Mode")
@@ -193,6 +307,304 @@ def render_sidebar():
         st.caption("Powered by Pydantic AI")
 
 
+async def render_dashboard():
+    """Render the GraphRAG Dashboard with analytics and visualizations."""
+    st.title("📊 GraphRAG Dashboard")
+    st.caption("Real-time analytics and visualization of your Agentic RAG system")
+
+    # Initialize dashboard handler fresh each time to avoid event loop conflicts
+    # Note: DashboardHandler has internal caching (30s TTL) so this is efficient
+    from src.agentic_rag.storage.connection_manager import ConnectionManager
+
+    try:
+        # Use async context manager to ensure proper cleanup
+        async with ConnectionManager() as conn_mgr:
+            handler = DashboardHandler(conn_mgr)
+            await _render_dashboard_content(handler)
+    except Exception as e:
+        st.error(f"Failed to initialize dashboard: {e}")
+        st.info("Please check your database connections (PostgreSQL and Neo4j)")
+        return
+
+
+async def _render_dashboard_content(handler: DashboardHandler):
+    """Render dashboard content with initialized handler."""
+
+    # Add refresh button
+    col1, col2 = st.columns([6, 1])
+    with col2:
+        if st.button("🔄 Refresh"):
+            handler.clear_cache()
+            st.rerun()
+
+    st.divider()
+
+    # Section A: Search Analytics
+    st.header("🔍 Search Analytics")
+
+    try:
+        metrics = await handler.get_search_metrics()
+
+        # Metrics cards
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Total Searches", metrics.get("total_searches", 0))
+        with col2:
+            st.metric("Avg Latency", f"{metrics.get('avg_latency_ms', 0):.0f}ms")
+        with col3:
+            st.metric("Top Strategy", metrics.get("most_used_strategy", "N/A"))
+        with col4:
+            st.metric("Graph Boost Rate", f"{metrics.get('boost_rate', 0):.1%}")
+
+        # Strategy distribution chart
+        if metrics.get("strategy_distribution"):
+            st.subheader("Search Strategy Distribution")
+            strategy_dist = metrics["strategy_distribution"]
+            fig = px.bar(
+                x=list(strategy_dist.keys()),
+                y=list(strategy_dist.values()),
+                labels={"x": "Strategy", "y": "Count"},
+                title="Search Strategy Usage",
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+    except Exception as e:
+        logger.exception("Error rendering search analytics")
+        st.error(f"Error loading search metrics: {e}")
+
+    st.divider()
+
+    # Section B: Intent Analysis (full width)
+    st.header("🎯 Intent Analysis")
+    try:
+        intent_dist = await handler.get_intent_distribution()
+
+        if intent_dist:
+            fig = px.pie(
+                values=list(intent_dist.values()),
+                names=list(intent_dist.keys()),
+                title="Query Intent Distribution",
+                hole=0.3,  # Donut chart style
+            )
+            fig.update_traces(textposition="inside", textinfo="percent+label")
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("No intent data available yet. Run some searches to see intent distribution.")
+
+    except Exception as e:
+        logger.exception("Error rendering intent analysis")
+        st.error(f"Error loading intent data: {e}")
+
+    st.divider()
+
+    # Section C: Knowledge Graph (full width, Interactive pyvis visualization)
+    st.header("🕸️ Knowledge Graph")
+    try:
+        # Controls for graph visualization
+        col1, col2, col3 = st.columns([2, 2, 6])
+        with col1:
+            limit = st.slider("Max Entities", 10, 200, 100, step=10, key="graph_limit")
+        with col2:
+            layout_type = st.selectbox(
+                "Layout",
+                ["force_directed", "hierarchical", "circular"],
+                format_func=lambda x: x.replace("_", " ").title(),
+                index=0,
+                key="graph_layout",
+            )
+
+        # Fetch graph data
+        graph_data = await handler.get_graph_data(limit=limit)
+        entities = graph_data.get("entities", [])
+        relationships = graph_data.get("relationships", [])
+
+        if entities:
+            # Filter out entities with None IDs
+            valid_entities = [e for e in entities if e.get("id") is not None]
+
+            # Create pyvis interactive graph
+            net = create_pyvis_graph(
+                entities=valid_entities,
+                relationships=relationships,
+                height="700px",
+                width="100%",
+                layout=layout_type,
+            )
+
+            # Save graph to temporary HTML file
+            with tempfile.NamedTemporaryFile(
+                delete=False, suffix=".html", mode="w", encoding="utf-8"
+            ) as tmp_file:
+                tmp_path = tmp_file.name
+
+            # Save the graph (must be done after closing the temp file)
+            net.save_graph(tmp_path)
+
+            # Read the HTML content
+            with open(tmp_path, encoding="utf-8") as f:
+                html_content = f.read()
+
+            # Clean up temporary file
+            Path(tmp_path).unlink()
+
+            # Display the interactive graph using Streamlit components
+            components.html(html_content, height=750, scrolling=False)
+
+            # Add legend for entity types
+            st.markdown("---")
+            st.markdown("**Entity Type Legend:**")
+            entity_type_colors = {
+                "person": "#4C8EDA",  # Blue
+                "company": "#FF6B6B",  # Coral Red
+                "organization": "#57C7E3",  # Cyan
+                "location": "#FFC454",  # Yellow
+                "event": "#F16667",  # Red
+                "technology": "#8DCC93",  # Green
+                "product": "#A78BFA",  # Purple
+                "concept": "#D9A5B3",  # Pink
+            }
+            legend_cols = st.columns(len(entity_type_colors))
+            for idx, (entity_type, color) in enumerate(entity_type_colors.items()):
+                with legend_cols[idx % len(legend_cols)]:
+                    st.markdown(
+                        f'<span style="color: {color}; font-size: 20px;">●</span> {entity_type.capitalize()}',
+                        unsafe_allow_html=True,
+                    )
+
+            # Usage instructions
+            st.info(
+                "💡 **Interactive Controls:** "
+                "Drag nodes to reposition • Click and drag background to pan • "
+                "Scroll to zoom • Hover over nodes for details • "
+                "Use navigation buttons in bottom-right corner"
+            )
+
+            st.caption(
+                f"Showing {len(valid_entities)} entities and {len(relationships)} relationships. "
+                f"Node size indicates connection count."
+            )
+        else:
+            st.info("No entities in knowledge graph yet. Ingest documents to build the graph.")
+
+    except Exception as e:
+        logger.exception("Error rendering knowledge graph")
+        st.error(f"Error loading graph data: {e}")
+        st.info("Make sure Neo4j is running and properly configured")
+
+    st.divider()
+
+    # Section D & E: Entity Explorer and Performance Metrics (side by side)
+    col_left, col_right = st.columns(2)
+
+    with col_left:
+        st.header("🏷️ Entity Explorer")
+        try:
+            entities = await handler.get_top_entities(limit=20)
+
+            if entities:
+                df = pd.DataFrame(entities)
+                # Select columns for display
+                display_columns = [
+                    "name",
+                    "type",
+                    "relationship_count",
+                    "chunk_count",
+                ]
+                df_display = df[display_columns]
+
+                # Show the dataframe
+                st.dataframe(
+                    df_display,
+                    width="stretch",
+                    hide_index=True,
+                    column_config={
+                        "name": st.column_config.TextColumn("Entity Name", width="medium"),
+                        "type": st.column_config.TextColumn("Type", width="small"),
+                        "relationship_count": st.column_config.NumberColumn(
+                            "Relationships", width="small"
+                        ),
+                        "chunk_count": st.column_config.NumberColumn("Chunks", width="small"),
+                    },
+                )
+
+                # Optional: Show details for selected entity
+                if len(entities) > 0:
+                    entity_names = [e["name"] for e in entities]
+                    selected_entity = st.selectbox(
+                        "View entity timeline:", ["Select an entity...", *entity_names]
+                    )
+
+                    if selected_entity != "Select an entity...":
+                        entity_data = next(e for e in entities if e["name"] == selected_entity)
+                        entity_id = entity_data["id"]
+
+                        with st.spinner("Loading timeline..."):
+                            timeline = await handler.get_entity_timeline(entity_id)
+
+                        if timeline:
+                            st.subheader(f"Timeline: {selected_entity}")
+                            for fact in timeline:
+                                st.write(f"- {fact.get('description', 'N/A')}")
+                                if fact.get("valid_from"):
+                                    st.caption(f"  From: {fact['valid_from']}")
+                        else:
+                            st.info("No temporal facts available for this entity")
+            else:
+                st.info("No entities found. Ingest documents to populate the graph.")
+
+        except Exception as e:
+            logger.exception("Error rendering entity explorer")
+            st.error(f"Error loading entities: {e}")
+
+    with col_right:
+        st.header("⚡ Performance Metrics")
+        try:
+            perf = await handler.get_performance_metrics()
+
+            # Latency breakdown
+            if perf.get("vector_latency_ms", 0) > 0 or perf.get("graph_latency_ms", 0) > 0:
+                fig = px.bar(
+                    x=[
+                        "Vector Search",
+                        "Graph Search",
+                        "Total",
+                    ],
+                    y=[
+                        perf.get("vector_latency_ms", 0),
+                        perf.get("graph_latency_ms", 0),
+                        perf.get("total_latency_ms", 0),
+                    ],
+                    labels={"x": "Component", "y": "Latency (ms)"},
+                    title="Average Query Latency Breakdown",
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
+            # Cache and database health
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric("Cache Hit Rate", f"{perf.get('cache_hit_rate', 0):.1%}")
+            with col2:
+                st.metric("DB Connections", perf.get("db_connections_active", 0))
+
+            # Database metrics detail
+            with st.expander("Database Metrics Detail"):
+                st.subheader("PostgreSQL")
+                pg_metrics = perf.get("pg_metrics", {})
+                st.write(f"- Total Queries: {pg_metrics.get('total_queries', 0)}")
+                st.write(f"- Failed Queries: {pg_metrics.get('failed_queries', 0)}")
+                st.write(f"- Avg Query Time: {pg_metrics.get('avg_query_time_ms', 0):.2f}ms")
+
+                st.subheader("Neo4j")
+                neo4j_metrics = perf.get("neo4j_metrics", {})
+                st.write(f"- Total Queries: {neo4j_metrics.get('total_queries', 0)}")
+                st.write(f"- Failed Queries: {neo4j_metrics.get('failed_queries', 0)}")
+                st.write(f"- Avg Query Time: {neo4j_metrics.get('avg_query_time_ms', 0):.2f}ms")
+
+        except Exception as e:
+            logger.exception("Error rendering performance metrics")
+            st.error(f"Error loading performance data: {e}")
+
+
 def export_conversation():
     import json
     from datetime import datetime
@@ -270,7 +682,48 @@ async def handle_user_input(user_input: str):
                         # Display tool call in real-time
                         if config.features["tools_visibility"]:
                             with st.expander(f"🔧 Tool: {chunk['tool_name']}", expanded=True):
-                                st.json(chunk["args"])
+                                try:
+                                    # Get args
+                                    args = chunk["args"]
+                                    logger.debug(
+                                        f"Tool {chunk['tool_name']} args type: {type(args)}, value preview: {str(args)[:200]}"
+                                    )
+
+                                    # If string, try to parse it
+                                    if isinstance(args, str):
+                                        try:
+                                            args = json.loads(args)
+                                            logger.debug(
+                                                "Successfully parsed args from JSON string"
+                                            )
+                                        except json.JSONDecodeError as e:
+                                            # Invalid JSON string - show as code
+                                            logger.warning(
+                                                f"Tool {chunk['tool_name']} args is invalid JSON string: {e!s}"
+                                            )
+                                            st.warning("Tool arguments could not be parsed")
+                                            st.code(str(args))
+                                            # Don't continue the loop - just don't show JSON
+
+                                    # If we still have args (either original dict or successfully parsed), display it
+                                    if args and not isinstance(args, str):
+                                        # Make it JSON-safe and display
+                                        safe_args = make_json_safe(args)
+                                        if safe_args != args:
+                                            logger.debug(
+                                                f"Tool {chunk['tool_name']} args contained non-serializable data"
+                                            )
+                                        st.json(safe_args)
+                                    elif args and isinstance(args, str):
+                                        # Still a string after parse attempt - show as code
+                                        st.code(args)
+
+                                except Exception as e:
+                                    # Ultimate fallback - show raw args
+                                    logger.error(
+                                        f"Failed to display tool {chunk['tool_name']} args: {e}"
+                                    )
+                                    st.code(str(chunk["args"]))
                     elif chunk.get("type") == "tool-return":
                         # Display tool return in real-time
                         if config.features["tools_visibility"]:
@@ -300,29 +753,41 @@ async def main():
     if st.session_state.config.mode != UIMode.SIMPLE:
         render_sidebar()
 
-    # Main chat interface
-    st.title("🤖 AI with Apex Advanced RAG Agent")
+    # Get current page
+    current_page = st.session_state.get("current_page", "Chat")
 
-    # Mode indicator
-    mode = st.session_state.config.mode
-    mode_badge = {
-        UIMode.SIMPLE: "🟢 Simple",
-        UIMode.STANDARD: "🔵 Standard",
-        UIMode.ADVANCED: "🟣 Advanced",
-    }
-    st.caption(f"Mode: {mode_badge[mode]}")
+    # Render appropriate page
+    if current_page == "Dashboard":
+        # Dashboard page (only available in Standard/Advanced modes)
+        if st.session_state.config.mode != UIMode.SIMPLE:
+            await render_dashboard()
+        else:
+            st.warning("📊 Dashboard is only available in Standard and Advanced modes")
+            st.info("Switch to Standard or Advanced mode to access the dashboard")
+    else:
+        # Main chat interface
+        st.title("🤖 AI with Apex Advanced RAG Agent")
 
-    # Display conversation history
-    for msg in st.session_state.messages:
-        if isinstance(msg, ModelRequest | ModelResponse):
-            for part in msg.parts:
-                display_message_part(part)
+        # Mode indicator
+        mode = st.session_state.config.mode
+        mode_badge = {
+            UIMode.SIMPLE: "🟢 Simple",
+            UIMode.STANDARD: "🔵 Standard",
+            UIMode.ADVANCED: "🟣 Advanced",
+        }
+        st.caption(f"Mode: {mode_badge[mode]}")
 
-    # Chat input
-    user_input = st.chat_input("What do you want to do today?")
+        # Display conversation history
+        for msg in st.session_state.messages:
+            if isinstance(msg, ModelRequest | ModelResponse):
+                for part in msg.parts:
+                    display_message_part(part)
 
-    if user_input:
-        await handle_user_input(user_input)
+        # Chat input
+        user_input = st.chat_input("What do you want to do today?")
+
+        if user_input:
+            await handle_user_input(user_input)
 
 
 if __name__ == "__main__":

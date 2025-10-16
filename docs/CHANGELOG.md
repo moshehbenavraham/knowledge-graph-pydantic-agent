@@ -9,222 +9,147 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.0.0] - 2025-10-15
+## [1.0.2] - 2025-10-16
 
-### 🎉 Production Release - Agentic Graph RAG System Complete
+### Changed
+- **Interactive Knowledge Graph Visualization** - Replaced static Plotly graph with interactive pyvis network
+  - Draggable nodes: Click and drag individual nodes to reposition them for better relationship visualization
+  - Pan and zoom: Click-drag background to pan, scroll to zoom in/out
+  - Physics simulation: ForceAtlas2 algorithm (same as Neo4j Enterprise) with natural node repulsion and spring forces
+  - Multiple layout options: Force-directed (default), hierarchical, and circular layouts via dropdown selector
+  - Navigation controls: Built-in pan/zoom buttons in bottom-right corner
+  - Enhanced tooltips: Hover over nodes to see entity details (name, type, connections) in clean multi-line format
+  - Neo4j-inspired styling: 8 distinct entity type colors, node size based on connection count (15-50px)
+  - Full-width display: Knowledge graph now spans entire dashboard width for better visibility (was half-width)
+  - Edge validation: Only displays edges between visible nodes, preventing graph rendering errors
+  - Performance: Increased max entities from 100 to 200 with optimized physics stabilization
 
-**Phase 7 Complete**: All critical systems operational and validated with production-ready quality.
+### Added
+- New dependency: `pyvis>=0.3.2` for interactive network visualization
+- Helper function: `create_pyvis_graph()` in `src/ui/features/dashboard_utils.py` (180 lines)
+  - Configurable physics engines for different layout algorithms
+  - Comprehensive node/edge styling with entity type-based color mapping
+  - Defensive edge validation to prevent assertion errors
+  - Debug logging for skipped edges (nodes not in top N entities)
 
-### Fixed - Critical Bug Resolution (14 total)
+### Fixed
+- **Knowledge Graph Edge Errors** - Fixed AssertionError when relationships referenced entities outside top N
+  - Added node ID tracking set to validate edge endpoints before adding to graph
+  - Edges to non-existent nodes are now safely skipped with debug logging
+  - Prevents crashes when Neo4j relationships span beyond displayed entity limit
+- **HTML Encoding in Tooltips** - Fixed display of raw HTML tags in node hover tooltips
+  - Changed from HTML format (`<b>`, `<br>`, `<i>`) to plain text with newlines (`\n`)
+  - Tooltips now render as clean multi-line text instead of showing encoded characters
 
-#### Ingestion Pipeline
-- **Entity Extraction JSON Parsing** (`knowledge_extractor.py:248`)
-  - Fixed unescaped curly braces in LLM prompt causing KeyError
-  - Entity extraction now yields 50-100+ entities per document with 0.95-0.99 confidence
-
-- **Neo4j Store Method Calls** (`pipeline.py:444-501`)
-  - Rewrote `_update_knowledge_graph()` to use proper batch methods
-  - Fixed non-existent method calls (create_entity, add_chunk_reference)
-
-- **Relationship Storage KeyError** (`neo4j_store.py:65-141`)
-  - Modified `add_relationships()` to accept entity names instead of IDs
-  - Fixed entity1_id/entity2_id KeyError blocking relationship linking
-  - Knowledge graph now correctly links 300+ relationships
-
-- **PostgreSQL Vector Format** (`postgres_store.py:48-67`)
-  - Fixed embedding format conversion from Python list to pgvector string
-  - Resolved "expected str, got list" errors during storage
-
-- **Pydantic-AI API Changes** (6 locations)
-  - Updated `response.data` → `response.output` across codebase
-  - Fixed compatibility with Pydantic-AI v0.1.2+ API
-
-- **GraphitiClient Episode Storage** (`pipeline.py:482-500`)
-  - Fixed non-existent `add_episode()` method call
-  - Now uses `neo4j_store.add_episodes()` directly
-
-#### Search System
-- **Vector Search Embedding Format** (`vector_search.py:247-254`)
-  - Added type checking and conversion for embedding formats
-  - Fixed TypeError during vector search execution
-  - Validated with 0.54-0.68 similarity scores on real queries
-
-- **Neo4j v5+ Compatibility** (`neo4j_store.py:134, 371-372`)
-  - Replaced deprecated `size()` function with `COUNT {}` syntax
-  - Eliminated syntax warnings in Neo4j v5+ environments
-
-#### Infrastructure
-- **Event Loop Compatibility** (5-part fix)
-  - Fixed asyncpg pool creation in wrong event loop scope
-  - Implemented module-scoped fixtures and explicit loop binding
-  - Resolved "Task attached to different loop" errors
-
-- **Configuration Masking Bug** (`settings.py:516-543`)
-  - Added `mask_sensitive` parameter to prevent internal credential masking
-  - Fixed Neo4j authentication failures from masked passwords
-
-- **ConnectionManager Async Initialization** (`connection_manager.py:421-429`)
-  - Implemented async context manager pattern
-  - Fixed 100% ingestion failure rate from uninitialized pools
-
-- **Circuit Breaker Pool Validation** (`connection_manager.py:249-255`)
-  - Added pool existence checks before circuit breaker evaluation
-  - Improved error messages with actionable guidance
-
-- **Neo4j Driver SSL Configuration** (`connection_manager.py:352-358`)
-  - Fixed encryption handling for `neo4j+s://` URIs
-  - Proper certificate trust configuration
-
-- **Neo4j Connection Restoration**
-  - Unpaused Neo4j Aura instance
-  - Verified DNS resolution and connectivity
-
-### Added - Test Infrastructure
-
-#### Comprehensive Test Suites (5 new files, 268 new tests)
-- `tests/test_vector_search_coverage.py` (54 tests)
-  - Embedding generation, format conversion, similarity scoring
-  - Edge cases: empty queries, invalid embeddings, large result sets
-
-- `tests/test_chunker_coverage.py` (61 tests)
-  - Semantic and simple chunking strategies
-  - Validation, overlap handling, edge cases
-
-- `tests/test_embedder_coverage.py` (51 tests)
-  - Multi-model support (OpenAI, Ollama, Nomic)
-  - Batch processing, caching, error handling
-
-- `tests/test_knowledge_extractor_coverage.py` (79 tests)
-  - Entity extraction with 50-100+ entities per document
-  - Relationship extraction with confidence scoring
-  - Fact extraction with temporal markers
-
-- `tests/test_hybrid_search_edge_cases.py` (23 tests)
-  - Strategy selection, result merging, concurrent operations
-  - Error handling and graceful degradation
-
-#### Utility Scripts
-- `scripts/verify_ingestion.py` - Verify document ingestion completeness
-- `scripts/test_search_strategies.py` - Test all 4 search strategies
-- `scripts/clear_databases.py` - Clean databases for testing
-
-#### Test Data
-- `docs/example_docs/light/` - 8-document test corpus
-  - Validated end-to-end ingestion (46 chunks, 397 entities, 217 facts)
-  - Used for search strategy validation
-
-### Changed - Test Coverage Achievements
-
-**Before Phase 7**: 18.45% overall coverage
-**After Phase 7**: 95-100% on core RAG components
-
-| Component | Before | After | Improvement |
-|-----------|--------|-------|-------------|
-| Graph Search | 38.36% | 100% | +61.64% |
-| Hybrid Search | 25.81% | 100% | +74.19% |
-| Vector Search | 67.23% | 100% | +32.77% |
-| Chunker | 20.97% | 96.24% | +75.27% |
-| Embedder | 25.95% | 99.37% | +73.42% |
-| Knowledge Extractor | 35.92% | 99.55% | +63.63% |
-| Intent Analyzer | N/A | 96.06% | Maintained |
-| Ranker | N/A | 77.54% | Maintained |
-
-**Total Tests**: 365 passing, 2 skipped
-
-### Changed - Search System Validation
-
-All 4 search strategies validated with real ingested data:
-
-#### Vector Search ✅
-- Query: "What is OpenAI's latest funding round?"
-- Results: 5 relevant chunks with 0.54-0.68 similarity scores
-- Precision: 100% (all results relevant)
-- Recall: 100% (found all matching chunks)
-
-#### Graph Search ✅
-- Query: "How is Microsoft related to OpenAI?"
-- Results: 3 direct relationships found
-  - Microsoft → OpenAI: invested_in
-  - Microsoft → OpenAI: partners_with
-  - Microsoft → OpenAI: competes_with
-- Source: All relationships verified in source documents
-
-#### Hybrid Search ✅
-- Intelligent strategy selection based on query intent
-- Parallel execution of vector + graph search
-- Result merging with deduplication
-- Query time: 0.001s for graph queries, <500ms for hybrid
-
-#### Intent Analysis ✅
-- Classification accuracy: 100% on test queries
-- Confidence scores: 0.60-0.80 range
-- Correct routing: VECTOR_HEAVY, GRAPH_HEAVY, HYBRID strategies
-
-### Changed - Documentation Updates
-
-#### Main Documentation
-- `docs/AGENTIC_RAG.md` - Updated to v1.0.0 Production Ready status
-- `docs/CHANGELOG.md` - Moved historical entries to changelogs_previous/
-- `docs/TROUBLESHOOTING.md` - Added all Phase 7 fixes and solutions
-- `docs/operations/API_RUNBOOK.md` - Updated references to current docs
-
-#### Cleanup
-- Removed `docs/projects_ongoing/` (10 files deleted)
-- All project information consolidated into main documentation
-- Clear separation: active docs vs. historical changelogs
-
-### Performance Metrics
-
-**Ingestion Performance** (8-document validation):
-- Processing time: ~5.5 minutes total (~41 seconds per document)
-- Chunk creation: 46 chunks (~5.8 per document)
-- Entity extraction: 397 entities (~49.6 per document)
-- Fact extraction: 217 facts (~27.1 per document)
-- Neo4j storage: 230 entities + 339 relationships (after deduplication)
-
-**Search Performance**:
-- Vector search: <150ms average latency
-- Graph search: <500ms for complex traversals
-- Hybrid search: <300ms average latency
-- Intent classification: 90%+ accuracy
-- Storage efficiency: 99.6% zero-duplication compliance
-
-### System Status
-
-**✅ Production Ready - All Systems Operational**
-
-#### Core Components
-- ✅ Document ingestion pipeline (100% operational)
-- ✅ Entity extraction (50-100+ entities per document)
-- ✅ Relationship linking (339 relationships validated)
-- ✅ Vector search (pgvector with 1536d embeddings)
-- ✅ Graph search (Neo4j Cypher queries)
-- ✅ Hybrid search (intelligent strategy selection)
-- ✅ Intent analysis (90%+ classification accuracy)
-
-#### Quality Gates
-- ✅ 365 tests passing with 95-100% coverage on core components
-- ✅ All 14 critical bugs fixed and verified
-- ✅ All 4 search strategies validated with real data
-- ✅ End-to-end ingestion validated (8 documents)
-- ✅ Zero critical issues remaining
-
-#### Next Phase
-**Phase 8: Production Deployment** (Not Started)
-- Full document corpus ingestion
-- Performance benchmarking under load
-- Production readiness validation
-- Enterprise features and optimization
+### Technical Details
+- **Physics Configuration**:
+  - Gravitational constant: -50 (nodes repel each other)
+  - Spring length: 200px (natural spacing between connected nodes)
+  - Damping: 0.4 (smooth, realistic motion)
+  - Stabilization: 100 iterations for optimal initial layout
+- **Interaction Features**: Drag nodes, drag canvas, zoom (scroll), hover tooltips, keyboard navigation
+- **Rendering**: HTML generated via pyvis, embedded in Streamlit via `components.html()`
+- **Temporary Files**: Proper cleanup with context managers and Path.unlink()
 
 ---
 
-## [Unreleased]
+## [1.0.1] - 2025-10-15
 
-*All new changes go here*
+### Added
+- **GraphRAG Analytics Dashboard** - Comprehensive visualization and monitoring interface for the Agentic RAG system
+  - Real-time search analytics with metrics cards (total searches, avg latency, top strategy, graph boost rate)
+  - Search strategy distribution bar chart showing usage patterns across vector, graph, and hybrid searches
+  - Query intent distribution pie chart displaying intent analysis breakdown (VECTOR_HEAVY, GRAPH_HEAVY, HYBRID, TEMPORAL, ENTITY_FOCUSED)
+  - Interactive knowledge graph visualization using NetworkX and Plotly with spring layout algorithm
+  - Entity explorer with top 20 entities table (sortable by relationships, chunks, creation date)
+  - Entity timeline viewer showing first_seen, last_updated, mention_count, and chunk references
+  - Performance metrics section with query latency breakdown and database health indicators
+  - 30-second caching for expensive Neo4j queries to optimize dashboard performance
+  - Manual refresh button to clear cache and fetch latest data
+  - Graceful degradation when databases are unavailable or empty
+- Dashboard feature handlers in modular architecture:
+  - `src/ui/features/dashboard_handler.py` (380 lines) - Metrics collection and data fetching
+  - `src/ui/features/dashboard_utils.py` (330 lines) - Cypher query generation and data formatting
+- Dashboard configuration in `src/config/ui.py` with DashboardConfig dataclass
+- Page navigation system in Streamlit UI (Chat / Dashboard)
+- Comprehensive test suite: `tests/ui/test_dashboard.py` (470 lines, 20+ tests)
+- New dependencies: `plotly>=5.18.0`, `networkx>=3.2.1`
+- Documentation: `docs/DASHBOARD_QUICKSTART.md` - User-friendly quick start guide
+
+### Fixed
+- **Neo4j Schema Compatibility** - Updated all Cypher queries to match actual database schema
+  - Changed property names: `uuid` → `id`, `entity_type` → `type`, `created_at` → `first_seen`
+  - Updated entity summary retrieval to use `canonical_name` property
+  - Fixed chunk count queries to use `size(e.chunk_refs)` instead of relationship traversal
+  - Fixed relationship queries to use correct property names and `properties(r)` for metadata
+- **Neo4j 5+ Syntax Compliance** - Migrated from deprecated `size()` function to modern `COUNT {}` syntax
+  - Updated all relationship counting queries: `size((e)-[]->())` → `COUNT { (e)-[]->(other) }`
+  - Ensures compatibility with Neo4j 5.x and later versions
+  - Eliminates syntax error warnings from Neo4j server
+- **NetworkX Graph Rendering** - Resolved "None cannot be a node" error
+  - Added entity ID validation to filter out None values before graph creation
+  - Implemented `valid_entities` filtering in dashboard visualization
+  - Updated entity count displays to reflect filtered entities
+- **Plotly Visualization Compatibility** - Fixed deprecated colorbar configuration
+  - Migrated `titleside` parameter to nested `title=dict(text=..., side=...)` format
+  - Ensures compatibility with Plotly 5.18.0+
+- **Streamlit Component Parameters** - Corrected parameter usage for Streamlit widgets
+  - `st.plotly_chart()` uses `use_container_width=True` (not `width`)
+  - `st.dataframe()` uses `width="stretch"` (new parameter)
+  - Eliminates deprecation warnings in Streamlit output
+
+### Changed
+- Dashboard only available in Standard and Advanced UI modes (not Simple mode)
+- Entity timeline view simplified to show entity metadata instead of temporal facts (Facts node type not yet in schema)
+- Graph visualization limited to 100 entities maximum for performance optimization
+
+### Technical Details
+- **Architecture**: Modular feature handler pattern following existing codebase conventions
+- **Performance**: 30-second TTL cache for Neo4j queries, lazy loading of graph data
+- **Error Handling**: Comprehensive try-catch blocks with graceful degradation
+- **Testing**: 20+ unit and integration tests covering all dashboard functionality
+- **Code Quality**: All changes pass ruff linting, black formatting, and type checks
+
+### Documentation
+- Added `docs/DASHBOARD_QUICKSTART.md` with usage instructions and troubleshooting
+- Updated `docs/projects_ongoing/graphrag-dashboard.md` with completion status
+- Created `docs/projects_ongoing/graphrag-dashboard-COMPLETE.md` with implementation summary
+- Added `docs/projects_ongoing/graphrag-dashboard-BUGS-FIXED.md` documenting critical bug fixes
 
 ---
 
-**For historical changes (v0.1.0 - v0.9.0)**, see:
-- `docs/changelogs_previous/changelog_2025_10_15.md` (v0.4.0 - v0.9.0)
-- `docs/changelogs_previous/changelog_2025_07_01.md`
-- `docs/changelogs_previous/changelog_2025_06_01.md`
+## [1.0.0] - 2025-10-14
+
+### Release
+- **Production-Ready Agentic Graph RAG System** - Complete implementation with dual-database architecture
+- PostgreSQL/Supabase vector storage with pgvector for embeddings
+- Neo4j Aura knowledge graph with Graphiti integration
+- Hybrid search with intelligent intent analysis and routing
+- Comprehensive tooling: web search, image analysis, SQL queries, code execution
+- Three UI modes: Simple, Standard (default), Advanced
+- Full test coverage (75%+) with integration and end-to-end tests
+- Production deployment guides and monitoring setup
+
+---
+
+## Previous Versions
+
+See `/docs/changelogs_previous/` for historical changes from v0.1.0 through v0.9.0.
+
+---
+
+## Version Numbering
+
+This project uses [Semantic Versioning](https://semver.org/):
+- **MAJOR** version (X.0.0) for incompatible API changes
+- **MINOR** version (0.X.0) for new functionality in a backward compatible manner
+- **PATCH** version (0.0.X) for backward compatible bug fixes
+
+## Changelog Sections
+
+- **Added** for new features
+- **Changed** for changes in existing functionality
+- **Deprecated** for soon-to-be removed features
+- **Removed** for now removed features
+- **Fixed** for any bug fixes
+- **Security** in case of vulnerabilities

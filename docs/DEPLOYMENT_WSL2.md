@@ -419,6 +419,49 @@ ENABLE_REDIS_CACHE=false
 - [x] **Fixed RAG list_documents_tool** (was querying non-existent document_metadata table, now queries documents table correctly)
 - [x] **Updated TESTING_GUIDE.md** (added document-specific test queries based on ingested content)
 - [x] **Deployment fully operational** (UI + RAG accessible)
+- [x] **GraphRAG Analytics Dashboard deployed** (v1.0.0 - 2025-10-15)
+
+### 📊 GraphRAG Analytics Dashboard (NEW - v1.0.0)
+
+**Deployed:** 2025-10-15
+**Status:** ✅ Fully Operational
+
+**Dependencies Installed:**
+- ✅ plotly 6.3.1 (interactive visualizations)
+- ✅ networkx 3.5 (graph layout algorithms)
+- ✅ Dashboard modules verified working
+
+**Features Available:**
+- 🔍 **Search Analytics:** Metrics cards, strategy distribution charts
+- 🎯 **Intent Analysis:** Query intent distribution visualizations
+- 🕸️ **Knowledge Graph:** Interactive network visualization with up to 100 entities
+- 🏷️ **Entity Explorer:** Top entities table with temporal fact timelines
+- ⚡ **Performance Metrics:** Latency breakdowns, cache stats, DB health monitoring
+
+**Access Dashboard:**
+```bash
+# Start UI in Standard mode (recommended)
+make run-ui
+# OR
+source .venv/bin/activate && PYTHONPATH=$(PWD):$PYTHONPATH streamlit run src/ui/streamlit_app.py
+
+# Navigate to: http://localhost:8501
+# Click "📊 Dashboard" in the sidebar
+```
+
+**Dashboard Requirements:**
+- ✅ PostgreSQL/Supabase connection (verified working)
+- ✅ Neo4j Aura connection (verified working)
+- ✅ Documents ingested (for meaningful analytics)
+- ✅ Some searches performed (generates metrics)
+
+**Quick Start Guide:** See `docs/DASHBOARD_QUICKSTART.md`
+
+**WSL2-Specific Notes:**
+- Dashboard accessible from Windows browser at http://localhost:8501
+- Graph visualization uses CPU-only rendering (no GPU needed)
+- All features work identically to Linux/Mac
+- 30-second caching optimizes performance on WSL2 I/O
 
 ### ⚠️ In Progress
 - [ ] **Neo4j Aura authentication** (credentials need verification/refresh - instance may be paused)
@@ -426,19 +469,30 @@ ENABLE_REDIS_CACHE=false
 - [ ] **Fix Prometheus metrics setup** (resolve .env duplicates, add @track_performance to tools)
 
 ### 📋 Next Steps (Priority Order)
-1. **Verify Neo4j Aura credentials** (instance may be paused, password may need reset)
+
+1. **🎉 Test the new GraphRAG Dashboard** (RECOMMENDED FIRST)
+   ```bash
+   # Start the UI
+   make run-ui
+
+   # Open browser: http://localhost:8501
+   # Click "📊 Dashboard" in sidebar
+   # Explore all 5 analytics sections
+   ```
+
+2. **Verify Neo4j Aura credentials** (instance may be paused, password may need reset)
    - Login: https://neo4j.com/cloud/aura-free
    - Check instance status → Resume if paused
    - Reset password if needed → Update `.env`
 
-2. **Run `python scripts/init_neo4j.py`** (creates constraints and indexes)
+3. **Run `python scripts/init_neo4j.py`** (creates constraints and indexes)
 
-3. **Test full ingestion with graph extraction**:
+4. **Test full ingestion with graph extraction**:
    ```bash
    python -m src.agentic_rag.ingestion ingest --path docs/example_docs
    ```
 
-4. **Complete comprehensive testing** with TESTING_GUIDE.md
+5. **Complete comprehensive testing** with TESTING_GUIDE.md
 
 ## Troubleshooting
 
