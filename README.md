@@ -285,29 +285,33 @@ See `docs/DB_AND_RAG.md` and `docs/TROUBLESHOOTING.md` for detailed ingestion ex
 
 ## Tools & Capabilities
 
-The unified agent (`src/agent/unified_agent.py`) provides comprehensive tooling through async functions:
+The unified agent (`src/agent/unified_agent.py`) provides 12 comprehensive tools through async functions decorated with `@super_agent.tool`:
 
 ### Search & Retrieval
-- **`smart_search`** – Intent-aware routing (5 strategies: VECTOR_HEAVY, GRAPH_HEAVY, HYBRID, TEMPORAL, ENTITY_FOCUSED) that automatically selects optimal search approach
-- **`retrieve_relevant_documents`** – Vector similarity search via Supabase pgvector
-- **`list_documents`** – Browse available documents with metadata filtering
-- **`get_document_content`** – Retrieve full document content by ID
+- **`smart_search(query, limit)`** – Primary search tool with intent-aware routing (5 strategies: VECTOR_HEAVY, GRAPH_HEAVY, HYBRID, TEMPORAL, ENTITY_FOCUSED) that automatically selects optimal approach. Returns rich results with chunks, entities, and facts.
+- **`query_knowledge_graph(entity_name, query_type, limit)`** – Direct knowledge graph queries for entity exploration, relationship discovery, and temporal facts. Query types: entity_facts, entity_relationships, temporal_facts.
+- **`retrieve_documents(query, limit)`** – Simple vector similarity search via Supabase pgvector for straightforward content retrieval.
+- **`comprehensive_search(query, use_vector, use_graph, max_results)`** – Parallel multi-strategy search that executes all search types and intelligently combines results.
+- **`iterative_search(query, max_iterations)`** – Multi-step iterative search for complex queries requiring refinement and exploration.
+- **`list_all_documents()`** – Browse available documents with metadata including document IDs, file paths, types, and schema information.
+- **`get_full_document(document_id)`** – Retrieve complete document content by ID with all chunks combined.
 
-### Data Access
-- **`execute_sql_query`** – Secure read-only SQL execution via Supabase RPC with query validation
+### Data Access & Analysis
+- **`execute_sql(sql_query)`** – Secure read-only SQL execution via Supabase RPC with query validation. Use for data analysis and aggregations.
+- **`query_tabular_data(sql_query)`** – Execute SQL queries on uploaded CSV/Excel datasets stored in document_rows table. Includes detailed usage patterns.
 
 ### External Integration
-- **`web_search`** – Multi-provider web search (Jina.ai → Brave Search → SearXNG) with automatic failover
-- **`image_analysis`** – Vision model integration for image understanding and OCR
+- **`search_web(query)`** – Multi-provider web search (Jina.ai → Brave Search → SearXNG) with automatic failover for current information.
+- **`analyze_image(document_id, analysis_query)`** – Vision model integration for image understanding, OCR, object detection, and scene analysis.
 
 ### Code Execution
-- **`execute_safe_code`** – Sandboxed Python execution using RestrictedPython with whitelisted modules
+- **`execute_python_code(code)`** – Sandboxed Python execution using RestrictedPython with whitelisted modules for calculations and data transformation.
 
 ### Memory & Context
 - **mem0 integration** – Automatic session and long-term memory with semantic search over past conversations
 - **Knowledge extraction** – Graphiti-powered entity, relationship, and temporal fact extraction feeding the knowledge graph
 
-All tools include comprehensive error handling, input validation, and structured logging for production use.
+All tools include comprehensive error handling, input validation, and structured logging for production use. See `src/agent/unified_agent.py` for detailed tool signatures and docstrings.
 
 ## UI Features
 
@@ -364,6 +368,143 @@ Real-time visualization and analytics for your Agentic RAG system:
 make run-ui              # Standard mode (recommended)
 make run-ui-advanced     # Advanced mode with all features
 ```
+
+## API Reference
+
+The FastAPI service (`src/api/main.py`) exposes 24+ production endpoints across multiple routers. API documentation is available at `/docs` (Swagger UI) and `/redoc` (ReDoc) when running the API server.
+
+### Core Endpoints
+
+| Method | Path | Purpose | Request | Response |
+|--------|------|---------|---------|----------|
+| GET | `/` | API information and documentation links | - | JSON with API metadata and endpoint listing |
+| GET | `/api/v1/status` | System status and component health | - | StatusResponse with database/cache health |
+| GET | `/metrics` | Prometheus metrics exposition | - | Prometheus format metrics |
+| DELETE | `/api/v1/cache` | Clear cache entries (supports patterns) | `?pattern=*` | Success message |
+
+### Chat Endpoints (`/api/v1/chat`)
+
+| Method | Path | Purpose | Request Body | Response |
+|--------|------|---------|--------------|----------|
+| POST | `/api/v1/chat` | Synchronous chat with caching | `ChatRequest` | `ChatResponse` with sources and metrics |
+| POST | `/api/v1/chat/stream` | Server-Sent Events streaming chat | `ChatRequest` | SSE stream of response chunks |
+| WebSocket | `/api/v1/chat/ws` | Bidirectional WebSocket chat | JSON messages | Real-time streaming responses |
+| POST | `/api/v1/chat/feedback` | Submit user feedback on response | `FeedbackRequest` | `FeedbackResponse` with feedback ID |
+| GET | `/api/v1/chat/sessions/{session_id}/history` | Get session conversation history | `?limit=50` | List of messages with metadata |
+
+**ChatRequest Schema:**
+```json
+{
+  "message": "Your question here",
+  "session_id": "optional-session-id",
+  "search_strategy": "adaptive",
+  "include_sources": true,
+  "stream": false,
+  "max_tokens": 2000,
+  "temperature": 0.7
+}
+```
+
+### Search Endpoints (`/api/v1/search`)
+
+| Method | Path | Purpose | Query Parameters | Response |
+|--------|------|---------|------------------|----------|
+| POST | `/api/v1/search` | Unified search (vector/hybrid/adaptive) | - | `SearchResponse` with results and entities |
+| GET | `/api/v1/search/suggest` | Query autocomplete/suggestions | `?query=prefix&limit=5` | List of suggestions |
+| GET | `/api/v1/search/entities/{entity_name}` | Get entity information from graph | - | Entity properties and relationships |
+| GET | `/api/v1/search/relationships` | Find relationship paths between entities | `?entity1=X&entity2=Y&max_depth=3` | Relationship path data |
+
+**SearchRequest Schema:**
+```json
+{
+  "query": "search query text",
+  "search_type": "adaptive",
+  "limit": 10,
+  "threshold": 0.7,
+  "filters": {}
+}
+```
+
+### Document Endpoints (`/api/v1/documents`)
+
+| Method | Path | Purpose | Parameters | Response |
+|--------|------|---------|------------|----------|
+| POST | `/api/v1/documents` | Ingest new document with knowledge extraction | `IngestRequest` body | `IngestResponse` with document_id and stats |
+| GET | `/api/v1/documents` | List documents with pagination | `?page=1&page_size=20&source_filter=` | `DocumentListResponse` with pagination |
+| GET | `/api/v1/documents/{document_id}` | Get full document content | `?include_chunks=false` | `DocumentContent` with metadata |
+| DELETE | `/api/v1/documents/{document_id}` | Delete document and associated data | - | Status confirmation |
+| PATCH | `/api/v1/documents/{document_id}` | Update document metadata | `title` and/or `metadata` in body | Updated document info |
+| POST | `/api/v1/documents/{document_id}/reindex` | Regenerate embeddings and knowledge | - | Reindex status |
+| GET | `/api/v1/documents/{document_id}/stats` | Get document statistics | - | Chunk, entity, and relationship counts |
+
+**IngestRequest Schema:**
+```json
+{
+  "content": "document text content",
+  "title": "Document Title",
+  "source": "file_path_or_url",
+  "metadata": {}
+}
+```
+
+### Analytics Endpoints (`/api/v1/analytics`)
+
+| Method | Path | Purpose | Query Parameters | Response |
+|--------|------|---------|------------------|----------|
+| GET | `/api/v1/analytics/search-metrics` | Search performance metrics | `?window=7d` (24h/7d/30d) | Aggregated search statistics |
+| GET | `/api/v1/analytics/intent-distribution` | Query intent distribution | `?window=7d` | Intent percentages |
+| GET | `/api/v1/analytics/performance-metrics` | Latency and cache statistics | `?window=7d` | Performance breakdown |
+| GET | `/api/v1/analytics/time-series` | Time-series trending data | `?window=7d&metric=searches` | Time-stamped data points |
+| GET | `/api/v1/analytics/tool-usage` | Tool execution metrics | `?window=7d` | Per-tool usage stats |
+| GET | `/api/v1/analytics/agent-interactions` | User-agent interaction metrics | `?window=7d` | Interaction statistics |
+| GET | `/api/v1/analytics/health` | Analytics service health check | - | Service health status |
+
+### Example API Usage
+
+```bash
+# Synchronous chat request
+curl -X POST http://localhost:8058/api/v1/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "What is OpenAI?", "include_sources": true}'
+
+# Streaming chat with SSE
+curl -N http://localhost:8058/api/v1/chat/stream \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Explain RAG systems", "stream": true}'
+
+# Hybrid search
+curl -X POST http://localhost:8058/api/v1/search \
+  -H "Content-Type: application/json" \
+  -d '{"query": "AI funding trends", "search_type": "hybrid", "limit": 10}'
+
+# Ingest document
+curl -X POST http://localhost:8058/api/v1/documents \
+  -H "Content-Type: application/json" \
+  -d '{
+    "content": "Document text here...",
+    "title": "My Document",
+    "source": "/path/to/doc.txt"
+  }'
+
+# Get search analytics
+curl http://localhost:8058/api/v1/analytics/search-metrics?window=24h
+
+# Check system status
+curl http://localhost:8058/api/v1/status
+
+# Get Prometheus metrics
+curl http://localhost:8058/metrics
+```
+
+### Authentication & Security
+
+- **Current version**: No authentication required (development mode)
+- **Production**: Add authentication middleware (JWT/API keys) before deployment
+- **Rate limiting**: 60 requests/minute per IP (configurable in middleware)
+- **CORS**: Configured via `CORS_ORIGINS` environment variable
+- **Security headers**: Automatic security headers added by middleware
+
+See `docs/operations/API_RUNBOOK.md` for detailed operational procedures, troubleshooting, and production deployment guidelines.
 
 ## Development Workflow
 

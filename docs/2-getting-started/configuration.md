@@ -1,6 +1,6 @@
 # Configuration Guide
 
-Configure Luminari AI Agent using the centralized Pydantic settings system with type safety and runtime validation.
+Configure Base Agent using the centralized Pydantic settings system with type safety and runtime validation.
 
 ## Configuration Architecture
 
@@ -318,8 +318,8 @@ print(client.complete('Hello'))
 
 - **[Environment Variables Reference](../4-configuration/environment.md)** - Complete list of all settings
 - **[Settings System Guide](../4-configuration/settings.md)** - Technical details about the configuration system
-- **[Troubleshooting Guide](../9-troubleshooting/)** - Common configuration issues
+- **[Troubleshooting Guide](../10-troubleshooting/)** - Common configuration issues
 
 ---
 
-**Configuration Complete!** Your Luminari AI Agent is now configured for your environment.
+**Configuration Complete!** Your Base Agent is now configured for your environment.

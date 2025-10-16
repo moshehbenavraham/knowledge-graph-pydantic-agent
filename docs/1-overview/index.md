@@ -1,6 +1,6 @@
-# Luminari AI Agent - Overview
+# Base Agent - Overview
 
-## What is Luminari AI Agent?
+## What is Base Agent?
 
 Enterprise-grade unified AI platform built on [Pydantic AI](https://ai.pydantic.dev/). Consolidates multiple AI capabilities into a single intelligent agent with intelligent routing, parallel execution, and enterprise-grade resilience.
 
@@ -71,7 +71,7 @@ Access via Streamlit UI (interactive dashboard), FastAPI (REST + WebSocket), and
 ### Quick Start (5 minutes)
 ```bash
 git clone <repository-url>
-cd luminari-ai-agent
+cd base_agent
 make setup
 cp .env.example .env
 # Edit .env with your credentials
@@ -100,4 +100,4 @@ make run-ui   # Start development UI
 
 ---
 
-**Version**: 1.0.2 | **API Version**: 0.8.0 | **License**: MIT
+**Version**: 1.1.0 | **API Version**: 0.8.0 | **License**: MIT

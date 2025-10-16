@@ -1,6 +1,6 @@
 # Performance Optimization Guide
 
-This guide provides strategies and best practices for optimizing the performance of your Luminari AI Agent system, including Phase 3 Agent Intelligence Layer optimizations.
+This guide provides strategies and best practices for optimizing the performance of your Base Agent system, including Phase 3 Agent Intelligence Layer optimizations.
 
 ## Table of Contents
 

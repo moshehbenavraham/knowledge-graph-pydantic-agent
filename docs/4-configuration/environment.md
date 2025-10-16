@@ -1,6 +1,6 @@
 # Environment Variables Reference
 
-This document provides a complete reference for all environment variables used by Luminari AI Agent.
+This document provides a complete reference for all environment variables used by Base Agent.
 
 ## Configuration Categories
 
@@ -473,7 +473,7 @@ All settings are validated at startup. Invalid values will cause the application
 
 ## Troubleshooting
 
-See the [Troubleshooting Guide](../9-troubleshooting/) for solutions to common configuration issues.
+See the [Troubleshooting Guide](../10-troubleshooting/) for solutions to common configuration issues.
 
 ---
 

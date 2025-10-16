@@ -1,117 +1,227 @@
-# Documentation Overview
+# Base Agent Documentation
 
-This directory contains comprehensive enterprise-grade documentation for the Luminari AI Agent platform.
+**Enterprise-grade documentation for the Base Agent Agentic Graph RAG System**
 
-## Documentation Structure
-
-```
-docs/
-├── 1-overview/              # System overview and introduction
-│   ├── index.md            # Main overview and introduction
-│   ├── key-features.md     # Core features and capabilities
-│   ├── use-cases.md        # Common use cases and scenarios
-│   └── what-is-it.md       # What is the Luminari AI Agent?
-│
-├── 2-getting-started/       # Quick start guides
-│   ├── index.md            # Getting started overview
-│   ├── installation.md     # Installation and setup
-│   ├── configuration.md    # Configuration guide
-│   ├── quick-start.md      # 5-minute quick start
-│   └── first-run.md        # Your first agent interaction
-│
-├── 3-architecture/          # Technical architecture
-│   ├── index.md            # Architecture overview
-│   ├── system-design.md    # High-level system design
-│   ├── components.md       # Component architecture
-│   ├── data-flow.md        # Data flow diagrams
-│   └── security.md         # Security architecture
-│
-├── 4-configuration/        # Configuration reference
-│   ├── index.md            # Configuration overview
-│   ├── environment.md      # Environment variables
-│   ├── settings.md         # Pydantic settings system
-│   └── providers.md        # Provider configurations
-│
-├── 5-development/          # Development workflow
-│   ├── index.md            # Development overview
-│   ├── setup.md            # Development environment setup
-│   ├── workflow.md         # Development workflow
-│   ├── testing.md          # Testing strategies
-│   └── contributing.md     # Contribution guidelines
-│
-├── 6-deployment/           # Deployment and operations
-│   ├── index.md            # Deployment overview
-│   ├── docker.md           # Docker deployment
-│   ├── kubernetes.md       # Kubernetes deployment
-│   ├── monitoring.md        # Monitoring and observability
-│   └── maintenance.md      # Maintenance procedures
-│
-├── 7-api-reference/        # API documentation
-│   ├── index.md            # API overview
-│   ├── endpoints.md        # REST API endpoints
-│   ├── websocket.md        # WebSocket API
-│   └── streaming.md        # Streaming responses
-│
-├── 8-user-guides/          # User guides and tutorials
-│   ├── index.md            # User guides overview
-│   ├── streamlit-ui.md     # Using the Streamlit interface
-│   ├── rag-features.md     # RAG capabilities
-│   ├── knowledge-graph.md  # Knowledge graph features
-│   └── tools-usage.md      # Tool usage patterns
-│
-├── 9-troubleshooting/      # Troubleshooting and support
-│   ├── index.md            # Troubleshooting overview
-│   ├── common-issues.md    # Common problems and solutions
-│   ├── faq.md              # Frequently asked questions
-│   └── support.md          # Getting help and support
-│
-├── 10-security/            # Security and compliance
-│   ├── index.md            # Security overview
-│   ├── hardening.md        # Security hardening
-│   ├── compliance.md       # Compliance requirements
-│   └── best-practices.md   # Security best practices
-│
-└── _templates/             # Documentation templates
-    └── README.md           # This file
-```
-
-## Documentation Standards
-
-### Content Guidelines
-- **Professional Tone**: Enterprise-grade, professional language
-- **Concise but Complete**: Comprehensive coverage without unnecessary detail
-- **Actionable**: Include practical examples and step-by-step instructions
-- **Current**: Keep documentation synchronized with code changes
-
-### Formatting Standards
-- Use Markdown consistently across all documents
-- Include table of contents for documents > 500 words
-- Use consistent heading hierarchy (H1 → H2 → H3)
-- Include code examples with proper syntax highlighting
-- Use consistent terminology throughout
-
-### Maintenance
-- Review and update documentation quarterly
-- Archive outdated information rather than deleting it
-- Include version information where relevant
-- Cross-reference related documentation sections
-
-## Quick Access
-
-- **[Getting Started](./2-getting-started/)** - Start here for new users
-- **[Architecture](./3-architecture/)** - Technical system overview
-- **[Configuration](./4-configuration/)** - Complete configuration reference
-- **[API Reference](./7-api-reference/)** - Integration and API documentation
-- **[Troubleshooting](./9-troubleshooting/)** - Common issues and solutions
-
-## Contributing
-
-To contribute to documentation:
-1. Follow the established structure and naming conventions
-2. Use the templates in `_templates/` for consistency
-3. Ensure all examples are tested and functional
-4. Update cross-references when adding new content
+Version 1.1.0 | Last Updated: October 2025
 
 ---
 
-*This documentation is maintained by the Luminari AI Agent development team.*
+## 📚 Documentation Structure
+
+### Core Documentation (User Journey Flow)
+
+#### 1️⃣ [Overview](1-overview/index.md)
+**Start here** to understand what Base Agent is and what it can do.
+
+- [System Overview](1-overview/index.md) - Introduction and value proposition
+- [Key Features](1-overview/key-features.md) - Core capabilities and differentiators
+- [Use Cases](1-overview/use-cases.md) - Practical applications and scenarios
+
+---
+
+#### 2️⃣ [Getting Started](2-getting-started/index.md)
+**Quick onboarding** to get Base Agent running in minutes.
+
+- [Installation](2-getting-started/installation.md) - Setup and installation guide
+- [Quick Start](2-getting-started/quick-start.md) - 5-minute quickstart
+- [First Run](2-getting-started/first-run.md) - Your first agent interaction
+- [Configuration](2-getting-started/configuration.md) - Basic configuration setup
+- [Installation Reference](2-getting-started/installation-reference.md) - Detailed installation options
+
+---
+
+#### 3️⃣ [Architecture](3-architecture/index.md)
+**Technical deep dive** into system design and components.
+
+- [Architecture Overview](3-architecture/index.md) - High-level system architecture
+- [Agentic RAG System](3-architecture/agentic-rag.md) - RAG architecture and search strategies
+- [Database & RAG Integration](3-architecture/database-and-rag.md) - Storage architecture
+- [Architecture Diagrams](3-architecture/diagrams.md) - Visual system representations
+- [Full Reference](3-architecture/reference.md) - Complete technical documentation
+
+---
+
+#### 4️⃣ [Configuration](4-configuration/index.md)
+**Complete configuration reference** for all settings and options.
+
+- [Configuration Guide](4-configuration/index.md) - Configuration overview
+- [Environment Variables](4-configuration/environment.md) - All environment settings
+- [Reference Documentation](4-configuration/reference.md) - Comprehensive config reference
+
+---
+
+#### 5️⃣ [Guides](5-guides/index.md)
+**Task-oriented guides** to accomplish specific goals.
+
+- [Usage Guide](5-guides/usage.md) - Core usage patterns and workflows
+- [Tool Usage Patterns](5-guides/tool-usage-patterns.md) - Effective tool usage
+- [Examples](5-guides/examples.md) - Practical code examples
+- [AI Coder Guide](5-guides/ai-coder-guide.md) - Guide for AI assistants
+
+---
+
+#### 6️⃣ [Deployment](6-deployment/index.md)
+**Production deployment** guides and best practices.
+
+- [Deployment Overview](6-deployment/index.md) - Deployment strategy and checklist
+- [General Deployment](6-deployment/general.md) - Standard deployment procedures
+- [WSL2 Deployment](6-deployment/wsl2.md) - Complete WSL2 guide
+- [Dashboard Quickstart](6-deployment/dashboard-quickstart.md) - Analytics dashboard setup
+- [Dashboard WSL2](6-deployment/dashboard-wsl2.md) - Dashboard on WSL2
+
+---
+
+#### 7️⃣ [Operations](7-operations/index.md)
+**Running and monitoring** Base Agent in production.
+
+**Day-to-Day Operations:**
+- [API Runbook](7-operations/api-runbook.md) - API operations procedures
+- [Tool Installation](7-operations/tool-installation.md) - Operational tooling
+- [Runbooks](7-operations/runbooks/) - Incident response procedures
+
+**Pre-Production:**
+- [Go-Live Checklist](7-operations/go-live-checklist.md) - Production readiness
+
+**Analytics & Monitoring:**
+- [Analytics System](7-operations/analytics/system.md) - Complete analytics guide
+- [Population Guide](7-operations/analytics/population-guide.md) - Populating analytics
+- [Verification Checklist](7-operations/analytics/verification.md) - Verifying analytics
+- [Recent Updates](7-operations/analytics/updates.md) - Latest analytics changes
+- [Alerts](7-operations/observability/alerts.md) - Monitoring and alerting
+
+**Performance:**
+- [Performance Guide](7-operations/performance.md) - Optimization and tuning
+
+---
+
+#### 8️⃣ [Development](8-development/index.md)
+**Contributing and developing** Base Agent features.
+
+- [Development Guide](8-development/index.md) - Development workflow overview
+- [Testing Guide](8-development/testing.md) - Comprehensive testing documentation
+- [Testing Quick Reference](8-development/testing-guide.md) - Quick testing guide
+- [Development Tooling](8-development/dev-tooling.md) - Dev environment setup
+- [Product Requirements](8-development/prd.md) - Product vision and roadmap
+
+---
+
+#### 9️⃣ [Security](9-security/index.md)
+**Security hardening** and best practices.
+
+- [Security Overview](9-security/index.md) - Security strategy and principles
+- [Security Hardening](9-security/hardening.md) - Production hardening guide
+- [Supply Chain Security](9-security/supply-chain.md) - Dependency security
+
+---
+
+#### 🔟 [Troubleshooting](10-troubleshooting/index.md)
+**Problem solving** and common issues.
+
+- [Troubleshooting Guide](10-troubleshooting/index.md) - Complete troubleshooting reference
+
+---
+
+### Supporting Documentation
+
+#### 📋 [Changelogs](a-changelogs/index.md)
+Version history and release notes.
+
+- [Current Changelog](a-changelogs/current.md) - Latest changes
+- [Archive](a-changelogs/archive/) - Historical changelogs
+
+---
+
+#### 🚧 [Ongoing Projects](b-projects/index.md)
+Internal planning and project documentation.
+
+> **Note:** Working notes for active development - may be incomplete
+
+---
+
+#### 📝 [Example Documents](x-examples/index.md)
+Sample documents for testing and demonstration.
+
+> Test data for RAG ingestion and system validation
+
+---
+
+## 🚀 Quick Start Paths
+
+### New Users
+1. [Overview](1-overview/index.md) → [Getting Started](2-getting-started/index.md) → [Quick Start](2-getting-started/quick-start.md)
+
+### Developers
+1. [Architecture](3-architecture/index.md) → [Development](8-development/index.md) → [Testing](8-development/testing.md)
+
+### DevOps/SRE
+1. [Deployment](6-deployment/index.md) → [Operations](7-operations/index.md) → [Security](9-security/index.md)
+
+### Troubleshooters
+1. [Troubleshooting](10-troubleshooting/index.md) → [Operations](7-operations/index.md) → [Security](9-security/index.md)
+
+---
+
+## 🎯 Documentation Standards
+
+### Content Guidelines
+- **Professional & Concise**: Enterprise-grade, actionable content
+- **Practical Examples**: Code samples and step-by-step instructions
+- **Always Current**: Synchronized with codebase changes
+- **Cross-Referenced**: Linked to related documentation
+
+### Formatting Standards
+- Consistent Markdown formatting across all documents
+- Clear heading hierarchy (H1 → H2 → H3)
+- Syntax-highlighted code examples
+- Table of contents for documents > 500 words
+
+### Maintenance
+- Quarterly documentation reviews
+- Version information where relevant
+- Archived outdated content (not deleted)
+- Updated cross-references
+
+---
+
+## 🔗 Essential Links
+
+### Most Used Docs
+- 🎯 [Quick Start Guide](2-getting-started/quick-start.md)
+- 🏗️ [Architecture Overview](3-architecture/index.md)
+- ⚙️ [Configuration Reference](4-configuration/reference.md)
+- 🚀 [Deployment Guide](6-deployment/index.md)
+- 📊 [Analytics System](7-operations/analytics/system.md)
+- 🔧 [Troubleshooting](10-troubleshooting/index.md)
+
+### External Resources
+- [GitHub Repository](https://github.com/yourusername/base_agent)
+- [CLAUDE.md](../CLAUDE.md) - Project guidance for Claude Code
+- [Makefile](../Makefile) - All development commands
+
+---
+
+## 📖 About This Documentation
+
+This documentation follows an **enterprise-grade structure** designed for:
+
+✅ **User Journey Optimization** - Numbered categories follow the user's learning path
+✅ **Clear Separation** - Development, operations, and usage documentation are distinct
+✅ **Scalability** - Easy to add new docs without restructuring
+✅ **Discoverability** - Intuitive navigation and comprehensive cross-linking
+
+---
+
+## 🤝 Contributing
+
+To contribute to documentation:
+
+1. **Follow Structure**: Use established categories and naming conventions
+2. **Quality Standards**: Ensure professional tone and accurate information
+3. **Test Examples**: All code samples must be tested and functional
+4. **Update Cross-References**: Link to related documentation
+
+See [Development Guide](8-development/index.md) for contribution workflow.
+
+---
+
+**Base Agent Documentation** | Unified AI Assistant with Agentic Graph RAG

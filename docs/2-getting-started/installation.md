@@ -1,6 +1,6 @@
 # Complete Installation Guide
 
-Detailed setup instructions for Luminari AI Agent with all features enabled.
+Detailed setup instructions for Base Agent with all features enabled.
 
 ## System Requirements
 
@@ -21,7 +21,7 @@ Detailed setup instructions for Luminari AI Agent with all features enabled.
 
 ```bash
 git clone <repository-url>
-cd luminari-ai-agent
+cd base_agent
 pip install -e .[dev,rag]  # Or: make setup
 ```
 
@@ -273,7 +273,7 @@ make docker-run
 ```
 
 **What's included:**
-- Luminari application container
+- Base Agent application container
 - PostgreSQL database
 - Redis cache
 - Neo4j knowledge graph
@@ -316,18 +316,17 @@ pip install -e .[dev,rag] --force-reinstall
 
 ### Getting Help
 
-- **[Troubleshooting Guide](../9-troubleshooting/)** - Detailed solutions
+- **[Troubleshooting Guide](../10-troubleshooting/)** - Detailed solutions for common issues
 - **[Configuration Reference](../4-configuration/)** - All settings explained
-- **[Support](../9-troubleshooting/support.md)** - Additional help resources
 
 ## Next Steps
 
 1. **[First Run Guide](./first-run.md)** - Start using the system
 2. **[Configuration Guide](./configuration.md)** - Customize for your needs
-3. **[User Guides](../8-user-guides/)** - Learn specific features
+3. **[User Guides](../5-guides/)** - Learn specific features
 
 ---
 
 **Installation Complete!** 🎉
 
-You now have a fully functional Luminari AI Agent with all features enabled.
+You now have a fully functional Base Agent with all features enabled.

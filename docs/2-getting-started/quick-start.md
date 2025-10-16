@@ -1,6 +1,6 @@
 # 5-Minute Quick Start
 
-Get Luminari AI Agent running in under 5 minutes.
+Get Base Agent running in under 5 minutes.
 
 ## Prerequisites
 
@@ -8,11 +8,11 @@ Get Luminari AI Agent running in under 5 minutes.
 - **OpenAI API key** ([platform.openai.com](https://platform.openai.com))
 - **Supabase project** ([supabase.com](https://supabase.com))
 
-## Step 1: Install Luminari
+## Step 1: Install Base Agent
 
 ```bash
 git clone <repository-url>
-cd luminari-ai-agent
+cd base_agent
 make setup
 ```
 
@@ -100,12 +100,12 @@ Access at `http://localhost:8501`
 1. **Check logs** for error messages
 2. **Verify credentials** - API keys and Supabase access
 3. **Test database connection**
-4. **See [Troubleshooting Guide](../9-troubleshooting/)**
+4. **See [Troubleshooting Guide](../10-troubleshooting/)**
 
 ## Next Steps
 
 - **[Configuration Guide](./configuration.md)** - Customize settings
-- **[User Guides](../8-user-guides/)** - Learn features
+- **[User Guides](../5-guides/)** - Learn features
 - **[Architecture Overview](../3-architecture/)** - System design
 
 ## Getting Help

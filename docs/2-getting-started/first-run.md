@@ -1,6 +1,6 @@
 # Your First Agent Interaction
 
-This guide walks you through your first interaction with the Luminari AI Agent after installation.
+This guide walks you through your first interaction with the Base Agent after installation.
 
 ## Starting the Application
 
@@ -195,7 +195,7 @@ curl -I $SUPABASE_URL/rest/v1/
 Now that you're comfortable with basic interactions:
 
 - **[Configuration Guide](./configuration.md)** - Customize for your needs
-- **[User Guides](../8-user-guides/)** - Learn advanced features
+- **[User Guides](../5-guides/)** - Learn advanced features
 - **[Architecture Overview](../3-architecture/)** - Understand how it works
 
 ## Getting Help
@@ -203,10 +203,10 @@ Now that you're comfortable with basic interactions:
 If you encounter issues:
 
 1. **Check the logs** - Look for error messages in the terminal
-2. **Review troubleshooting** - See [Troubleshooting Guide](../9-troubleshooting/)
+2. **Review troubleshooting** - See [Troubleshooting Guide](../10-troubleshooting/)
 3. **Test components** - Use the provided test scripts
 4. **Ask for help** - Use GitHub Issues or Discussions
 
 ---
 
-**🎉 Welcome to Luminari AI Agent!** You're now ready to explore all the capabilities.
+**🎉 Welcome to Base Agent!** You're now ready to explore all the capabilities.

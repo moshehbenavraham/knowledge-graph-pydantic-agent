@@ -1,6 +1,6 @@
 # Architecture Overview
 
-Comprehensive view of Luminari AI Agent's technical architecture, design principles, and system components.
+Comprehensive view of Base Agent's technical architecture, design principles, and system components.
 
 ## System Overview
 
@@ -192,12 +192,26 @@ Entity Extraction → Relationship Discovery → Fact Timeline → Graph Storage
 - **Log Aggregation**: Structured logging with correlation IDs
 - **Alert Management**: Configurable alerting and notification system
 
+## Architecture Documentation
+
+- **[Full Architecture Reference](reference.md)** - Complete technical architecture documentation
+- **[Agentic RAG System](agentic-rag.md)** - RAG architecture and search strategies
+- **[Database & RAG Integration](database-and-rag.md)** - Database schemas and RAG workflows
+- **[Architecture Diagrams](diagrams.md)** - Visual system diagrams and flows
+
 ## Next Steps
 
-- **[System Design](./system-design.md)** - Detailed technical design decisions
-- **[Component Architecture](./components.md)** - Deep dive into each component
-- **[Data Flow](./data-flow.md)** - Detailed data processing flows
-- **[Security Architecture](./security.md)** - Security design and implementation
+Explore detailed architecture documentation:
+1. Start with [Agentic RAG](agentic-rag.md) for search architecture
+2. Review [Database Integration](database-and-rag.md) for storage details
+3. See [Diagrams](diagrams.md) for visual representations
+4. Check [Full Reference](reference.md) for comprehensive details
+
+## Quick Links
+
+- [Back to Documentation Home](../README.md)
+- [Configuration](../4-configuration/index.md)
+- [Deployment](../6-deployment/index.md)
 
 ---
 

@@ -80,7 +80,7 @@
 ### Academic Research Assistant
 **Scenario**: Researchers need to synthesize information from multiple academic sources and identify research gaps.
 
-**Luminari Solution**:
+**Base Agent Solution**:
 - Process academic papers, journals, and research databases
 - Identify key findings, methodologies, and citations
 - Map relationships between different research areas

@@ -1,6 +1,6 @@
 # Getting Started
 
-Welcome to Luminari AI Agent! This section provides everything you need to get up and running quickly.
+Welcome to Base Agent! This section provides everything you need to get up and running quickly.
 
 ## Quick Start Paths
 
@@ -41,7 +41,7 @@ For customizing the system to your specific requirements.
 ```bash
 # 1. Clone and setup
 git clone <repository-url>
-cd luminari-ai-agent
+cd base_agent
 make setup
 
 # 2. Configure environment
@@ -61,13 +61,11 @@ make run-api  # API server
 
 1. **[First Run Guide](./first-run.md)** - Your first interaction with the agent
 2. **[Configuration Reference](../4-configuration/)** - Customize for your needs
-3. **[User Guides](../8-user-guides/)** - Learn how to use specific features
+3. **[User Guides](../5-guides/)** - Learn how to use specific features
 
 ## Getting Help
 
-- **[Troubleshooting Guide](../9-troubleshooting/)** - Common issues and solutions
-- **[FAQ](../9-troubleshooting/faq.md)** - Frequently asked questions
-- **[Support](../9-troubleshooting/support.md)** - Getting additional help
+- **[Troubleshooting Guide](../10-troubleshooting/)** - Common issues and solutions
 
 ---
 

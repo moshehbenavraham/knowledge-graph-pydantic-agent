@@ -1,10 +1,10 @@
 # Configuration Reference
 
-This section provides comprehensive documentation for all configuration options in Luminari AI Agent.
+This section provides comprehensive documentation for all configuration options in Base Agent.
 
 ## Configuration System Overview
 
-Luminari uses a **centralized Pydantic-based configuration system** that provides:
+Base Agent uses a **centralized Pydantic-based configuration system** that provides:
 
 - **Type Safety**: Full validation with helpful error messages
 - **Environment Integration**: Automatic loading from `.env` files
@@ -97,9 +97,10 @@ make run-ui  # Will show validation errors if any
 
 ### Common Issues
 
-- **[Missing Variables](../9-troubleshooting/common-issues.md#missing-environment-variables)** - Required settings not found
-- **[Invalid Values](../9-troubleshooting/common-issues.md#invalid-configuration-values)** - Settings with wrong format
-- **[Connection Errors](../9-troubleshooting/common-issues.md#database-connection-issues)** - Cannot connect to services
+Refer to the [Troubleshooting Guide](../10-troubleshooting/) for solutions to:
+- Missing environment variables
+- Invalid configuration values
+- Database connection issues
 
 ## Environment-Specific Configuration
 
@@ -138,8 +139,7 @@ CORS_ORIGINS=https://yourdomain.com
 ## Getting Help
 
 - **[Environment Variables](./environment.md)** - Complete reference for all settings
-- **[Settings System](./settings.md)** - Technical details about Pydantic configuration
-- **[Troubleshooting Guide](../9-troubleshooting/)** - Solutions for common issues
+- **[Troubleshooting Guide](../10-troubleshooting/)** - Solutions for common issues
 
 ---
 
