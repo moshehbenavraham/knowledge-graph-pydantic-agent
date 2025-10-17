@@ -4,9 +4,9 @@ import os
 from pydantic_ai import Agent, BinaryContent
 
 try:
-    from pydantic_ai.models.openai import OpenAIModel
+    from pydantic_ai.models.openai import OpenAIChatModel
 except ImportError:
-    OpenAIModel = None
+    OpenAIChatModel = None
 
 try:
     from pydantic_ai.providers.openai import OpenAIProvider
@@ -45,7 +45,9 @@ async def image_analysis_tool(supabase: Client, document_id: str, query: str) ->
             model = AnthropicModel(anthropic_model, api_key=api_key)
         else:
             base_url = os.getenv("LLM_BASE_URL", "https://api.openai.com/v1")
-            model = OpenAIModel(llm, provider=OpenAIProvider(base_url=base_url, api_key=api_key))
+            model = OpenAIChatModel(
+                llm, provider=OpenAIProvider(base_url=base_url, api_key=api_key)
+            )
 
         vision_agent = Agent(
             model,

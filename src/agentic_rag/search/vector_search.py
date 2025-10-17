@@ -126,15 +126,24 @@ class VectorSearch:
     - <100ms with caching
     """
 
-    def __init__(self, connection_manager: ConnectionManager | None = None):
+    def __init__(self, connection_manager: ConnectionManager):
         """
         Initialize vector search.
 
         Args:
-            connection_manager: Database connection manager
+            connection_manager: Initialized database connection manager (required)
+
+        Raises:
+            ValueError: If connection_manager is None
         """
+        if connection_manager is None:
+            raise ValueError(
+                "VectorSearch requires an initialized ConnectionManager. "
+                "Use get_connection_manager() to get a properly initialized instance."
+            )
+
         self.config = get_config()
-        self.connection_manager = connection_manager or ConnectionManager()
+        self.connection_manager = connection_manager
         self.pg_store = PostgresStore(self.connection_manager)
         self.embedder = EmbeddingGenerator()
 

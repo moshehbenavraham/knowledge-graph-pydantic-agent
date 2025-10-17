@@ -5,7 +5,7 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Pydantic AI](https://img.shields.io/badge/Pydantic-AI-blue)](https://ai.pydantic.dev/)
 
-**Version 1.1.0** | **API Version 0.8.0** | **Package:** `luminari-ai-agent`
+**Version 1.2.3** | **API Version 0.8.0** | **Package:** `luminari-ai-agent`
 
 Base Agent is a unified AI assistant built on [Pydantic-AI](https://github.com/pydantic/pydantic-ai)
 that combines retrieval augmented generation, knowledge graph search, long-term memory, and
@@ -15,7 +15,7 @@ can run in multiple contexts.
 
 ## Table of Contents
 - [Highlights](#highlights)
-- [What's New in v1.1.0](#whats-new-in-v110)
+- [What's New in v1.2.3](#whats-new-in-v123)
 - [Architecture Overview](#architecture-overview)
 - [Prerequisites](#prerequisites)
 - [Quick Start](#quick-start)
@@ -51,15 +51,50 @@ The graph component is **REQUIRED**, not optional. Without it, you lose:
 - **Production-ready FastAPI** with versioned routes (`/api/v1`), SSE/WebSocket streaming, circuit breakers, and comprehensive middleware
 - **Flexible Streamlit UI** with runtime-configurable modes (simple/standard/advanced) and CLI utilities
 - **📊 GraphRAG Analytics Dashboard** - Real-time visualization of search patterns, knowledge graph structure, entity relationships, and system performance
-- **📈 Persistent Analytics System (v1.1.0)** - Foundational observability infrastructure with PostgreSQL-backed event logging, performance tracking, and dashboard-ready queries (NEW!)
+- **📈 Persistent Analytics System (v1.1.0)** - Foundational observability infrastructure with PostgreSQL-backed event logging, performance tracking, and dashboard-ready queries
+- **🔍 Comprehensive Application Logging (v1.2.2)** - Structured debug logging across entire UI and agent pipeline with immediate visibility into operations, performance, and errors (NEW!)
 - **Type-safe centralized configuration** via Pydantic settings with full validation, supporting OpenAI, Anthropic, Ollama, and OpenRouter
-- **Full observability stack**: Redis caching, structured logging, Prometheus metrics, OpenTelemetry tracing, and monitoring (Grafana + Jaeger)
+- **Full observability stack**: Redis caching, structured logging (structlog), Prometheus metrics, OpenTelemetry tracing, and monitoring (Grafana + Jaeger)
 - **mem0-powered memory**: Long-term and session memory for contextual conversations
 - **Enterprise resilience**: Circuit breakers, retry logic with exponential backoff, rate limiting, and graceful degradation
 
+## What's New in v1.2.3
+
+Version 1.2.3 delivers **critical stability fixes and enhanced learning visibility** with comprehensive bug fixes for connection pooling, circuit breakers, and tool result display.
+
+🔧 **Critical Stability Improvements**
+- **Fixed PostgreSQL pool race condition**: Async lock ensures atomic singleton creation, preventing multiple uninitialized instances
+- **Fixed circuit breaker logic**: Corrected inverted states (CLOSED=healthy, OPEN=broken) following standard patterns - Neo4j searches now work correctly
+- **Fixed broken singleton recovery**: Failed initialization now retries instead of permanently breaking the connection manager
+- **Fixed analytics logger initialization**: RAG tools now use singleton pattern, properly initializing analytics on first use
+- **Eliminated deprecation warnings**: Updated Supabase client configuration and Pydantic AI model names
+
+📚 **Enhanced Learning Experience**
+- **Tool Return Visibility**: NEW! See what each tool actually returned in collapsible expanders
+  - Displays after streaming completes with tool name in title
+  - Smart truncation for long results (>2000 chars with preview)
+  - Perfect for learning: inspect RAG chunks, graph relationships, web search results
+  - Example: 12 tool returns visible in logs after running all tools
+- **Improved error handling**: Empty tool arguments display "No arguments" instead of parse warnings
+
+**What Was Fixed**:
+- Race condition in connection manager singleton (async lock added)
+- Circuit breaker states inverted (9 locations updated)
+- Analytics logger bypassed in direct instantiation (now uses singleton)
+- Supabase timeout/verify deprecation warnings (httpx client configured)
+- Tool returns not visible in UI (post-stream extraction added)
+- Image analysis deprecation (OpenAIModel → OpenAIChatModel)
+- JSON parsing warnings for empty tool args (early validation)
+
+**Impact**: System now stable, resilient, and provides excellent visibility into tool operations for learning and debugging.
+
+See `docs/a-changelogs/current.md` for detailed technical notes.
+
+---
+
 ## What's New in v1.1.0
 
-Version 1.1.0 introduces **foundational observability infrastructure** for comprehensive system monitoring and analytics.
+Version 1.1.0 introduced **foundational observability infrastructure** for comprehensive system monitoring and analytics.
 
 📈 **Persistent Analytics System** (Core Infrastructure)
 - **Always-on event logging** to PostgreSQL with async, non-blocking architecture (<5ms overhead)
@@ -744,10 +779,18 @@ base_agent/
 ```
 
 ## Observability & Operations
-- Structured logging via `structlog` with JSON output (`LOG_FORMAT=json`).
-- Prometheus metrics (`/metrics`) for API usage, latency, cache hits, and LLM utilisation.
-- Optional monitoring stack (Prometheus, Grafana, Jaeger) via `docker-compose.monitoring.yml` and `make monitoring-*` targets.
-- Rate limiting, caching, and circuit breaker helpers live in `src/utils/`.
+- **Application Logging (v1.2.2)**: Comprehensive structured logging via `structlog` across entire UI and agent pipeline with real-time execution tracking, event counters, and debug filtering. See `CLAUDE.md` section "Application Logging & Debugging" for complete guide.
+  - Handler initialization and lifecycle tracking
+  - Session management (mode switches, feature toggles, page navigation)
+  - Agent execution flow (input → handler → agent → tools → response)
+  - Streaming events (chunk counts, tool calls, memory operations)
+  - Error context with state snapshots
+  - Usage: `make run-ui | grep "keyword"` or `LOG_LEVEL=DEBUG make run-ui`
+- **Analytics System (v1.1.0)**: Persistent event logging to PostgreSQL with search metrics, tool usage, agent interactions, and system health tracking. Dashboard-ready materialized views for performance analysis.
+- **Metrics & Monitoring**: Prometheus metrics (`/metrics`) for API usage, latency, cache hits, and LLM utilisation.
+- **Tracing**: Optional OpenTelemetry tracing with Jaeger integration (`ENABLE_TRACING=true`).
+- **Monitoring Stack**: Optional Prometheus + Grafana + Jaeger via `docker-compose.monitoring.yml` and `make monitoring-*` targets.
+- **Resilience**: Rate limiting, caching, circuit breaker helpers in `src/utils/`.
 
 ## Testing & Quality Assurance
 

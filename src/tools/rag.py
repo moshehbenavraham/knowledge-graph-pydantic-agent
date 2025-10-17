@@ -14,21 +14,38 @@ Architecture:
 
 import asyncio
 import logging
-from typing import Any
+import warnings
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from src.agentic_rag.config import get_config
 from src.agentic_rag.search.hybrid_search import HybridSearch, HybridSearchResult
 from src.agentic_rag.search.intent_analyzer import IntentAnalyzer
-from src.agentic_rag.storage.connection_manager import ConnectionManager
 from src.config import SearchStrategy
 from supabase.client import Client
+
+if TYPE_CHECKING:
+    from src.agentic_rag.storage.connection_manager import ConnectionManager
+
+# Filter Supabase deprecation warnings (from internal library code)
+warnings.filterwarnings(
+    "ignore",
+    category=DeprecationWarning,
+    module="supabase",
+    message=".*timeout.*parameter is deprecated.*",
+)
+warnings.filterwarnings(
+    "ignore",
+    category=DeprecationWarning,
+    module="supabase",
+    message=".*verify.*parameter is deprecated.*",
+)
 
 logger = logging.getLogger(__name__)
 
 # Global instances (initialized once per application lifecycle)
 
-_connection_manager: ConnectionManager | None = None
+_connection_manager: "ConnectionManager | None" = None
 _hybrid_search: HybridSearch | None = None
 _intent_analyzer: IntentAnalyzer | None = None
 _current_loop: asyncio.AbstractEventLoop | None = None
@@ -54,8 +71,10 @@ async def get_hybrid_search() -> HybridSearch:
 
     if _hybrid_search is None:
         if _connection_manager is None:
-            _connection_manager = ConnectionManager()
-            await _connection_manager.initialize()
+            # Use singleton get_connection_manager which properly initializes analytics
+            from src.agentic_rag.storage.connection_manager import get_connection_manager
+
+            _connection_manager = await get_connection_manager()
             logger.info("ConnectionManager initialized for RAG tools")
 
         _hybrid_search = HybridSearch(_connection_manager)

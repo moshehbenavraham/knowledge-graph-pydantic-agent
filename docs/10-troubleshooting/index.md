@@ -4,6 +4,7 @@ This guide helps you diagnose and resolve common issues with the Base Agent syst
 
 ## Table of Contents
 
+- [Recently Fixed Issues (v1.2.3+)](#recently-fixed-issues-v123)
 - [Quick Diagnostics](#quick-diagnostics)
 - [Phase 3 Specific Issues](#phase-3-specific-issues)
 - [Installation Issues](#installation-issues)
@@ -16,6 +17,80 @@ This guide helps you diagnose and resolve common issues with the Base Agent syst
 - [Agentic RAG Issues](#agentic-rag-issues)
 - [Docker Issues](#docker-issues)
 - [Monitoring and Debugging](#monitoring-and-debugging)
+
+## Recently Fixed Issues (v1.2.3+)
+
+These issues have been resolved in version 1.2.3. If you're still experiencing them, ensure you're running the latest version:
+
+### PostgreSQL Pool Not Initialized
+
+**Symptoms:**
+```
+ConnectionError: PostgreSQL pool not initialized. Call await connection_manager.initialize() first.
+```
+
+**Fixed in v1.2.3:**
+- Race condition in singleton pattern resolved with async lock
+- Failed initialization now allows retry instead of permanent breakage
+- Analytics logger initialization fixed (RAG tools now use singleton)
+
+**Solution:** Upgrade to v1.2.3+. The connection manager now properly handles concurrent initialization and retries on failure.
+
+### Neo4j Circuit Breaker Warnings
+
+**Symptoms:**
+```
+WARNING: Neo4j circuit breaker is closed. Last error: None
+```
+
+**Fixed in v1.2.3:**
+- Circuit breaker states were inverted (CLOSED should be healthy, not broken)
+- Updated 9 locations to follow standard circuit breaker pattern
+- Error messages now clearly indicate state: "OPEN - blocking requests" vs "CLOSED (healthy)"
+
+**Solution:** Upgrade to v1.2.3+. Circuit breaker now correctly allows requests when CLOSED (healthy) and blocks when OPEN (broken).
+
+### Analytics Logger Not Initialized
+
+**Symptoms:**
+```
+WARNING: Failed to log search analytics: Analytics logger not initialized
+```
+
+**Fixed in v1.2.3:**
+- RAG tools were creating their own ConnectionManager instances, bypassing analytics initialization
+- Now use `get_connection_manager()` singleton which properly initializes analytics
+
+**Solution:** Upgrade to v1.2.3+. Analytics automatically initialize with the connection manager.
+
+### Supabase Deprecation Warnings
+
+**Symptoms:**
+```
+DeprecationWarning: The 'timeout' parameter is deprecated
+DeprecationWarning: The 'verify' parameter is deprecated
+```
+
+**Fixed in v1.2.3:**
+- Updated Supabase client to use httpx client configuration
+- Added warning filters for internal library warnings
+
+**Solution:** Upgrade to v1.2.3+. No more deprecation warnings.
+
+### Tool Returns Not Visible in UI
+
+**Symptoms:**
+- Tool calls shown but no tool results displayed
+- Logs show `"tool_return": 0` despite tools executing successfully
+
+**Fixed in v1.2.3:**
+- Added post-stream extraction of tool returns from new_messages
+- Results now displayed in collapsible expanders: "📥 Tool Result: {tool_name}"
+- Smart truncation for long results (>2000 chars)
+
+**Solution:** Upgrade to v1.2.3+. Tool returns now visible after streaming completes.
+
+---
 
 ## Quick Diagnostics
 

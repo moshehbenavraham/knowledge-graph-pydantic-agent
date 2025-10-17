@@ -61,15 +61,24 @@ class HybridSearch:
     and merges results for optimal relevance.
     """
 
-    def __init__(self, connection_manager: ConnectionManager | None = None):
+    def __init__(self, connection_manager: ConnectionManager):
         """
         Initialize hybrid search.
 
         Args:
-            connection_manager: Database connection manager
+            connection_manager: Initialized database connection manager (required)
+
+        Raises:
+            ValueError: If connection_manager is None
         """
+        if connection_manager is None:
+            raise ValueError(
+                "HybridSearch requires an initialized ConnectionManager. "
+                "Use get_connection_manager() to get a properly initialized instance."
+            )
+
         self.config = get_config()
-        self.connection_manager = connection_manager or ConnectionManager()
+        self.connection_manager = connection_manager
 
         # Initialize components
         self.vector_search = VectorSearch(self.connection_manager)

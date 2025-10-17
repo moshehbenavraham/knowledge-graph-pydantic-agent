@@ -9,6 +9,446 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.3] - 2025-10-17
+
+### Fixed - Critical Stability & UX Improvements
+
+**Comprehensive bug fixes addressing connection pooling, circuit breaker logic, deprecation warnings, and tool result visibility for improved stability and learning experience.**
+
+#### Connection Manager Race Condition (`src/agentic_rag/storage/connection_manager.py`)
+- **Fixed PostgreSQL pool initialization race condition** (lines 568-629):
+  - **Issue**: Multiple concurrent calls to `get_connection_manager()` could create multiple uninitialized ConnectionManager instances
+  - **Root Cause**: Singleton pattern wasn't thread-safe - two coroutines could both see `_connection_manager is None` and create instances
+  - **Solution**: Added async lock (`asyncio.Lock`) to ensure atomic singleton creation
+  - **Result**: Only one ConnectionManager instance is ever created, fully initialized before returning
+- **Fixed broken singleton on initialization failure** (lines 601-629):
+  - **Issue**: If PostgreSQL connection failed during initialization, broken ConnectionManager with `pg_pool = None` was stored globally
+  - **Root Cause**: Singleton was set before `initialize()` completed, so failures left it in bad state
+  - **Solution**: Use temporary variable, only set global singleton after successful initialization
+  - **Result**: Failed initialization allows retry on next call instead of failing permanently
+
+#### Circuit Breaker Logic Inversion (`src/agentic_rag/storage/connection_manager.py`)
+- **Fixed inverted circuit breaker states** (9 locations: lines 164, 180, 253, 257, 315, 356, 368-406, 408-436):
+  - **Issue**: Circuit breaker had states backwards - CLOSED treated as broken, OPEN as healthy
+  - **Standard Pattern**: CLOSED = healthy (allow requests), OPEN = broken (block requests), HALF_OPEN = testing recovery
+  - **Fixes Applied**:
+    - Initialization: Set to `CLOSED` on success (was `OPEN`), `OPEN` on failure (was `CLOSED`)
+    - `_check_circuit_breaker()`: Completely reversed logic with clear documentation
+    - `_record_failure()`: Set to `OPEN` on threshold (was `CLOSED`)
+    - Recovery: Set to `CLOSED` on success (was `OPEN`)
+  - **Error Messages**: Updated to show state correctly: "circuit breaker is OPEN - blocking requests"
+  - **Result**: Neo4j graph searches now work correctly, no more "circuit breaker is closed" warnings
+
+#### Analytics Logger Initialization (`src/tools/rag.py`)
+- **Fixed analytics logger not initializing** (lines 18, 27-28, 48, 72-76):
+  - **Issue**: RAG tools created their own `ConnectionManager()` instances, bypassing singleton initialization
+  - **Root Cause**: Direct `ConnectionManager()` instantiation doesn't call `initialize_analytics_logger()`
+  - **Solution**: Changed to use `get_connection_manager()` singleton which properly initializes analytics
+  - **Import Fix**: Moved `ConnectionManager` to `TYPE_CHECKING` block, used string literal type annotation
+  - **Result**: No more "Analytics logger not initialized" warnings, search metrics now logged
+
+#### Supabase Deprecation Warnings
+- **Fixed Supabase client deprecation warnings** (`src/clients/database.py`):
+  - **Issue**: `timeout` and `verify` parameters deprecated in newer supabase-py
+  - **Solution**:
+    - Created httpx client with proper `timeout=60.0` and `verify=True` configuration
+    - Added `ClientOptions` with proper timeout settings
+    - Added warning filters in `src/ui/streamlit_app.py` and `src/tools/rag.py`
+  - **Result**: No deprecation warnings, cleaner logs
+
+#### Tool Return Visibility (`src/ui/streamlit_app.py`)
+- **Added post-stream tool return extraction for learning** (lines 1096-1115, 185-193):
+  - **Issue**: Tool returns weren't visible in UI - users only saw final synthesized answer
+  - **Root Cause**: Pydantic AI doesn't emit `PartStartEvent` for tool returns during streaming
+  - **Solution**:
+    - Extract tool returns from `new_messages` after stream completes
+    - Display in collapsible expanders: `"📥 Tool Result: {tool_name}"`
+    - Truncate long results (>2000 chars) with preview
+    - Show tool name in expander title for clarity
+  - **Result**: Users can now see what each tool actually returned (12 tool returns displayed in logs)
+  - **Benefits**: Perfect for learning - see RAG chunk quality, graph relationships found, web search results
+
+#### Image Analysis Deprecation (`src/tools/image_analysis.py`)
+- **Fixed Pydantic AI model naming deprecation** (lines 7, 48):
+  - **Issue**: `OpenAIModel` renamed to `OpenAIChatModel` in pydantic-ai
+  - **Solution**: Updated import and usage to new class name
+  - **Result**: No deprecation warnings from image analysis tool
+
+#### UI Error Handling Improvements (`src/ui/streamlit_app.py`)
+- **Fixed JSON parsing warnings for empty tool arguments** (lines 139-154, 1016-1047):
+  - **Issue**: Tools with no arguments (like `list_all_documents`) triggered JSON parse warnings
+  - **Solution**:
+    - Check for empty/None args before attempting JSON parsing
+    - Changed warning to debug-level for non-empty invalid JSON
+    - Display "No arguments" info message instead of parse errors
+  - **Result**: No more "Expecting value: line 1 column 1" warnings in logs
+
+### Changed
+- **Circuit Breaker Error Messages**: More descriptive messages showing state clearly ("OPEN - blocking requests", "CLOSED (healthy)")
+- **Tool Result Display**: Enhanced with tool name in title, length indicators, smart truncation
+- **Connection Manager Logging**: Added lock status and retry information for better debugging
+
+### Technical Notes
+**Root Causes Addressed:**
+1. **Async Singleton Pattern** - Lacked atomic creation guarantee
+2. **Circuit Breaker Confusion** - Standard terminology not followed
+3. **Initialization Order** - Analytics logger bypassed in direct instantiation path
+4. **API Deprecations** - Libraries evolving, parameters deprecated
+5. **Streaming Limitations** - Pydantic AI doesn't stream tool returns
+6. **Error Recovery** - Failed initialization permanently broke singleton
+
+**Impact**: System now stable, resilient, and provides excellent learning visibility into tool operations.
+
+---
+
+## [1.2.2] - 2025-10-17
+
+### Added - Comprehensive Application Logging & Debugging Infrastructure
+
+**Complete structured logging across the entire Streamlit UI and agent execution pipeline for immediate visibility into operations, performance, and errors.**
+
+This release adds verbose, context-rich logging using `structlog` throughout all UI handlers and the main Streamlit application. Every critical operation is now logged with detailed context, making debugging immediate and transparent.
+
+#### Handler Layer Logging (`src/ui/features/`)
+
+**BaseHandler** (`base_handler.py`):
+- Added comprehensive initialization logging:
+  - Handler type identification
+  - Client creation tracking (LLM/embedding, Supabase)
+  - Success/failure status for each initialization step
+  - Full exception context with error types
+- Added dependency creation logging:
+  - Memory context presence and length
+  - Web search provider configuration
+  - All client availability checks
+  - Settings validation logging
+
+**SimpleHandler** (`base_handler.py`):
+- Added non-streaming execution tracking:
+  - User input length and preview (first 100 chars)
+  - Message history count
+  - Agent execution start/complete timestamps
+  - Response output length and preview (first 200 chars)
+  - New messages count added to session
+  - Full error context on failures
+
+**StreamingHandler** (`streaming_handler.py`):
+- Added comprehensive streaming event tracking:
+  - Stream initialization (context opened, nodes processing)
+  - Event counters for all chunk types (text_start, text_delta, tool_call, tool_return)
+  - First chunk detection logging (critical for UX)
+  - Text start events: content length + preview
+  - Text delta events: logged every 10 deltas (avoids log spam)
+  - Tool call events: tool name + argument keys
+  - Tool return events: tool name + content length + preview
+  - Stream completion with full event statistics
+  - Total event counts and response length
+- Added node processing tracking with count
+
+**MemoryHandler** (`memory_handler.py`):
+- Added Mem0 integration logging:
+  - Client initialization success/failure with error details
+  - `_setup_hook()` execution tracking
+- Added memory retrieval logging:
+  - Query preview and length
+  - Memory search parameters (user_id, limit)
+  - Retrieved memory count and total length
+  - First memory content preview (avoids exposing full memory)
+  - Search failures with exception context
+- Added memory storage logging:
+  - Interaction details (user input length, response length)
+  - Message count being stored
+  - Storage success/failure
+  - User ID tracking
+- Added 3-step execution flow logging:
+  - Step 1: Memory retrieval (count, length)
+  - Step 2: Agent streaming (chunk count)
+  - Step 3: Memory storage (completion status)
+
+**MCPHandler** (`mcp_handler.py`):
+- Added MCP context management logging:
+  - MCP enable/disable state
+  - MCP servers context open/close
+  - Chunk counts inside MCP context
+  - Delegation to parent MemoryHandler tracking
+  - MCP-specific error context
+
+#### Main UI Logging (`src/ui/streamlit_app.py`)
+
+**Session Initialization** (`initialize_session_state()`):
+- Added session state creation tracking:
+  - Messages list initialization (empty or existing with count)
+  - Config creation (mode, features dict)
+  - Handler creation (handler type)
+  - Handler initialization completion
+  - Theme and current page setup
+  - Complete session state summary at end
+
+**Sidebar Interactions** (`render_sidebar()`):
+- Added page navigation logging:
+  - From/to page tracking (Chat ↔ Dashboard)
+- Added UI mode change logging:
+  - From/to mode tracking (Simple/Standard/Advanced)
+  - Features dict changes
+  - New handler creation and type
+  - Handler initialization completion
+  - Rerun trigger
+- Added feature toggle logging:
+  - Old vs new features comparison
+  - Handler re-creation tracking
+  - Advanced mode changes
+- Added conversation management logging:
+  - Clear chat with message count cleared
+
+**Chat Flow** (`handle_user_input()`) - **MOST CRITICAL**:
+- Added user message reception logging:
+  - Input length and preview (first 100 chars)
+  - Current message count in session
+  - Handler type and mode
+  - All feature flags (streaming, memory, MCP, etc.)
+  - User message displayed confirmation
+
+**Non-streaming path**:
+- Added SimpleHandler execution tracking:
+  - HTTP client creation
+  - Agent execution start
+  - Response length and new messages count
+  - Messages added to session state
+  - Total message count update
+
+**Streaming path**:
+- Added streaming execution tracking:
+  - HTTP client creation
+  - Stream start
+  - Chunk counters initialization (start, delta, tool_call, tool_return, complete, total)
+  - First chunk detection (text start or text delta)
+  - Text start: content length + preview
+  - Text delta: logged every 50 deltas (avoids spam)
+  - Tool call: tool name + args type
+  - Tool return: tool name + content length
+  - Stream complete: new messages count + response length
+  - Messages added to session state
+  - Final statistics (all chunk counts, final response length)
+
+#### Logging Patterns & Standards
+
+**Visual Separation**:
+- Major operations marked with `"=" * 80` separator lines
+- Clear boundaries between different execution phases
+
+**Structured Logging**:
+- All logs use `structlog` with key-value pairs for easy parsing
+- Consistent format: `logger.info("message", key1=value1, key2=value2)`
+
+**Log Levels**:
+- `logger.info()` for major milestones and user-facing operations
+- `logger.debug()` for detailed sub-steps and internal state
+- `logger.exception()` for errors with full exception context
+
+**Content Previews**:
+- First 50-100 characters for user input, responses, memory content
+- Prevents log spam while providing sufficient context for debugging
+
+**Count Tracking**:
+- Event counts (chunks, deltas, tool calls)
+- Message counts (history, new messages)
+- Memory counts (retrieved, stored)
+
+**Progress Indicators**:
+- Multi-step operations use "Step 1/2/3" format
+- Clear flow through complex operations
+
+**Error Context**:
+- Error type (`type(e).__name__`)
+- Error message (`str(e)`)
+- State before failure (counters, flags, etc.)
+
+#### Benefits
+
+**Immediate Visibility**:
+- Know EXACTLY what's happening at every step
+- No more guessing where failures occur
+- Real-time execution flow tracking
+
+**Performance Tracking**:
+- Count all events and measure response lengths
+- Identify bottlenecks (first chunk delay, tool execution time)
+- Track streaming efficiency (delta counts)
+
+**Error Diagnosis**:
+- Full context when something fails
+- State snapshots before errors
+- Clear error propagation paths
+
+**Flow Understanding**:
+- See complete request path: UI → handler → agent → tools → response
+- Understand mode switching and handler transitions
+- Track session lifecycle
+
+**Debug Filtering**:
+- Use `grep` to filter by handler type, event type, or operation
+- Examples:
+  - `make run-ui | grep "StreamingHandler"`
+  - `make run-ui | grep "tool_call"`
+  - `make run-ui | grep "ERROR"`
+
+#### Usage Examples
+
+**View all logs**:
+```bash
+make run-ui  # Logs appear in terminal
+```
+
+**Filter by log level**:
+```bash
+make run-ui | grep "\[info\]"
+make run-ui | grep "\[error\]"
+```
+
+**Filter by component**:
+```bash
+make run-ui | grep "StreamingHandler"
+make run-ui | grep "handle_user_input"
+make run-ui | grep "MemoryHandler"
+```
+
+**Save logs to file**:
+```bash
+make run-ui 2>&1 | tee ui_debug.log
+```
+
+**Debug mode** (verbose logging):
+```bash
+LOG_LEVEL=DEBUG make run-ui
+```
+
+#### Files Modified
+
+- `src/ui/features/base_handler.py` - Added initialization and dependency logging
+- `src/ui/features/streaming_handler.py` - Added streaming event tracking
+- `src/ui/features/memory_handler.py` - Added memory operations logging
+- `src/ui/features/mcp_handler.py` - Added MCP context logging
+- `src/ui/streamlit_app.py` - Added session management and chat flow logging
+
+#### Code Quality
+
+- ✅ All lint checks passing (Ruff)
+- ✅ All format checks passing (Black)
+- ✅ Consistent `structlog` usage across all files
+- ✅ No breaking changes to existing functionality
+
+#### Documentation Updates
+
+- Updated `CLAUDE.md` with new "Application Logging & Debugging" section
+- Updated Troubleshooting Guide with logging-first debugging approach
+- Updated Key Files Reference to highlight logging coverage
+- Updated Version Information to 1.2.2
+
+---
+
+## [1.2.1] - 2025-10-17
+
+### Fixed - Database Connection & Dashboard Stability
+
+**Critical bug fixes for PostgreSQL connection pooling and dashboard data display issues.**
+
+#### Connection Manager Fixes (`src/agentic_rag/storage/connection_manager.py`)
+- **Removed deprecated event loop binding** (line 127):
+  - Removed explicit `loop=loop` parameter from `asyncpg.create_pool()`
+  - asyncpg 0.30.0+ automatically binds to current event loop
+  - **Resolved**: "connection was closed in the middle of operation" errors with Streamlit
+- **Simplified pool configuration**:
+  - Removed problematic `server_settings` that conflicted with Supabase managed databases
+  - Removed `max_queries` and `max_inactive_connection_lifetime` (unnecessary complexity)
+  - Added explicit `timeout=30` for more reliable pool creation
+  - Kept essential settings: `setup` and `init` callbacks for connection configuration
+- **Comprehensive debug logging**:
+  - Added detailed logging to all initialization methods
+  - Log event loop state, pool status, and connection lifecycle
+  - Full stack traces on connection close to identify premature cleanup
+  - Helps diagnose issues immediately instead of silent failures
+
+#### Dashboard Query Fixes (`src/ui/features/dashboard_handler.py`)
+- **Fixed SQL syntax errors** (6 occurrences):
+  - Lines 96, 126, 218, 415, 601, 612, 668
+  - **Issue**: Python comments (`# nosec B608`) were inside SQL f-strings
+  - PostgreSQL interpreted `#` as invalid syntax, causing all queries to fail
+  - **Solution**: Moved security suppression comments outside f-strings
+  - **Result**: Dashboard now queries analytics database successfully
+- **Fixed performance metrics display** (lines 432-469):
+  - **Issue**: Showed "DB Connections: 0" despite active connections
+  - Was querying transient `pg_metrics.active_connections` (0 when no query running)
+  - **Solution**: Query `system_metrics` table for actual database connection counts
+  - Now shows PostgreSQL and Neo4j connections separately for clarity
+  - Falls back to pool size if system_metrics unavailable
+- **Fixed connection scope issue** (lines 432-448):
+  - Moved `system_metrics` query inside same connection context as main query
+  - Prevents "connection released back to pool" errors
+
+#### Streamlit UI Fixes (`src/ui/streamlit_app.py`)
+- **Fixed dashboard initialization** (line 321):
+  - **Issue**: Created new `ConnectionManager()` instance on every render
+  - Context manager closed pool after each render, breaking subsequent requests
+  - **Solution**: Use singleton `get_connection_manager()` instead
+  - Reuses same connection pool across all dashboard renders
+  - No more create/destroy cycles
+- **Enhanced performance metrics display** (lines 627-633):
+  - Split combined "DB Connections" into separate PostgreSQL and Neo4j metrics
+  - Shows `PostgreSQL Conns: 3` and `Neo4j Conns: 2` instead of confusing `5`
+  - Added `pg_active_connections` and `neo4j_active_connections` to handler response
+
+#### Materialized View Maintenance
+- **Identified issue**: `tool_performance_7d` view was empty despite 40 records in base table
+  - View exists and marked as populated, but 0 rows
+  - Dashboard showed "No tool usage data available" (incorrect)
+- **Manual refresh** restored 7 tool records:
+  ```sql
+  REFRESH MATERIALIZED VIEW tool_performance_7d;
+  ```
+- **Recommendation**: Schedule automatic refresh via cron:
+  ```sql
+  SELECT refresh_analytics_views();  -- Run hourly
+  ```
+
+### Verified - Dashboard Metrics Accuracy
+
+All dashboard sections now displaying accurate data from analytics database:
+
+**Search Analytics** ✅
+- Total Searches: 15 (was showing 0)
+- Avg Latency: 2002.73ms (was showing 0ms)
+- Top Strategy: HYBRID
+- Graph Boost Rate: 93.3% (was showing 0.0%)
+
+**Performance Metrics** ✅
+- Cache Hit Rate: 0.0% (correct - no cache hits yet)
+- PostgreSQL Connections: 3 (was showing 0)
+- Neo4j Connections: 2 (was showing 0)
+- P50/P95/P99 Latency: All populated with real data
+
+**Tool Usage Analytics** ✅
+- Total Tool Calls: 40 (was showing "No data")
+- Unique Tools: 7
+- Average Success Rate: 78.6%
+- Top tools: retrieve_relevant_documents, sql_query, web_search
+
+**Agent Interactions** ✅
+- All metrics verified accurate (25 interactions, 17 sessions, 2154ms avg response)
+- RAG usage rate: 76.0%
+- User feedback: 17 thumbs up, 2 thumbs down
+
+### Technical Notes
+
+**Root Causes Identified:**
+1. **asyncpg event loop binding** - Deprecated parameter caused pool to bind to closed event loops
+2. **SQL syntax errors** - Inline Python comments broke PostgreSQL query parsing
+3. **Singleton pattern bypass** - Dashboard creating new ConnectionManager instead of reusing global instance
+4. **Stale materialized views** - Views not refreshed since data ingestion
+
+**Impact**: Dashboard fully functional with real-time analytics from persistent database storage.
+
+---
+
 ## [1.2.0] - 2025-10-16
 
 ### Added - GraphRAG Dashboard with Persistent Analytics

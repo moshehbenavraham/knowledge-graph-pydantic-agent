@@ -93,8 +93,9 @@ class DashboardHandler:
 
             async with self.connection_manager.get_pg_connection() as conn:
                 # Get overall summary from search_analytics table
+                # nosec B608 - interval is from whitelist, not user input
                 summary = await conn.fetchrow(
-                    f"""  # nosec B608
+                    f"""
                     SELECT
                         COUNT(*) AS total_searches,
                         AVG(total_latency_ms) AS avg_latency_ms,
@@ -122,8 +123,9 @@ class DashboardHandler:
                     )
                 else:
                     # Query directly for other windows
+                    # nosec B608 - interval is from whitelist, not user input
                     strategies = await conn.fetch(
-                        f"""  # nosec B608
+                        f"""
                         SELECT
                             strategy_used,
                             COUNT(*) as search_count
@@ -212,8 +214,9 @@ class DashboardHandler:
                 else:
                     interval_map = {"24h": "24 hours", "30d": "30 days"}
                     interval = interval_map.get(window, "7 days")
+                    # nosec B608 - interval is from whitelist, not user input
                     rows = await conn.fetch(
-                        f"""  # nosec B608
+                        f"""
                         SELECT
                             detected_intent,
                             COUNT(*) as search_count,
@@ -408,8 +411,9 @@ class DashboardHandler:
 
             async with self.connection_manager.get_pg_connection() as conn:
                 # Query performance metrics with percentiles
+                # nosec B608 - interval is from whitelist, not user input
                 metrics_row = await conn.fetchrow(
-                    f"""  # nosec B608
+                    f"""
                     SELECT
                         AVG(vector_latency_ms) AS avg_vector_latency_ms,
                         AVG(graph_latency_ms) AS avg_graph_latency_ms,
@@ -425,6 +429,20 @@ class DashboardHandler:
                     """
                 )
 
+                # Get latest system metrics if available (inside same connection context)
+                system_metrics = await conn.fetchrow(
+                    """
+                    SELECT
+                        pg_active_connections,
+                        pg_idle_connections,
+                        neo4j_active_connections,
+                        cache_hit_rate as system_cache_hit_rate
+                    FROM system_metrics
+                    ORDER BY created_at DESC
+                    LIMIT 1
+                    """
+                )
+
             # Get connection pool metrics from connection manager
             pg_metrics = self.connection_manager.pg_metrics
             neo4j_metrics = self.connection_manager.neo4j_metrics
@@ -432,6 +450,23 @@ class DashboardHandler:
             # Calculate cache hit rate
             total_searches = metrics_row["total_searches"] or 1
             cache_hit_rate = (metrics_row["cache_hits"] or 0) / total_searches
+
+            # Prefer system_metrics for DB connections if available, otherwise use pool metrics
+            if system_metrics:
+                pg_active = system_metrics["pg_active_connections"]
+                neo4j_active = system_metrics["neo4j_active_connections"]
+                db_connections_active = pg_active + neo4j_active
+                db_connections_idle = system_metrics["pg_idle_connections"]
+            else:
+                # Fallback: show pool size instead of currently-in-use connections
+                pg_active = (
+                    self.connection_manager.pg_pool.get_size()
+                    if self.connection_manager.pg_pool
+                    else 0
+                )
+                neo4j_active = 0
+                db_connections_active = pg_active
+                db_connections_idle = 0
 
             metrics = {
                 "vector_latency_ms": float(metrics_row["avg_vector_latency_ms"] or 0),
@@ -443,9 +478,10 @@ class DashboardHandler:
                 "p99_latency_ms": float(metrics_row["p99_latency_ms"] or 0),
                 "cache_hit_rate": cache_hit_rate,
                 "cache_hits": metrics_row["cache_hits"] or 0,
-                "db_connections_active": pg_metrics.active_connections
-                + neo4j_metrics.active_connections,
-                "db_connections_idle": pg_metrics.idle_connections + neo4j_metrics.idle_connections,
+                "db_connections_active": db_connections_active,
+                "db_connections_idle": db_connections_idle,
+                "pg_active_connections": pg_active,
+                "neo4j_active_connections": neo4j_active,
                 "pg_metrics": {
                     "total_queries": pg_metrics.total_queries,
                     "failed_queries": pg_metrics.failed_queries,
@@ -593,8 +629,9 @@ class DashboardHandler:
                     interval_map = {"24h": "24 hours", "30d": "30 days"}
                     interval = interval_map.get(window, "7 days")
 
+                    # nosec B608 - interval is from whitelist, not user input
                     summary = await conn.fetchrow(
-                        f"""  # nosec B608
+                        f"""
                         SELECT
                             COUNT(*) AS total_calls,
                             COUNT(DISTINCT tool_name) AS unique_tools,
@@ -604,8 +641,9 @@ class DashboardHandler:
                         """
                     )
 
+                    # nosec B608 - interval is from whitelist, not user input
                     tools = await conn.fetch(
-                        f"""  # nosec B608
+                        f"""
                         SELECT
                             tool_name,
                             COUNT(*) as total_calls,
@@ -658,8 +696,9 @@ class DashboardHandler:
             interval = interval_map.get(window, "7 days")
 
             async with self.connection_manager.get_pg_connection() as conn:
+                # nosec B608 - interval is from whitelist, not user input
                 stats = await conn.fetchrow(
-                    f"""  # nosec B608
+                    f"""
                     SELECT
                         COUNT(*) AS total_interactions,
                         COUNT(DISTINCT session_id) AS unique_sessions,

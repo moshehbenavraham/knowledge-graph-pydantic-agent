@@ -1,15 +1,30 @@
 import asyncio
 import json
-import logging
 import tempfile
+import warnings
 from pathlib import Path
 
 import pandas as pd
 import plotly.express as px
 import streamlit as st
 import streamlit.components.v1 as components
+import structlog
 from httpx import AsyncClient
 from pydantic_ai.messages import ModelRequest, ModelResponse
+
+# Filter Supabase deprecation warnings (from internal library code)
+warnings.filterwarnings(
+    "ignore",
+    category=DeprecationWarning,
+    module="supabase",
+    message=".*timeout.*parameter is deprecated.*",
+)
+warnings.filterwarnings(
+    "ignore",
+    category=DeprecationWarning,
+    module="supabase",
+    message=".*verify.*parameter is deprecated.*",
+)
 
 from src.config import UIMode
 from src.config.ui import ui_config as config
@@ -23,7 +38,7 @@ from src.ui.features import (
 )
 from src.ui.features.base_handler import SimpleHandler
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 def make_json_safe(obj: any, max_depth: int = 10, _current_depth: int = 0) -> any:
@@ -136,6 +151,11 @@ def display_message_part(part):
                     f"Tool {part.tool_name} args type: {type(args)}, value preview: {str(args)[:200]}"
                 )
 
+                # Handle empty/None args
+                if not args or (isinstance(args, str) and not args.strip()):
+                    st.info("No arguments")
+                    return
+
                 # If string, try to parse it
                 if isinstance(args, str):
                     try:
@@ -143,10 +163,11 @@ def display_message_part(part):
                         logger.debug("Successfully parsed args from JSON string")
                     except json.JSONDecodeError as e:
                         # Invalid JSON string - show as code
-                        logger.warning(f"Tool {part.tool_name} args is invalid JSON string: {e!s}")
-                        st.warning("Tool arguments could not be parsed")
+                        logger.debug(
+                            f"Tool {part.tool_name} args is not valid JSON: {e!s}, displaying as text"
+                        )
                         st.code(str(args))
-                        return  # Exit this function since we showed the error
+                        return  # Exit this function since we showed the content
 
                 # If we still have args (either original dict or successfully parsed), display it
                 if args and not isinstance(args, str):
@@ -164,26 +185,81 @@ def display_message_part(part):
                 logger.error(f"Failed to display tool {part.tool_name} args: {e}")
                 st.code(str(part.args))
     elif part.part_kind == "tool-return" and st.session_state.config.features["tools_visibility"]:
-        with st.expander("📥 Tool Result"):
-            st.code(str(part.content)[:500])
+        with st.expander(f"📥 Tool Result: {part.tool_name}", expanded=False):
+            content_str = str(part.content)
+            # Show preview if content is very long
+            if len(content_str) > 2000:
+                st.caption(f"Result length: {len(content_str)} chars (showing first 2000)")
+                st.code(content_str[:2000] + "\n\n... (truncated)")
+            else:
+                st.code(content_str)
 
 
 def initialize_session_state():
+    logger.info("=" * 80)
+    logger.info("initialize_session_state() called")
+
     if "messages" not in st.session_state:
         st.session_state.messages = []
+        logger.info("Session state: messages initialized (empty list)")
+    else:
+        logger.debug(
+            "Session state: messages already exists", message_count=len(st.session_state.messages)
+        )
 
     if "config" not in st.session_state:
+        logger.info("Session state: config not found, creating UIConfig...")
         st.session_state.config = UIConfig()
+        logger.info(
+            "Session state: config created",
+            mode=st.session_state.config.mode.value,
+            features=st.session_state.config.features,
+        )
+    else:
+        logger.debug(
+            "Session state: config already exists",
+            mode=st.session_state.config.mode.value,
+        )
 
     if "handler" not in st.session_state:
-        st.session_state.handler = st.session_state.config.get_handler()
+        logger.info("Session state: handler not found, creating handler...")
+        handler = st.session_state.config.get_handler()
+        logger.info(
+            "Session state: handler created",
+            handler_type=type(handler).__name__,
+        )
+
+        logger.info("Initializing handler...")
+        st.session_state.handler = handler
         st.session_state.handler.initialize()
+        logger.info("Handler initialization complete")
+    else:
+        logger.debug(
+            "Session state: handler already exists",
+            handler_type=type(st.session_state.handler).__name__,
+        )
 
     if "theme" not in st.session_state:
         st.session_state.theme = "light"
+        logger.info("Session state: theme initialized to 'light'")
+    else:
+        logger.debug("Session state: theme already exists", theme=st.session_state.theme)
 
     if "current_page" not in st.session_state:
         st.session_state.current_page = "Chat"
+        logger.info("Session state: current_page initialized to 'Chat'")
+    else:
+        logger.debug(
+            "Session state: current_page already exists", page=st.session_state.current_page
+        )
+
+    logger.info(
+        "Session state initialization COMPLETE",
+        mode=st.session_state.config.mode.value,
+        handler_type=type(st.session_state.handler).__name__,
+        message_count=len(st.session_state.messages),
+        current_page=st.session_state.current_page,
+    )
 
 
 def render_sidebar():
@@ -201,6 +277,11 @@ def render_sidebar():
             # Extract page name (remove emoji)
             selected_page = page.split(" ", 1)[1]
             if selected_page != st.session_state.current_page:
+                logger.info(
+                    "Page navigation triggered",
+                    from_page=st.session_state.current_page,
+                    to_page=selected_page,
+                )
                 st.session_state.current_page = selected_page
                 st.rerun()
 
@@ -225,10 +306,29 @@ def render_sidebar():
         )
 
         if selected_mode != current_mode:
+            logger.info(
+                "=" * 80,
+            )
+            logger.info(
+                "UI Mode change triggered",
+                from_mode=current_mode.value,
+                to_mode=selected_mode.value,
+            )
+
             st.session_state.config.mode = selected_mode
-            st.session_state.config.features = UIConfig._get_features_for_mode(selected_mode)
-            st.session_state.handler = st.session_state.config.get_handler()
+            new_features = UIConfig._get_features_for_mode(selected_mode)
+            st.session_state.config.features = new_features
+            logger.info("Mode features updated", new_features=new_features)
+
+            logger.info("Creating new handler for mode change...")
+            new_handler = st.session_state.config.get_handler()
+            logger.info("New handler created", handler_type=type(new_handler).__name__)
+
+            st.session_state.handler = new_handler
+            logger.info("Initializing new handler...")
             st.session_state.handler.initialize()
+            logger.info("Mode change complete, triggering rerun")
+
             st.rerun()
 
         st.divider()
@@ -249,9 +349,25 @@ def render_sidebar():
             new_features["metrics"] = st.checkbox("Show Metrics", value=features["metrics"])
 
             if new_features != features:
+                logger.info("=" * 80)
+                logger.info(
+                    "Advanced feature toggles changed",
+                    old_features=features,
+                    new_features=new_features,
+                )
+
                 st.session_state.config.features = new_features
-                st.session_state.handler = st.session_state.config.get_handler()
+                logger.info("Features updated in config")
+
+                logger.info("Creating new handler for feature changes...")
+                new_handler = st.session_state.config.get_handler()
+                logger.info("New handler created", handler_type=type(new_handler).__name__)
+
+                st.session_state.handler = new_handler
+                logger.info("Initializing new handler...")
                 st.session_state.handler.initialize()
+                logger.info("Feature toggle complete, triggering rerun")
+
                 st.rerun()
 
         st.divider()
@@ -262,6 +378,8 @@ def render_sidebar():
         col1, col2 = st.columns(2)
         with col1:
             if st.button("🗑️ Clear Chat"):
+                message_count = len(st.session_state.messages)
+                logger.info("Clear chat triggered", message_count_cleared=message_count)
                 st.session_state.messages = []
                 st.rerun()
 
@@ -312,15 +430,15 @@ async def render_dashboard():
     st.title("📊 GraphRAG Dashboard")
     st.caption("Real-time analytics and visualization of your Agentic RAG system")
 
-    # Initialize dashboard handler fresh each time to avoid event loop conflicts
+    # Use singleton connection manager to avoid creating/destroying pools on every render
     # Note: DashboardHandler has internal caching (30s TTL) so this is efficient
-    from src.agentic_rag.storage.connection_manager import ConnectionManager
+    from src.agentic_rag.storage.connection_manager import get_connection_manager
 
     try:
-        # Use async context manager to ensure proper cleanup
-        async with ConnectionManager() as conn_mgr:
-            handler = DashboardHandler(conn_mgr)
-            await _render_dashboard_content(handler)
+        # Use the singleton connection manager (does NOT close on exit)
+        conn_mgr = await get_connection_manager()
+        handler = DashboardHandler(conn_mgr)
+        await _render_dashboard_content(handler)
     except Exception as e:
         st.error(f"Failed to initialize dashboard: {e}")
         st.info("Please check your database connections (PostgreSQL and Neo4j)")
@@ -624,11 +742,13 @@ async def _render_dashboard_content(handler: DashboardHandler):
                 st.plotly_chart(fig, use_container_width=True)
 
             # Cache and database health
-            col1, col2 = st.columns(2)
+            col1, col2, col3 = st.columns(3)
             with col1:
                 st.metric("Cache Hit Rate", f"{perf.get('cache_hit_rate', 0):.1%}")
             with col2:
-                st.metric("DB Connections", perf.get("db_connections_active", 0))
+                st.metric("PostgreSQL Conns", perf.get("pg_active_connections", 0))
+            with col3:
+                st.metric("Neo4j Conns", perf.get("neo4j_active_connections", 0))
 
             # Database metrics detail
             with st.expander("Database Metrics Detail"):
@@ -787,50 +907,125 @@ def export_conversation():
 
 
 async def handle_user_input(user_input: str):
+    logger.info("=" * 80)
+    logger.info(
+        "handle_user_input() called - USER MESSAGE RECEIVED",
+        user_input_length=len(user_input),
+        user_input_preview=user_input[:100] + "..." if len(user_input) > 100 else user_input,
+        current_message_count=len(st.session_state.messages),
+    )
+
     handler = st.session_state.handler
     config = st.session_state.config
 
+    logger.info(
+        "Handler and config loaded",
+        handler_type=type(handler).__name__,
+        mode=config.mode.value,
+        streaming_enabled=config.features["streaming"],
+        features=config.features,
+    )
+
     with st.chat_message("user"):
         st.markdown(user_input)
+        logger.debug("User message displayed in UI")
 
     with st.chat_message("assistant"):
         if not config.features["streaming"]:
             # Simple mode - no streaming
+            logger.info("NON-STREAMING mode - executing SimpleHandler.run_agent()...")
+
             with st.spinner("Thinking..."):
                 async with AsyncClient() as http_client:
+                    logger.debug("HTTP client created, calling handler.run_agent()...")
+
                     result = await handler.run_agent(
                         user_input, st.session_state.messages, http_client
                     )
+
+                    response_length = len(result["response"]) if result.get("response") else 0
+                    new_messages_count = len(result.get("new_messages", []))
+
+                    logger.info(
+                        "Agent execution complete (non-streaming)",
+                        response_length=response_length,
+                        new_messages_count=new_messages_count,
+                    )
+
                     st.markdown(result["response"])
                     st.session_state.messages.extend(result["new_messages"])
+
+                    logger.info(
+                        "Messages added to session state",
+                        total_message_count=len(st.session_state.messages),
+                    )
         else:
             # Streaming mode
+            logger.info("STREAMING mode - executing streaming handler...")
+
             message_placeholder = st.empty()
             status_placeholder = st.empty()
             full_response = ""
             first_chunk_received = False
 
+            # Chunk tracking
+            chunk_counts = {
+                "start": 0,
+                "delta": 0,
+                "tool_call": 0,
+                "tool_return": 0,
+                "complete": 0,
+                "total": 0,
+            }
+
             async with AsyncClient() as http_client:
+                logger.debug("HTTP client created, starting agent stream...")
+
                 # Show thinking indicator while waiting for first chunk
                 status_placeholder.status("Thinking...", state="running")
 
                 async for chunk in handler.run_agent(
                     user_input, st.session_state.messages, http_client
                 ):
-                    if chunk.get("type") == "start":
+                    chunk_counts["total"] += 1
+                    chunk_type = chunk.get("type", "unknown")
+                    if chunk_type == "start":
+                        chunk_counts["start"] += 1
                         # Clear the thinking indicator once we start receiving content
                         if not first_chunk_received:
+                            logger.info("First chunk received - text start")
                             status_placeholder.empty()
                             first_chunk_received = True
                         full_response = chunk["content"]
                         message_placeholder.markdown(full_response + "▌")
-                    elif chunk.get("type") == "delta":
+
+                        if chunk_counts["start"] == 1:
+                            logger.debug(
+                                "Text start chunk",
+                                content_length=len(chunk["content"]),
+                                content_preview=chunk["content"][:50],
+                            )
+
+                    elif chunk_type == "delta":
+                        chunk_counts["delta"] += 1
                         if not first_chunk_received:
+                            logger.info("First chunk received - text delta")
                             status_placeholder.empty()
                             first_chunk_received = True
                         full_response += chunk["content"]
                         message_placeholder.markdown(full_response + "▌")
-                    elif chunk.get("type") == "tool-call":
+
+                        # Log every 50 deltas to avoid spam
+                        if chunk_counts["delta"] % 50 == 0:
+                            logger.debug("Text streaming", delta_count=chunk_counts["delta"])
+
+                    elif chunk_type == "tool-call":
+                        chunk_counts["tool_call"] += 1
+                        logger.info(
+                            "Tool call chunk received",
+                            tool_name=chunk.get("tool_name"),
+                            args_type=type(chunk.get("args")).__name__,
+                        )
                         # Display tool call in real-time
                         if config.features["tools_visibility"]:
                             with st.expander(f"🔧 Tool: {chunk['tool_name']}", expanded=True):
@@ -841,24 +1036,31 @@ async def handle_user_input(user_input: str):
                                         f"Tool {chunk['tool_name']} args type: {type(args)}, value preview: {str(args)[:200]}"
                                     )
 
+                                    # Handle empty/None args
+                                    if not args or (isinstance(args, str) and not args.strip()):
+                                        st.info("No arguments")
                                     # If string, try to parse it
-                                    if isinstance(args, str):
+                                    elif isinstance(args, str):
                                         try:
                                             args = json.loads(args)
                                             logger.debug(
                                                 "Successfully parsed args from JSON string"
                                             )
+                                            # Display the parsed args
+                                            safe_args = make_json_safe(args)
+                                            if safe_args != args:
+                                                logger.debug(
+                                                    f"Tool {chunk['tool_name']} args contained non-serializable data"
+                                                )
+                                            st.json(safe_args)
                                         except json.JSONDecodeError as e:
                                             # Invalid JSON string - show as code
-                                            logger.warning(
-                                                f"Tool {chunk['tool_name']} args is invalid JSON string: {e!s}"
+                                            logger.debug(
+                                                f"Tool {chunk['tool_name']} args is not valid JSON: {e!s}, displaying as text"
                                             )
-                                            st.warning("Tool arguments could not be parsed")
                                             st.code(str(args))
-                                            # Don't continue the loop - just don't show JSON
-
-                                    # If we still have args (either original dict or successfully parsed), display it
-                                    if args and not isinstance(args, str):
+                                    # If already a dict/object, display it directly
+                                    elif args:
                                         # Make it JSON-safe and display
                                         safe_args = make_json_safe(args)
                                         if safe_args != args:
@@ -866,9 +1068,6 @@ async def handle_user_input(user_input: str):
                                                 f"Tool {chunk['tool_name']} args contained non-serializable data"
                                             )
                                         st.json(safe_args)
-                                    elif args and isinstance(args, str):
-                                        # Still a string after parse attempt - show as code
-                                        st.code(args)
 
                                 except Exception as e:
                                     # Ultimate fallback - show raw args
@@ -876,15 +1075,66 @@ async def handle_user_input(user_input: str):
                                         f"Failed to display tool {chunk['tool_name']} args: {e}"
                                     )
                                     st.code(str(chunk["args"]))
-                    elif chunk.get("type") == "tool-return":
+
+                    elif chunk_type == "tool-return":
+                        chunk_counts["tool_return"] += 1
+                        content_str = str(chunk.get("content", ""))
+                        logger.info(
+                            "Tool return chunk received",
+                            tool_name=chunk.get("tool_name", "unknown"),
+                            content_length=len(content_str),
+                        )
                         # Display tool return in real-time
                         if config.features["tools_visibility"]:
                             with st.expander("📥 Tool Result", expanded=False):
                                 st.code(str(chunk["content"])[:500])
-                    elif chunk.get("type") == "complete":
+
+                    elif chunk_type == "complete":
+                        chunk_counts["complete"] += 1
+                        new_messages_count = len(chunk.get("new_messages", []))
+                        logger.info(
+                            "Stream COMPLETE chunk received",
+                            new_messages_count=new_messages_count,
+                            full_response_length=len(full_response),
+                        )
+
                         status_placeholder.empty()
                         message_placeholder.markdown(full_response)
+
+                        # Extract and display tool returns from completed messages (for learning)
+                        if config.features["tools_visibility"]:
+                            for msg in chunk.get("new_messages", []):
+                                if isinstance(msg, ModelRequest | ModelResponse):
+                                    for part in msg.parts:
+                                        if part.part_kind == "tool-return":
+                                            chunk_counts["tool_return"] += 1
+                                            with st.expander(
+                                                f"📥 Tool Result: {part.tool_name}", expanded=False
+                                            ):
+                                                content_str = str(part.content)
+                                                # Show preview if content is very long
+                                                if len(content_str) > 2000:
+                                                    st.caption(
+                                                        f"Result length: {len(content_str)} chars (showing first 2000)"
+                                                    )
+                                                    st.code(
+                                                        content_str[:2000] + "\n\n... (truncated)"
+                                                    )
+                                                else:
+                                                    st.code(content_str)
+
                         st.session_state.messages.extend(chunk["new_messages"])
+
+                        logger.info(
+                            "Messages added to session state",
+                            total_message_count=len(st.session_state.messages),
+                        )
+
+            logger.info(
+                "handle_user_input() COMPLETE - streaming finished",
+                **chunk_counts,
+                final_response_length=len(full_response),
+            )
 
 
 async def main():

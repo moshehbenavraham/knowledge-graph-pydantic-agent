@@ -1,11 +1,25 @@
 from src.config.clients import clients_config
 from supabase import create_client  # type: ignore
-from supabase.client import Client
+from supabase.client import Client, ClientOptions
 
 
 def get_supabase_client() -> Client:
+    """
+    Create Supabase client with properly configured httpx client.
+
+    This avoids deprecation warnings about timeout/verify parameters
+    by configuring them in the httpx client instead.
+    """
     # Supabase client setup
     supabase_url = clients_config.supabase_url
     supabase_key = clients_config.supabase_service_key
-    supabase = create_client(supabase_url, supabase_key)
+
+    # Create client with configured httpx client options
+    options = ClientOptions(
+        postgrest_client_timeout=60,
+        storage_client_timeout=60,
+    )
+
+    supabase = create_client(supabase_url, supabase_key, options=options)
+
     return supabase

@@ -83,70 +83,123 @@ class ConnectionManager:
 
     async def initialize(self):
         """Initialize all connection pools with proper error handling."""
+        logger.info("=" * 60)
+        logger.info("ConnectionManager.initialize() called")
+
+        # Log event loop information
+        try:
+            loop = asyncio.get_running_loop()
+            logger.info(f"Event loop: {loop}")
+            logger.info(f"Event loop running: {loop.is_running()}")
+            logger.info(f"Event loop closed: {loop.is_closed()}")
+        except RuntimeError as e:
+            logger.error(f"No running event loop! {e}")
+            raise
+
+        logger.info(f"Config keys: {list(self.config.keys())}")
+        logger.info(f"Enable graph: {self.config.get('enable_graph', True)}")
+        logger.info(f"Enable redis: {self.config.get('enable_redis_cache', False)}")
+
         initialization_tasks = [
             self._init_postgresql(),
             self._init_neo4j() if self.config.get("enable_graph", True) else None,
             self._init_redis() if self.config.get("enable_redis_cache") else None,
         ]
 
-        results = await asyncio.gather(
-            *[t for t in initialization_tasks if t], return_exceptions=True
-        )
+        tasks_to_run = [t for t in initialization_tasks if t]
+        logger.info(f"Running {len(tasks_to_run)} initialization tasks")
+
+        results = await asyncio.gather(*tasks_to_run, return_exceptions=True)
 
         for i, result in enumerate(results):
             if isinstance(result, Exception):
                 service = ["PostgreSQL", "Neo4j", "Redis"][i]
                 logger.error(f"Failed to initialize {service}: {result}")
+                logger.error(f"Exception type: {type(result).__name__}")
+                logger.error(f"Exception args: {result.args}")
                 if i < 2:  # PostgreSQL and Neo4j are critical
                     raise result
 
+        logger.info("ConnectionManager.initialize() completed successfully")
+        logger.info("=" * 60)
+
     async def _init_postgresql(self):
         """Initialize PostgreSQL connection pool with optimized settings."""
+        logger.info(">>> _init_postgresql() starting")
+        logger.info(f"Database URL (masked): {self.config['database_url'][:30]}...")
+        logger.info(f"Pool min_size: {self.config.get('pg_pool_min', 5)}")
+        logger.info(f"Pool max_size: {self.config.get('pg_pool_max', 20)}")
+
         try:
-            # Get current event loop to bind the pool to
-            import asyncio
-
+            # Check event loop again right before pool creation
             loop = asyncio.get_running_loop()
+            logger.info(f"Event loop before pool creation: {loop}")
+            logger.info(f"Event loop ID: {id(loop)}")
+            logger.info(f"Event loop is running: {loop.is_running()}")
+            logger.info(f"Event loop is closed: {loop.is_closed()}")
 
+            # Check if pool already exists
+            if self.pg_pool is not None:
+                logger.warning(f"PostgreSQL pool already exists! {self.pg_pool}")
+                logger.warning(f"Pool is closed: {self.pg_pool._closed}")
+                return
+
+            logger.info("Calling asyncpg.create_pool()...")
+
+            # Create pool with simplified settings to avoid Streamlit event loop conflicts
             self.pg_pool = await asyncpg.create_pool(
                 dsn=self.config["database_url"],
                 min_size=self.config.get("pg_pool_min", 5),
                 max_size=self.config.get("pg_pool_max", 20),
-                max_queries=50000,
-                max_inactive_connection_lifetime=300,
+                timeout=30,
                 command_timeout=60,
                 setup=self._setup_postgres_connection,
                 init=self._init_postgres_connection,
-                server_settings={
-                    "jit": "off",  # Disable JIT for consistent performance
-                    "search_path": "public",
-                    "statement_timeout": "30s",
-                    "lock_timeout": "10s",
-                    "idle_in_transaction_session_timeout": "60s",
-                },
-                loop=loop,  # Explicitly bind to current event loop
             )
 
-            self.pg_state = ConnectionState.OPEN
+            logger.info(f"asyncpg.create_pool() returned: {self.pg_pool}")
+            logger.info(f"Pool type: {type(self.pg_pool)}")
+            logger.info(f"Pool closed: {self.pg_pool._closed}")
+
+            self.pg_state = ConnectionState.CLOSED  # CLOSED = healthy/normal operation
             self.pg_metrics.total_connections = self.pg_pool.get_size()
             logger.info(
-                f"PostgreSQL pool initialized with {self.pg_metrics.total_connections} connections"
+                f"✅ PostgreSQL pool initialized with {self.pg_metrics.total_connections} connections"
             )
 
         except Exception as e:
-            self.pg_state = ConnectionState.CLOSED
+            logger.error("❌ PostgreSQL initialization FAILED")
+            logger.error(f"Exception type: {type(e).__name__}")
+            logger.error(f"Exception message: {e!s}")
+            logger.error(f"Exception args: {e.args}")
+
+            # Try to get more details about the error
+            import traceback
+
+            logger.error(f"Full traceback:\n{traceback.format_exc()}")
+
+            self.pg_state = ConnectionState.OPEN  # OPEN = broken/failure state
             self.pg_metrics.last_error = str(e)
             self.pg_metrics.last_error_time = datetime.now(UTC)
             raise
 
     async def _setup_postgres_connection(self, connection):
         """Setup function for each PostgreSQL connection."""
-        # Set connection-specific settings
-        await connection.execute("SET work_mem = '50MB'")
-        await connection.execute("SET maintenance_work_mem = '256MB'")
+        logger.info(f">>> _setup_postgres_connection() called for {connection}")
+        try:
+            # Set connection-specific settings
+            logger.info("Setting work_mem...")
+            await connection.execute("SET work_mem = '50MB'")
+            logger.info("Setting maintenance_work_mem...")
+            await connection.execute("SET maintenance_work_mem = '256MB'")
+            logger.info("✅ Setup complete")
+        except Exception as e:
+            logger.error(f"❌ Setup failed: {e}")
+            raise
 
     async def _init_postgres_connection(self, connection):
         """Initialize function for new PostgreSQL connections."""
+        logger.info(f">>> _init_postgres_connection() called for {connection}")
         # Prepare commonly used statements
         # NOTE: Commented out - schema uses embedding_1536/embedding_768 columns, not 'embedding'
         # await connection.execute(
@@ -159,6 +212,7 @@ class ConnectionManager:
         #     LIMIT $2
         # """
         # )
+        logger.info("✅ Init complete (no-op)")
         pass
 
     async def _init_neo4j(self):
@@ -197,11 +251,11 @@ class ConnectionManager:
                 result = await session.run("RETURN 1 as test")
                 await result.single()
 
-            self.neo4j_state = ConnectionState.OPEN
+            self.neo4j_state = ConnectionState.CLOSED  # CLOSED = healthy/normal operation
             logger.info("Neo4j driver initialized successfully")
 
         except Exception as e:
-            self.neo4j_state = ConnectionState.CLOSED
+            self.neo4j_state = ConnectionState.OPEN  # OPEN = broken/failure state
             self.neo4j_metrics.last_error = str(e)
             self.neo4j_metrics.last_error_time = datetime.now(UTC)
             raise
@@ -244,7 +298,7 @@ class ConnectionManager:
 
         if not self._check_circuit_breaker("pg"):
             raise ConnectionError(
-                f"PostgreSQL circuit breaker is {self.pg_state.value}. "
+                f"PostgreSQL circuit breaker is {self.pg_state.value.upper()} - blocking requests. "
                 f"Last error: {self.pg_metrics.last_error}"
             )
 
@@ -259,8 +313,8 @@ class ConnectionManager:
             # Reset failure count on success
             if self.pg_state == ConnectionState.HALF_OPEN:
                 self.pg_failures = 0
-                self.pg_state = ConnectionState.OPEN
-                logger.info("PostgreSQL circuit breaker closed - connection recovered")
+                self.pg_state = ConnectionState.CLOSED  # Back to healthy state
+                logger.info("PostgreSQL circuit breaker CLOSED (healthy) - connection recovered")
 
         except Exception as e:
             self._record_failure("pg", e)
@@ -285,7 +339,7 @@ class ConnectionManager:
 
         if not self._check_circuit_breaker("neo4j"):
             raise ConnectionError(
-                f"Neo4j circuit breaker is {self.neo4j_state.value}. "
+                f"Neo4j circuit breaker is {self.neo4j_state.value.upper()} - blocking requests. "
                 f"Last error: {self.neo4j_metrics.last_error}"
             )
 
@@ -300,8 +354,8 @@ class ConnectionManager:
             # Reset failure count on success
             if self.neo4j_state == ConnectionState.HALF_OPEN:
                 self.neo4j_failures = 0
-                self.neo4j_state = ConnectionState.OPEN
-                logger.info("Neo4j circuit breaker closed - connection recovered")
+                self.neo4j_state = ConnectionState.CLOSED  # Back to healthy state
+                logger.info("Neo4j circuit breaker CLOSED (healthy) - connection recovered")
 
         except Exception as e:
             self._record_failure("neo4j", e)
@@ -313,7 +367,14 @@ class ConnectionManager:
             self._update_query_metrics("neo4j", elapsed_ms)
 
     def _check_circuit_breaker(self, service: str) -> bool:
-        """Check if circuit breaker allows request."""
+        """
+        Check if circuit breaker allows request.
+
+        Circuit breaker states:
+        - CLOSED = Normal operation (healthy) → Allow requests
+        - OPEN = Failure state (broken) → Block requests, check for recovery
+        - HALF_OPEN = Testing recovery → Allow limited requests
+        """
         if service == "pg":
             state = self.pg_state
             last_failure = self.pg_last_failure_time
@@ -321,23 +382,30 @@ class ConnectionManager:
             state = self.neo4j_state
             last_failure = self.neo4j_last_failure_time
 
-        if state == ConnectionState.OPEN:
+        # CLOSED = healthy, allow all requests
+        if state == ConnectionState.CLOSED:
             return True
 
-        if state == ConnectionState.CLOSED:
+        # OPEN = broken, check if we should try recovery
+        if state == ConnectionState.OPEN:
             if (
                 last_failure
                 and datetime.now(UTC) - last_failure > self.circuit_config.recovery_timeout
             ):
-                # Try half-open state
+                # Try half-open state to test recovery
                 if service == "pg":
                     self.pg_state = ConnectionState.HALF_OPEN
+                    logger.info(
+                        "PostgreSQL circuit breaker entering HALF_OPEN state for recovery test"
+                    )
                 else:
                     self.neo4j_state = ConnectionState.HALF_OPEN
+                    logger.info("Neo4j circuit breaker entering HALF_OPEN state for recovery test")
                 return True
+            # Still broken, block request
             return False
 
-        # HALF_OPEN state
+        # HALF_OPEN state - allow requests to test recovery
         return True
 
     def _record_failure(self, service: str, error: Exception):
@@ -349,9 +417,12 @@ class ConnectionManager:
             self.pg_metrics.last_error_time = datetime.now(UTC)
 
             if self.pg_failures >= self.circuit_config.failure_threshold:
-                self.pg_state = ConnectionState.CLOSED
+                self.pg_state = ConnectionState.OPEN  # OPEN = broken/failure state
                 self.pg_last_failure_time = datetime.now(UTC)
-                logger.error(f"PostgreSQL circuit breaker opened after {self.pg_failures} failures")
+                logger.error(
+                    f"PostgreSQL circuit breaker OPEN (blocking requests) after {self.pg_failures} failures. "
+                    f"Last error: {str(error)[:100]}"
+                )
 
         else:
             self.neo4j_failures += 1
@@ -360,9 +431,12 @@ class ConnectionManager:
             self.neo4j_metrics.last_error_time = datetime.now(UTC)
 
             if self.neo4j_failures >= self.circuit_config.failure_threshold:
-                self.neo4j_state = ConnectionState.CLOSED
+                self.neo4j_state = ConnectionState.OPEN  # OPEN = broken/failure state
                 self.neo4j_last_failure_time = datetime.now(UTC)
-                logger.error(f"Neo4j circuit breaker opened after {self.neo4j_failures} failures")
+                logger.error(
+                    f"Neo4j circuit breaker OPEN (blocking requests) after {self.neo4j_failures} failures. "
+                    f"Last error: {str(error)[:100]}"
+                )
 
     def _update_query_metrics(self, service: str, elapsed_ms: float):
         """Update query performance metrics."""
@@ -447,55 +521,115 @@ class ConnectionManager:
 
     async def close(self):
         """Close all connections gracefully."""
+        logger.info("=" * 60)
+        logger.info(">>> ConnectionManager.close() called")
+        logger.info(f"ConnectionManager instance ID: {id(self)}")
+
+        # Log stack trace to see who called close()
+        import traceback
+
+        logger.info(f"Close called from:\n{''.join(traceback.format_stack())}")
+
         close_tasks = []
 
         if self.pg_pool:
+            logger.info(f"Closing PostgreSQL pool: {self.pg_pool}")
+            logger.info(f"Pool already closed: {self.pg_pool._closed}")
             close_tasks.append(self.pg_pool.close())
 
         if self.neo4j_driver:
+            logger.info(f"Closing Neo4j driver: {self.neo4j_driver}")
             close_tasks.append(self.neo4j_driver.close())
 
         if self.redis_client:
+            logger.info(f"Closing Redis client: {self.redis_client}")
             close_tasks.append(self.redis_client.aclose())
 
+        logger.info(f"Running {len(close_tasks)} close tasks")
         await asyncio.gather(*close_tasks, return_exceptions=True)
-        logger.info("All connections closed")
+        logger.info("✅ All connections closed")
+        logger.info("=" * 60)
 
     async def __aenter__(self):
         """Async context manager entry - initialize connections."""
+        logger.info(">>> ConnectionManager.__aenter__() called")
+        logger.info(f"Instance ID: {id(self)}")
         await self.initialize()
+        logger.info("<<< ConnectionManager.__aenter__() returning self")
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Async context manager exit - close connections."""
+        logger.info(">>> ConnectionManager.__aexit__() called")
+        logger.info(f"Instance ID: {id(self)}")
+        logger.info(f"Exception: {exc_type}, {exc_val}")
         await self.close()
+        logger.info("<<< ConnectionManager.__aexit__() done")
         return False  # Don't suppress exceptions
 
 
 # Global connection manager instance
 _connection_manager: ConnectionManager | None = None
+_connection_manager_lock: asyncio.Lock | None = None
 
 
 async def get_connection_manager() -> ConnectionManager:
-    """Get or create the global connection manager."""
-    global _connection_manager
+    """
+    Get or create the global connection manager.
 
-    if _connection_manager is None:
+    Thread-safe singleton pattern with async lock to prevent race conditions.
+    """
+    global _connection_manager, _connection_manager_lock
+
+    # Create lock if needed (not async, so safe to do without lock)
+    if _connection_manager_lock is None:
+        _connection_manager_lock = asyncio.Lock()
+
+    # Use lock to prevent race condition where multiple coroutines
+    # try to create the connection manager simultaneously
+    async with _connection_manager_lock:
+        logger.info(">>> get_connection_manager() called (inside lock)")
+        logger.info(f"_connection_manager is None: {_connection_manager is None}")
+
+        if _connection_manager is not None:
+            logger.info(f"Returning existing connection manager: {id(_connection_manager)}")
+            logger.info(f"Existing PG pool: {_connection_manager.pg_pool}")
+            if _connection_manager.pg_pool:
+                logger.info(f"Existing pool closed: {_connection_manager.pg_pool._closed}")
+            return _connection_manager
+
+        logger.info("Creating NEW connection manager")
+
         from src.agentic_rag.config import config  # Import config when needed
 
-        _connection_manager = ConnectionManager(config.dict())
-        await _connection_manager.initialize()
+        temp_connection_manager = ConnectionManager(config.dict())
+        logger.info(f"ConnectionManager instance created: {id(temp_connection_manager)}")
 
-        # Initialize analytics logger after connection manager is ready
         try:
-            from src.agentic_rag.analytics import initialize_analytics_logger
+            logger.info("Calling initialize()...")
+            await temp_connection_manager.initialize()
+            logger.info("initialize() completed")
 
-            await initialize_analytics_logger(_connection_manager)
-            logger.info("Analytics logger initialized successfully")
+            # Initialize analytics logger after connection manager is ready
+            try:
+                from src.agentic_rag.analytics import initialize_analytics_logger
+
+                await initialize_analytics_logger(temp_connection_manager)
+                logger.info("Analytics logger initialized successfully")
+            except Exception as e:
+                logger.warning(f"Analytics logger initialization failed (non-critical): {e}")
+
+            # Only set global singleton if initialization succeeded
+            _connection_manager = temp_connection_manager
+            logger.info(f"Returning NEW connection manager: {id(_connection_manager)}")
+            return _connection_manager
+
         except Exception as e:
-            logger.warning(f"Analytics logger initialization failed (non-critical): {e}")
-
-    return _connection_manager
+            logger.error(
+                f"Failed to initialize ConnectionManager: {e}. " f"Will retry on next call."
+            )
+            # Don't set _connection_manager - leave it None so next call will retry
+            raise
 
 
 async def close_connections():
