@@ -131,13 +131,6 @@ Version history and release notes.
 
 ---
 
-#### 🚧 [Ongoing Projects](b-projects/index.md)
-Internal planning and project documentation.
-
-> **Note:** Working notes for active development - may be incomplete
-
----
-
 #### 📝 [Example Documents](x-examples/index.md)
 Sample documents for testing and demonstration.
 
