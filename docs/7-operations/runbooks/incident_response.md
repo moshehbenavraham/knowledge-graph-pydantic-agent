@@ -382,10 +382,13 @@ After incident resolution, review:
 ## Additional Resources
 
 - [Scaling Runbook](./scaling.md)
-- [Database Issues Runbook](./database_issues.md)
-- [Deployment Runbook](./deployment.md)
-- [Alert Documentation](../../observability/ALERTS.md)
-- [Architecture Documentation](../../ARCHITECTURE.md)
+- [Alert Documentation](../observability/alerts.md)
+- [Architecture Documentation](../../3-architecture/index.md)
+
+<!-- TODO: Add runbooks when created:
+- Database Issues Runbook (./database_issues.md)
+- Deployment Runbook (./deployment.md)
+-->
 
 ---
 

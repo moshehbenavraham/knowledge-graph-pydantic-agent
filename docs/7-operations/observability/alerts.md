@@ -271,10 +271,13 @@ All metrics are exposed at `/metrics` endpoint.
 
 ## Runbook Links
 
-- [Incident Response Runbook](../operations/RUNBOOKS/incident_response.md)
-- [Database Issues Runbook](../operations/RUNBOOKS/database_issues.md)
-- [Deployment Runbook](../operations/RUNBOOKS/deployment.md)
-- [Scaling Runbook](../operations/RUNBOOKS/scaling.md)
+- [Incident Response Runbook](../runbooks/incident_response.md)
+- [Scaling Runbook](../runbooks/scaling.md)
+
+<!-- TODO: Add when runbooks are created:
+- Database Issues Runbook (../runbooks/database_issues.md)
+- Deployment Runbook (../runbooks/deployment.md)
+-->
 
 ## Contact Information
 

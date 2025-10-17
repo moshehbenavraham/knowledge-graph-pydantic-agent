@@ -146,7 +146,7 @@
      ```
    - **Execute single migration file** in the Supabase SQL Editor:
      - Go to SQL Editor → New Query
-     - Copy contents of [`src/agentic_rag/storage/migrations/sql/001_enhanced_schema.sql`](../src/agentic_rag/storage/migrations/sql/001_enhanced_schema.sql)
+     - Copy contents of [`src/agentic_rag/storage/migrations/sql/001_enhanced_schema.sql`](../../src/agentic_rag/storage/migrations/sql/001_enhanced_schema.sql)
      - Paste and run
      - This creates all tables (documents, chunks, sessions, messages, search_cache, graph_sync_queue), indexes, functions, and triggers
 
@@ -358,7 +358,7 @@ For enhanced code execution capabilities beyond the built-in sandbox:
    ```
 
 3. **Configure Agent:**
-   - Edit [`src/agent/agent.py`](../src/agent/agent.py)
+   - Edit [`src/agent/unified_agent.py`](../../src/agent/unified_agent.py)
    - Add MCP server configuration (see comments in the file)
    - Comment out the built-in `execute_code` tool (lines 187-201)
 
@@ -455,8 +455,8 @@ asyncio.run(test())
 
 ### Getting Help
 
-- Check the [Configuration Guide](CONFIGURATION.md) for environment setup
-- Review [Usage Documentation](USAGE.md) for feature usage
-- See [Architecture Documentation](ARCHITECTURE.md) for system overview
-- View [Examples](EXAMPLES.md) for Phase 3 usage patterns
+- Check the [Configuration Guide](../4-configuration/environment.md) for environment setup
+- Review [Usage Documentation](../5-guides/usage.md) for feature usage
+- See [Architecture Documentation](../3-architecture/index.md) for system overview
+- View [Examples](../5-guides/examples.md) for Phase 3 usage patterns
 - Check existing [GitHub Issues](https://github.com/your-repo/issues) for known problems

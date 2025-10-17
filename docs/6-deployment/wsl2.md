@@ -1108,6 +1108,6 @@ neo4j.exceptions.AuthError: {neo4j_code: Neo.ClientError.Security.Unauthorized}
 
 ## References
 
-- Main deployment guide: [DEPLOYMENT.md](./DEPLOYMENT.md)
-- Installation guide: [INSTALL.md](./INSTALL.md)
-- Project instructions: [CLAUDE.md](../CLAUDE.md)
+- Main deployment guide: [Deployment Guide](./general.md)
+- Installation guide: [Installation Guide](../2-getting-started/installation.md)
+- Project instructions: [CLAUDE.md](../../CLAUDE.md)

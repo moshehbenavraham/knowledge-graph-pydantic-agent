@@ -182,7 +182,7 @@ The enhanced Agentic RAG pipeline processes documents through dual storage:
 
 The RAG pipeline processes documents from local filesystem or Google Drive.
 
-**Configuration:** Using centralized config system (see [Configuration Guide](CONFIGURATION.md)):
+**Configuration:** Using centralized config system (see [Configuration Guide](../4-configuration/environment.md)):
 ```bash
 # Text processing settings (in .env)
 EMBEDDING_MODEL=text-embedding-3-small
@@ -246,18 +246,18 @@ GOOGLE_DRIVE_CREDENTIALS_PATH=config/google_credentials.json
 
 ### Pipeline Architecture
 
-**Standard RAG Pipeline** ([`src/rag_pipeline/`](../src/rag_pipeline/)):
-- [`common/db_handler.py`](../src/rag_pipeline/common/db_handler.py): Database operations
-- [`common/text_processor.py`](../src/rag_pipeline/common/text_processor.py): Text processing and embeddings
-- [`sources/google_drive.py`](../src/rag_pipeline/sources/google_drive.py): Google Drive integration
-- [`sources/local_files.py`](../src/rag_pipeline/sources/local_files.py): Local file processing
+**Standard RAG Pipeline** ([`src/rag_pipeline/`](../../src/rag_pipeline/)):
+- [`common/db_handler.py`](../../src/rag_pipeline/common/db_handler.py): Database operations
+- [`common/text_processor.py`](../../src/rag_pipeline/common/text_processor.py): Text processing and embeddings
+- [`sources/google_drive.py`](../../src/rag_pipeline/sources/google_drive.py): Google Drive integration
+- [`sources/local_files.py`](../../src/rag_pipeline/sources/local_files.py): Local file processing
 
-**Agentic RAG Pipeline** ([`src/agentic_rag/`](../src/agentic_rag/)):
-- [`ingestion/chunker.py`](../src/agentic_rag/ingestion/chunker.py): Semantic chunking
-- [`ingestion/embedder.py`](../src/agentic_rag/ingestion/embedder.py): Multi-model embeddings
-- [`ingestion/extractor.py`](../src/agentic_rag/ingestion/extractor.py): Knowledge extraction
-- [`storage/postgres_store.py`](../src/agentic_rag/storage/postgres_store.py): PostgreSQL operations
-- [`storage/neo4j_store.py`](../src/agentic_rag/storage/neo4j_store.py): Neo4j operations
+**Agentic RAG Pipeline** ([`src/agentic_rag/`](../../src/agentic_rag/)):
+- [`ingestion/chunker.py`](../../src/agentic_rag/ingestion/chunker.py): Semantic chunking
+- [`ingestion/embedder.py`](../../src/agentic_rag/ingestion/embedder.py): Multi-model embeddings
+- [`ingestion/knowledge_extractor.py`](../../src/agentic_rag/ingestion/knowledge_extractor.py): Knowledge extraction
+- [`storage/postgres_store.py`](../../src/agentic_rag/storage/postgres_store.py): PostgreSQL operations
+- [`storage/neo4j_store.py`](../../src/agentic_rag/storage/neo4j_store.py): Neo4j operations
 
 ## Running the Agent
 
@@ -303,7 +303,7 @@ make dev MODE=standard
 
 #### Built-in Custom Sandboxed Execution (Default)
 
-The agent uses a custom safe execution environment implemented in [`src/tools/code_execution.py`](../src/tools/code_execution.py):
+The agent uses a custom safe execution environment implemented in [`src/tools/code_execution.py`](../../src/tools/code_execution.py):
 
 **Whitelisted Modules:**
 - Core Python libraries: `math`, `datetime`, `json`, `csv`, `re`, `statistics`, etc.
@@ -318,8 +318,8 @@ The agent uses a custom safe execution environment implemented in [`src/tools/co
 - Custom print function for output capture
 
 **Configuration:**
-- Enabled by default in [`src/agent/unified_agent.py`](../src/agent/unified_agent.py)
-- Uses `execute_safe_code_tool` from [`src/tools/code_execution.py`](../src/tools/code_execution.py)
+- Enabled by default in [`src/agent/unified_agent.py`](../../src/agent/unified_agent.py)
+- Uses `execute_safe_code_tool` from [`src/tools/code_execution.py`](../../src/tools/code_execution.py)
 - Can be disabled via `ENABLE_CODE_EXECUTION=false` in `.env`
 
 #### Alternative: MCP Code Execution Server (Optional)
@@ -332,7 +332,7 @@ For enhanced capabilities, you can use the MCP (Model Context Protocol) server:
    ```bash
    deno run -N -R=node_modules -W=node_modules --node-modules-dir=auto jsr:@pydantic/mcp-run-python sse
    ```
-3. Configure MCP in [`src/agent/unified_agent.py`](../src/agent/unified_agent.py) (see comments in the file)
+3. Configure MCP in [`src/agent/unified_agent.py`](../../src/agent/unified_agent.py) (see comments in the file)
 4. Comment out the built-in `execute_python_code` tool
 
 **Benefits:**
@@ -348,7 +348,7 @@ For enhanced capabilities, you can use the MCP (Model Context Protocol) server:
 - **Function**: Intelligently routes queries to optimal search strategy
 - **Intent Analysis**: Automatic detection of query type
 - **Returns**: Chunks, facts, entities, and relationships
-- **Implementation**: Built into [`src/agent/unified_agent.py`](../src/agent/unified_agent.py) as smart_search tool
+- **Implementation**: Built into [`src/agent/unified_agent.py`](../../src/agent/unified_agent.py) as smart_search tool
 
 #### `vector_search`
 - **Function**: Pure semantic similarity search
@@ -373,25 +373,25 @@ For enhanced capabilities, you can use the MCP (Model Context Protocol) server:
 #### `retrieve_documents`
 - **Function**: Vector similarity search using pgvector
 - **Returns**: Top 4 most relevant document chunks with metadata
-- **Implementation**: [`src/tools/rag.py:retrieve_relevant_documents_tool`](../src/tools/rag.py)
+- **Implementation**: [`src/tools/rag.py:retrieve_relevant_documents_tool`](../../src/tools/rag.py)
 - **Usage**: Automatic context retrieval for user queries
 
 #### `list_all_documents`
 - **Function**: Enumerate all available documents
 - **Returns**: List of documents from `document_metadata` table with schemas
-- **Implementation**: [`src/tools/rag.py:list_documents_tool`](../src/tools/rag.py)
+- **Implementation**: [`src/tools/rag.py:list_documents_tool`](../../src/tools/rag.py)
 - **Usage**: Discover available documents and their IDs
 
 #### `get_full_document`
 - **Function**: Retrieve full document content by combining chunks
 - **Returns**: Complete document text (limited to 20,000 characters)
-- **Implementation**: [`src/tools/rag.py:get_document_content_tool`](../src/tools/rag.py)
+- **Implementation**: [`src/tools/rag.py:get_document_content_tool`](../../src/tools/rag.py)
 - **Usage**: Access entire document content when needed
 
 #### `execute_sql`
 - **Function**: Execute read-only SQL queries on structured data
 - **Returns**: Query results in JSON format
-- **Implementation**: [`src/tools/sql_query.py:execute_sql_query_tool`](../src/tools/sql_query.py)
+- **Implementation**: [`src/tools/sql_query.py:execute_sql_query_tool`](../../src/tools/sql_query.py)
 - **Usage**: Query CSV/Excel data stored in `document_rows` table
 
 ### External Service Tools
@@ -400,13 +400,13 @@ For enhanced capabilities, you can use the MCP (Model Context Protocol) server:
 - **Function**: Internet search with dual provider support
 - **Primary**: Brave Search API (summarized results)
 - **Fallback**: SearXNG (detailed result listings)
-- **Implementation**: [`src/tools/web_search.py:web_search_tool`](../src/tools/web_search.py)
+- **Implementation**: [`src/tools/web_search.py:web_search_tool`](../../src/tools/web_search.py)
 - **Configuration**: `BRAVE_API_KEY` and `SEARXNG_BASE_URL`
 
 #### `analyze_image`
 - **Function**: Vision model analysis of stored images
 - **Model**: Configurable via `VISION_LLM_MODEL` (default: `gpt-4o-mini`)
-- **Implementation**: [`src/tools/image_analysis.py:image_analysis_tool`](../src/tools/image_analysis.py)
+- **Implementation**: [`src/tools/image_analysis.py:image_analysis_tool`](../../src/tools/image_analysis.py)
 - **Usage**: Analyze images based on user queries (supports OCR, object detection, scene analysis)
 
 ### Code Execution Tool
@@ -414,7 +414,7 @@ For enhanced capabilities, you can use the MCP (Model Context Protocol) server:
 #### `execute_python_code`
 - **Function**: Sandboxed Python code execution
 - **Security**: Custom whitelist-based execution environment
-- **Implementation**: [`src/tools/code_execution.py:execute_safe_code_tool`](../src/tools/code_execution.py)
+- **Implementation**: [`src/tools/code_execution.py:execute_safe_code_tool`](../../src/tools/code_execution.py)
 - **Output**: Results captured via custom print function
 - **Libraries**: Core Python + optional numpy/pandas/scipy
 
@@ -424,7 +424,7 @@ For enhanced capabilities, you can use the MCP (Model Context Protocol) server:
 - **Integration**: Automatic conversation memory via mem0
 - **Backend**: Supabase with vector similarity
 - **Features**: User-isolated, deduplicated, persistent across sessions
-- **Configuration**: [`src/clients/memory.py`](../src/clients/memory.py)
+- **Configuration**: [`src/clients/memory.py`](../../src/clients/memory.py)
 - **Control**: `ENABLE_LONG_TERM_MEMORY` environment variable
 
 ## Configuration Examples

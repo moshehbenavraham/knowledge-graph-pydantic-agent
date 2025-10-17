@@ -464,5 +464,5 @@ DEVELOPMENT_MODE=true
 
 ---
 
-For detailed configuration options, see [CONFIGURATION.md](./CONFIGURATION.md)
-For troubleshooting, see [TROUBLESHOOTING.md](./TROUBLESHOOTING.md)
+For detailed configuration options, see [Configuration Reference](../4-configuration/reference.md)
+For troubleshooting, see [Troubleshooting Guide](../10-troubleshooting/index.md)

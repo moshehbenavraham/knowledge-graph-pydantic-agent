@@ -7,6 +7,13 @@ repos:
         language: system
         files: '\.(md|txt|rst|py|yaml|yml|json)$'
         pass_filenames: true
+    -   id: validate-docs
+        name: Validate documentation links
+        entry: python3 scripts/validate_docs.py
+        language: system
+        files: '\.md$'
+        pass_filenames: false
+        stages: [commit, manual]
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:

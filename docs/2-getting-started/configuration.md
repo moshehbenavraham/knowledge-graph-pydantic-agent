@@ -317,7 +317,7 @@ print(client.complete('Hello'))
 ## Getting Help
 
 - **[Environment Variables Reference](../4-configuration/environment.md)** - Complete list of all settings
-- **[Settings System Guide](../4-configuration/settings.md)** - Technical details about the configuration system
+- **[Configuration Reference](../4-configuration/reference.md)** - Technical details about the configuration system
 - **[Troubleshooting Guide](../10-troubleshooting/)** - Common configuration issues
 
 ---

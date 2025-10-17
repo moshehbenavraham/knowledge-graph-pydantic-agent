@@ -356,11 +356,11 @@ make docker-stop    # Stop containers
 
 ### Documentation
 
-- **[Architecture](docs/ARCHITECTURE.md)**: System design and structure
-- **[Configuration](docs/CONFIGURATION.md)**: Environment setup
-- **[Database & RAG](docs/DB_AND_RAG.md)**: Database and RAG details
-- **[Usage](docs/USAGE.md)**: Usage examples and patterns
-- **[Performance](docs/PERFORMANCE.md)**: Performance guidelines
+- **[Architecture](docs/3-architecture/index.md)**: System design and structure
+- **[Configuration](docs/4-configuration/index.md)**: Environment setup
+- **[Database & RAG](docs/3-architecture/database-and-rag.md)**: Database and RAG details
+- **[Usage](docs/5-guides/usage.md)**: Usage examples and patterns
+- **[Performance](docs/7-operations/performance.md)**: Performance guidelines
 
 ### Community
 

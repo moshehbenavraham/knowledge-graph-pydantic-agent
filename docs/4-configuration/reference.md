@@ -450,4 +450,4 @@ from src.agentic_rag.config import get_config  # ⚠️ Legacy (but still works)
 
 ## Complete Environment Variables Reference
 
-See [.env.example](../.env.example) for a complete list of all available environment variables with descriptions and examples.
+See [.env.example](../../.env.example) for a complete list of all available environment variables with descriptions and examples.

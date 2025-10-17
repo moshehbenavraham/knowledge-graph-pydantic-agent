@@ -1,0 +1,171 @@
+name: Documentation Validation
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'docs/**/*.md'
+      - '*.md'
+      - 'scripts/validate_docs.py'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'docs/**/*.md'
+      - '*.md'
+      - 'scripts/validate_docs.py'
+  workflow_dispatch:  # Allow manual triggering
+  schedule:
+    # Run weekly on Monday at 9 AM UTC
+    - cron: '0 9 * * 1'
+
+jobs:
+  validate-links:
+    name: Validate Documentation Links
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run documentation link validator
+        id: validate
+        run: |
+          echo "## Documentation Link Validation Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if python3 scripts/validate_docs.py > validation_output.txt 2>&1; then
+            echo "✅ All documentation links are valid!" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            cat validation_output.txt >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            exit 0
+          else
+            echo "❌ Found broken documentation links" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            cat validation_output.txt >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+
+            # Post detailed output
+            cat validation_output.txt
+            exit 1
+          fi
+
+      - name: Upload validation report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: doc-validation-report
+          path: validation_output.txt
+          retention-days: 30
+
+  check-markdown-syntax:
+    name: Check Markdown Syntax
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install markdownlint-cli
+        run: npm install -g markdownlint-cli
+
+      - name: Run markdownlint
+        run: |
+          markdownlint '**/*.md' \
+            --ignore node_modules \
+            --ignore .venv \
+            --config .markdownlint.json || true
+        continue-on-error: true
+
+  check-doc-structure:
+    name: Verify Documentation Structure
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify required documentation files exist
+        run: |
+          echo "## Documentation Structure Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          required_files=(
+            "README.md"
+            "CLAUDE.md"
+            "CONTRIBUTING.md"
+            "docs/README.md"
+            "docs/2-getting-started/installation.md"
+            "docs/3-architecture/index.md"
+            "docs/4-configuration/environment.md"
+            "DOCUMENTATION_AUDIT.md"
+          )
+
+          missing_files=()
+
+          for file in "${required_files[@]}"; do
+            if [ ! -f "$file" ]; then
+              missing_files+=("$file")
+              echo "❌ Missing: $file" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "✅ Found: $file" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+
+          if [ ${#missing_files[@]} -eq 0 ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "✅ All required documentation files are present" >> $GITHUB_STEP_SUMMARY
+            exit 0
+          else
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "❌ Missing ${#missing_files[@]} required documentation file(s)" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+  count-documentation:
+    name: Documentation Metrics
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Count documentation files and generate metrics
+        run: |
+          echo "## Documentation Metrics" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          total_md=$(find . -name "*.md" -not -path "./node_modules/*" -not -path "./.venv/*" | wc -l)
+          docs_md=$(find docs -name "*.md" | wc -l)
+          root_md=$(find . -maxdepth 1 -name "*.md" | wc -l)
+
+          echo "📊 **File Counts:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Total markdown files: $total_md" >> $GITHUB_STEP_SUMMARY
+          echo "- Documentation files: $docs_md" >> $GITHUB_STEP_SUMMARY
+          echo "- Root-level files: $root_md" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Count words
+          total_words=$(find docs -name "*.md" -exec cat {} \; | wc -w)
+          echo "📝 **Content Metrics:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Total words in docs/: $total_words" >> $GITHUB_STEP_SUMMARY
+          echo "- Average per file: $((total_words / docs_md)) words" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Find largest files
+          echo "📄 **Largest Documentation Files:**" >> $GITHUB_STEP_SUMMARY
+          find docs -name "*.md" -exec wc -w {} \; | sort -rn | head -5 | while read words file; do
+            echo "- $file: $words words" >> $GITHUB_STEP_SUMMARY
+          done

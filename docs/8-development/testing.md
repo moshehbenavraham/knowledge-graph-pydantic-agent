@@ -42,6 +42,8 @@ The Base Agent platform uses a comprehensive testing strategy that includes:
 
 ## Phase 3 Testing Requirements
 
+> **⚠️ IMPORTANT**: The Phase 3 test suites documented below (test_phase3_*.py files) are **planned/future implementations**. Currently, only Phase 2 tests exist (test_phase2_search.py, test_phase2_ingestion.py). The documentation below serves as a specification for comprehensive Phase 3 testing when implemented.
+
 ### Agent Intelligence Layer Testing
 
 The Phase 3 Agent Intelligence Layer introduces specialized testing requirements for advanced components:
@@ -74,7 +76,7 @@ The Phase 3 Agent Intelligence Layer introduces specialized testing requirements
 
 ### Prerequisites
 
-1. **Python Environment**: Python 3.12+ with virtual environment
+1. **Python Environment**: Python 3.11+ with virtual environment
 2. **Dependencies**: All project dependencies installed
 3. **Environment Variables**: Test-specific configuration
 
@@ -290,6 +292,23 @@ python -m pytest --cov=src/clients --cov-report=term-missing
 python -m pytest --cov=src --cov-fail-under=75
 
 ## Writing Tests
+
+### Tool Naming Convention
+
+**IMPORTANT**: Understand the distinction between agent methods and internal functions:
+
+- **Agent Methods** (in `src/agent/unified_agent.py`): What the agent and users see
+  - `retrieve_documents`, `list_all_documents`, `get_full_document`, `query_tabular_data`
+  - These are decorated with `@super_agent.tool`
+
+- **Internal Functions** (in `src/tools/*.py`): Implementation details
+  - `retrieve_relevant_documents_tool`, `list_documents_tool`, `get_document_content_tool`, `execute_sql_query_tool`
+  - These are the actual implementations called by agent methods
+
+**When writing tests:**
+- Unit tests typically test the internal `_tool` functions directly
+- Integration tests may test agent methods through the agent interface
+- Both approaches are valid depending on what you're testing
 
 ### Test Structure
 
