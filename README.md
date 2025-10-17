@@ -117,9 +117,9 @@ See `docs/projects_ongoing/AGENTIC_GRAPH_RAG_PLAN.md` for detailed progress trac
 
 ## Architecture Overview
 - **Agent layer:** Single Pydantic-AI agent (`src/agent/unified_agent.py`) exposing async tools for RAG, SQL, web search, code execution, and image analysis
-- **Retrieval layer:** `src/agentic_rag/` provides intent-aware routing, semantic chunking, Graphiti knowledge extraction, and hybrid search; legacy `src/rag_pipeline/` handles scheduled ingestion
-- **Persistence:** Supabase (PostgreSQL + pgvector) stores documents, embeddings, and mem0 memory; Neo4j + Graphiti manage the temporal knowledge graph
-- **Interfaces:** Unified Streamlit UI (`src/ui/streamlit_app.py`) with modular feature handlers, FastAPI service (`src/api/main.py`), and CLI helpers in `examples/`
+- **Retrieval layer:** `src/agentic_rag/` provides intent-aware routing (`search/`), semantic chunking (`ingestion/`), Graphiti knowledge extraction, and hybrid search; analytics system (`analytics/`) logs all operations for observability; legacy `src/rag_pipeline/` handles scheduled ingestion
+- **Persistence:** Supabase (PostgreSQL + pgvector) stores documents, embeddings, analytics events, and mem0 memory; Neo4j + Graphiti manage the temporal knowledge graph
+- **Interfaces:** Unified Streamlit UI (`src/ui/streamlit_app.py`) with modular feature handlers (`ui/features/`), FastAPI service (`src/api/main.py`) with endpoint routers (`api/endpoints/`), and CLI helpers in `examples/`
 - **Configuration:** Type-safe Pydantic settings in `src/config/` with module-specific facades (agent, API, clients, UI) - all sourcing from `.env` (see `.env.example`)
 
 ## Prerequisites
@@ -246,6 +246,165 @@ All configuration is managed through type-safe Pydantic models in `src/config/` 
 - **Performance:** `MAX_CONCURRENT_REQUESTS`, `REQUEST_TIMEOUT`, `RATE_LIMIT_PER_MINUTE`
 
 **Important:** Updates to `.env` are automatically validated and reflected across all modules through the centralized Pydantic configuration system in `src/config/`.
+
+### Complete Configuration Reference
+
+All 68 configuration fields with types, defaults, and validation rules:
+
+#### Application Environment (3 fields)
+
+| Variable | Type | Default | Validation | Description |
+|----------|------|---------|------------|-------------|
+| `APP_ENV` | `development\|testing\|production` | `development` | Enum | Application environment |
+| `LOG_LEVEL` | `str` | `INFO` | - | Logging level (DEBUG/INFO/WARNING/ERROR) |
+| `DEBUG` | `bool` | `false` | - | Debug mode flag |
+
+#### Database Configuration - PostgreSQL/Supabase (3 fields)
+
+| Variable | Type | Default | Validation | Description |
+|----------|------|---------|------------|-------------|
+| `DATABASE_URL` | `str` | `None` | Required in production | PostgreSQL database URL |
+| `SUPABASE_URL` | `str` | `None` | Required if no DATABASE_URL | Supabase project URL |
+| `SUPABASE_SERVICE_KEY` | `str` | `None` | - | Supabase service role key |
+
+#### Database Configuration - Neo4j (5 fields)
+
+| Variable | Type | Default | Validation | Description |
+|----------|------|---------|------------|-------------|
+| `NEO4J_URI` | `str` | `bolt://localhost:7687` | - | Neo4j connection URI |
+| `NEO4J_USER` | `str` | `neo4j` | - | Neo4j username |
+| `NEO4J_PASSWORD` | `str` | `""` | Required in production if graph enabled | Neo4j password |
+| `NEO4J_DATABASE` | `str` | `neo4j` | - | Neo4j database name |
+| `NEO4J_ENCRYPTED` | `bool` | `true` | - | Use encrypted connection |
+
+#### Database Configuration - Redis (2 fields)
+
+| Variable | Type | Default | Validation | Description |
+|----------|------|---------|------------|-------------|
+| `REDIS_URL` | `str` | `None` | Required if cache enabled | Redis connection URL |
+| `ENABLE_REDIS_CACHE` | `bool` | `false` | - | Enable Redis caching |
+
+#### Connection Pool Settings - PostgreSQL (5 fields)
+
+| Variable | Type | Default | Validation | Description |
+|----------|------|---------|------------|-------------|
+| `PG_POOL_MIN` | `int` | `5` | ≥ 1 | Minimum pool size |
+| `PG_POOL_MAX` | `int` | `20` | ≥ 1, > PG_POOL_MIN | Maximum pool size |
+| `PG_MAX_QUERIES` | `int` | `50000` | ≥ 100 | Max queries before connection reset |
+| `PG_MAX_INACTIVE_LIFETIME` | `int` | `300` | ≥ 10 | Max inactive connection lifetime (seconds) |
+| `PG_COMMAND_TIMEOUT` | `int` | `60` | ≥ 5 | Command timeout (seconds) |
+
+#### Connection Pool Settings - Neo4j (3 fields)
+
+| Variable | Type | Default | Validation | Description |
+|----------|------|---------|------------|-------------|
+| `NEO4J_POOL_SIZE` | `int` | `50` | ≥ 1 | Connection pool size |
+| `NEO4J_CONNECTION_TIMEOUT` | `float` | `30.0` | > 0 | Connection timeout (seconds) |
+| `NEO4J_MAX_RETRY_TIME` | `int` | `30` | ≥ 1 | Maximum retry time (seconds) |
+
+#### Connection Pool Settings - Redis (2 fields)
+
+| Variable | Type | Default | Validation | Description |
+|----------|------|---------|------------|-------------|
+| `REDIS_POOL_SIZE` | `int` | `10` | ≥ 1 | Connection pool size |
+| `REDIS_SOCKET_TIMEOUT` | `int` | `5` | ≥ 1 | Socket timeout (seconds) |
+
+#### Embedding Configuration (7 fields)
+
+| Variable | Type | Default | Validation | Description |
+|----------|------|---------|------------|-------------|
+| `EMBEDDING_PROVIDER` | `openai\|nomic\|ollama\|cohere` | `openai` | Enum | Embedding model provider |
+| `EMBEDDING_BASE_URL` | `str` | `https://api.openai.com/v1` | - | Embedding API base URL |
+| `EMBEDDING_API_KEY` | `str` | `""` | Required in production | Embedding API key |
+| `EMBEDDING_MODEL` | `str` | `text-embedding-3-small` | - | Embedding model name |
+| `EMBEDDING_MODEL_CHOICE` | `str` | `None` | - | Alternative model (legacy) |
+| `EMBEDDING_DIMENSION` | `int` | `1536` | > 0 | Vector dimension (1536 for OpenAI, 768 for Ollama) |
+| `EMBEDDING_BATCH_SIZE` | `int` | `100` | 1-2048 | Embedding batch size |
+
+#### LLM Configuration (8 fields)
+
+| Variable | Type | Default | Validation | Description |
+|----------|------|---------|------------|-------------|
+| `LLM_PROVIDER` | `openai\|anthropic\|ollama\|openrouter` | `openai` | Enum | LLM provider |
+| `LLM_BASE_URL` | `str` | `https://api.openai.com/v1` | - | LLM API base URL |
+| `LLM_API_KEY` | `str` | `""` | Required in production | LLM API key |
+| `LLM_MODEL` | `str` | `gpt-4o-mini` | - | LLM model name |
+| `LLM_CHOICE` | `str` | `None` | - | Alternative model (legacy) |
+| `EXTRACTION_MODEL` | `str` | `gpt-4o-mini` | - | Model for knowledge extraction |
+| `LLM_TEMPERATURE` | `float` | `0.7` | 0.0-2.0 | Temperature setting |
+| `LLM_MAX_TOKENS` | `int` | `2000` | 1-128000 | Maximum tokens for response |
+
+#### Performance Settings (7 fields)
+
+| Variable | Type | Default | Validation | Description |
+|----------|------|---------|------------|-------------|
+| `VECTOR_SEARCH_TIMEOUT` | `float` | `2.0` | > 0 | Vector search timeout (seconds) |
+| `GRAPH_SEARCH_TIMEOUT` | `float` | `3.0` | > 0 | Graph search timeout (seconds) |
+| `ENABLE_CACHING` | `bool` | `true` | - | Enable caching |
+| `EMBEDDING_CACHE_SIZE` | `int` | `1000` | ≥ 0 | Embedding cache size |
+| `EMBEDDING_CACHE_TTL` | `int` | `3600` | ≥ 0 | Embedding cache TTL (seconds) |
+| `GRAPH_CACHE_SIZE` | `int` | `500` | ≥ 0 | Graph cache size |
+| `GRAPH_CACHE_TTL` | `int` | `1800` | ≥ 0 | Graph cache TTL (seconds) |
+
+#### Feature Flags (4 fields)
+
+| Variable | Type | Default | Validation | Description |
+|----------|------|---------|------------|-------------|
+| `ENABLE_GRAPH` | `bool` | `true` | - | Enable graph database features |
+| `ENABLE_PARALLEL_SEARCH` | `bool` | `true` | - | Enable parallel search execution |
+| `ENABLE_TRACING` | `bool` | `false` | - | Enable OpenTelemetry tracing |
+| `HOT_RELOAD` | `bool` | `false` | - | Enable hot reload for development |
+
+#### Ingestion Settings (6 fields)
+
+| Variable | Type | Default | Validation | Description |
+|----------|------|---------|------------|-------------|
+| `CHUNK_SIZE` | `int` | `1000` | 100-10000 | Document chunk size |
+| `CHUNK_OVERLAP` | `int` | `200` | ≥ 0, < CHUNK_SIZE | Chunk overlap size |
+| `MAX_ENTITIES_PER_CHUNK` | `int` | `10` | 1-100 | Maximum entities per chunk |
+| `MAX_FACT_LENGTH` | `int` | `500` | 50-2000 | Maximum fact length |
+| `USE_SEMANTIC_CHUNKING` | `bool` | `true` | - | Use semantic chunking |
+| `GRAPH_BATCH_SIZE` | `int` | `10` | 1-100 | Graph operation batch size |
+
+#### API Configuration (3 fields)
+
+| Variable | Type | Default | Validation | Description |
+|----------|------|---------|------------|-------------|
+| `API_HOST` | `str` | `0.0.0.0` | - | API server host |
+| `API_PORT` | `int` | `8058` | 1-65535 | API server port |
+| `CORS_ORIGINS` | `str` | `http://localhost:3000` | - | CORS allowed origins (comma-separated) |
+
+#### UI Configuration (1 field)
+
+| Variable | Type | Default | Validation | Description |
+|----------|------|---------|------------|-------------|
+| `UI_MODE` | `simple\|standard\|advanced` | `standard` | Enum | UI display mode |
+
+#### Web Search Configuration (4 fields)
+
+| Variable | Type | Default | Validation | Description |
+|----------|------|---------|------------|-------------|
+| `WEB_SEARCH_PROVIDER` | `jina\|brave\|searxng` | `None` | Enum | Preferred web search provider |
+| `JINA_API_KEY` | `str` | `None` | - | Jina.ai API key |
+| `BRAVE_API_KEY` | `str` | `None` | - | Brave Search API key |
+| `SEARXNG_BASE_URL` | `str` | `None` | - | SearXNG instance URL |
+
+#### Circuit Breaker Settings (3 fields)
+
+| Variable | Type | Default | Validation | Description |
+|----------|------|---------|------------|-------------|
+| `CIRCUIT_BREAKER_FAILURE_THRESHOLD` | `int` | `5` | ≥ 1 | Failures before circuit opens |
+| `CIRCUIT_BREAKER_RECOVERY_TIMEOUT` | `int` | `60` | ≥ 10 | Recovery timeout (seconds) |
+| `CIRCUIT_BREAKER_HALF_OPEN_REQUESTS` | `int` | `3` | ≥ 1 | Requests allowed in half-open state |
+
+#### Tracing Configuration (2 fields)
+
+| Variable | Type | Default | Validation | Description |
+|----------|------|---------|------------|-------------|
+| `JAEGER_HOST` | `str` | `localhost` | - | Jaeger agent host |
+| `JAEGER_PORT` | `int` | `6831` | - | Jaeger agent port |
+
+**Total: 68 configuration fields** organized in 17 categories. See `.env.example` for complete examples.
 
 ## Data Stores & Ingestion
 
