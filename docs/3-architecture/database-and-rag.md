@@ -106,26 +106,89 @@ CREATE TABLE IF NOT EXISTS document_rows (
 ```
 
 #### 4. `chunks` (Agentic RAG)
-Enhanced chunks table with entity references for knowledge graph integration.
+Enhanced chunks table with multi-model embedding support and entity references for knowledge graph integration.
 
 ```sql
 CREATE TABLE IF NOT EXISTS chunks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     document_id UUID REFERENCES documents(id) ON DELETE CASCADE,
     content TEXT NOT NULL,
-    embedding vector(1536), -- Or 768 for different models
+    content_hash TEXT GENERATED ALWAYS AS (md5(content)) STORED,
+    embedding_1536 vector(1536),  -- OpenAI text-embedding-3-small
+    embedding_768 vector(768),     -- Nomic/other models
     chunk_index INTEGER NOT NULL,
-    metadata JSONB DEFAULT '{}', -- Includes entity_refs
+    start_char INTEGER NOT NULL,
+    end_char INTEGER NOT NULL,
+    metadata JSONB DEFAULT '{}',
+    entity_refs TEXT[] DEFAULT '{}',  -- Array of entity UUIDs from Neo4j
+    graph_episode_id TEXT,            -- Reference to Graphiti episode
     token_count INTEGER,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Index for entity references
-CREATE INDEX idx_chunks_entity_refs ON chunks
-    USING GIN ((metadata->'entity_refs'));
+CREATE INDEX idx_chunks_entity_refs ON chunks USING GIN(entity_refs);
 ```
 
-#### 5. `mem0_memories`
+#### 5. `chunk_entities`
+Entity reference junction table for efficient entity-to-chunk lookups.
+
+```sql
+CREATE TABLE IF NOT EXISTS chunk_entities (
+    chunk_id UUID REFERENCES chunks(id) ON DELETE CASCADE,
+    entity_id TEXT NOT NULL,          -- Neo4j entity UUID
+    entity_name TEXT NOT NULL,        -- Denormalized for quick access
+    entity_type TEXT NOT NULL,        -- company|person|technology|product|location|event
+    confidence FLOAT DEFAULT 1.0 CHECK (confidence >= 0 AND confidence <= 1),
+    extraction_method TEXT DEFAULT 'llm', -- llm|ner|regex|manual
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (chunk_id, entity_id)
+);
+```
+
+#### 6. `search_cache`
+Search cache for frequently used queries with TTL expiration.
+
+```sql
+CREATE TABLE IF NOT EXISTS search_cache (
+    query_hash TEXT PRIMARY KEY,
+    query_text TEXT NOT NULL,
+    embedding_1536 vector(1536),
+    embedding_768 vector(768),
+    result_chunk_ids UUID[],
+    result_scores FLOAT[],
+    search_type TEXT NOT NULL CHECK (search_type IN ('vector', 'hybrid', 'graph')),
+    hit_count INTEGER DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    expires_at TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '1 hour'),
+    last_accessed_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+#### 7. `sessions` and `messages`
+Conversation history and session management.
+
+```sql
+CREATE TABLE IF NOT EXISTS sessions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id TEXT,
+    metadata JSONB DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    expires_at TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '24 hours')
+);
+
+CREATE TABLE IF NOT EXISTS messages (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    session_id UUID REFERENCES sessions(id) ON DELETE CASCADE,
+    role TEXT NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
+    content TEXT NOT NULL,
+    metadata JSONB DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+#### 8. `mem0_memories`
 Managed by Mem0 for long-term memory storage.
 
 ```sql
@@ -366,26 +429,25 @@ class AdvancedIntentAnalyzer:
             recommended_strategy=self.recommend_strategy(primary_intent, complexity_score)
         )
 
-    def recommend_strategy(self, intent: IntentType, complexity: float) -> SearchStrategy:
+    def recommend_strategy(self, intent: SearchIntent, complexity: float) -> SearchStrategy:
         """Route queries to optimal search strategy based on intent."""
 
-        # High complexity queries benefit from comprehensive search
+        # High complexity queries benefit from adaptive search
         if complexity > 0.8:
-            return SearchStrategy.COMPREHENSIVE
+            return SearchStrategy.ADAPTIVE
 
-        # Intent-based routing
-        strategy_map = {
-            IntentType.FACTUAL: SearchStrategy.VECTOR_HEAVY,
-            IntentType.RELATIONSHIP: SearchStrategy.GRAPH_HEAVY,
-            IntentType.TEMPORAL: SearchStrategy.GRAPH_HEAVY,
-            IntentType.COMPARISON: SearchStrategy.HYBRID,
-            IntentType.EXPLORATORY: SearchStrategy.HYBRID,
-            IntentType.AGGREGATION: SearchStrategy.COMPREHENSIVE,
-            IntentType.DEFINITION: SearchStrategy.VECTOR_HEAVY,
-            IntentType.MULTI_HOP: SearchStrategy.ITERATIVE
-        }
+        # Intent-based routing (actual implementation from hybrid_search.py)
+        if intent == SearchIntent.VECTOR_HEAVY:
+            return SearchStrategy.VECTOR_ONLY
 
-        return strategy_map.get(intent, SearchStrategy.SMART)
+        if intent == SearchIntent.GRAPH_HEAVY:
+            return SearchStrategy.GRAPH_ONLY
+
+        if intent in [SearchIntent.TEMPORAL, SearchIntent.ENTITY_FOCUSED]:
+            return SearchStrategy.HYBRID
+
+        # Default to adaptive for other cases
+        return SearchStrategy.ADAPTIVE
 ```
 
 #### Performance Metrics

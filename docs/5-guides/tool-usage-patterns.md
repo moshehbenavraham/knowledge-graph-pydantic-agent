@@ -19,28 +19,28 @@ This guide demonstrates effective patterns for using the various tools available
 
 | Tool | Purpose | Best For |
 |------|---------|----------|
-| `web_search` | Search the internet | Current information, news, trends |
-| `retrieve_relevant_documents` | RAG document search | Knowledge base queries, research |
-| `list_documents` | Show available documents | Document discovery, inventory |
-| `get_document_content` | Retrieve specific document | Detailed document analysis |
-| `execute_sql_query` | Database queries | Data analysis, reporting |
-| `image_analysis` | Analyze images | Visual content understanding |
-| `execute_code` | Run Python code | Calculations, data processing, visualization |
+| `search_web` | Search the internet | Current information, news, trends |
+| `retrieve_documents` | RAG document search | Knowledge base queries, research |
+| `list_all_documents` | Show available documents | Document discovery, inventory |
+| `get_full_document` | Retrieve specific document | Detailed document analysis |
+| `execute_sql` | Database queries | Data analysis, reporting |
+| `analyze_image` | Analyze images | Visual content understanding |
+| `execute_python_code` | Run Python code | Calculations, data processing, visualization |
 
 ### Tool Selection Guidelines
 
 **For Current Information:**
-- Use `web_search` for recent events, news, market data
-- Combine with `retrieve_relevant_documents` for comprehensive analysis
+- Use `search_web` for recent events, news, market data
+- Combine with `retrieve_documents` for comprehensive analysis
 
 **For Knowledge-Based Queries:**
-- Start with `retrieve_relevant_documents` for existing knowledge
-- Use `get_document_content` for specific document deep-dives
-- Supplement with `web_search` for recent developments
+- Start with `retrieve_documents` for existing knowledge
+- Use `get_full_document` for specific document deep-dives
+- Supplement with `search_web` for recent developments
 
 **For Data Analysis:**
-- Use `execute_sql_query` for structured data queries
-- Use `execute_code` for complex calculations and visualizations
+- Use `execute_sql` for structured data queries
+- Use `execute_python_code` for complex calculations and visualizations
 - Combine both for comprehensive data analysis workflows
 
 ## Phase 3 Agentic RAG Tools

@@ -365,6 +365,52 @@ model = clients_config.llm_model
 dimension = clients_config.embedding_dimension
 ```
 
+## Configuration Usage Patterns
+
+### Development Environment
+```bash
+# Fast iteration with hot reload
+APP_ENV=development
+LOG_LEVEL=DEBUG
+UI_MODE=advanced
+HOT_RELOAD=true
+DEBUG=true
+ENABLE_METRICS=false
+```
+
+### Production Environment
+```bash
+# Secure and performant
+APP_ENV=production
+LOG_LEVEL=WARNING
+UI_MODE=standard
+DEBUG=false
+MASK_SENSITIVE=true
+ENABLE_METRICS=true
+ENABLE_REDIS_CACHE=true
+ENABLE_TRACING=true
+```
+
+### High-Performance Setup
+```bash
+# Optimize for traffic
+PG_POOL_MAX=50
+NEO4J_POOL_SIZE=100
+ENABLE_PARALLEL_SEARCH=true
+ENABLE_CACHING=true
+MAX_CONCURRENT_REQUESTS=20
+VECTOR_SEARCH_TIMEOUT=1.0
+```
+
+### Minimal Setup (Vector Only)
+```bash
+# Quick start without Neo4j
+ENABLE_GRAPH=false
+ENABLE_GRAPH_SEARCH=false
+ENABLE_RAG=true
+USE_SEMANTIC_CHUNKING=false
+```
+
 ## Best Practices
 
 1. **Always use the centralized system** - Don't use `os.getenv()` directly
@@ -373,6 +419,8 @@ dimension = clients_config.embedding_dimension
 4. **Keep secrets in `.env`** - Never commit credentials
 5. **Use type hints** - The system provides full type safety
 6. **Test with overrides** - Use `patch.dict(os.environ)` for testing
+7. **Enable `MASK_SENSITIVE`** in all environments for security
+8. **Monitor configuration warnings** in logs during startup
 
 ## Troubleshooting
 

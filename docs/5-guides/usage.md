@@ -333,7 +333,7 @@ For enhanced capabilities, you can use the MCP (Model Context Protocol) server:
    deno run -N -R=node_modules -W=node_modules --node-modules-dir=auto jsr:@pydantic/mcp-run-python sse
    ```
 3. Configure MCP in [`src/agent/unified_agent.py`](../src/agent/unified_agent.py) (see comments in the file)
-4. Comment out the built-in `execute_code` tool
+4. Comment out the built-in `execute_python_code` tool
 
 **Benefits:**
 - More powerful execution environment
@@ -370,25 +370,25 @@ For enhanced capabilities, you can use the MCP (Model Context Protocol) server:
 
 ### Standard RAG Tools
 
-#### `retrieve_relevant_documents`
+#### `retrieve_documents`
 - **Function**: Vector similarity search using pgvector
 - **Returns**: Top 4 most relevant document chunks with metadata
 - **Implementation**: [`src/tools/rag.py:retrieve_relevant_documents_tool`](../src/tools/rag.py)
 - **Usage**: Automatic context retrieval for user queries
 
-#### `list_documents`
+#### `list_all_documents`
 - **Function**: Enumerate all available documents
 - **Returns**: List of documents from `document_metadata` table with schemas
 - **Implementation**: [`src/tools/rag.py:list_documents_tool`](../src/tools/rag.py)
 - **Usage**: Discover available documents and their IDs
 
-#### `get_document_content`
+#### `get_full_document`
 - **Function**: Retrieve full document content by combining chunks
 - **Returns**: Complete document text (limited to 20,000 characters)
 - **Implementation**: [`src/tools/rag.py:get_document_content_tool`](../src/tools/rag.py)
 - **Usage**: Access entire document content when needed
 
-#### `execute_sql_query`
+#### `execute_sql`
 - **Function**: Execute read-only SQL queries on structured data
 - **Returns**: Query results in JSON format
 - **Implementation**: [`src/tools/sql_query.py:execute_sql_query_tool`](../src/tools/sql_query.py)
@@ -396,22 +396,22 @@ For enhanced capabilities, you can use the MCP (Model Context Protocol) server:
 
 ### External Service Tools
 
-#### `web_search`
+#### `search_web`
 - **Function**: Internet search with dual provider support
 - **Primary**: Brave Search API (summarized results)
 - **Fallback**: SearXNG (detailed result listings)
 - **Implementation**: [`src/tools/web_search.py:web_search_tool`](../src/tools/web_search.py)
 - **Configuration**: `BRAVE_API_KEY` and `SEARXNG_BASE_URL`
 
-#### `image_analysis`
+#### `analyze_image`
 - **Function**: Vision model analysis of stored images
-- **Model**: Configurable via `VISION_LLM_CHOICE` (default: `gpt-5-mini`)
+- **Model**: Configurable via `VISION_LLM_MODEL` (default: `gpt-4o-mini`)
 - **Implementation**: [`src/tools/image_analysis.py:image_analysis_tool`](../src/tools/image_analysis.py)
 - **Usage**: Analyze images based on user queries (supports OCR, object detection, scene analysis)
 
 ### Code Execution Tool
 
-#### `execute_code`
+#### `execute_python_code`
 - **Function**: Sandboxed Python code execution
 - **Security**: Custom whitelist-based execution environment
 - **Implementation**: [`src/tools/code_execution.py:execute_safe_code_tool`](../src/tools/code_execution.py)

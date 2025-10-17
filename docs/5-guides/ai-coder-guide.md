@@ -167,11 +167,11 @@ The system implements an **Agentic RAG** architecture combining two databases:
 
 All tools are in `src/tools/` and follow async patterns:
 
-- **RAG tools** (`rag.py`): `retrieve_relevant_documents`, `list_documents`, `get_document_content`
-- **Web search** (`web_search.py`): Multi-provider support (Jina > Brave > SearXNG)
-- **SQL queries** (`sql_query.py`): Read-only queries via Supabase RPC
-- **Image analysis** (`image_analysis.py`): Vision model integration
-- **Code execution** (`code_execution.py`): RestrictedPython sandbox
+- **RAG tools** (`rag.py`): `retrieve_documents`, `list_all_documents`, `get_full_document`
+- **Web search** (`web_search.py`): `search_web` - Multi-provider support (Jina > Brave > SearXNG)
+- **SQL queries** (`sql_query.py`): `execute_sql` - Read-only queries via Supabase RPC
+- **Image analysis** (`image_analysis.py`): `analyze_image` - Vision model integration
+- **Code execution** (`code_execution.py`): `execute_python_code` - RestrictedPython sandbox
 
 **Tool Development Rules**:
 - Must be async functions

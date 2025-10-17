@@ -263,6 +263,45 @@ ENABLE_REDIS_CACHE=true
 - **Default**: `true` (if Redis available)
 - **Note**: Improves performance for repeated queries
 
+#### Search Configuration
+```bash
+# ===== SEARCH CONFIGURATION =====
+DEFAULT_SEARCH_LIMIT=10
+VECTOR_SEARCH_THRESHOLD=0.7
+VECTOR_SEARCH_TIMEOUT=2.0
+GRAPH_SEARCH_TIMEOUT=3.0
+ENABLE_SEARCH_CACHE=true
+SEARCH_CACHE_TTL=3600
+PARALLEL_SEARCH_TIMEOUT=5
+```
+
+**DEFAULT_SEARCH_LIMIT**: Default number of results to return
+- **Default**: 10
+- **Range**: 1-100
+
+**VECTOR_SEARCH_THRESHOLD**: Minimum similarity score for vector search
+- **Default**: 0.7
+- **Range**: 0.0-1.0
+
+**VECTOR_SEARCH_TIMEOUT**: Vector search timeout in seconds
+- **Default**: 2.0
+- **Note**: Fast timeout for responsive UX
+
+**GRAPH_SEARCH_TIMEOUT**: Graph search timeout in seconds
+- **Default**: 3.0
+- **Note**: Slightly longer for complex graph queries
+
+**ENABLE_SEARCH_CACHE**: Enable search result caching
+- **Default**: `true`
+- **Note**: Caches frequently used queries
+
+**SEARCH_CACHE_TTL**: Search cache time-to-live in seconds
+- **Default**: 3600 (1 hour)
+
+**PARALLEL_SEARCH_TIMEOUT**: Timeout for parallel search execution
+- **Default**: 5
+- **Note**: Combined vector + graph search timeout
+
 #### Performance Settings
 ```bash
 # ===== PERFORMANCE =====
@@ -313,9 +352,11 @@ SEMANTIC_CHUNKING_MODEL=gpt-4o-mini
 **USE_SEMANTIC_CHUNKING**: Use LLM for intelligent chunking
 - **Default**: `true`
 - **Note**: Better quality but slower processing
+- **Options**: `true` for semantic, `false` for simple chunking
 
 **SEMANTIC_CHUNKING_MODEL**: Model for semantic chunking
 - **Default**: `gpt-4o-mini`
+- **Note**: Used when USE_SEMANTIC_CHUNKING=true
 
 #### Entity Extraction
 ```bash
@@ -332,28 +373,39 @@ EXTRACTION_CONFIDENCE_THRESHOLD=0.7
 
 **EXTRACTION_MODEL**: Model for entity/fact extraction
 - **Default**: `gpt-4o-mini`
+- **Note**: Must be a capable model for structured extraction
 
 **EXTRACT_ENTITIES**: Extract named entities from text
 - **Default**: `true`
+- **Note**: Enables entity extraction for knowledge graph
 
 **EXTRACT_RELATIONSHIPS**: Extract entity relationships
 - **Default**: `true`
+- **Note**: Enables relationship extraction between entities
 
 **EXTRACT_FACTS**: Extract temporal facts and episodes
 - **Default**: `true`
+- **Note**: Enables temporal fact extraction with timestamps
 
 **MAX_ENTITIES_PER_CHUNK**: Maximum entities per chunk
 - **Default**: 10
+- **Range**: 1-50
+- **Note**: Limits entity extraction per document chunk
 
 **MAX_FACTS_PER_CHUNK**: Maximum facts per chunk
 - **Default**: 5
+- **Range**: 1-20
+- **Note**: Limits fact extraction per chunk
 
 **MAX_FACT_LENGTH**: Maximum fact length in characters
 - **Default**: 500
+- **Range**: 100-1000
+- **Note**: Brief facts for Neo4j storage
 
 **EXTRACTION_CONFIDENCE_THRESHOLD**: Minimum confidence for extraction
 - **Range**: 0.0-1.0
 - **Default**: 0.7
+- **Note**: Filters low-confidence extractions
 
 ### API Configuration
 
@@ -431,18 +483,39 @@ MCP_SERVER_HOST=localhost
 
 ### Security Settings
 
+#### Sensitive Data Masking
+```bash
+# ===== SECURITY =====
+MASK_SENSITIVE=true                           # Mask sensitive data in logs
+```
+
+**MASK_SENSITIVE**: Mask sensitive information in logs
+- **Default**: `true`
+- **Note**: Masks API keys, passwords, and tokens in log output
+- **Applies to**: Structured logging, error messages, debug output
+
 #### Circuit Breaker
 ```bash
 # ===== CIRCUIT BREAKER =====
 CIRCUIT_BREAKER_FAILURE_THRESHOLD=5
 CIRCUIT_BREAKER_RECOVERY_TIMEOUT=60
+CIRCUIT_BREAKER_HALF_OPEN_REQUESTS=3
 ```
 
 **CIRCUIT_BREAKER_FAILURE_THRESHOLD**: Failures before opening circuit
 - **Default**: 5
+- **Range**: 1-100
+- **Note**: Number of consecutive failures before circuit opens
 
 **CIRCUIT_BREAKER_RECOVERY_TIMEOUT**: Seconds before retrying
 - **Default**: 60
+- **Range**: 10-300
+- **Note**: Wait time before attempting recovery
+
+**CIRCUIT_BREAKER_HALF_OPEN_REQUESTS**: Requests allowed in half-open state
+- **Default**: 3
+- **Range**: 1-10
+- **Note**: Test requests before fully closing circuit
 
 ### Integration Settings
 

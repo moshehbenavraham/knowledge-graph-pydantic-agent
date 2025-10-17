@@ -69,17 +69,17 @@ SUPABASE_SERVICE_KEY=your_service_role_key
 ## Option 1: Anthropic Claude
 LLM_PROVIDER=anthropic
 LLM_API_KEY=sk-ant-api03-...
-LLM_CHOICE=claude-sonnet-4-20250514
+LLM_MODEL=claude-sonnet-4-20250514
 
 ## Option 2: OpenAI GPT
 LLM_PROVIDER=openai
 LLM_API_KEY=sk-proj-...
-LLM_CHOICE=gpt-5-mini
+LLM_MODEL=gpt-5-mini
 
 # Embeddings (Required)
 EMBEDDING_PROVIDER=openai
 EMBEDDING_API_KEY=sk-proj-...
-EMBEDDING_MODEL_CHOICE=text-embedding-3-small
+EMBEDDING_MODEL=text-embedding-3-small
 ```
 
 6. **Run Application**
