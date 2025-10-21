@@ -79,11 +79,32 @@ def get_mem0_config():
                 clients_config.embedding_base_url.replace("/v1", "")
             )
 
-    # Configure Supabase vector store (using Supabase for everything)
+    # Configure Supabase vector store (using PostgreSQL connection string)
+    db_url = clients_config.database_url or ""
+
+    # Extract project ref from username (postgres.{project-ref})
+    # and convert pooler URL to direct connection URL for SSL stability
+    if db_url and "pooler.supabase.com" in db_url:
+        import re
+
+        # Extract project ref from username (format: postgres.{project-ref})
+        match = re.search(r"postgres\.([^:]+)", db_url)
+        if match:
+            project_ref = match.group(1)
+            # Convert: aws-X-region.pooler.supabase.com:5432 -> db.{project-ref}.supabase.co:5432
+            db_url = re.sub(
+                r"@[^/]+pooler\.supabase\.com:\d+", f"@db.{project_ref}.supabase.co:5432", db_url
+            )
+
+    # Add SSL parameters for psycopg2 + SQLAlchemy stability
+    if db_url and "sslmode" not in db_url:
+        separator = "&" if "?" in db_url else "?"
+        db_url = f"{db_url}{separator}sslmode=require&connect_timeout=10"
+
     config["vector_store"] = {
         "provider": "supabase",
         "config": {
-            "connection_string": clients_config.supabase_url or "",
+            "connection_string": db_url,
             "collection_name": "mem0_memories",
             "embedding_model_dims": clients_config.embedding_dimension,
         },

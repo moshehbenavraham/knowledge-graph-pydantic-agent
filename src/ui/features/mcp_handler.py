@@ -41,9 +41,9 @@ class MCPHandler(MemoryHandler):
             return
 
         try:
-            logger.info("MCP enabled, opening MCP servers context...")
-            async with super_agent.run_mcp_servers():
-                logger.info("MCP servers context opened, delegating to MemoryHandler...")
+            logger.info("MCP enabled, opening MCP context...")
+            async with super_agent:
+                logger.info("MCP context opened, delegating to MemoryHandler...")
 
                 chunk_count = 0
                 async for chunk in super().run_agent(
@@ -56,7 +56,7 @@ class MCPHandler(MemoryHandler):
                     "MemoryHandler streaming complete inside MCP context", chunk_count=chunk_count
                 )
 
-            logger.info("MCP servers context closed successfully")
+            logger.info("MCP context closed successfully")
             logger.info("MCPHandler.run_agent() finished successfully", total_chunks=chunk_count)
 
         except Exception as e:

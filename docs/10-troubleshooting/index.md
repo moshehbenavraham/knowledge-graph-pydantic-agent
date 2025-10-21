@@ -18,9 +18,9 @@ This guide helps you diagnose and resolve common issues with the Base Agent syst
 - [Docker Issues](#docker-issues)
 - [Monitoring and Debugging](#monitoring-and-debugging)
 
-## Recently Fixed Issues (v1.2.3+)
+## Recently Fixed Issues (v1.2.4+)
 
-These issues have been resolved in version 1.2.3. If you're still experiencing them, ensure you're running the latest version:
+These issues have been resolved in recent versions. If you're still experiencing them, ensure you're running the latest version:
 
 ### PostgreSQL Pool Not Initialized
 
@@ -89,6 +89,67 @@ DeprecationWarning: The 'verify' parameter is deprecated
 - Smart truncation for long results (>2000 chars)
 
 **Solution:** Upgrade to v1.2.3+. Tool returns now visible after streaming completes.
+
+### SQL Query Syntax Errors (v1.2.4)
+
+**Symptoms:**
+```
+Error executing SQL query: syntax error at or near ";"
+```
+
+**Fixed in v1.2.4:**
+- Supabase RPC `execute_sql` function doesn't accept trailing semicolons
+- LLM generates standard SQL with semicolons (e.g., `SELECT 1 as test_limit;`)
+- Tool now automatically strips trailing semicolons before execution
+
+**Solution:** Upgrade to v1.2.4+. Both `execute_sql` and `query_tabular_data` tools now handle semicolons correctly.
+
+### Mem0 Memory Initialization Error (v1.2.4)
+
+**Symptoms:**
+```
+ValidationError: A valid PostgreSQL connection string must be provided
+ERROR: Failed to initialize Mem0 client
+```
+
+**Fixed in v1.2.4:**
+- Mem0 client was receiving `SUPABASE_URL` (HTTPS endpoint) instead of `DATABASE_URL` (PostgreSQL connection)
+- Changed `src/clients/memory.py` to use correct `database_url` configuration
+
+**Solution:**
+1. Upgrade to v1.2.4+
+2. Ensure `.env` has both variables set:
+   ```bash
+   SUPABASE_URL=https://xxx.supabase.co          # For REST API
+   DATABASE_URL=postgresql://postgres.xxx:...    # For Mem0 memory
+   ```
+
+### Tool Arguments Showing "No Arguments" (v1.2.4)
+
+**Symptoms:**
+- During streaming, tool calls show confusing "No arguments" message
+- Arguments not visible until streaming completes
+
+**Fixed in v1.2.4:**
+- Replaced complex JSON parsing with clear pending state
+- Now displays: "⏳ Tool executing... (result will appear below when complete)"
+
+**Technical Note:** This is a Pydantic AI limitation - tool arguments aren't fully available during streaming.
+
+**Solution:** Upgrade to v1.2.4+. UX now sets clear expectations about pending tool execution.
+
+### MCP Deprecation Warning (v1.2.4)
+
+**Symptoms:**
+```
+DeprecationWarning: `run_mcp_servers` is deprecated, use `async with agent:` instead
+```
+
+**Fixed in v1.2.4:**
+- Updated MCP handler to use modern Pydantic AI v1.0.15 API
+- Changed from `async with super_agent.run_mcp_servers():` to `async with super_agent:`
+
+**Solution:** Upgrade to v1.2.4+. No more MCP deprecation warnings.
 
 ---
 

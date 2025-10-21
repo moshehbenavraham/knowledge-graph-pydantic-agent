@@ -35,6 +35,10 @@ async def execute_sql_query_tool(supabase: Client, sql_query: str) -> str:
     try:
         # Validate that the query is read-only by checking for write operations
         sql_query = sql_query.strip()
+
+        # Remove trailing semicolons (Supabase RPC doesn't accept them)
+        sql_query = sql_query.rstrip(";").strip()
+
         write_operations = [
             "INSERT",
             "UPDATE",

@@ -410,7 +410,17 @@ def render_sidebar():
         if st.session_state.config.features.get("metrics"):
             st.divider()
             st.subheader("📊 Metrics")
-            st.metric("Messages", len(st.session_state.messages))
+
+            # Count actual user/assistant message pairs (not technical message objects)
+            conversation_count = 0
+            for msg in st.session_state.messages:
+                if isinstance(msg, ModelRequest | ModelResponse):
+                    for part in msg.parts:
+                        if part.part_kind in ["user-prompt", "text"] and part.content:
+                            conversation_count += 1
+
+            st.metric("Messages", conversation_count)
+
             if (
                 hasattr(st.session_state.handler, "memory_client")
                 and st.session_state.handler.memory_client
@@ -1029,52 +1039,12 @@ async def handle_user_input(user_input: str):
                         # Display tool call in real-time
                         if config.features["tools_visibility"]:
                             with st.expander(f"🔧 Tool: {chunk['tool_name']}", expanded=True):
-                                try:
-                                    # Get args
-                                    args = chunk["args"]
-                                    logger.debug(
-                                        f"Tool {chunk['tool_name']} args type: {type(args)}, value preview: {str(args)[:200]}"
-                                    )
-
-                                    # Handle empty/None args
-                                    if not args or (isinstance(args, str) and not args.strip()):
-                                        st.info("No arguments")
-                                    # If string, try to parse it
-                                    elif isinstance(args, str):
-                                        try:
-                                            args = json.loads(args)
-                                            logger.debug(
-                                                "Successfully parsed args from JSON string"
-                                            )
-                                            # Display the parsed args
-                                            safe_args = make_json_safe(args)
-                                            if safe_args != args:
-                                                logger.debug(
-                                                    f"Tool {chunk['tool_name']} args contained non-serializable data"
-                                                )
-                                            st.json(safe_args)
-                                        except json.JSONDecodeError as e:
-                                            # Invalid JSON string - show as code
-                                            logger.debug(
-                                                f"Tool {chunk['tool_name']} args is not valid JSON: {e!s}, displaying as text"
-                                            )
-                                            st.code(str(args))
-                                    # If already a dict/object, display it directly
-                                    elif args:
-                                        # Make it JSON-safe and display
-                                        safe_args = make_json_safe(args)
-                                        if safe_args != args:
-                                            logger.debug(
-                                                f"Tool {chunk['tool_name']} args contained non-serializable data"
-                                            )
-                                        st.json(safe_args)
-
-                                except Exception as e:
-                                    # Ultimate fallback - show raw args
-                                    logger.error(
-                                        f"Failed to display tool {chunk['tool_name']} args: {e}"
-                                    )
-                                    st.code(str(chunk["args"]))
+                                st.info(
+                                    "⏳ Tool executing... (result will appear below when complete)"
+                                )
+                                logger.debug(
+                                    f"Tool {chunk['tool_name']} executing, args will be available in final results"
+                                )
 
                     elif chunk_type == "tool-return":
                         chunk_counts["tool_return"] += 1

@@ -9,6 +9,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.4] - 2025-10-17
+
+### Fixed - Streaming UX, SQL, Memory, and API Deprecation
+
+**Bug fixes improving tool visibility during streaming, SQL query compatibility, Mem0 initialization, and Pydantic AI API compliance.**
+
+#### Streaming Tool Call UX Improvement (`src/ui/streamlit_app.py`)
+- **Fixed confusing "No arguments" display during tool execution** (lines 1022-1035):
+  - **Issue**: During streaming, tool call arguments weren't fully available, showing misleading "No arguments" message
+  - **Root Cause**: Pydantic AI streams tool calls before arguments are complete (args come as strings)
+  - **Solution**: Replaced complex argument parsing with simple pending state message
+  - **Display**: Now shows `⏳ Tool executing... (result will appear below when complete)`
+  - **Result**: Clear user expectation that tool results are pending, no confusion about missing arguments
+
+#### SQL Query Semicolon Handling (`src/tools/sql_query.py`)
+- **Fixed SQL syntax errors with trailing semicolons** (lines 39-40):
+  - **Issue**: Supabase RPC `execute_sql` function rejects queries with trailing semicolons
+  - **Error**: `syntax error at or near ";"`
+  - **Root Cause**: LLM generates standard SQL with semicolons (e.g., `SELECT 1 as test_limit;`)
+  - **Solution**: Strip trailing semicolons before executing: `sql_query.rstrip(';').strip()`
+  - **Result**: Both `execute_sql` and `query_tabular_data` tools now work correctly
+
+#### Mem0 Memory Client Initialization (`src/clients/memory.py`)
+- **Fixed Mem0 validation error on Advanced mode switch** (line 86):
+  - **Issue**: Mem0 client failed to initialize with "A valid PostgreSQL connection string must be provided"
+  - **Root Cause**: Passing `supabase_url` (HTTPS endpoint) instead of `database_url` (PostgreSQL connection string)
+  - **Before**: `"connection_string": clients_config.supabase_url`
+  - **After**: `"connection_string": clients_config.database_url`
+  - **Result**: Advanced mode now activates successfully, Mem0 memory system fully functional
+
+#### Pydantic AI MCP Deprecation (`src/ui/features/mcp_handler.py`)
+- **Fixed Pydantic AI v1.0.15 deprecation warning** (line 45):
+  - **Warning**: `run_mcp_servers` is deprecated, use `async with agent:` instead
+  - **Before**: `async with super_agent.run_mcp_servers():`
+  - **After**: `async with super_agent:`
+  - **Result**: Clean logs without deprecation warnings, using modern Pydantic AI API
+
+### Changed
+- **Tool Call Display**: Simplified from complex JSON parsing to clear pending state message
+- **SQL Query Processing**: Automatically normalizes queries to Supabase RPC requirements
+
+### Technical Notes
+**Root Causes Addressed:**
+1. **Streaming Limitations** - Tool arguments not available during streaming, simplified UX instead of parsing incomplete data
+2. **Database API Differences** - Supabase RPC doesn't follow standard SQL semicolon convention
+3. **Configuration Confusion** - Mem0 needs PostgreSQL connection string, not HTTPS REST endpoint
+4. **API Evolution** - Pydantic AI deprecated old MCP context manager in favor of simpler syntax
+
+**Impact**: Streaming UX is clearer, SQL tools work reliably, Advanced mode (memory + MCP) initializes correctly, and codebase uses current Pydantic AI APIs.
+
+---
+
 ## [1.2.3] - 2025-10-17
 
 ### Fixed - Critical Stability & UX Improvements
