@@ -1,6 +1,15 @@
 repos:
 -   repo: local
     hooks:
+    -   id: constitution-validator
+        name: Constitution Compliance Validator
+        entry: validate-constitution --quiet --skip-coverage
+        language: system
+        types: [python]
+        pass_filenames: true
+        always_run: false
+        stages: [commit]
+        verbose: false
     -   id: check-problematic-chars
         name: Check for problematic characters
         entry: python3 -c "import sys; content = open(sys.argv[1], 'rb').read(); bad = [i for i, b in enumerate(content) if b == 0 or (b < 0x20 and b not in (0x09, 0x0A, 0x0D))]; sys.exit(f'Found {len(bad)} problematic characters' if bad else 0)"

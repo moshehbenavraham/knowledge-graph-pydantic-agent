@@ -1,0 +1,30 @@
+{
+  "version": "1.0.0",
+  "timestamp": "2025-10-21T14:30:00Z",
+  "status": "PASS",
+  "summary": {
+    "total_violations": 0,
+    "total_files_scanned": 342,
+    "total_files_with_violations": 0,
+    "validation_duration_ms": 12450.5,
+    "principles_violated": []
+  },
+  "violations": [],
+  "metadata": {
+    "validator_version": "1.0.0",
+    "python_version": "3.11.5",
+    "constitution_file": "/home/user/project/.specify/memory/constitution.md",
+    "target_paths": [],
+    "ignored_patterns": [
+      "*.pyc",
+      "__pycache__/",
+      "node_modules/",
+      ".venv/"
+    ],
+    "cli_flags": {
+      "verbose": false,
+      "quiet": false,
+      "dry_run": false
+    }
+  }
+}
