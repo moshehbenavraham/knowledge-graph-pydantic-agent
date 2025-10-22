@@ -31,6 +31,8 @@ class DualDatabaseRule(BaseValidationRule):
         "create_client",  # Supabase factory function
         "create_async_driver",  # Neo4j async factory
         "AsyncClient",  # PostgreSQL async client
+        "psycopg2",  # PostgreSQL client library
+        "connect",  # Database connection method
     ]
 
     EXEMPTED_FILES = [
@@ -80,7 +82,7 @@ class DualDatabaseRule(BaseValidationRule):
                             "Use centralized configuration instead:\n"
                             "  from src.config import get_settings\n"
                             "  settings = get_settings()\n"
-                            "  # Use configured clients from ConnectionManager"
+                            "  # Use configured clients from src/config/clients.py via ConnectionManager"
                         ),
                         detected_code=self.get_source_segment(node),
                         suggested_fix="# Use ConnectionManager.get_client()",
