@@ -102,9 +102,53 @@ class TestCoverageRule(BaseValidationRule):
         Returns:
             List of violations detected
         """
-        # For project-wide coverage check, create a minimal AST
-        tree = ast.parse("")
-        return self.execute(tree, project_root)
+        from src.constitution_validator.scanners.coverage_scanner import CoverageScanner
+
+        self.violations = []
+        self.file_path = project_root
+
+        try:
+            scanner = CoverageScanner()
+            coverage_pct = scanner.get_coverage(project_root)
+
+            if coverage_pct < self.MINIMUM_COVERAGE:
+                self.add_violation(
+                    line_number=1,
+                    message=f"Test coverage {coverage_pct:.1f}% below minimum {self.MINIMUM_COVERAGE}%",
+                    remediation=(
+                        f"Increase test coverage to meet {self.MINIMUM_COVERAGE}% minimum:\n"
+                        f"  1. Run: pytest --cov=src --cov-report=term-missing\n"
+                        f"  2. Add tests for uncovered lines\n"
+                        f"  3. Current coverage: {coverage_pct:.1f}%"
+                    ),
+                    detected_code=f"# Coverage: {coverage_pct:.1f}%",
+                    suggested_fix="# Add more unit tests",
+                    confidence=ConfidenceLevel.HIGH,
+                    severity="error",
+                    metadata={
+                        "coverage_pct": coverage_pct,
+                        "minimum": self.MINIMUM_COVERAGE,
+                    },
+                )
+        except Exception as e:
+            # Report coverage measurement failure as a violation
+            self.add_violation(
+                line_number=1,
+                message=f"Coverage measurement failed: {str(e)}",
+                remediation=(
+                    "Ensure pytest-cov is installed and configured:\n"
+                    "  1. Install: pip install pytest-cov\n"
+                    "  2. Configure .coveragerc if needed\n"
+                    "  3. Run tests with: pytest --cov=src"
+                ),
+                detected_code="# Coverage measurement error",
+                suggested_fix="# Install and configure pytest-cov",
+                confidence=ConfidenceLevel.HIGH,
+                severity="warning",
+                metadata={"error": str(e)},
+            )
+
+        return self.violations
 
 
 # No alias needed - TestCoverageRule is the expected name
