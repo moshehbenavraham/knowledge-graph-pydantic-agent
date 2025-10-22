@@ -30,8 +30,11 @@ class TestPrincipleVRule:
         """Test detection of functions that lack logging calls."""
         code = """
 def process_data(data):
+    # Process the input data
     result = transform(data)
     validate(result)
+    check_quality(result)
+    finalize(result)
     return result
 """
         tree = ast.parse(code)
@@ -121,13 +124,19 @@ def complex_operation(data):
         """Test detection of multiple non-trivial functions without logging."""
         code = """
 def function1(x):
+    # Function 1 processing
     result = compute(x)
     validate(result)
+    check(result)
+    finalize(result)
     return result
 
 def function2(y):
+    # Function 2 processing
     data = fetch(y)
     process(data)
+    verify(data)
+    store(data)
     return data
 """
         tree = ast.parse(code)
@@ -146,8 +155,11 @@ def function2(y):
         """Test that remediation guidance mentions logging setup."""
         code = """
 def process(data):
+    # Processing data
     transform(data)
     validate(data)
+    verify(data)
+    finalize(data)
     return data
 """
         tree = ast.parse(code)
@@ -211,15 +223,20 @@ def abstract_method():
         code = """
 class DataProcessor:
     def process(self, data):
+        # Complex processing
         result = self.transform(data)
         self.validate(result)
+        self.verify(result)
+        self.finalize(result)
         return result
 
     def transform(self, data):
         # Complex transformation without logging
         step1 = data * 2
         step2 = step1 + 10
-        return step2
+        step3 = step2 / 3
+        step4 = step3 - 5
+        return step4
 """
         tree = ast.parse(code)
         file_path = Path("src/processor.py")
