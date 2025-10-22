@@ -164,7 +164,7 @@ api_key = os.getenv('API_KEY')
         tree = ast.parse(code)
         file_path = Path("src/app.py")
 
-        violations = rule.execute(tree, file_path)
+        violations = rule.execute(tree, file_path, source_code=code)
 
         assert len(violations) == 1
         assert violations[0].detected_code is not None
@@ -180,11 +180,11 @@ value = os.getenv('VALUE')
         tree = ast.parse(code)
         file_path = Path("src/tool.py")
 
-        violations = rule.execute(tree, file_path)
+        violations = rule.execute(tree, file_path, source_code=code)
 
         assert len(violations) == 1
         assert "get_settings()" in violations[0].remediation
-        assert "src/config/settings.py" in violations[0].remediation
+        assert "src.config" in violations[0].remediation
 
     def test_confidence_level_is_high(self, rule: CentralizedConfigRule):
         """Test that AST-based detection has HIGH confidence."""

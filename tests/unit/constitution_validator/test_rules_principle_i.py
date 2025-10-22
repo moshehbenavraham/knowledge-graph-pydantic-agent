@@ -167,7 +167,7 @@ class MyaGeNt:
         code = """
 # Line 1
 # Line 2
-class MyAgent:  # Line 3
+class MyAgent:  # This is actually line 4 in AST (triple-quote creates line 1)
     pass
 """
         tree = ast.parse(code)
@@ -177,7 +177,7 @@ class MyAgent:  # Line 3
 
         assert len(violations) == 1
         assert violations[0].location.file_path == file_path
-        assert violations[0].location.line_number == 3
+        assert violations[0].location.line_number == 4  # AST line numbers include opening triple-quote
 
     def test_violation_includes_remediation(self, rule: UnifiedAgentRule):
         """Test that violations include remediation guidance."""
