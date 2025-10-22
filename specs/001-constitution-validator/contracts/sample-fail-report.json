@@ -1,0 +1,128 @@
+{
+  "version": "1.0.0",
+  "timestamp": "2025-10-21T15:45:23Z",
+  "status": "FAIL",
+  "summary": {
+    "total_violations": 8,
+    "total_files_scanned": 342,
+    "total_files_with_violations": 5,
+    "validation_duration_ms": 13200.8,
+    "principles_violated": [
+      "PRINCIPLE_II",
+      "PRINCIPLE_IV",
+      "PRINCIPLE_V"
+    ]
+  },
+  "violations": [
+    {
+      "principle_id": "PRINCIPLE_II",
+      "principle_name": "Type-Safe Centralized Configuration",
+      "violation_type": "direct_os_getenv_usage",
+      "violation_description": "Direct use of os.getenv() instead of centralized configuration",
+      "severity": "ERROR",
+      "locations": [
+        {
+          "file_path": "src/tools/web_search.py",
+          "line_number": 42,
+          "column_number": 15,
+          "code_snippet": "api_key = os.getenv('BRAVE_API_KEY')",
+          "context": "Found in function initialize_brave_client()"
+        },
+        {
+          "file_path": "src/agent/custom_tool.py",
+          "line_number": 156,
+          "column_number": 20,
+          "code_snippet": "token = os.getenv('CUSTOM_TOKEN')",
+          "context": "Found in function authenticate()"
+        },
+        {
+          "file_path": "tests/test_integration.py",
+          "line_number": 89,
+          "code_snippet": "test_key = os.getenv('TEST_API_KEY')"
+        }
+      ],
+      "remediation": {
+        "steps": [
+          "Move configuration to src/config/settings.py",
+          "Use get_settings() to access configuration values",
+          "Remove all os.getenv() calls"
+        ],
+        "constitutional_reference": "Constitution Principle II: 'NEVER use os.getenv() directly - always use the centralized configuration via get_settings()'",
+        "code_example": "from src.config import get_settings\nsettings = get_settings()\napi_key = settings.brave_api_key"
+      }
+    },
+    {
+      "principle_id": "PRINCIPLE_IV",
+      "principle_name": "Test-Driven Quality Assurance",
+      "violation_type": "insufficient_test_coverage",
+      "violation_description": "Test coverage below required 75% threshold",
+      "severity": "ERROR",
+      "locations": [
+        {
+          "file_path": "src/tools/new_feature.py",
+          "line_number": 0,
+          "context": "Coverage: 45% (threshold: 75%)"
+        }
+      ],
+      "remediation": {
+        "steps": [
+          "Add unit tests for all public functions in new_feature.py",
+          "Add integration tests for main workflows",
+          "Run 'pytest --cov=src/tools/new_feature.py --cov-report=term-missing' to identify untested lines"
+        ],
+        "constitutional_reference": "Constitution Principle IV: 'Test coverage minimum: 75% (enforced by pytest-cov)'"
+      }
+    },
+    {
+      "principle_id": "PRINCIPLE_V",
+      "principle_name": "Production-Ready Observability",
+      "violation_type": "missing_logging",
+      "violation_description": "Public functions lack structured logging statements",
+      "severity": "WARNING",
+      "locations": [
+        {
+          "file_path": "src/tools/new_feature.py",
+          "line_number": 25,
+          "context": "Function 'process_data' has no logger calls"
+        },
+        {
+          "file_path": "src/tools/new_feature.py",
+          "line_number": 58,
+          "context": "Function 'validate_input' has no logger calls"
+        },
+        {
+          "file_path": "src/ui/features/new_handler.py",
+          "line_number": 103,
+          "context": "Function 'handle_request' has no logger calls"
+        }
+      ],
+      "remediation": {
+        "steps": [
+          "Import structlog logger: 'import structlog; logger = structlog.get_logger()'",
+          "Add logger.info() calls for major operations",
+          "Add logger.exception() for error handling"
+        ],
+        "constitutional_reference": "Constitution Principle V: 'The application uses structlog for structured, context-rich logging throughout the Streamlit UI and all handler classes.'",
+        "code_example": "import structlog\nlogger = structlog.get_logger()\n\ndef process_data():\n    logger.info('Processing data started', record_count=len(data))\n    # ... implementation\n    logger.info('Processing complete')"
+      }
+    }
+  ],
+  "metadata": {
+    "validator_version": "1.0.0",
+    "python_version": "3.11.5",
+    "constitution_file": "/home/user/project/.specify/memory/constitution.md",
+    "target_paths": [
+      "src/tools/",
+      "src/ui/features/"
+    ],
+    "ignored_patterns": [
+      "*.pyc",
+      "__pycache__/"
+    ],
+    "cli_flags": {
+      "verbose": true,
+      "quiet": false,
+      "dry_run": false
+    }
+  }
+}

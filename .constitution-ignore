@@ -1,0 +1,72 @@
+# Constitution Validator Ignore Patterns
+# Uses gitignore-style glob syntax
+# Lines starting with # are comments
+
+# Test code (legitimate use of patterns that violate production rules)
+tests/
+test_*.py
+*_test.py
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Build artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Git
+.git/
+
+# Third-party code
+vendor/
+third_party/
+
+# Generated code
+*.generated.py
+*_pb2.py
+*_pb2_grpc.py
+
+# Migrations (Alembic versions)
+alembic/versions/*.py
+
+# Documentation builds
+docs/_build/
+docs/_static/
+docs/_templates/
+
+# Temporary files
+*.tmp
+*.temp
+.temp/
+.tmp/
+
+# Spec-kit documentation (not production code)
+specs/
+.specify/
