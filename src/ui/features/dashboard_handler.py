@@ -411,9 +411,9 @@ class DashboardHandler:
 
             async with self.connection_manager.get_pg_connection() as conn:
                 # Query performance metrics with percentiles
-                # nosec B608 - interval is from whitelist, not user input
+                # interval is from validated whitelist (24h/7d/30d), not user input
                 metrics_row = await conn.fetchrow(
-                    f"""
+                    f"""  # noqa: S608  # nosec B608
                     SELECT
                         AVG(vector_latency_ms) AS avg_vector_latency_ms,
                         AVG(graph_latency_ms) AS avg_graph_latency_ms,
@@ -629,9 +629,9 @@ class DashboardHandler:
                     interval_map = {"24h": "24 hours", "30d": "30 days"}
                     interval = interval_map.get(window, "7 days")
 
-                    # nosec B608 - interval is from whitelist, not user input
+                    # interval is from validated whitelist (24h/30d), not user input
                     summary = await conn.fetchrow(
-                        f"""
+                        f"""  # noqa: S608  # nosec B608
                         SELECT
                             COUNT(*) AS total_calls,
                             COUNT(DISTINCT tool_name) AS unique_tools,
@@ -641,9 +641,9 @@ class DashboardHandler:
                         """
                     )
 
-                    # nosec B608 - interval is from whitelist, not user input
+                    # interval is from validated whitelist (24h/30d), not user input
                     tools = await conn.fetch(
-                        f"""
+                        f"""  # noqa: S608  # nosec B608
                         SELECT
                             tool_name,
                             COUNT(*) as total_calls,
@@ -696,9 +696,9 @@ class DashboardHandler:
             interval = interval_map.get(window, "7 days")
 
             async with self.connection_manager.get_pg_connection() as conn:
-                # nosec B608 - interval is from whitelist, not user input
+                # interval is from validated whitelist (24h/7d/30d), not user input
                 stats = await conn.fetchrow(
-                    f"""
+                    f"""  # noqa: S608  # nosec B608
                     SELECT
                         COUNT(*) AS total_interactions,
                         COUNT(DISTINCT session_id) AS unique_sessions,

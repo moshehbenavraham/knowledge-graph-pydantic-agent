@@ -6,9 +6,8 @@ Parses Python files into Abstract Syntax Trees for rule execution.
 
 import ast
 import hashlib
-from functools import lru_cache
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Any
 
 import structlog
 
@@ -26,9 +25,9 @@ class ASTScanner:
             cache_size: Number of parsed ASTs to cache (default 1024)
         """
         self.cache_size = cache_size
-        self._parse_cache: Dict[str, ast.AST] = {}
+        self._parse_cache: dict[str, ast.AST] = {}
 
-    def parse_file(self, file_path: Path) -> Optional[ast.AST]:
+    def parse_file(self, file_path: Path) -> ast.AST | None:
         """
         Parse a Python file into an AST.
 
@@ -40,7 +39,7 @@ class ASTScanner:
         """
         try:
             # Read file content
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, encoding="utf-8") as f:
                 content = f.read()
 
             # Generate cache key from file hash
@@ -67,29 +66,15 @@ class ASTScanner:
             return tree
 
         except SyntaxError as e:
-            logger.warning(
-                "syntax_error_in_file",
-                file=str(file_path),
-                line=e.lineno,
-                error=str(e)
-            )
+            logger.warning("syntax_error_in_file", file=str(file_path), line=e.lineno, error=str(e))
             return None
 
         except UnicodeDecodeError as e:
-            logger.warning(
-                "encoding_error_in_file",
-                file=str(file_path),
-                error=str(e)
-            )
+            logger.warning("encoding_error_in_file", file=str(file_path), error=str(e))
             return None
 
         except Exception as e:
-            logger.error(
-                "failed_to_parse_file",
-                file=str(file_path),
-                error=str(e),
-                exc_info=True
-            )
+            logger.error("failed_to_parse_file", file=str(file_path), error=str(e), exc_info=True)
             return None
 
     def _hash_content(self, content: str) -> str:
@@ -102,14 +87,14 @@ class ASTScanner:
         Returns:
             SHA256 hex digest
         """
-        return hashlib.sha256(content.encode('utf-8')).hexdigest()[:16]
+        return hashlib.sha256(content.encode("utf-8")).hexdigest()[:16]
 
     def clear_cache(self):
         """Clear the AST parse cache."""
         self._parse_cache.clear()
         logger.info("ast_cache_cleared")
 
-    def get_cache_stats(self) -> Dict[str, Any]:
+    def get_cache_stats(self) -> dict[str, Any]:
         """
         Get cache statistics.
 

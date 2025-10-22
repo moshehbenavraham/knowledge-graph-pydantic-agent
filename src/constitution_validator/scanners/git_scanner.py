@@ -5,12 +5,13 @@ Scans git commit messages for attribution violations.
 """
 
 from pathlib import Path
-from typing import List, Optional
+from typing import Any
 
 import structlog
 
 try:
-    from git import Repo, Commit, InvalidGitRepositoryError, GitCommandError
+    from git import Commit, GitCommandError, InvalidGitRepositoryError, Repo
+
     GIT_AVAILABLE = True
 except ImportError:
     GIT_AVAILABLE = False
@@ -25,10 +26,12 @@ class GitScanner:
     def __init__(self):
         """Initialize git scanner."""
         if not GIT_AVAILABLE:
-            logger.warning("gitpython_not_available",
-                         message="GitPython not installed - git checks will be skipped")
+            logger.warning(
+                "gitpython_not_available",
+                message="GitPython not installed - git checks will be skipped",
+            )
 
-    def get_unpushed_commits(self, repo_path: Path) -> List[Commit]:
+    def get_unpushed_commits(self, repo_path: Path) -> list[Commit]:
         """
         Get list of commits that haven't been pushed to remote.
 
@@ -60,8 +63,10 @@ class GitScanner:
                 tracking_branch = current_branch.tracking_branch()
                 if tracking_branch is None:
                     # No remote tracking branch - check all commits
-                    logger.info("no_tracking_branch",
-                              message="No remote tracking branch, checking all commits")
+                    logger.info(
+                        "no_tracking_branch",
+                        message="No remote tracking branch, checking all commits",
+                    )
                     commits = list(repo.iter_commits(current_branch.name, max_count=100))
                     return commits
             except Exception:
@@ -72,7 +77,7 @@ class GitScanner:
             # Get commits that are ahead of remote
             try:
                 unpushed_commits = list(
-                    repo.iter_commits(f'{tracking_branch.name}..{current_branch.name}')
+                    repo.iter_commits(f"{tracking_branch.name}..{current_branch.name}")
                 )
                 logger.info("unpushed_commits_found", count=len(unpushed_commits))
                 return unpushed_commits

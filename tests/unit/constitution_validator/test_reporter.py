@@ -3,16 +3,12 @@
 Tests violation grouping, remediation formatting, and report structure per US2.
 """
 
-import pytest
 from pathlib import Path
-from datetime import datetime
+
 from src.constitution_validator.models import (
-    ViolationRecord,
-    ViolationLocation,
-    ViolationGroup,
-    ComplianceReport,
-    PrincipleViolationSummary,
     ConfidenceLevel,
+    ViolationLocation,
+    ViolationRecord,
 )
 from src.constitution_validator.reporter import ComplianceReporter
 
@@ -213,9 +209,7 @@ class TestReportStructure:
                 rule_id="CONST-II-001",
                 principle_id="II",
                 location=ViolationLocation(
-                    file_path=Path("src/config/settings.py"),
-                    line_number=45,
-                    column_number=12
+                    file_path=Path("src/config/settings.py"), line_number=45, column_number=12
                 ),
                 message="Direct os.getenv() call",
                 remediation="Use get_settings()",
@@ -228,7 +222,7 @@ class TestReportStructure:
         report_dict = reporter.generate_report_dict(
             violations=violations,
             scanned_files=[Path("src/config/settings.py")],
-            scan_duration_ms=100
+            scan_duration_ms=100,
         )
 
         # Verify file path and line number are in report
@@ -254,9 +248,7 @@ class TestReportStructure:
 
         reporter = ComplianceReporter()
         report_dict = reporter.generate_report_dict(
-            violations=violations,
-            scanned_files=[Path("src/file.py")],
-            scan_duration_ms=100
+            violations=violations, scanned_files=[Path("src/file.py")], scan_duration_ms=100
         )
 
         # Verify principle information is preserved in violation
@@ -282,7 +274,7 @@ class TestReportStructure:
         report_dict = reporter.generate_report_dict(
             violations=violations,
             scanned_files=[Path(f"src/file{i}.py") for i in range(1, 4)],
-            scan_duration_ms=100
+            scan_duration_ms=100,
         )
 
         # Verify violations are grouped by principle
@@ -310,9 +302,7 @@ class TestReportStructure:
 
         reporter = ComplianceReporter()
         report_dict = reporter.generate_report_dict(
-            violations=violations,
-            scanned_files=[Path("src/file.py")],
-            scan_duration_ms=100
+            violations=violations, scanned_files=[Path("src/file.py")], scan_duration_ms=100
         )
 
         # Verify required top-level keys

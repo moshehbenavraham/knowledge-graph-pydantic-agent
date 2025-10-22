@@ -5,17 +5,12 @@ Tests end-to-end validation including all 6 principles, file discovery,
 report generation, and exit codes.
 """
 
-import json
-import subprocess
 from pathlib import Path
-from typing import Dict, Any
 
 import pytest
 
-from src.constitution_validator.cli import validate_constitution
 from src.constitution_validator.loader import ConstitutionLoader, IgnoreConfigurationLoader
 from src.constitution_validator.models import ComplianceReport
-from src.constitution_validator.reporter import ReportGenerator
 
 
 class TestFullValidationFlow:
@@ -46,7 +41,9 @@ class TestFullValidationFlow:
         assert constitution.version is not None
         assert constitution.checksum is not None
 
-    def test_validates_violation_samples_and_detects_all_principles(self, violation_samples_dir: Path):
+    def test_validates_violation_samples_and_detects_all_principles(
+        self, violation_samples_dir: Path
+    ):
         """Test end-to-end validation detects violations for all 6 principles."""
         # This is the key integration test - run validator on known violations
         # and verify all are detected
@@ -66,15 +63,8 @@ class TestFullValidationFlow:
         """Test that generated reports match the contracts/report-schema.json."""
         # This will be fully testable once we have report generation working
         # For now, verify the report model can be instantiated
-        from src.constitution_validator.models import (
-            ComplianceReport,
-            PrincipleViolationSummary,
-            ViolationRecord,
-            ViolationLocation,
-            ConfidenceLevel,
-        )
-        from datetime import datetime
         import uuid
+        from datetime import datetime
 
         # Create a minimal valid report
         report = ComplianceReport(
@@ -105,7 +95,6 @@ class TestFullValidationFlow:
         """Test that validator exits with non-zero code when violations found."""
         # This will be tested via CLI once implemented
         # For now, verify the logic in the models
-        from src.constitution_validator.models import ComplianceReport
         import uuid
         from datetime import datetime
 
@@ -130,7 +119,6 @@ class TestFullValidationFlow:
 
     def test_validation_exits_with_zero_on_clean_codebase(self, valid_codebase_dir: Path):
         """Test that validator exits with 0 when no violations found."""
-        from src.constitution_validator.models import ComplianceReport
         import uuid
         from datetime import datetime
 
@@ -182,7 +170,6 @@ class TestFullValidationFlow:
 
     def test_report_generation_includes_all_required_fields(self):
         """Test that generated JSON reports have all required fields."""
-        from src.constitution_validator.models import ComplianceReport
         import uuid
         from datetime import datetime
 
@@ -232,7 +219,6 @@ class TestFullValidationFlow:
 
     def test_performance_metrics_tracked(self):
         """Test that validation tracks timing metrics."""
-        from src.constitution_validator.models import ComplianceReport
         import uuid
         from datetime import datetime
 
@@ -280,7 +266,6 @@ class TestFullValidationFlow:
 
     def test_report_includes_coverage_metrics(self):
         """Test that reports can include coverage percentage."""
-        from src.constitution_validator.models import ComplianceReport
         import uuid
         from datetime import datetime
 
@@ -306,7 +291,6 @@ class TestFullValidationFlow:
 
     def test_report_includes_git_commit_count(self):
         """Test that reports include git commit check count."""
-        from src.constitution_validator.models import ComplianceReport
         import uuid
         from datetime import datetime
 

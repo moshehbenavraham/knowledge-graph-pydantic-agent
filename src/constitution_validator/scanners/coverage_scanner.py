@@ -4,10 +4,9 @@ Test coverage scanner.
 Integrates with pytest-cov to measure test coverage.
 """
 
-import subprocess
 import re
+import subprocess
 from pathlib import Path
-from typing import Optional
 
 import structlog
 
@@ -19,7 +18,7 @@ class CoverageScanner:
 
     def __init__(self):
         """Initialize coverage scanner."""
-        self.coverage_pattern = re.compile(r'TOTAL\s+\d+\s+\d+\s+(\d+)%')
+        self.coverage_pattern = re.compile(r"TOTAL\s+\d+\s+\d+\s+(\d+)%")
 
     def get_coverage(self, project_root: Path) -> float:
         """
@@ -38,12 +37,13 @@ class CoverageScanner:
             # Run pytest with coverage
             result = subprocess.run(
                 [
-                    'pytest',
-                    '--cov=src',
-                    '--cov-report=term-missing',
-                    '--quiet',
-                    '--no-header',
+                    "pytest",
+                    "--cov=src",
+                    "--cov-report=term-missing",
+                    "--quiet",
+                    "--no-header",
                 ],
+                check=False,
                 cwd=project_root,
                 capture_output=True,
                 text=True,
@@ -56,12 +56,11 @@ class CoverageScanner:
             if coverage is not None:
                 logger.info("coverage_measured", coverage=coverage)
                 return coverage
-            else:
-                # Try parsing from stderr
-                coverage = self._parse_coverage_output(result.stderr)
-                if coverage is not None:
-                    logger.info("coverage_measured_from_stderr", coverage=coverage)
-                    return coverage
+            # Try parsing from stderr
+            coverage = self._parse_coverage_output(result.stderr)
+            if coverage is not None:
+                logger.info("coverage_measured_from_stderr", coverage=coverage)
+                return coverage
 
             # If we couldn't parse coverage, raise error
             raise Exception("Could not parse coverage from pytest output")
@@ -76,7 +75,7 @@ class CoverageScanner:
             logger.error("coverage_measurement_failed", error=str(e))
             raise
 
-    def _parse_coverage_output(self, output: str) -> Optional[float]:
+    def _parse_coverage_output(self, output: str) -> float | None:
         """
         Parse coverage percentage from pytest-cov output.
 
@@ -96,7 +95,7 @@ class CoverageScanner:
 
         # Also try to find percentage in other formats
         # Look for lines like "78% coverage"
-        alt_pattern = re.compile(r'(\d+)%\s+coverage', re.IGNORECASE)
+        alt_pattern = re.compile(r"(\d+)%\s+coverage", re.IGNORECASE)
         alt_match = alt_pattern.search(output)
 
         if alt_match:
@@ -113,12 +112,13 @@ class CoverageScanner:
         """
         try:
             result = subprocess.run(
-                ['pytest', '--version'],
+                ["pytest", "--version"],
+                check=False,
                 capture_output=True,
                 text=True,
                 timeout=10,
             )
-            return 'pytest' in result.stdout.lower()
+            return "pytest" in result.stdout.lower()
 
         except (FileNotFoundError, subprocess.TimeoutExpired):
             return False

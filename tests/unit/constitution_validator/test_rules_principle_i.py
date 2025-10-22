@@ -6,15 +6,13 @@ Tests detection of multiple agent files and exemptions for the unified agent.
 
 import ast
 from pathlib import Path
-from typing import List
 
 import pytest
 
 from src.constitution_validator.models import (
+    ConfidenceLevel,
     RuleCategory,
     ValidationRule,
-    ViolationRecord,
-    ConfidenceLevel,
 )
 from src.constitution_validator.rules.principle_i import UnifiedAgentRule
 
@@ -121,7 +119,7 @@ class UnifiedAgentDeps:
         # Rule should skip this file entirely via path filtering
         # In actual implementation, this is handled by the file discovery layer
         # For unit test, we verify the rule config excludes this path
-        violations = rule.execute(tree, file_path)
+        _violations = rule.execute(tree, file_path)
 
         # Since exemption is path-based, we test that the rule config has the exclusion
         assert "src/agent/unified_agent.py" in rule.excluded_paths
@@ -177,7 +175,9 @@ class MyAgent:  # This is actually line 4 in AST (triple-quote creates line 1)
 
         assert len(violations) == 1
         assert violations[0].location.file_path == file_path
-        assert violations[0].location.line_number == 4  # AST line numbers include opening triple-quote
+        assert (
+            violations[0].location.line_number == 4
+        )  # AST line numbers include opening triple-quote
 
     def test_violation_includes_remediation(self, rule: UnifiedAgentRule):
         """Test that violations include remediation guidance."""

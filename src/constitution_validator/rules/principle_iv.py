@@ -62,7 +62,7 @@ class TestCoverageRule(BaseValidationRule):
             # Get coverage for this specific file
             analysis = cov.analysis2(str(file_path))
             if analysis:
-                _, executable, excluded, missing, _ = analysis
+                _, executable, _excluded, missing, _ = analysis
                 if executable:
                     coverage_pct = ((executable - len(missing)) / executable) * 100
 
@@ -134,7 +134,7 @@ class TestCoverageRule(BaseValidationRule):
             # Report coverage measurement failure as a violation
             self.add_violation(
                 line_number=1,
-                message=f"Coverage measurement failed: {str(e)}",
+                message=f"Coverage measurement failed: {e!s}",
                 remediation=(
                     "Ensure pytest-cov is installed and configured:\n"
                     "  1. Install: pip install pytest-cov\n"

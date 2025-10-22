@@ -12,7 +12,11 @@ from typing import Any
 
 import structlog
 
-from ..models import ConfidenceLevel, ViolationLocation, ViolationRecord
+from src.constitution_validator.models import (
+    ConfidenceLevel,
+    ViolationLocation,
+    ViolationRecord,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -181,14 +185,14 @@ class BaseValidationRule(ABC):
 
         line = self.source_lines[line_number - 1]  # Convert to 0-indexed
 
-        # Check for # noqa: CONST-X-YYY or # noqa: CONSTITUTION-X
+        # Check for noqa comments: CONST-X-YYY or CONSTITUTION-X format
         noqa_pattern = r"#\s*noqa:\s*(CONST|CONSTITUTION)-([IVX]+)(?:-(\d+))?\s*(?:-\s*(.+))?"
         match = re.search(noqa_pattern, line, re.IGNORECASE)
 
         if not match:
             return False, None
 
-        prefix, principle_id, rule_number, reason = match.groups()
+        _prefix, principle_id, rule_number, reason = match.groups()
 
         # Check if suppression applies to this rule
         if principle_id != self.principle_id:

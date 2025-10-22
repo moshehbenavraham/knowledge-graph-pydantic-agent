@@ -10,9 +10,6 @@ from pathlib import Path
 import pytest
 
 from src.constitution_validator.models import (
-    RuleCategory,
-    ValidationRule,
-    ViolationRecord,
     ConfidenceLevel,
 )
 from src.constitution_validator.rules.principle_iii import DualDatabaseRule
@@ -54,7 +51,9 @@ driver = GraphDatabase.driver(uri, auth=(user, password))
         violations = rule.execute(tree, file_path)
 
         assert len(violations) >= 1
-        assert any("neo4j" in v.message.lower() or "driver" in v.message.lower() for v in violations)
+        assert any(
+            "neo4j" in v.message.lower() or "driver" in v.message.lower() for v in violations
+        )
 
     def test_exempts_clients_config_file(self, rule: DualDatabaseRule):
         """Test that src/config/clients.py is exempted."""
@@ -64,8 +63,8 @@ from supabase import create_client
 # This is the central client configuration - should be exempt
 supabase_client = create_client(url, key)
 """
-        tree = ast.parse(code)
-        file_path = Path("src/config/clients.py")
+        _tree = ast.parse(code)
+        _file_path = Path("src/config/clients.py")
 
         # Verify exemption is in excluded_paths
         assert "src/config/clients.py" in rule.excluded_paths

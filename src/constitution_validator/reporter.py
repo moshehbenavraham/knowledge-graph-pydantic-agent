@@ -8,16 +8,15 @@ import json
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 import structlog
 
 from .models import (
     ComplianceReport,
-    ViolationRecord,
     ViolationGroup,
     ViolationLocation,
-    PrincipleViolationSummary,
+    ViolationRecord,
 )
 
 logger = structlog.get_logger(__name__)
@@ -120,7 +119,7 @@ def generate_detailed_text_report(report: ComplianceReport) -> str:
         meets_min = report.coverage_percentage >= 75.0
         status_icon = "✓" if meets_min else "✗"
         lines.append(f"Test Coverage: {status_icon} {report.coverage_percentage:.1f}%")
-        lines.append(f"  Minimum Required: 75.0%")
+        lines.append("  Minimum Required: 75.0%")
         lines.append("")
 
     # Git Attribution (if available)
@@ -178,7 +177,7 @@ def generate_detailed_text_report(report: ComplianceReport) -> str:
     return "\n".join(lines)
 
 
-def validate_report_schema(report_dict: Dict[str, Any]) -> tuple[bool, list[str]]:
+def validate_report_schema(report_dict: dict[str, Any]) -> tuple[bool, list[str]]:
     """
     Validate report structure matches expected schema.
 
@@ -283,8 +282,7 @@ class ReportGenerator:
         """
         if detailed:
             return generate_detailed_text_report(report)
-        else:
-            return generate_text_summary(report)
+        return generate_text_summary(report)
 
     def validate_schema(self, report: ComplianceReport) -> tuple[bool, list[str]]:
         """
@@ -318,7 +316,7 @@ class ComplianceReporter:
         self.validator_version = validator_version
         self.constitution_version = constitution_version
 
-    def group_violations(self, violations: List[ViolationRecord]) -> List[ViolationGroup]:
+    def group_violations(self, violations: list[ViolationRecord]) -> list[ViolationGroup]:
         """
         Group violations by rule_id and deduplicate locations.
 
@@ -331,7 +329,7 @@ class ComplianceReporter:
         logger.debug("Grouping violations", count=len(violations))
 
         # Group by rule_id
-        groups_dict: Dict[str, List[ViolationRecord]] = {}
+        groups_dict: dict[str, list[ViolationRecord]] = {}
         for violation in violations:
             if violation.rule_id not in groups_dict:
                 groups_dict[violation.rule_id] = []
@@ -341,7 +339,7 @@ class ComplianceReporter:
         groups = []
         for rule_id, rule_violations in groups_dict.items():
             # Deduplicate locations by file path and line number
-            unique_locations: Dict[tuple, ViolationLocation] = {}
+            unique_locations: dict[tuple, ViolationLocation] = {}
             for v in rule_violations:
                 location_key = (str(v.location.file_path), v.location.line_number)
                 if location_key not in unique_locations:
@@ -365,14 +363,14 @@ class ComplianceReporter:
 
     def generate_report_dict(
         self,
-        violations: List[ViolationRecord],
-        scanned_files: List[Path],
+        violations: list[ViolationRecord],
+        scanned_files: list[Path],
         scan_duration_ms: int,
-        excluded_files: List[Path] | None = None,
-        suppressed_violations: List[ViolationRecord] | None = None,
+        excluded_files: list[Path] | None = None,
+        suppressed_violations: list[ViolationRecord] | None = None,
         coverage_percentage: float | None = None,
         unpushed_commits_checked: int | None = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Generate report dictionary from violations.
 
@@ -457,7 +455,9 @@ class ComplianceReporter:
 
         return report_dict
 
-    def _create_principle_summaries(self, violations: List[ViolationRecord]) -> List[Dict[str, Any]]:
+    def _create_principle_summaries(
+        self, violations: list[ViolationRecord]
+    ) -> list[dict[str, Any]]:
         """
         Create per-principle summaries with grouped violations.
 

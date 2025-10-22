@@ -105,8 +105,9 @@ class GitAttributionRule(BaseValidationRule):
         Returns:
             List of violations detected
         """
-        from src.constitution_validator.scanners.git_scanner import GitScanner
         import re
+
+        from src.constitution_validator.scanners.git_scanner import GitScanner
 
         self.violations = []
         self.file_path = repo_path
@@ -126,14 +127,14 @@ class GitAttributionRule(BaseValidationRule):
 
             for commit in commits:
                 # Skip merge commits
-                is_merge = getattr(commit, 'is_merge', False) or (
-                    hasattr(commit, 'parents') and len(commit.parents) > 1
+                is_merge = getattr(commit, "is_merge", False) or (
+                    hasattr(commit, "parents") and len(commit.parents) > 1
                 )
                 if is_merge:
                     continue
 
-                message = commit.message if hasattr(commit, 'message') else str(commit)
-                hexsha = commit.hexsha if hasattr(commit, 'hexsha') else "unknown"
+                message = commit.message if hasattr(commit, "message") else str(commit)
+                hexsha = commit.hexsha if hasattr(commit, "hexsha") else "unknown"
 
                 # Check for prohibited patterns
                 for pattern in prohibited_patterns:

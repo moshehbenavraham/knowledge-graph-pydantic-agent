@@ -3,14 +3,15 @@
 Tests quiet mode, dry-run mode, and command-line argument handling per US3.
 """
 
-import pytest
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import patch
+
+import pytest
 from click.testing import CliRunner
 
 # Import CLI functions (will be tested)
 try:
-    from src.constitution_validator.cli import main, validate_command
+    from src.constitution_validator.cli import validate_command
 except ImportError:
     # CLI may have different structure - this is for test skeleton
     pytest.skip("CLI module structure needs verification", allow_module_level=True)
@@ -129,7 +130,7 @@ class TestDryRunMode:
         runner = CliRunner()
 
         start_time = time.time()
-        result = runner.invoke(validate_command, ["--dry-run", "src/"])
+        _result = runner.invoke(validate_command, ["--dry-run", "src/"])
         end_time = time.time()
 
         execution_time = end_time - start_time
@@ -222,13 +223,15 @@ class TestPreCommitHookIntegration:
             }
 
             start_time = time.time()
-            result = runner.invoke(validate_command, test_files)
+            _result = runner.invoke(validate_command, test_files)
             end_time = time.time()
 
             execution_time = end_time - start_time
 
             # Pre-commit should complete in <5s per SC-007
-            assert execution_time < 5.0, f"Incremental validation took {execution_time}s, should be <5s"
+            assert (
+                execution_time < 5.0
+            ), f"Incremental validation took {execution_time}s, should be <5s"
 
     def test_hook_shows_violation_summary_on_failure(self):
         """Test that hook failure shows helpful violation summary."""

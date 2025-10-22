@@ -10,9 +10,6 @@ from pathlib import Path
 import pytest
 
 from src.constitution_validator.models import (
-    RuleCategory,
-    ValidationRule,
-    ViolationRecord,
     ConfidenceLevel,
 )
 from src.constitution_validator.rules.principle_v import ObservabilityRule

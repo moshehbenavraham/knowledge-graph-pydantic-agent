@@ -7,10 +7,9 @@ All entities use Pydantic models for runtime validation and type safety.
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, computed_field, field_validator
-
 
 # =============================================================================
 # Enumerations
@@ -61,7 +60,7 @@ class ConstitutionalPrinciple(BaseModel):
     rationale: str = Field(
         ..., description="Why this principle exists (context for violations)", min_length=10
     )
-    related_files: List[str] = Field(
+    related_files: list[str] = Field(
         default_factory=list, description="Key files that implement this principle"
     )
 
@@ -76,12 +75,14 @@ class Constitution(BaseModel):
         description="Path to constitution markdown file",
     )
     version: str = Field(
-        ..., description="Semantic version of constitution (from frontmatter)", pattern=r"^\d+\.\d+\.\d+$"
+        ...,
+        description="Semantic version of constitution (from frontmatter)",
+        pattern=r"^\d+\.\d+\.\d+$",
     )
     loaded_at: datetime = Field(
         default_factory=datetime.utcnow, description="Timestamp when constitution was loaded"
     )
-    principles: List[ConstitutionalPrinciple] = Field(
+    principles: list[ConstitutionalPrinciple] = Field(
         ..., description="All six constitutional principles", min_length=6, max_length=6
     )
     raw_content: str = Field(..., description="Full markdown content for reference", min_length=100)
@@ -94,8 +95,8 @@ class Constitution(BaseModel):
     @field_validator("principles")
     @classmethod
     def validate_principle_ids(
-        cls, principles: List[ConstitutionalPrinciple]
-    ) -> List[ConstitutionalPrinciple]:
+        cls, principles: list[ConstitutionalPrinciple]
+    ) -> list[ConstitutionalPrinciple]:
         """Ensure all six principles are present with correct IDs."""
         expected_ids = {"I", "II", "III", "IV", "V", "VI"}
         actual_ids = {p.principle_id for p in principles}
@@ -124,7 +125,9 @@ class ValidationRule(BaseModel):
         pattern=r"^CONST-(I|II|III|IV|V|VI)-\d{3}$",
     )
     principle_id: str = Field(
-        ..., description="Which constitutional principle this checks", pattern="^(I|II|III|IV|V|VI)$"
+        ...,
+        description="Which constitutional principle this checks",
+        pattern="^(I|II|III|IV|V|VI)$",
     )
     category: RuleCategory = Field(..., description="High-level category for grouping")
     name: str = Field(..., description="Human-readable rule name", min_length=5, max_length=100)
@@ -132,7 +135,9 @@ class ValidationRule(BaseModel):
     violation_message_template: str = Field(
         ..., description="Template for violation message (uses {var} substitution)"
     )
-    remediation_guidance: str = Field(..., description="How to fix violations of this rule", min_length=20)
+    remediation_guidance: str = Field(
+        ..., description="How to fix violations of this rule", min_length=20
+    )
     confidence_level: ConfidenceLevel = Field(
         default=ConfidenceLevel.HIGH, description="Expected accuracy of this rule"
     )
@@ -142,38 +147,39 @@ class ValidationRule(BaseModel):
     )
 
     # AST-based rules
-    ast_node_types: Optional[List[str]] = Field(
+    ast_node_types: list[str] | None = Field(
         default=None, description="AST node types to visit (e.g., ['Call', 'ClassDef'])"
     )
 
     # Pattern-based rules (git commits, file names)
-    regex_pattern: Optional[str] = Field(
+    regex_pattern: str | None = Field(
         default=None, description="Regex pattern for text-based matching"
     )
 
     # File filtering
-    included_paths: List[str] = Field(
+    included_paths: list[str] = Field(
         default_factory=lambda: ["src/**/*.py"], description="Glob patterns for files to check"
     )
-    excluded_paths: List[str] = Field(
-        default_factory=lambda: ["tests/**", ".venv/**"], description="Glob patterns for files to skip"
+    excluded_paths: list[str] = Field(
+        default_factory=lambda: ["tests/**", ".venv/**"],
+        description="Glob patterns for files to skip",
     )
 
 
 class RuleRegistry(BaseModel):
     """Collection of all validation rules."""
 
-    rules: List[ValidationRule] = Field(..., description="All registered validation rules")
+    rules: list[ValidationRule] = Field(..., description="All registered validation rules")
 
-    def get_by_principle(self, principle_id: str) -> List[ValidationRule]:
+    def get_by_principle(self, principle_id: str) -> list[ValidationRule]:
         """Get all rules for a specific principle."""
         return [r for r in self.rules if r.principle_id == principle_id]
 
-    def get_enabled_rules(self) -> List[ValidationRule]:
+    def get_enabled_rules(self) -> list[ValidationRule]:
         """Get only enabled rules."""
         return [r for r in self.rules if r.enabled]
 
-    def get_by_id(self, rule_id: str) -> Optional[ValidationRule]:
+    def get_by_id(self, rule_id: str) -> ValidationRule | None:
         """Get specific rule by ID."""
         return next((r for r in self.rules if r.rule_id == rule_id), None)
 
@@ -188,8 +194,8 @@ class ViolationLocation(BaseModel):
 
     file_path: Path = Field(..., description="Absolute or relative path to file")
     line_number: int = Field(..., description="Line number where violation occurs", ge=1)
-    column_number: Optional[int] = Field(default=None, description="Column offset (from AST)", ge=0)
-    context_lines: Optional[str] = Field(
+    column_number: int | None = Field(default=None, description="Column offset (from AST)", ge=0)
+    context_lines: str | None = Field(
         default=None, description="Surrounding code lines for context (5 lines)"
     )
 
@@ -215,14 +221,16 @@ class ViolationRecord(BaseModel):
     message: str = Field(..., description="Specific violation description", min_length=10)
     remediation: str = Field(..., description="How to fix this specific violation", min_length=10)
     confidence: ConfidenceLevel = Field(..., description="How confident we are in this detection")
-    severity: Literal["error", "warning", "info"] = Field(..., description="How serious this violation is")
+    severity: Literal["error", "warning", "info"] = Field(
+        ..., description="How serious this violation is"
+    )
 
     # Additional context
-    detected_code: Optional[str] = Field(
+    detected_code: str | None = Field(
         default=None, description="Exact code snippet that violated the rule"
     )
-    suggested_fix: Optional[str] = Field(default=None, description="Suggested code replacement")
-    metadata: Dict[str, Any] = Field(
+    suggested_fix: str | None = Field(default=None, description="Suggested code replacement")
+    metadata: dict[str, Any] = Field(
         default_factory=dict, description="Rule-specific extra data (e.g., AST node type)"
     )
 
@@ -230,7 +238,7 @@ class ViolationRecord(BaseModel):
     suppressed: bool = Field(
         default=False, description="Whether violation is suppressed via # noqa comment"
     )
-    suppression_reason: Optional[str] = Field(
+    suppression_reason: str | None = Field(
         default=None, description="Reason from # noqa comment (if suppressed)"
     )
 
@@ -239,7 +247,7 @@ class ViolationRecord(BaseModel):
         suppressed_mark = " [SUPPRESSED]" if self.suppressed else ""
         return f"[{self.rule_id}] {self.location}: {self.message}{suppressed_mark}"
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "rule_id": self.rule_id,
@@ -264,7 +272,7 @@ class ViolationGroup(BaseModel):
 
     rule_id: str = Field(..., description="Common rule ID")
     violation_type: str = Field(..., description="Human-readable type name")
-    locations: List[ViolationLocation] = Field(
+    locations: list[ViolationLocation] = Field(
         default_factory=list, description="All locations where this violation occurs"
     )
     message_template: str = Field(..., description="Template message")
@@ -292,7 +300,7 @@ class PrincipleViolationSummary(BaseModel):
     principle_id: str = Field(..., pattern="^(I|II|III|IV|V|VI)$")
     principle_name: str = Field(..., min_length=5)
     violation_count: int = Field(..., ge=0)
-    violation_groups: List[ViolationGroup] = Field(
+    violation_groups: list[ViolationGroup] = Field(
         default_factory=list, description="Violations grouped by type"
     )
     compliant: bool = Field(..., description="Whether this principle passes")
@@ -318,22 +326,20 @@ class ComplianceReport(BaseModel):
     )
 
     # Scan scope
-    scanned_files: List[Path] = Field(..., description="All Python files that were scanned")
-    excluded_files: List[Path] = Field(
+    scanned_files: list[Path] = Field(..., description="All Python files that were scanned")
+    excluded_files: list[Path] = Field(
         default_factory=list, description="Files excluded via .constitution-ignore"
     )
-    scan_duration_ms: int = Field(
-        ..., description="Total validation time in milliseconds", ge=0
-    )
+    scan_duration_ms: int = Field(..., description="Total validation time in milliseconds", ge=0)
 
     # Results
-    violations: List[ViolationRecord] = Field(
+    violations: list[ViolationRecord] = Field(
         default_factory=list, description="All detected violations (unsuppressed only by default)"
     )
-    suppressed_violations: List[ViolationRecord] = Field(
+    suppressed_violations: list[ViolationRecord] = Field(
         default_factory=list, description="Violations suppressed via # noqa comments"
     )
-    principle_summaries: List[PrincipleViolationSummary] = Field(
+    principle_summaries: list[PrincipleViolationSummary] = Field(
         default_factory=list, description="Per-principle violation summaries"
     )
 
@@ -344,10 +350,10 @@ class ComplianceReport(BaseModel):
     info_count: int = Field(..., ge=0)
 
     # Additional metrics
-    coverage_percentage: Optional[float] = Field(
+    coverage_percentage: float | None = Field(
         default=None, description="Test coverage % (from Principle IV check)", ge=0.0, le=100.0
     )
-    unpushed_commits_checked: Optional[int] = Field(
+    unpushed_commits_checked: int | None = Field(
         default=None, description="Number of git commits checked (Principle VI)"
     )
 
@@ -372,7 +378,7 @@ class ComplianceReport(BaseModel):
             raise ValueError(f"Report marked as passed but has {error_count} errors")
         return passed
 
-    def to_json_dict(self) -> Dict[str, Any]:
+    def to_json_dict(self) -> dict[str, Any]:
         """Convert to JSON-serializable dictionary."""
         return {
             "report_id": self.report_id,
@@ -436,7 +442,9 @@ class ComplianceReport(BaseModel):
 
         for summary in self.principle_summaries:
             status_icon = "✓" if summary.compliant else "✗"
-            lines.append(f"{status_icon} Principle {summary.principle_id}: {summary.principle_name}")
+            lines.append(
+                f"{status_icon} Principle {summary.principle_id}: {summary.principle_name}"
+            )
             lines.append(f"  {summary.violation_count} violations")
 
             for group in summary.violation_groups:
@@ -454,20 +462,18 @@ class IgnorePattern(BaseModel):
     """A pattern for excluding files from validation."""
 
     pattern: str = Field(..., description="Gitignore-style glob pattern", min_length=1)
-    reason: Optional[str] = Field(default=None, description="Why this pattern is ignored")
+    reason: str | None = Field(default=None, description="Why this pattern is ignored")
     scope: Literal["global", "rule-specific"] = Field(
         default="global", description="Whether this applies to all rules or specific ones"
     )
-    rule_ids: Optional[List[str]] = Field(
+    rule_ids: list[str] | None = Field(
         default=None, description="Specific rule IDs this applies to (if rule-specific)"
     )
     enabled: bool = Field(default=True, description="Whether this pattern is active")
 
     @field_validator("rule_ids", mode="after")
     @classmethod
-    def validate_rule_specific_scope(
-        cls, rule_ids: Optional[List[str]], info
-    ) -> Optional[List[str]]:
+    def validate_rule_specific_scope(cls, rule_ids: list[str] | None, info) -> list[str] | None:
         """Ensure rule_ids is set only for rule-specific scope."""
         scope = info.data.get("scope")
         if scope == "rule-specific" and not rule_ids:
@@ -480,8 +486,8 @@ class IgnorePattern(BaseModel):
 class IgnoreConfiguration(BaseModel):
     """Complete ignore configuration from .constitution-ignore."""
 
-    patterns: List[IgnorePattern] = Field(default_factory=list, description="All ignore patterns")
-    default_patterns: List[str] = Field(
+    patterns: list[IgnorePattern] = Field(default_factory=list, description="All ignore patterns")
+    default_patterns: list[str] = Field(
         default_factory=lambda: [
             "tests/",
             ".venv/",
@@ -504,7 +510,7 @@ class IgnoreConfiguration(BaseModel):
         all_patterns = self.default_patterns + [p.pattern for p in self.patterns if p.enabled]
         return pathspec.PathSpec.from_lines("gitwildmatch", all_patterns)
 
-    def should_ignore(self, file_path: Path, rule_id: Optional[str] = None) -> bool:
+    def should_ignore(self, file_path: Path, rule_id: str | None = None) -> bool:
         """Check if a file should be ignored."""
         # Check global patterns
         spec = self.compile_pathspec()
