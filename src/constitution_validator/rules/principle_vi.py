@@ -105,9 +105,60 @@ class GitAttributionRule(BaseValidationRule):
         Returns:
             List of violations detected
         """
-        # For git check, create a minimal AST
-        tree = ast.parse("")
-        return self.execute(tree, repo_path)
+        from src.constitution_validator.scanners.git_scanner import GitScanner
+        import re
+
+        self.violations = []
+        self.file_path = repo_path
+
+        try:
+            scanner = GitScanner()
+            commits = scanner.get_unpushed_commits(repo_path)
+
+            # Prohibited attribution patterns
+            prohibited_patterns = [
+                r"co-authored-by:\s*claude",
+                r"generated\s+with\s+claude\s+code",
+                r"claude\s+code",
+                r"@anthropic\.com",
+                r"anthropic",
+            ]
+
+            for commit in commits:
+                # Skip merge commits
+                is_merge = getattr(commit, 'is_merge', False) or (
+                    hasattr(commit, 'parents') and len(commit.parents) > 1
+                )
+                if is_merge:
+                    continue
+
+                message = commit.message if hasattr(commit, 'message') else str(commit)
+                hexsha = commit.hexsha if hasattr(commit, 'hexsha') else "unknown"
+
+                # Check for prohibited patterns
+                for pattern in prohibited_patterns:
+                    if re.search(pattern, message, re.IGNORECASE):
+                        self.add_violation(
+                            line_number=1,
+                            message=f"AI attribution detected in commit {hexsha[:7]}: {message[:50].strip()}",
+                            remediation=(
+                                "Remove AI attribution from commit message.\n"
+                                "All work should be attributed to the repository owner.\n"
+                                "Use: git commit --amend to fix the message."
+                            ),
+                            detected_code=message[:100],
+                            suggested_fix="# Remove Claude/Anthropic attribution",
+                            confidence=ConfidenceLevel.HIGH,
+                            severity="error",
+                            metadata={"commit_sha": hexsha, "pattern": pattern},
+                        )
+                        break  # Only report once per commit
+
+        except Exception:  # nosec B110 - Git operations may fail
+            # Git operations failed - this is okay
+            pass
+
+        return self.violations
 
 
 # No alias needed - GitAttributionRule is the expected name
