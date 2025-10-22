@@ -9,7 +9,6 @@ Handles parsing of:
 import hashlib
 import re
 from pathlib import Path
-from typing import Optional
 
 import structlog
 
@@ -117,7 +116,7 @@ def load_constitution(file_path: Path = Path(".specify/memory/constitution.md"))
     )
 
 
-def _extract_version(content: str) -> Optional[str]:
+def _extract_version(content: str) -> str | None:
     """
     Extract version from HTML comment block.
 
@@ -241,3 +240,22 @@ def load_ignore_configuration(
     )
 
     return config
+
+
+# Class-based API for test compatibility
+class ConstitutionLoader:
+    """Wrapper class for constitution loading functionality."""
+
+    @staticmethod
+    def load(file_path: Path = Path(".specify/memory/constitution.md")) -> Constitution:
+        """Load constitution from file."""
+        return load_constitution(file_path)
+
+
+class IgnoreConfigurationLoader:
+    """Wrapper class for ignore configuration loading functionality."""
+
+    @staticmethod
+    def load(file_path: Path = Path(".constitution-ignore")) -> IgnoreConfiguration:
+        """Load ignore configuration from file."""
+        return load_ignore_configuration(file_path)

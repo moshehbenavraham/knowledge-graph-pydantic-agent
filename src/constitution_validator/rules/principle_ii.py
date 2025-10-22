@@ -1,192 +1,140 @@
 """
-Principle II: Type-Safe Centralized Configuration
+Principle II validation rule: Centralized Configuration.
 
-Detects direct os.getenv() and os.environ access violations.
+Detects direct os.getenv() usage instead of centralized configuration.
 """
 
 import ast
 from pathlib import Path
 
-import structlog
-
-from ..models import ConfidenceLevel
-from .base import BaseValidationRule
-
-logger = structlog.get_logger(__name__)
+from src.constitution_validator.models import (
+    ConfidenceLevel,
+    ViolationRecord,
+)
+from src.constitution_validator.rules.base import BaseValidationRule
 
 
 class PrincipleIIRule(BaseValidationRule):
-    """
-    Validate Principle II: Type-Safe Centralized Configuration.
+    """Validates adherence to Centralized Configuration principle."""
 
-    Detects:
-    - Direct os.getenv() calls
-    - Direct os.environ[] access
-    - os.environ.get() calls
+    rule_id = "CONST-II-001"
+    principle_id = "II"
+    rule_name = "Detect direct os.getenv() usage"
 
-    Exemptions:
-    - src/config/settings.py (configuration module itself)
-    - test files
-    """
+    EXEMPTED_FILES = ["src/config/settings.py"]
 
-    RULE_ID = "CONST-II-001"
-    PRINCIPLE_ID = "II"
-    RULE_NAME = "Detect direct environment variable access"
+    # Configuration for test compatibility
+    excluded_paths = ["src/config/settings.py", "tests/**"]
+    included_paths = ["src/**/*.py"]
 
-    # Files exempt from this rule
-    EXEMPT_FILES = {
-        "src/config/settings.py",  # Configuration module can access env vars
-        "src/config/__init__.py",
-    }
-
-    def __init__(self, file_path: Path, source_code: str):
-        """Initialize Principle II rule."""
-        super().__init__(
-            file_path=file_path,
-            source_code=source_code,
-            rule_id=self.RULE_ID,
-            principle_id=self.PRINCIPLE_ID,
-            rule_name=self.RULE_NAME,
-        )
-
-    def execute(self) -> list:
+    def execute(
+        self, tree: ast.AST, file_path: Path, source_code: str | None = None
+    ) -> list[ViolationRecord]:
         """
-        Execute Principle II validation.
+        Execute validation on AST to detect direct environment variable access.
+
+        Args:
+            tree: Parsed AST of the file
+            file_path: Path to file being validated
+            source_code: Optional source code (for tests or when file doesn't exist)
 
         Returns:
             List of violations detected
         """
-        # Check if file is exempt
-        file_str = str(self.file_path)
-        if any(exempt in file_str for exempt in self.EXEMPT_FILES):
-            logger.debug("File exempt from Principle II checks", file=file_str)
+        # Prepare instance state
+        self._prepare_execution(file_path, tree, source_code)
+
+        # Skip exempted files
+        if any(str(file_path).endswith(exempt) for exempt in self.EXEMPTED_FILES):
             return []
 
-        # Run AST-based detection
-        return self.check_ast()
+        # Traverse AST looking for os.getenv() or os.environ access
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call):
+                # Pattern 1: os.getenv("KEY")
+                if self.is_attribute_call(node, "os", "getenv"):
+                    var_name = self._extract_var_name_from_call(node)
+                    self.add_violation(
+                        line_number=node.lineno,
+                        column_number=node.col_offset,
+                        message=f"Direct os.getenv('{var_name}') call detected",
+                        remediation=(
+                            f"Use centralized configuration instead:\n"
+                            f"  from src.config import get_settings\n"
+                            f"  settings = get_settings()\n"
+                            f"  value = settings.{var_name.lower()}"
+                        ),
+                        detected_code=self.get_source_segment(node),
+                        suggested_fix=f"get_settings().{var_name.lower()}",
+                        confidence=ConfidenceLevel.HIGH,
+                        severity="error",
+                        metadata={"pattern": "os.getenv", "variable": var_name},
+                    )
 
-    def visit_Call(self, node: ast.Call) -> None:
-        """
-        Visit Call nodes to detect os.getenv() and os.environ access.
+                # Pattern 2: os.environ.get("KEY")
+                elif isinstance(node.func, ast.Attribute) and node.func.attr == "get":
+                    if isinstance(node.func.value, ast.Attribute):
+                        if (
+                            isinstance(node.func.value.value, ast.Name)
+                            and node.func.value.value.id == "os"
+                            and node.func.value.attr == "environ"
+                        ):
+                            var_name = self._extract_var_name_from_call(node)
+                            self.add_violation(
+                                line_number=node.lineno,
+                                column_number=node.col_offset,
+                                message=f"Direct os.environ.get('{var_name}') call detected",
+                                remediation=(
+                                    f"Use centralized configuration instead:\n"
+                                    f"  from src.config import get_settings\n"
+                                    f"  settings = get_settings()\n"
+                                    f"  value = settings.{var_name.lower()}"
+                                ),
+                                detected_code=self.get_source_segment(node),
+                                suggested_fix=f"get_settings().{var_name.lower()}",
+                                confidence=ConfidenceLevel.HIGH,
+                                severity="error",
+                                metadata={"pattern": "os.environ.get", "variable": var_name},
+                            )
 
-        Patterns detected:
-        1. os.getenv("VAR")
-        2. os.getenv("VAR", "default")
-        3. os.environ.get("VAR")
-        4. os.environ["VAR"] (handled in visit_Subscript)
-        """
-        # Pattern 1 & 2: os.getenv(...)
-        if self.is_attribute_call(node, "os", "getenv"):
-            self._report_getenv_violation(node)
+            elif isinstance(node, ast.Subscript):
+                # Pattern: os.environ["KEY"]
+                # Structure: Subscript(value=Attribute(value=Name(id='os'), attr='environ'), slice=...)
+                if isinstance(node.value, ast.Attribute):
+                    if isinstance(node.value.value, ast.Name) and node.value.value.id == "os":
+                        if node.value.attr == "environ":
+                            var_name = self._extract_var_name_from_subscript(node)
+                            self.add_violation(
+                                line_number=node.lineno,
+                                column_number=node.col_offset,
+                                message=f"Direct os.environ['{var_name}'] access detected",
+                                remediation=(
+                                    f"Use centralized configuration instead:\n"
+                                    f"  from src.config import get_settings\n"
+                                    f"  settings = get_settings()\n"
+                                    f"  value = settings.{var_name.lower()}"
+                                ),
+                                detected_code=self.get_source_segment(node),
+                                suggested_fix=f"get_settings().{var_name.lower()}",
+                                confidence=ConfidenceLevel.HIGH,
+                                severity="error",
+                                metadata={"pattern": "os.environ[]", "variable": var_name},
+                            )
 
-        # Pattern 3: os.environ.get(...)
-        elif isinstance(node.func, ast.Attribute):
-            # Check for os.environ.get()
-            if (
-                node.func.attr == "get"
-                and isinstance(node.func.value, ast.Attribute)
-                and isinstance(node.func.value.value, ast.Name)
-                and node.func.value.value.id == "os"
-                and node.func.value.attr == "environ"
-            ):
-                self._report_environ_get_violation(node)
+        return self.violations
 
-        # Continue traversing
-        self.generic_visit(node)
-
-    def visit_Subscript(self, node: ast.Subscript) -> None:
-        """
-        Visit Subscript nodes to detect os.environ["VAR"].
-
-        Pattern: os.environ["KEY"]
-        """
-        # Check if subscript is os.environ[...]
-        if isinstance(node.value, ast.Attribute):
-            if (
-                isinstance(node.value.value, ast.Name)
-                and node.value.value.id == "os"
-                and node.value.attr == "environ"
-            ):
-                self._report_environ_subscript_violation(node)
-
-        # Continue traversing
-        self.generic_visit(node)
-
-    def _report_getenv_violation(self, node: ast.Call) -> None:
-        """Report os.getenv() violation."""
-        # Extract variable name from first argument
-        var_name = "UNKNOWN"
+    def _extract_var_name_from_call(self, node: ast.Call) -> str:
+        """Extract variable name from os.getenv(var_name) call."""
         if node.args and isinstance(node.args[0], ast.Constant):
-            var_name = node.args[0].value
+            return node.args[0].value
+        return "UNKNOWN"
 
-        detected_code = self.get_source_segment(node)
-
-        self.add_violation(
-            line_number=node.lineno,
-            column_number=node.col_offset,
-            message=f"Direct os.getenv('{var_name}') usage detected",
-            remediation=(
-                f"Replace with centralized configuration:\n"
-                f"  from src.config import get_settings\n"
-                f"  settings = get_settings()\n"
-                f"  {var_name.lower()} = settings.{var_name.lower()}\n\n"
-                f"Or add '{var_name}' to src/config/settings.py if not present"
-            ),
-            detected_code=detected_code,
-            suggested_fix=f"get_settings().{var_name.lower()}",
-            confidence=ConfidenceLevel.HIGH,
-            severity="error",
-            metadata={"pattern": "os.getenv", "variable": var_name},
-        )
-
-    def _report_environ_get_violation(self, node: ast.Call) -> None:
-        """Report os.environ.get() violation."""
-        # Extract variable name from first argument
-        var_name = "UNKNOWN"
-        if node.args and isinstance(node.args[0], ast.Constant):
-            var_name = node.args[0].value
-
-        detected_code = self.get_source_segment(node)
-
-        self.add_violation(
-            line_number=node.lineno,
-            column_number=node.col_offset,
-            message=f"Direct os.environ.get('{var_name}') usage detected",
-            remediation=(
-                f"Replace with centralized configuration:\n"
-                f"  from src.config import get_settings\n"
-                f"  settings = get_settings()\n"
-                f"  {var_name.lower()} = settings.{var_name.lower()}"
-            ),
-            detected_code=detected_code,
-            suggested_fix=f"get_settings().{var_name.lower()}",
-            confidence=ConfidenceLevel.HIGH,
-            severity="error",
-            metadata={"pattern": "os.environ.get", "variable": var_name},
-        )
-
-    def _report_environ_subscript_violation(self, node: ast.Subscript) -> None:
-        """Report os.environ["VAR"] violation."""
-        # Extract variable name from subscript
-        var_name = "UNKNOWN"
+    def _extract_var_name_from_subscript(self, node: ast.Subscript) -> str:
+        """Extract variable name from os.environ[var_name] subscript."""
         if isinstance(node.slice, ast.Constant):
-            var_name = node.slice.value
+            return node.slice.value
+        return "UNKNOWN"
 
-        detected_code = self.get_source_segment(node)
 
-        self.add_violation(
-            line_number=node.lineno,
-            column_number=node.col_offset,
-            message=f"Direct os.environ['{var_name}'] access detected",
-            remediation=(
-                f"Replace with centralized configuration:\n"
-                f"  from src.config import get_settings\n"
-                f"  settings = get_settings()\n"
-                f"  {var_name.lower()} = settings.{var_name.lower()}"
-            ),
-            detected_code=detected_code,
-            suggested_fix=f"get_settings().{var_name.lower()}",
-            confidence=ConfidenceLevel.HIGH,
-            severity="error",
-            metadata={"pattern": "os.environ[]", "variable": var_name},
-        )
+# Alias for test compatibility
+CentralizedConfigRule = PrincipleIIRule

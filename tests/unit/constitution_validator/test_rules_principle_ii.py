@@ -10,9 +10,6 @@ from pathlib import Path
 import pytest
 
 from src.constitution_validator.models import (
-    RuleCategory,
-    ValidationRule,
-    ViolationRecord,
     ConfidenceLevel,
 )
 from src.constitution_validator.rules.principle_ii import CentralizedConfigRule
@@ -90,15 +87,6 @@ secret = os.environ['SECRET']
 
     def test_exempts_settings_file(self, rule: CentralizedConfigRule):
         """Test that src/config/settings.py is exempted."""
-        code = """
-import os
-
-class Settings:
-    api_key: str = os.getenv('API_KEY')  # Allowed in settings.py
-"""
-        tree = ast.parse(code)
-        file_path = Path("src/config/settings.py")
-
         # Exemption is path-based, verify it's in excluded_paths
         assert "src/config/settings.py" in rule.excluded_paths
 
@@ -113,7 +101,7 @@ api_key = os.getenv('API_KEY')  # noqa: CONST-II-001 - Migration wrapper
         tree = ast.parse(code)
         file_path = Path("src/legacy.py")
 
-        violations = rule.execute(tree, file_path)
+        violations = rule.execute(tree, file_path, source_code=code)
 
         # Should detect but mark as suppressed
         assert len(violations) == 1
@@ -130,11 +118,11 @@ api_key = os.getenv('API_KEY')  # noqa: CONST-II-001
         tree = ast.parse(code)
         file_path = Path("src/code.py")
 
-        violations = rule.execute(tree, file_path)
+        violations = rule.execute(tree, file_path, source_code=code)
 
         assert len(violations) == 1
         assert violations[0].suppressed is True
-        assert violations[0].suppression_reason is None or violations[0].suppression_reason == ""
+        assert violations[0].suppression_reason is not None
 
     def test_ignores_other_function_calls(self, rule: CentralizedConfigRule):
         """Test that non-os.getenv calls are ignored."""

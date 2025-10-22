@@ -4,105 +4,110 @@ Principle VI validation rule: Git Attribution Standards.
 Detects AI attribution in git commit messages.
 """
 
-import re
+import ast
 from pathlib import Path
-from typing import List
 
 from src.constitution_validator.models import (
-    ViolationRecord,
-    ViolationLocation,
     ConfidenceLevel,
+    ViolationRecord,
 )
-from src.constitution_validator.rules.base import ValidationRule
-from src.constitution_validator.scanners.git_scanner import GitScanner
+from src.constitution_validator.rules.base import BaseValidationRule
 
 
-class GitAttributionRule(ValidationRule):
+class GitAttributionRule(BaseValidationRule):
     """Validates adherence to Git Attribution Standards principle."""
 
-    def __init__(self):
-        """Initialize the Git Attribution validation rule."""
-        super().__init__(
-            rule_id="CONST-VI-001",
-            principle_id="VI",
-            name="Detect AI attribution in commits",
-            description="Detects AI attribution patterns in git commit messages",
-            violation_message_template="AI attribution found in commit {commit}: {pattern}",
-            remediation_guidance=(
-                "Remove AI attribution from commit messages. "
-                "All work should be attributed to the repository owner, not AI assistants. "
-                "Use 'git commit --amend' to fix the most recent commit message, "
-                "or 'git rebase -i' for older commits."
-            ),
-            confidence_level=ConfidenceLevel.HIGH,
-            severity="error",
-        )
+    rule_id = "CONST-VI-001"
+    principle_id = "VI"
+    rule_name = "Detect AI attribution in commits"
 
-        # Patterns to detect (case-insensitive)
-        self.ai_patterns = [
-            r"co-authored-by:\s*claude",
-            r"co-authored-by:\s*anthropic",
-            r"generated\s+with\s+claude",
-            r"generated\s+with\s+\[claude\s+code\]",
-            r"assisted\s+by\s+anthropic",
-            r"assisted\s+by\s+claude",
-            r"@anthropic\.com",
-        ]
-
-        self.git_scanner = GitScanner()
-
-    def execute_git_check(self, project_root: Path) -> List[ViolationRecord]:
+    def execute(
+        self, tree: ast.AST, file_path: Path, source_code: str | None = None
+    ) -> list[ViolationRecord]:
         """
-        Execute git commit message check.
+        Execute validation on git commits (not AST-based).
+
+        Note: This rule checks git commit messages, not Python AST.
+        The tree parameter is kept for API consistency.
 
         Args:
-            project_root: Root directory of the git repository
+            tree: Parsed AST (not used for git validation)
+            file_path: Path to file (used to locate git repository)
+            source_code: Optional source code (for tests or when file doesn't exist)
 
         Returns:
-            List of violation records found
+            List of violations detected
         """
-        violations = []
+        # Prepare instance state
+        self._prepare_execution(file_path, tree, source_code)
 
         try:
-            # Get unpushed commits
-            commits = self.git_scanner.get_unpushed_commits(project_root)
+            import re
+
+            from git import Repo
+
+            # Find git repository
+            repo = Repo(file_path.parent, search_parent_directories=True)
+
+            # Check recent commits (unpushed commits)
+            try:
+                commits = list(repo.iter_commits("origin/main..HEAD", max_count=100))
+            except Exception:
+                # Fallback to all commits if origin/main doesn't exist
+                commits = list(repo.iter_commits("HEAD", max_count=20))
+
+            # Patterns to detect
+            prohibited_patterns = [
+                r"Co-Authored-By:.*Claude",
+                r"Generated with.*Claude Code",
+                r"Co-Authored-By:.*noreply@anthropic\.com",
+                r"\bAnthropic\b",
+            ]
 
             for commit in commits:
-                # Skip merge commits (they can have multiple authors)
+                message = commit.message
+
+                # Skip merge commits
                 if len(commit.parents) > 1:
                     continue
 
-                # Check commit message against patterns
-                for pattern in self.ai_patterns:
-                    matches = re.finditer(pattern, commit.message, re.IGNORECASE)
-                    for match in matches:
-                        violation = ViolationRecord(
-                            rule_id=self.rule_id,
-                            principle_id=self.principle_id,
-                            location=ViolationLocation(
-                                file_path=project_root / ".git" / "HEAD",  # Symbolic location
-                                line_number=1,
+                for pattern in prohibited_patterns:
+                    if re.search(pattern, message, re.IGNORECASE):
+                        self.add_violation(
+                            line_number=1,  # Git commits don't have line numbers
+                            message=f"AI attribution detected in commit {commit.hexsha[:7]}: {commit.summary[:50]}",
+                            remediation=(
+                                "Remove AI attribution from commit message.\n"
+                                "All work should be attributed to the repository owner.\n"
+                                "Use: git commit --amend to fix the message."
                             ),
-                            message=self.violation_message_template.format(
-                                commit=commit.hexsha[:8],
-                                pattern=match.group(0)
-                            ),
-                            remediation=self.remediation_guidance,
-                            confidence=self.confidence_level,
-                            severity=self.severity,
-                            detected_code=match.group(0),
-                            suggested_fix=f"Remove '{match.group(0)}' from commit {commit.hexsha[:8]}",
-                            metadata={
-                                "commit_sha": commit.hexsha,
-                                "commit_message": commit.message,
-                            },
+                            detected_code=commit.summary,
+                            suggested_fix="# Remove Claude/Anthropic attribution",
+                            confidence=ConfidenceLevel.HIGH,
+                            severity="error",
+                            metadata={"commit_sha": commit.hexsha, "pattern": pattern},
                         )
+                        break  # Only report once per commit
 
-                        violations.append(violation)
-
-        except Exception as e:
-            # If git operations fail, we might not be in a git repo
-            # Don't report this as a violation, just skip
+        except Exception:  # nosec B110 - Git operations may fail for non-git files
+            # Git operations failed - this is okay, not all files are in git
             pass
 
-        return violations
+        return self.violations
+
+    def execute_git_check(self, repo_path: Path) -> list[ViolationRecord]:
+        """
+        Execute git commit check (test compatibility method).
+
+        Args:
+            repo_path: Path to git repository
+
+        Returns:
+            List of violations detected
+        """
+        # For git check, create a minimal AST
+        tree = ast.parse("")
+        return self.execute(tree, repo_path)
+
+
+# No alias needed - GitAttributionRule is the expected name

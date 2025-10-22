@@ -6,156 +6,107 @@ Detects functions that lack logging instrumentation.
 
 import ast
 from pathlib import Path
-from typing import List, Set
 
 from src.constitution_validator.models import (
-    ViolationRecord,
-    ViolationLocation,
     ConfidenceLevel,
+    ViolationRecord,
 )
-from src.constitution_validator.rules.base import ValidationRule
+from src.constitution_validator.rules.base import BaseValidationRule
 
 
-class ObservabilityRule(ValidationRule):
+class ObservabilityRule(BaseValidationRule):
     """Validates adherence to Production-Ready Observability principle."""
 
-    def __init__(self):
-        """Initialize the Observability validation rule."""
-        super().__init__(
-            rule_id="CONST-V-001",
-            principle_id="V",
-            name="Detect missing logging instrumentation",
-            description="Detects functions without proper logging calls",
-            violation_message_template="Function '{function}' lacks logging instrumentation in {file}",
-            remediation_guidance=(
-                "Add logging to this function using structlog or Python's logging module. "
-                "Import: from structlog import get_logger; logger = get_logger() "
-                "Then add logger.info/debug/error calls at key points in the function."
-            ),
-            confidence_level=ConfidenceLevel.MEDIUM,  # Heuristic-based
-            severity="warning",  # Less critical than architecture violations
-        )
-        self.excluded_paths = [
-            "tests/",
-            "test_*.py",
-            "*_test.py",
-        ]
+    rule_id = "CONST-V-001"
+    principle_id = "V"
+    rule_name = "Detect missing logging instrumentation"
 
-    def execute(self, tree: ast.AST, file_path: Path) -> List[ViolationRecord]:
+    MINIMUM_FUNCTION_LINES = 5  # Skip trivial functions
+
+    # Configuration for test compatibility
+    excluded_paths = ["tests/**"]
+    included_paths = ["src/**/*.py"]
+
+    def execute(
+        self, tree: ast.AST, file_path: Path, source_code: str | None = None
+    ) -> list[ViolationRecord]:
         """
-        Execute the rule on an AST tree.
+        Execute validation on AST to detect missing logging.
 
         Args:
-            tree: Parsed AST of the Python file
-            file_path: Path to the file being validated
+            tree: Parsed AST of the file
+            file_path: Path to file being validated
+            source_code: Optional source code (for tests or when file doesn't exist)
 
         Returns:
-            List of violation records found
+            List of violations detected
         """
-        violations = []
+        # Prepare instance state
+        self._prepare_execution(file_path, tree, source_code)
 
-        # Check if file has logging imports
-        has_logging_import = self._check_logging_imports(tree)
+        # Skip test files
+        if "test" in str(file_path):
+            return []
 
-        # Find all function definitions
+        # Traverse AST looking for functions without logging
         for node in ast.walk(tree):
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                # Skip trivial functions (< 5 lines)
-                if self._is_trivial_function(node):
+            if isinstance(node, ast.FunctionDef):
+                # Skip private functions, property getters, and trivial functions
+                if self._should_skip_function(node):
                     continue
 
                 # Check if function has logging calls
-                has_logging_calls = self._has_logging_calls(node)
-
-                # If no logging import or no logging calls, report violation
-                if not has_logging_import or not has_logging_calls:
-                    violation = ViolationRecord(
-                        rule_id=self.rule_id,
-                        principle_id=self.principle_id,
-                        location=ViolationLocation(
-                            file_path=file_path,
-                            line_number=node.lineno,
-                            column_number=node.col_offset,
+                if not self._has_logging(node):
+                    self.add_violation(
+                        line_number=node.lineno,
+                        column_number=node.col_offset,
+                        message=f"Function '{node.name}' lacks logging instrumentation",
+                        remediation=(
+                            f"Add logging to function:\n"
+                            f"  import structlog\n"
+                            f"  logger = structlog.get_logger(__name__)\n"
+                            f'  logger.info("Function {node.name} called", ...)'
                         ),
-                        message=self.violation_message_template.format(
-                            function=node.name,
-                            file=str(file_path)
-                        ),
-                        remediation=self.remediation_guidance,
-                        confidence=self.confidence_level,
-                        severity=self.severity,
-                        detected_code=node.name,
-                        suggested_fix=f"Add logger.info() calls in {node.name}()",
+                        detected_code=f"def {node.name}",
+                        suggested_fix="# Add logger.info/debug calls",
+                        confidence=ConfidenceLevel.MEDIUM,
+                        severity="warning",
+                        metadata={"function_name": node.name, "line_count": len(node.body)},
                     )
 
-                    violations.append(violation)
+        return self.violations
 
-        return violations
+    def _should_skip_function(self, node: ast.FunctionDef) -> bool:
+        """Check if function should be skipped from logging checks."""
+        # Skip private functions
+        if node.name.startswith("_"):
+            return True
 
-    def _check_logging_imports(self, tree: ast.AST) -> bool:
-        """Check if file imports logging or structlog."""
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Import):
-                for alias in node.names:
-                    if "logging" in alias.name or "structlog" in alias.name:
-                        return True
-            elif isinstance(node, ast.ImportFrom):
-                if node.module and ("logging" in node.module or "structlog" in node.module):
-                    return True
+        # Skip property getters
+        if self.find_decorator(node, "property"):
+            return True
+
+        # Skip trivial functions (< 5 lines of code)
+        # Calculate actual line span of function body
+        if node.body:
+            first_line = node.body[0].lineno
+            last_line = node.body[-1].end_lineno or node.body[-1].lineno
+            line_count = last_line - first_line + 1
+            if line_count < self.MINIMUM_FUNCTION_LINES:
+                return True
+
         return False
 
-    def _has_logging_calls(self, func_node: ast.FunctionDef) -> bool:
+    def _has_logging(self, node: ast.FunctionDef) -> bool:
         """Check if function contains logging calls."""
-        for node in ast.walk(func_node):
-            if isinstance(node, ast.Call):
-                call_str = self._get_call_string(node)
-                # Check for common logging patterns
-                if any(pattern in call_str.lower() for pattern in [
-                    "logger.", "log.", ".info(", ".debug(", ".error(", ".warning("
-                ]):
-                    return True
+        for child in ast.walk(node):
+            if isinstance(child, ast.Call):
+                # Check for logger.info/debug/warning/error calls
+                if isinstance(child.func, ast.Attribute):
+                    if isinstance(child.func.value, ast.Name):
+                        if child.func.value.id in ["logger", "analytics_logger", "log"]:
+                            return True
         return False
 
-    def _is_trivial_function(self, func_node: ast.FunctionDef) -> bool:
-        """
-        Check if function is trivial (< 5 lines or just pass/return/raise).
 
-        Args:
-            func_node: Function AST node
-
-        Returns:
-            True if function is trivial and exempt from logging requirement
-        """
-        # Count non-trivial statements
-        non_trivial_statements = 0
-        for node in func_node.body:
-            if isinstance(node, (ast.Pass, ast.Return)):
-                # These are trivial
-                if isinstance(node, ast.Return) and node.value is None:
-                    continue
-            if isinstance(node, ast.Expr):
-                # Docstrings are trivial
-                if isinstance(node.value, ast.Constant) and isinstance(node.value.value, str):
-                    continue
-            non_trivial_statements += 1
-
-        return non_trivial_statements < 3
-
-    def _get_call_string(self, node: ast.Call) -> str:
-        """Extract string representation of a call."""
-        try:
-            if isinstance(node.func, ast.Attribute):
-                return f"{self._get_name(node.func.value)}.{node.func.attr}"
-            elif isinstance(node.func, ast.Name):
-                return node.func.id
-            return ""
-        except Exception:
-            return ""
-
-    def _get_name(self, node: ast.AST) -> str:
-        """Extract name from AST node."""
-        if isinstance(node, ast.Name):
-            return node.id
-        elif isinstance(node, ast.Attribute):
-            return f"{self._get_name(node.value)}.{node.attr}"
-        return ""
+# No alias needed - ObservabilityRule is the expected name

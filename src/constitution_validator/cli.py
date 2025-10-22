@@ -5,10 +5,10 @@ Entry point: constitution-validate
 """
 
 import os
+import subprocess  # nosec B404 - Required for git operations
 import sys
-import subprocess
 from pathlib import Path
-from typing import Optional, Any
+from typing import Any
 
 import click
 import structlog
@@ -29,7 +29,7 @@ def _get_staged_files() -> list[Path]:
         subprocess.CalledProcessError: If git command fails
     """
     try:
-        result = subprocess.run(
+        result = subprocess.run(  # nosec B607 - git is a trusted executable
             ["git", "diff", "--cached", "--name-only", "--diff-filter=ACMR"],
             capture_output=True,
             text=True,
@@ -78,7 +78,6 @@ def _discover_files(
     Returns:
         List of Python file paths to scan
     """
-    from src.constitution_validator.loader import IgnoreConfigurationLoader
 
     files = []
 
@@ -236,7 +235,7 @@ def validate(
     quiet: bool,
     dry_run: bool,
     format: str,
-    output: Optional[Path],
+    output: Path | None,
     skip_git: bool,
     skip_coverage: bool,
     staged: bool,
@@ -282,19 +281,22 @@ def validate(
 
         import time
         import uuid
-        import json
         from datetime import datetime
 
         from src.constitution_validator.loader import ConstitutionLoader, IgnoreConfigurationLoader
-        from src.constitution_validator.models import ComplianceReport, PrincipleViolationSummary, ViolationGroup
+        from src.constitution_validator.models import (
+            ComplianceReport,
+            PrincipleViolationSummary,
+            ViolationGroup,
+        )
         from src.constitution_validator.reporter import ReportGenerator
-        from src.constitution_validator.scanners.ast_scanner import ASTScanner
         from src.constitution_validator.rules.principle_i import UnifiedAgentRule
         from src.constitution_validator.rules.principle_ii import CentralizedConfigRule
         from src.constitution_validator.rules.principle_iii import DualDatabaseRule
         from src.constitution_validator.rules.principle_iv import TestCoverageRule
         from src.constitution_validator.rules.principle_v import ObservabilityRule
         from src.constitution_validator.rules.principle_vi import GitAttributionRule
+        from src.constitution_validator.scanners.ast_scanner import ASTScanner
 
         start_time = time.time()
 
@@ -441,7 +443,11 @@ def validate(
             for rule_id, rule_violations in groups_by_rule.items():
                 group = ViolationGroup(
                     rule_id=rule_id,
-                    violation_type=rule_violations[0].message.split(':')[0] if ':' in rule_violations[0].message else "violation",
+                    violation_type=(
+                        rule_violations[0].message.split(":")[0]
+                        if ":" in rule_violations[0].message
+                        else "violation"
+                    ),
                     locations=[v.location for v in rule_violations],
                     message_template=rule_violations[0].message,
                     remediation=rule_violations[0].remediation,
@@ -518,6 +524,10 @@ def validate(
 def main():
     """Entry point for CLI."""
     cli()
+
+
+# Alias for programmatic use (e.g., in tests)
+validate_constitution = validate
 
 
 if __name__ == "__main__":

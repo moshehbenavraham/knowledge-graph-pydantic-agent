@@ -8,7 +8,7 @@ import ast
 import re
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import structlog
 
@@ -17,94 +17,97 @@ from ..models import ConfidenceLevel, ViolationLocation, ViolationRecord
 logger = structlog.get_logger(__name__)
 
 
-class BaseValidationRule(ABC, ast.NodeVisitor):
+class BaseValidationRule(ABC):
     """
     Base class for all constitutional validation rules.
 
     Provides:
-    - AST traversal utilities
-    - Regex matching utilities
-    - Common violation detection patterns
+    - Abstract execute() method for validation logic
+    - Violation creation utilities
     - Inline suppression support (# noqa: CONST-X-YYY)
+
+    Usage:
+        rule = SomeRule()
+        violations = rule.execute(tree, file_path)
     """
 
-    def __init__(
-        self,
-        file_path: Path,
-        source_code: str,
-        rule_id: str,
-        principle_id: str,
-        rule_name: str,
-    ):
-        """
-        Initialize base validation rule.
+    # Subclasses must define these
+    rule_id: str = "CONST-X-001"
+    principle_id: str = "X"
+    rule_name: str = "Base Rule"
 
-        Args:
-            file_path: Path to file being validated
-            source_code: Full source code of the file
-            rule_id: Unique rule identifier (e.g., 'CONST-II-001')
-            principle_id: Constitutional principle (I-VI)
-            rule_name: Human-readable rule name
-        """
-        self.file_path = file_path
-        self.source_code = source_code
-        self.source_lines = source_code.splitlines()
-        self.rule_id = rule_id
-        self.principle_id = principle_id
-        self.rule_name = rule_name
-        self.violations: List[ViolationRecord] = []
-
-        # Track current AST node for context
-        self.current_node: Optional[ast.AST] = None
+    def __init__(self):
+        """Initialize base validation rule."""
+        # Instance state reset on each execute() call
+        self.violations: list[ViolationRecord] = []
+        self.file_path: Path | None = None
+        self.source_code: str = ""
+        self.source_lines: list[str] = []
 
     @abstractmethod
-    def execute(self) -> List[ViolationRecord]:
+    def execute(
+        self, tree: ast.AST, file_path: Path, source_code: str | None = None
+    ) -> list[ViolationRecord]:
         """
-        Execute validation rule and return violations.
+        Execute validation rule on AST and return violations.
 
         Subclasses MUST implement this method with their specific logic.
+
+        Args:
+            tree: Parsed AST of the file
+            file_path: Path to the file being validated
+            source_code: Optional source code (for tests or when file doesn't exist)
 
         Returns:
             List of detected violations
         """
         pass
 
-    def check_ast(self) -> List[ViolationRecord]:
+    def _prepare_execution(
+        self, file_path: Path, tree: ast.AST | None = None, source_code: str | None = None
+    ):
         """
-        Parse file as AST and run visitor pattern.
+        Prepare instance state for execution.
 
-        Returns:
-            List of violations detected during AST traversal
-
-        Handles:
-            - Syntax errors in Python files
-            - Parse failures
+        Args:
+            file_path: Path to file being validated
+            tree: Optional AST tree (used to extract source code if file doesn't exist)
+            source_code: Optional source code (takes precedence over file/tree)
         """
-        try:
-            tree = ast.parse(self.source_code, filename=str(self.file_path))
-            self.visit(tree)
-            return self.violations
-        except SyntaxError as e:
-            logger.warning(
-                "Syntax error in file, skipping AST checks",
-                file=str(self.file_path),
-                line=e.lineno,
-                error=str(e),
-            )
-            # Don't report syntax errors as constitutional violations
-            return []
+        self.violations = []
+        self.file_path = file_path
+
+        # Priority: explicit source_code > file contents > AST unparse
+        if source_code:
+            self.source_code = source_code
+        elif file_path.exists():
+            try:
+                self.source_code = file_path.read_text()
+            except Exception as e:
+                logger.warning(f"Could not read file: {e}", file=str(file_path))
+                self.source_code = ""
+        elif tree is not None:
+            # For tests: reconstruct source from AST (loses comments!)
+            try:
+                self.source_code = ast.unparse(tree)
+            except Exception:
+                self.source_code = ""
+        else:
+            self.source_code = ""
+
+        self.source_lines = self.source_code.splitlines()
 
     def add_violation(
         self,
         line_number: int,
         message: str,
         remediation: str,
-        column_number: Optional[int] = None,
-        detected_code: Optional[str] = None,
-        suggested_fix: Optional[str] = None,
+        column_number: int | None = None,
+        detected_code: str | None = None,
+        suggested_fix: str | None = None,
         confidence: ConfidenceLevel = ConfidenceLevel.HIGH,
         severity: str = "error",
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         """
         Add a violation with automatic suppression checking.
@@ -158,7 +161,7 @@ class BaseValidationRule(ABC, ast.NodeVisitor):
                 reason=suppression_reason,
             )
 
-    def _check_suppression(self, line_number: int) -> tuple[bool, Optional[str]]:
+    def _check_suppression(self, line_number: int) -> tuple[bool, str | None]:
         """
         Check if violation on this line is suppressed via # noqa comment.
 
@@ -214,9 +217,7 @@ class BaseValidationRule(ABC, ast.NodeVisitor):
         end = min(len(self.source_lines), line_number + context)
 
         context_lines = self.source_lines[start:end]
-        return "\n".join(
-            f"{i + start + 1:4d} | {line}" for i, line in enumerate(context_lines)
-        )
+        return "\n".join(f"{i + start + 1:4d} | {line}" for i, line in enumerate(context_lines))
 
     # ====================
     # AST Utility Methods
@@ -250,9 +251,7 @@ class BaseValidationRule(ABC, ast.NodeVisitor):
         """
         return isinstance(node, ast.Name) and node.id == name
 
-    def is_attribute_call(
-        self, node: ast.Call, object_name: str, attr_name: str
-    ) -> bool:
+    def is_attribute_call(self, node: ast.Call, object_name: str, attr_name: str) -> bool:
         """
         Check if Call node matches pattern: object_name.attr_name(...)
 
@@ -311,42 +310,4 @@ class BaseValidationRule(ABC, ast.NodeVisitor):
                 return True
             if isinstance(base, ast.Attribute) and pattern in base.attr:
                 return True
-        return False
-
-    # ====================
-    # Regex Utility Methods
-    # ====================
-
-    def find_regex_matches(
-        self, pattern: str, flags: int = 0
-    ) -> List[tuple[int, str]]:
-        """
-        Find all regex matches in source code.
-
-        Args:
-            pattern: Regex pattern
-            flags: re module flags (e.g., re.IGNORECASE)
-
-        Returns:
-            List of (line_number, matched_text) tuples
-        """
-        matches = []
-        for line_num, line in enumerate(self.source_lines, start=1):
-            for match in re.finditer(pattern, line, flags):
-                matches.append((line_num, match.group(0)))
-        return matches
-
-    def line_contains(self, line_number: int, substring: str) -> bool:
-        """
-        Check if a specific line contains substring.
-
-        Args:
-            line_number: Line to check (1-indexed)
-            substring: Substring to search for
-
-        Returns:
-            True if substring found in line
-        """
-        if 1 <= line_number <= len(self.source_lines):
-            return substring in self.source_lines[line_number - 1]
         return False
