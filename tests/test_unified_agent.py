@@ -27,10 +27,10 @@ with patch.dict(
 ):
     from httpx import AsyncClient
     from openai import AsyncOpenAI
-    from supabase.client import Client
 
     # Import the unified agent
     from src.agent import UnifiedAgentDeps, run_unified_agent, super_agent
+    from supabase.client import Client
 
 
 @pytest.fixture
