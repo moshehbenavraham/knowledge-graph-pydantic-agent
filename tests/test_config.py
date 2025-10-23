@@ -221,7 +221,7 @@ class TestAPIConfig:
         with patch.dict(
             os.environ,
             {
-                "API_HOST": "0.0.0.0",
+                "API_HOST": "0.0.0.0",  # nosec B104 - test config, binding to all interfaces is intentional
                 "API_PORT": "8080",
                 "HOT_RELOAD": "true",
                 "LOG_LEVEL": "INFO",
@@ -231,7 +231,7 @@ class TestAPIConfig:
             reload_settings()
 
             config = api_config.get_uvicorn_config()
-            assert config["host"] == "0.0.0.0"
+            assert config["host"] == "0.0.0.0"  # nosec B104 - test assertion
             assert config["port"] == 8080
             assert config["reload"] is True
             assert config["log_level"] == "info"
@@ -373,7 +373,9 @@ class TestClientsConfig:
             assert clients_config.supabase_service_key == "service-key"
             assert clients_config.neo4j_uri == "bolt://neo4j:7687"
             assert clients_config.neo4j_user == "neo4j_user"
-            assert clients_config.neo4j_password == "neo4j_pass"
+            assert (
+                clients_config.neo4j_password == "neo4j_pass"
+            )  # nosec B105 - test data, not a real password
 
 
 class TestUIConfig:

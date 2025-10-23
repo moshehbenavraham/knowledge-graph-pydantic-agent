@@ -19,9 +19,18 @@ TEST_ENV_VARS = {
 }
 
 with patch.dict(os.environ, TEST_ENV_VARS):
-    # Add src directory to path to import the module
-    sys.path.append(str(Path(__file__).parent.parent.resolve() / "src"))
-    from clients.memory import get_mem0_client, get_mem0_client_async, get_mem0_config
+    # Add project root to path to import src module properly
+    sys.path.insert(0, str(Path(__file__).parent.parent.resolve()))
+    from src.clients.memory import get_mem0_client, get_mem0_client_async, get_mem0_config
+    from src.config import clients
+    from src.config.settings import reload_settings
+
+
+def reload_config():
+    """Reload settings and recreate clients_config singleton for testing."""
+    reload_settings()
+    # Recreate the clients_config singleton with fresh settings
+    clients.clients_config = clients.ClientsConfig()
 
 
 class TestMemoryConfiguration:
@@ -40,6 +49,7 @@ class TestMemoryConfiguration:
     )
     def test_openai_memory_configuration(self):
         """Test memory configuration with OpenAI providers."""
+        reload_config()  # Clear cache and recreate singletons with patched env
         config = get_mem0_config()
 
         # Test LLM configuration
@@ -69,6 +79,7 @@ class TestMemoryConfiguration:
     )
     def test_openrouter_memory_configuration(self):
         """Test memory configuration with OpenRouter LLM and OpenAI embeddings."""
+        reload_config()  # Clear cache and recreate singletons with patched env
         config = get_mem0_config()
 
         # Test LLM configuration (OpenRouter uses OpenAI provider in mem0)
@@ -84,14 +95,18 @@ class TestMemoryConfiguration:
         {
             "LLM_PROVIDER": "ollama",
             "LLM_BASE_URL": "http://localhost:11434/v1",
+            "LLM_MODEL": "llama3.1",
             "LLM_CHOICE": "llama3.1",
             "EMBEDDING_PROVIDER": "ollama",
             "EMBEDDING_BASE_URL": "http://localhost:11434/v1",
+            "EMBEDDING_MODEL": "nomic-embed-text",
             "EMBEDDING_MODEL_CHOICE": "nomic-embed-text",
+            "EMBEDDING_DIMENSION": "768",  # Ollama uses 768-dim embeddings
         },
     )
     def test_ollama_memory_configuration(self):
         """Test memory configuration with Ollama providers."""
+        reload_config()  # Clear cache and recreate singletons with patched env
         config = get_mem0_config()
 
         # Test LLM configuration
@@ -115,12 +130,15 @@ class TestMemoryConfiguration:
             {
                 "LLM_PROVIDER": "ollama",
                 "LLM_BASE_URL": "http://localhost:11434/v1",
+                "LLM_MODEL": "llama3.1",
                 "LLM_CHOICE": "llama3.1",
                 "EMBEDDING_PROVIDER": "openai",
                 "EMBEDDING_API_KEY": "sk-test-key",
+                "EMBEDDING_MODEL": "text-embedding-3-small",
                 "EMBEDDING_MODEL_CHOICE": "text-embedding-3-small",
             },
         ):
+            reload_config()  # Clear cache and recreate singletons with patched env
             config = get_mem0_config()
 
             # LLM should be Ollama
@@ -137,6 +155,7 @@ class TestMemoryConfiguration:
         with patch.dict(
             os.environ, {"LLM_PROVIDER": "openai", "EMBEDDING_PROVIDER": "openai"}, clear=False
         ):
+            reload_config()  # Clear cache and recreate singletons with patched env
             config = get_mem0_config()
 
             # Should use default embedding model
@@ -189,11 +208,14 @@ class TestMemoryClientInitialization:
             os.environ,
             {
                 "LLM_PROVIDER": "ollama",
+                "LLM_MODEL": "custom-model",
                 "LLM_CHOICE": "custom-model",
                 "EMBEDDING_PROVIDER": "ollama",
+                "EMBEDDING_MODEL": "custom-embed-model",
                 "EMBEDDING_MODEL_CHOICE": "custom-embed-model",
             },
         ):
+            reload_config()  # Clear cache and recreate singletons with patched env
             client = get_mem0_client()
 
             # Verify client was created
@@ -285,6 +307,7 @@ class TestMemoryErrorHandling:
                 "EMBEDDING_PROVIDER": "invalid_embedding_provider",
             },
         ):
+            reload_config()  # Clear cache and recreate singletons with patched env
             config = get_mem0_config()
 
             # Should not have LLM or embedder config for invalid providers
@@ -294,6 +317,7 @@ class TestMemoryErrorHandling:
     def test_missing_required_environment_variables(self):
         """Test behavior when required environment variables are missing."""
         with patch.dict(os.environ, {}, clear=True):
+            reload_config()  # Clear cache and recreate singletons with patched env
             config = get_mem0_config()
 
             # Should still have vector store configuration

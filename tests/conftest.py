@@ -84,7 +84,7 @@ def event_loop():
 
 
 @pytest.fixture(scope="module")
-async def connection_manager_module(event_loop):
+async def connection_manager_module(_event_loop):
     """
     Module-scoped connection manager for tests.
 

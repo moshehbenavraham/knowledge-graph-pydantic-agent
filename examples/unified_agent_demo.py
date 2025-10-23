@@ -14,7 +14,6 @@ This demonstrates the capabilities of our new unified agent that combines:
 """
 
 import asyncio
-import os
 
 from dotenv import load_dotenv
 from httpx import AsyncClient
@@ -26,6 +25,7 @@ load_dotenv()
 from src.agent import UnifiedAgentDeps, run_unified_agent, super_agent
 from src.clients import get_supabase_client
 from src.clients.embedding import get_embedding_client
+from src.config import get_settings
 
 
 async def demo_basic_usage():
@@ -78,7 +78,8 @@ async def demo_advanced_features():
     print("ADVANCED FEATURES DEMO")
     print("=" * 60)
 
-    # Get clients
+    # Get clients and settings
+    settings = get_settings()
     supabase = get_supabase_client()
     embedding_client = get_embedding_client()
     http_client = AsyncClient()
@@ -88,10 +89,10 @@ async def demo_advanced_features():
         supabase=supabase,
         embedding_client=embedding_client,
         http_client=http_client,
-        brave_api_key=os.getenv("BRAVE_API_KEY"),
-        searxng_base_url=os.getenv("SEARXNG_BASE_URL"),
-        jina_api_key=os.getenv("JINA_API_KEY"),
-        web_search_provider=os.getenv("WEB_SEARCH_PROVIDER"),
+        brave_api_key=settings.brave_api_key,
+        searxng_base_url=settings.searxng_base_url,
+        jina_api_key=settings.jina_api_key,
+        web_search_provider=settings.web_search_provider,
         memories="User is a data scientist interested in AI research",
         session_id="advanced_demo",
         search_config={

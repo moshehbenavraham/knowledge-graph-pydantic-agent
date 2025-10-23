@@ -9,6 +9,120 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.5] - 2025-10-23
+
+### Added - Enhanced Code Quality Development Tools
+
+**New code analysis tools for maintaining high code quality standards and comprehensive pre-commit validation.**
+
+#### Development Tools Integration
+
+**New Dependencies** (`pyproject.toml`):
+- **vulture>=2.10** - Dead code detection
+- **radon>=6.0.1** - Cyclomatic complexity and maintainability analysis
+- **interrogate>=1.5.0** - Docstring coverage validation
+
+**Makefile Targets** (`Makefile` lines 31-49):
+- `make deadcode` - Scan for unused code with vulture (70% confidence threshold)
+  - Detects unused variables, functions, classes, imports
+  - Currently finding 19 unused items across codebase (test fixtures, exception variables)
+- `make complexity` - Analyze code complexity with radon
+  - Cyclomatic complexity analysis (169 blocks analyzed, average B rating)
+  - Maintainability index calculation
+  - Shows function-level complexity scores (A-F rating)
+- `make docstring-coverage` - Check documentation coverage with interrogate
+  - Enforces 75% minimum coverage threshold
+  - Currently at **91.7% coverage** ✅ (830/905 items documented)
+  - Ignores `__init__` methods and modules
+- `make quality` - Comprehensive quality check
+  - Runs all quality tools in sequence: lint → security → deadcode → complexity → docstring-coverage
+  - Single command for complete code quality audit
+
+**Pre-commit Hook Integration** (`.pre-commit-config.yaml`):
+- **Added interrogate to pre-commit hooks** (lines 26-33):
+  - Automatically enforces 75% docstring coverage on every commit
+  - Runs only on Python files with changes
+  - Quiet mode (minimal output on success)
+  - Blocks commits that drop coverage below threshold
+- **Updated deprecated stage names**:
+  - Migrated `stages: [commit]` → `stages: [pre-commit]` (modern syntax)
+  - Migrated `stages: [commit, manual]` → `stages: [pre-commit, manual]`
+  - Eliminates pre-commit deprecation warnings
+
+**Virtual Environment Activation** (`Makefile`):
+- All new tool targets use `bash -c "source .venv/bin/activate && <command>"` pattern
+  - Ensures tools are accessible from virtualenv
+  - Consistent with existing run targets (run-ui, run-rag, etc.)
+  - Prevents "command not found" errors
+
+#### Code Quality Metrics Baseline
+
+**Dead Code Analysis** (vulture):
+- Found 19 unused items (100% confidence)
+- Mostly test fixtures and exception handling variables
+- Example: `exc_tb` in exception handlers, `sample_document_with_chunks` fixtures
+
+**Complexity Analysis** (radon):
+- 169 code blocks analyzed
+- Average complexity: **B (9.23)** - Good! ✅
+- Most functions rated B or C (acceptable)
+- One F-rated function: `constitution_validator.cli.validate()` (needs refactoring)
+- Several D-E rated functions in UI (expected for interactive code)
+
+**Docstring Coverage** (interrogate):
+- **91.7% overall coverage** (830/905 items) ✅
+- Exceeds 75% minimum requirement
+- Areas needing improvement:
+  - UI handlers: base_handler.py (0%), memory_handler.py (0%), streaming_handler.py (0%), mcp_handler.py (0%)
+  - Tools: code_execution.py (0%), image_analysis.py (0%)
+  - clients/memory.py (0%)
+- Strong coverage in core systems: analytics (100%), RAG (90-100%), API (89-100%)
+
+### Changed
+
+- **Pre-commit workflow**: Now includes docstring coverage validation
+  - Commits blocked if coverage drops below 75%
+  - Prevents documentation debt accumulation
+- **Development commands**: Added 4 new quality check targets to Makefile
+- **Code quality standards**: Explicit tooling for maintainability and documentation
+
+### Technical Notes
+
+**Design Decisions**:
+- **Vulture**: Available via `make deadcode` only (not in pre-commit)
+  - Rationale: Too many false positives (pytest fixtures, dynamic imports)
+  - Would block legitimate commits unnecessarily
+- **Radon**: Available via `make complexity` only (not in pre-commit)
+  - Rationale: Complexity checks better as manual reviews
+  - UI code naturally has higher complexity (not always refactorable)
+- **Interrogate**: Added to pre-commit hooks ✅
+  - Rationale: Already passing at 91.7%, prevents regression
+  - Enforces documentation standards automatically
+  - Low false positive rate (ignores `__init__` methods)
+
+**Tool Configuration**:
+- Vulture: 70% confidence threshold (reduces false positives)
+- Radon: `-a` (average complexity), `-nb` (no borders for clean output)
+- Interrogate: `--fail-under 75`, `--ignore-init-method`, `--ignore-init-module`
+
+**Usage Workflow**:
+```bash
+# Run individual tools
+make deadcode           # Find unused code
+make complexity         # Check code complexity
+make docstring-coverage # Verify documentation
+
+# Run all quality checks
+make quality            # lint + security + deadcode + complexity + docstring-coverage
+
+# Pre-commit automatically runs
+git commit -m "..."     # Interrogate runs automatically, blocks if coverage < 75%
+```
+
+**Impact**: Enhanced code quality tooling with minimal friction - comprehensive analysis available on-demand, critical checks (documentation) enforced automatically.
+
+---
+
 ## [1.2.4] - 2025-10-17
 
 ### Fixed - Streaming UX, SQL, Memory, and API Deprecation

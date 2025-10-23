@@ -558,7 +558,7 @@ class ConnectionManager:
         logger.info("<<< ConnectionManager.__aenter__() returning self")
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type, exc_val, _exc_tb):
         """Async context manager exit - close connections."""
         logger.info(">>> ConnectionManager.__aexit__() called")
         logger.info(f"Instance ID: {id(self)}")

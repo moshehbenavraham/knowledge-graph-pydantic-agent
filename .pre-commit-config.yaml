@@ -3,12 +3,12 @@ repos:
     hooks:
     -   id: constitution-validator
         name: Constitution Compliance Validator
-        entry: validate-constitution --quiet --skip-coverage
+        entry: bash -c "source .venv/bin/activate && PYTHONPATH=$(pwd):$PYTHONPATH constitution-validate validate --quiet --skip-coverage"
         language: system
         types: [python]
         pass_filenames: true
         always_run: false
-        stages: [commit]
+        stages: [pre-commit]
         verbose: false
     -   id: check-problematic-chars
         name: Check for problematic characters
@@ -22,11 +22,20 @@ repos:
         language: system
         files: '\.md$'
         pass_filenames: false
-        stages: [commit, manual]
+        stages: [pre-commit, manual]
+    -   id: interrogate
+        name: Check docstring coverage
+        entry: bash -c "source .venv/bin/activate && interrogate"
+        language: system
+        types: [python]
+        args: ['--fail-under', '75', '--ignore-init-method', '--ignore-init-module', '--quiet']
+        pass_filenames: true
+        stages: [pre-commit]
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
     -   id: check-yaml
+        exclude: ^(mkdocs\.yml|\.github/workflows/performance\.yml)$  # Exclude files with Python-specific YAML tags or embedded code
     -   id: end-of-file-fixer
     -   id: trailing-whitespace
     -   id: check-added-large-files

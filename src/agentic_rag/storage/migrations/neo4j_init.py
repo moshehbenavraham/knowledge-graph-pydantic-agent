@@ -225,15 +225,16 @@ async def initialize_neo4j(uri: str, user: str, password: str):
 
 
 if __name__ == "__main__":
-    import os
-
     from dotenv import load_dotenv
+
+    from src.config import get_settings
 
     load_dotenv()
 
-    neo4j_uri = os.getenv("NEO4J_URI")
-    neo4j_user = os.getenv("NEO4J_USER")
-    neo4j_password = os.getenv("NEO4J_PASSWORD")
+    settings = get_settings()
+    neo4j_uri = settings.neo4j_uri
+    neo4j_user = settings.neo4j_user
+    neo4j_password = settings.neo4j_password
 
     if not all([neo4j_uri, neo4j_user, neo4j_password]):
         raise ValueError(

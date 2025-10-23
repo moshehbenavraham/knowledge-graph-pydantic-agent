@@ -15,7 +15,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, model_validator
 
 logger = logging.getLogger(__name__)
 
@@ -48,13 +48,14 @@ class SearchAnalyticsEvent(BaseModel):
     source: str = Field(default="ui", pattern="^(ui|api|cli)$")
     metadata: dict[str, Any] = Field(default_factory=dict)
 
-    @field_validator("query_hash", mode="before")
-    @classmethod
-    def generate_query_hash(cls, v: str, info) -> str:
+    @model_validator(mode="after")
+    def generate_query_hash(self) -> "SearchAnalyticsEvent":
         """Auto-generate query hash from query_text if not provided."""
-        if not v and info.data.get("query_text"):
-            return hashlib.md5(info.data["query_text"].encode(), usedforsecurity=False).hexdigest()
-        return v
+        if not self.query_hash and self.query_text:
+            self.query_hash = hashlib.md5(
+                self.query_text.encode(), usedforsecurity=False
+            ).hexdigest()
+        return self
 
 
 class ToolUsageEvent(BaseModel):

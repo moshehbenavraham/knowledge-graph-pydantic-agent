@@ -1,6 +1,7 @@
 import asyncio
 import json
 import tempfile
+import time
 import warnings
 from pathlib import Path
 
@@ -199,6 +200,122 @@ def initialize_session_state():
     logger.info("=" * 80)
     logger.info("initialize_session_state() called")
 
+    # Check if this is the first initialization
+    is_first_init = "handler" not in st.session_state
+
+    # Only show loading screen on first initialization
+    if is_first_init:
+        loading_placeholder = st.empty()
+        with loading_placeholder.container():
+            st.markdown(
+                """
+                <style>
+                .loading-container {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 4rem 2rem;
+                    text-align: center;
+                }
+                .loading-title {
+                    font-size: 2.5rem;
+                    font-weight: 700;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                    margin-bottom: 1rem;
+                    animation: pulse 2s ease-in-out infinite;
+                }
+                @keyframes pulse {
+                    0%, 100% { opacity: 1; }
+                    50% { opacity: 0.7; }
+                }
+                .loading-subtitle {
+                    font-size: 1.2rem;
+                    color: #666;
+                    margin-bottom: 2rem;
+                }
+                </style>
+                <div class="loading-container">
+                    <div class="loading-title">🚀 AI with Apex</div>
+                    <div class="loading-subtitle">Initializing Advanced RAG Agent...</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            progress_bar = st.progress(0, text="Starting initialization...")
+            time.sleep(0.3)
+
+            # Step 1: Initialize messages
+            if "messages" not in st.session_state:
+                progress_bar.progress(10, text="📝 Setting up message history...")
+                st.session_state.messages = []
+                logger.info("Session state: messages initialized (empty list)")
+                time.sleep(0.2)
+
+            # Step 2: Initialize config
+            if "config" not in st.session_state:
+                progress_bar.progress(25, text="⚙️ Loading configuration...")
+                logger.info("Session state: config not found, creating UIConfig...")
+                st.session_state.config = UIConfig()
+                logger.info(
+                    "Session state: config created",
+                    mode=st.session_state.config.mode.value,
+                    features=st.session_state.config.features,
+                )
+                time.sleep(0.3)
+
+            # Step 3: Create handler
+            progress_bar.progress(40, text="🔧 Creating handler components...")
+            handler = st.session_state.config.get_handler()
+            logger.info(
+                "Session state: handler created",
+                handler_type=type(handler).__name__,
+            )
+            time.sleep(0.4)
+
+            # Step 4: Initialize clients
+            progress_bar.progress(55, text="🔌 Connecting to services...")
+            st.session_state.handler = handler
+            time.sleep(0.5)
+
+            # Step 5: Initialize handler (this is the slow part - no artificial delay needed)
+            mode_name = st.session_state.config.mode.value.title()
+            features = []
+            if st.session_state.config.features.get("streaming"):
+                features.append("Streaming")
+            if st.session_state.config.features.get("memory"):
+                features.append("Memory")
+            if st.session_state.config.features.get("mcp"):
+                features.append("MCP")
+
+            feature_text = f" ({', '.join(features)})" if features else ""
+            progress_bar.progress(70, text=f"🧠 Initializing {mode_name} mode{feature_text}...")
+
+            logger.info("Initializing handler...")
+            st.session_state.handler.initialize()
+            logger.info("Handler initialization complete")
+
+            # Step 6: Finalize
+            progress_bar.progress(90, text="✨ Finalizing setup...")
+            time.sleep(0.3)
+
+            # Step 7: Complete
+            progress_bar.progress(100, text="✅ Ready to chat!")
+            time.sleep(0.5)
+
+        # Clear the loading screen
+        loading_placeholder.empty()
+    else:
+        # Fast path for subsequent calls
+        logger.debug(
+            "Session state: handler already exists",
+            handler_type=type(st.session_state.handler).__name__,
+        )
+
+    # Initialize remaining state
     if "messages" not in st.session_state:
         st.session_state.messages = []
         logger.info("Session state: messages initialized (empty list)")
@@ -219,24 +336,6 @@ def initialize_session_state():
         logger.debug(
             "Session state: config already exists",
             mode=st.session_state.config.mode.value,
-        )
-
-    if "handler" not in st.session_state:
-        logger.info("Session state: handler not found, creating handler...")
-        handler = st.session_state.config.get_handler()
-        logger.info(
-            "Session state: handler created",
-            handler_type=type(handler).__name__,
-        )
-
-        logger.info("Initializing handler...")
-        st.session_state.handler = handler
-        st.session_state.handler.initialize()
-        logger.info("Handler initialization complete")
-    else:
-        logger.debug(
-            "Session state: handler already exists",
-            handler_type=type(st.session_state.handler).__name__,
         )
 
     if "theme" not in st.session_state:
@@ -411,23 +510,40 @@ def render_sidebar():
             st.divider()
             st.subheader("📊 Metrics")
 
-            # Count actual user/assistant message pairs (not technical message objects)
-            conversation_count = 0
-            for msg in st.session_state.messages:
-                if isinstance(msg, ModelRequest | ModelResponse):
-                    for part in msg.parts:
-                        if part.part_kind in ["user-prompt", "text"] and part.content:
-                            conversation_count += 1
+            # Create containers for metrics that update dynamically
+            metrics_container = st.container()
 
-            st.metric("Messages", conversation_count)
+            with metrics_container:
+                # Count actual user/assistant message pairs (not technical message objects)
+                conversation_count = 0
+                for msg in st.session_state.messages:
+                    if isinstance(msg, ModelRequest | ModelResponse):
+                        for part in msg.parts:
+                            if part.part_kind in ["user-prompt", "text"] and part.content:
+                                conversation_count += 1
 
-            if (
-                hasattr(st.session_state.handler, "memory_client")
-                and st.session_state.handler.memory_client
-            ):
-                st.metric("Memories", "Active")
-            else:
-                st.metric("Memories", "Inactive")
+                # Check memory status
+                memory_active = (
+                    hasattr(st.session_state.handler, "memory_client")
+                    and st.session_state.handler.memory_client
+                )
+
+                logger.debug(
+                    "Sidebar metrics calculated",
+                    conversation_count=conversation_count,
+                    memory_active=memory_active,
+                    total_message_objects=len(st.session_state.messages),
+                )
+
+                # Display message count with visual indicator
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.metric("Messages", conversation_count, delta=None)
+                with col2:
+                    if memory_active:
+                        st.metric("Memory", "✅ Active")
+                    else:
+                        st.metric("Memory", "❌ Off")
 
         # About Section
         st.divider()
@@ -462,7 +578,9 @@ async def _render_dashboard_content(handler: DashboardHandler):
     col1, col2 = st.columns([6, 1])
     with col2:
         if st.button("🔄 Refresh"):
+            logger.info("Dashboard refresh button clicked - clearing cache and rerunning")
             handler.clear_cache()
+            logger.debug("Dashboard cache cleared")
             st.rerun()
 
     st.divider()
@@ -891,12 +1009,20 @@ def export_conversation():
     import json
     from datetime import datetime
 
+    logger.info("=" * 80)
+    logger.info(
+        "Export conversation requested",
+        current_message_count=len(st.session_state.messages),
+        mode=st.session_state.config.mode.value,
+    )
+
     export_data = {
         "timestamp": datetime.now().isoformat(),
         "mode": st.session_state.config.mode.value,
         "messages": [],
     }
 
+    message_count = 0
     for msg in st.session_state.messages:
         if isinstance(msg, ModelRequest | ModelResponse):
             for part in msg.parts:
@@ -907,13 +1033,27 @@ def export_conversation():
                             "content": part.content,
                         }
                     )
+                    message_count += 1
+
+    file_name = f"conversation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    export_json = json.dumps(export_data, indent=2)
+    export_size_kb = round(len(export_json) / 1024, 2)
+
+    logger.info(
+        "Conversation export prepared",
+        messages_exported=message_count,
+        file_name=file_name,
+        export_size_kb=export_size_kb,
+    )
 
     st.download_button(
         label="Download JSON",
-        data=json.dumps(export_data, indent=2),
-        file_name=f"conversation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+        data=export_json,
+        file_name=file_name,
         mime="application/json",
     )
+
+    logger.info("Export download button displayed", file_name=file_name)
 
 
 async def handle_user_input(user_input: str):
@@ -969,6 +1109,9 @@ async def handle_user_input(user_input: str):
                         "Messages added to session state",
                         total_message_count=len(st.session_state.messages),
                     )
+
+                    # Set flag to update metrics on next render
+                    st.session_state.needs_metrics_update = True
         else:
             # Streaming mode
             logger.info("STREAMING mode - executing streaming handler...")
@@ -1100,11 +1243,21 @@ async def handle_user_input(user_input: str):
                             total_message_count=len(st.session_state.messages),
                         )
 
+                        # Set flag to update metrics on next render
+                        st.session_state.needs_metrics_update = True
+
             logger.info(
                 "handle_user_input() COMPLETE - streaming finished",
                 **chunk_counts,
                 final_response_length=len(full_response),
             )
+
+    # Trigger rerun to update sidebar metrics after message is added
+    # (applies to both streaming and non-streaming modes)
+    if st.session_state.get("needs_metrics_update", False):
+        logger.debug("Triggering rerun to update sidebar metrics")
+        st.session_state.needs_metrics_update = False
+        st.rerun()
 
 
 async def main():

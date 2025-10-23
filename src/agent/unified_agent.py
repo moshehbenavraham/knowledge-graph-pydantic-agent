@@ -25,6 +25,7 @@ from dotenv import load_dotenv
 from httpx import AsyncClient
 from openai import AsyncOpenAI
 from pydantic_ai import Agent, RunContext
+from supabase.client import Client
 
 from src.clients.llm import get_model
 from src.config.agent import agent_config
@@ -38,7 +39,6 @@ from src.tools import (
     web_search_tool,
 )
 from src.tools.rag import graph_query_tool, smart_search_tool
-from supabase.client import Client
 
 # Load environment
 load_dotenv()
@@ -520,7 +520,7 @@ async def comprehensive_search(
 
 @super_agent.tool
 async def iterative_search(
-    ctx: RunContext[UnifiedAgentDeps], query: str, max_iterations: int = 3
+    ctx: RunContext[UnifiedAgentDeps], query: str, _max_iterations: int = 3
 ) -> dict[str, Any]:
     """
     Multi-step iterative search for complex queries.
@@ -533,7 +533,7 @@ async def iterative_search(
 
     Args:
         query: Complex query requiring multiple search steps
-        max_iterations: Maximum refinement iterations
+        _max_iterations: Maximum refinement iterations (reserved for future use)
 
     Returns:
         Detailed results from iterative exploration

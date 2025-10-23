@@ -851,10 +851,16 @@ make test-coverage         # Generates htmlcov/ directory
 ```
 
 ### Quality Enforcement
-- Pre-commit hooks enforce formatting (`Black`) and linting (`Ruff`)
+- Pre-commit hooks enforce formatting (`Black`), linting (`Ruff`), and docstring coverage (`interrogate`)
 - Minimum test coverage: 75% (enforced by `pytest-cov`)
+- Minimum docstring coverage: 75% (enforced by `interrogate` pre-commit hook)
 - Type checking with `mypy` (where configured)
 - Security scanning with `bandit` and `safety`
+- Code quality tools: `vulture` (dead code), `radon` (complexity), `interrogate` (docstrings)
+  - Run `make deadcode` to find unused code (19 items baseline)
+  - Run `make complexity` to check code complexity (average B rating)
+  - Run `make docstring-coverage` to verify documentation (91.7% baseline)
+  - Run `make quality` for comprehensive quality check (all tools at once)
 
 ### Continuous Integration
 Integration and load tests can be added to CI pipelines. See `docs/operations/API_RUNBOOK.md` for recommended CI configuration.

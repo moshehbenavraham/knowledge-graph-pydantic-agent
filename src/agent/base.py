@@ -1,4 +1,8 @@
-"""Base agent class for the AI agent system."""
+"""Base agent class for the AI agent system.
+
+Note: This module contains legacy agent interfaces maintained for backward compatibility.
+The unified agent (src/agent/unified_agent.py) should be used for new implementations.
+"""
 
 from abc import ABC, abstractmethod
 from typing import Any
@@ -14,8 +18,13 @@ class AgentResponse(BaseModel):
     sources: list[str] | None = None
 
 
+# constitution-validator: disable (Principle I - legacy interface for backward compatibility)
 class BaseAgent(ABC):
-    """Abstract base class for AI agents."""
+    """Abstract base class for AI agents.
+
+    DEPRECATED: Use UnifiedAgentDeps and super_agent from src/agent/unified_agent.py instead.
+    This class is maintained for backward compatibility only.
+    """
 
     def __init__(self, name: str, temperature: float = 0.7):
         self.name = name

@@ -4,36 +4,59 @@ setup:
 	pre-commit install
 
 check:
-	ruff check src/ tests/
-	mypy src/ tests/
-	pytest tests/
+	bash -c "source .venv/bin/activate && ruff check src/ tests/"
+	bash -c "source .venv/bin/activate && mypy src/ tests/"
+	bash -c "source .venv/bin/activate && pytest tests/"
 
 format:
-	black src/ tests/
-	ruff check --fix src/ tests/
+	bash -c "source .venv/bin/activate && black src/ tests/"
+	bash -c "source .venv/bin/activate && ruff check --fix src/ tests/"
 
 test:
-	pytest tests/
+	bash -c "source .venv/bin/activate && pytest tests/"
 
 test-coverage:
-	pytest --cov=src --cov-report=term-missing --cov-report=html tests/
+	bash -c "source .venv/bin/activate && pytest --cov=src --cov-report=term-missing --cov-report=html tests/"
 
 lint:
-	ruff check src/ tests/
-	black --check src/ tests/
+	bash -c "source .venv/bin/activate && ruff check src/ tests/"
+	bash -c "source .venv/bin/activate && black --check src/ tests/"
 
 security:
-	pip install -e .[security]
-	bandit -r src/
-	safety check
-	pip-audit
+	bash -c "source .venv/bin/activate && pip install -e .[security]"
+	bash -c "source .venv/bin/activate && bandit -r src/"
+	bash -c "source .venv/bin/activate && safety check"
+	bash -c "source .venv/bin/activate && pip-audit"
+
+# Code Quality Analysis
+deadcode:
+	@echo "🔍 Scanning for dead code..."
+	bash -c "source .venv/bin/activate && vulture src/ tests/ --min-confidence 70"
+
+complexity:
+	@echo "📊 Analyzing code complexity..."
+	@echo "\n=== Cyclomatic Complexity ==="
+	bash -c "source .venv/bin/activate && radon cc src/ -a -nb"
+	@echo "\n=== Maintainability Index ==="
+	bash -c "source .venv/bin/activate && radon mi src/ -nb"
+
+docstring-coverage:
+	@echo "📝 Checking docstring coverage..."
+	bash -c "source .venv/bin/activate && interrogate src/ -v --fail-under 75 --ignore-init-method --ignore-init-module"
+
+# Comprehensive quality check
+quality: lint security deadcode complexity docstring-coverage
+	@echo "✅ All quality checks passed!"
 
 # Running Services
 run-ui:
-	bash -c "source .venv/bin/activate && PYTHONPATH=$(PWD):$$PYTHONPATH UI_MODE=$(or $(MODE),standard) streamlit run src/ui/streamlit_app.py"
+	bash -c "source .venv/bin/activate && PYTHONPATH=$(PWD):$$PYTHONPATH UI_MODE=$(or $(MODE),advanced) streamlit run src/ui/streamlit_app.py"
 
 run-ui-simple:
 	bash -c "source .venv/bin/activate && PYTHONPATH=$(PWD):$$PYTHONPATH UI_MODE=simple streamlit run src/ui/streamlit_app.py"
+
+run-ui-standard:
+	bash -c "source .venv/bin/activate && PYTHONPATH=$(PWD):$$PYTHONPATH UI_MODE=standard streamlit run src/ui/streamlit_app.py"
 
 run-ui-advanced:
 	bash -c "source .venv/bin/activate && PYTHONPATH=$(PWD):$$PYTHONPATH UI_MODE=advanced streamlit run src/ui/streamlit_app.py"
@@ -51,7 +74,7 @@ run-agentic-rag:
 	bash -c "source .venv/bin/activate && PYTHONPATH=$(PWD):$$PYTHONPATH python -m src.agentic_rag.agent.agent"
 
 dev:
-	bash -c "source .venv/bin/activate && PYTHONPATH=$(PWD):$$PYTHONPATH UI_MODE=$(or $(MODE),standard) streamlit run src/ui/streamlit_app.py --server.runOnSave true"
+	bash -c "source .venv/bin/activate && PYTHONPATH=$(PWD):$$PYTHONPATH UI_MODE=$(or $(MODE),advanced) streamlit run src/ui/streamlit_app.py --server.runOnSave true"
 
 # Docker
 docker-build:
@@ -657,4 +680,4 @@ deploy-clean-all:
 	docker-compose -f docker/docker-compose.staging.yml down -v
 	docker-compose -f docker/docker-compose.prod.yml down -v
 
-.PHONY: setup check format test test-coverage lint security run-ui run-rag run-mcp run-api run-agentic-rag dev docker-build docker-run docker-stop db-setup db-migrate neo4j-init ingest ingest-clean clean clean-all requirements install-dev load-test load-test-headless stress-test monitoring-up monitoring-down monitoring-logs profile profile-memory db-migrate db-rollback db-history db-revision redis-cli redis-flush redis-stats redis-monitor api-test api-search api-metrics api-status full-stack-up full-stack-down benchmark poetry-install poetry-update poetry-lock poetry-export poetry-build poetry-shell poetry-check poetry-show tox tox-py311 tox-py312 tox-lint tox-security tox-parallel tox-recreate http-test http-chat http-search http-status http-metrics profile-api profile-ui profile-rag profile-tests profile-top profile-memory-api profile-memory-ui redis-commander-up redis-commander-down redis-commander-logs dev-setup dev-check dev-format dev-clean pre-commit-install pre-commit-run pre-commit-update full-test full-profile full-monitoring image-build image-build-api image-push image-push-api image-tag-release image-scan image-scan-full image-sbom image-sign image-verify deploy-dev deploy-dev-down deploy-staging deploy-staging-down deploy-prod deploy-prod-down health-check health-check-staging health-check-prod rollback-staging rollback-prod ci-supply-chain ci-deploy logs-app logs-api logs-all metrics-export image-clean deploy-clean-all
+.PHONY: setup check format test test-coverage lint security run-ui run-ui-simple run-ui-standard run-ui-advanced run-rag run-mcp run-api run-agentic-rag dev docker-build docker-run docker-stop db-setup db-migrate neo4j-init ingest ingest-clean clean clean-all requirements install-dev load-test load-test-headless stress-test monitoring-up monitoring-down monitoring-logs profile profile-memory db-migrate db-rollback db-history db-revision redis-cli redis-flush redis-stats redis-monitor api-test api-search api-metrics api-status full-stack-up full-stack-down benchmark poetry-install poetry-update poetry-lock poetry-export poetry-build poetry-shell poetry-check poetry-show tox tox-py311 tox-py312 tox-lint tox-security tox-parallel tox-recreate http-test http-chat http-search http-status http-metrics profile-api profile-ui profile-rag profile-tests profile-top profile-memory-api profile-memory-ui redis-commander-up redis-commander-down redis-commander-logs dev-setup dev-check dev-format dev-clean pre-commit-install pre-commit-run pre-commit-update full-test full-profile full-monitoring image-build image-build-api image-push image-push-api image-tag-release image-scan image-scan-full image-sbom image-sign image-verify deploy-dev deploy-dev-down deploy-staging deploy-staging-down deploy-prod deploy-prod-down health-check health-check-staging health-check-prod rollback-staging rollback-prod ci-supply-chain ci-deploy logs-app logs-api logs-all metrics-export image-clean deploy-clean-all

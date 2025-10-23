@@ -464,12 +464,13 @@ print(f"LLM Model: {clients_config.llm_model}")
 ```bash
 # Use Ollama for LLM (in .env)
 LLM_PROVIDER=ollama
-LLM_BASE_URL=http://localhost:11434
+LLM_BASE_URL=http://localhost:11434/v1
 LLM_MODEL=llama3.1
 
 # Use Ollama for embeddings
 EMBEDDING_PROVIDER=ollama
-EMBEDDING_BASE_URL=http://localhost:11434
+EMBEDDING_BASE_URL=http://localhost:11434/v1
+EMBEDDING_DIMENSION=768
 EMBEDDING_MODEL=nomic-embed-text
 EMBEDDING_DIMENSION=768  # Nomic uses 768d vectors
 

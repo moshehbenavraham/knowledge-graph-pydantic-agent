@@ -139,10 +139,12 @@ grep "@super_agent.tool" src/agent/unified_agent.py -A 2
 4. **Set removal date** (recommended: 2 major versions)
 
 **Example Deprecation Notice:**
-```markdown
-> **⚠️ DEPRECATED:** This feature is deprecated as of v1.2.0 and will be removed in v2.0.0.
-> Use [new-feature](link-to-new-feature.md) instead. See [migration guide](migration.md) for details.
 ```
+> **⚠️ DEPRECATED:** This feature is deprecated as of v1.2.0 and will be removed in v2.0.0.
+> Use \[new-feature\](path/to/new-feature.md) instead. See \[migration guide\](path/to/migration.md) for details.
+```
+
+*Note: Remove the backslashes and replace the placeholder paths with actual file paths when using this template.*
 
 ---
 
@@ -176,13 +178,21 @@ docs/
 ### Link Guidelines
 
 **Relative Links:**
-```markdown
+
+Example syntax (replace placeholder paths with actual paths):
+```
 <!-- From docs/5-guides/usage.md to docs/4-configuration/environment.md -->
-[Configuration Guide](../4-configuration/environment.md)
+\[Link Text\](../4-configuration/target-file.md)
 
 <!-- From docs/5-guides/ to src/ (2 levels up) -->
-[Source Code](../../src/agent/unified_agent.py)
+\[Link Text\](../../src/path/to/file.py)
 ```
+
+*Note: Remove the backslashes from the square brackets when using these examples.*
+
+Actual working examples:
+- Configuration: [environment.md](4-configuration/environment.md)
+- Installation: [installation-reference.md](2-getting-started/installation-reference.md)
 
 **Internal Links:**
 - Always use relative paths

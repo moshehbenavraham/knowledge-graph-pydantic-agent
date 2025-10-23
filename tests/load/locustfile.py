@@ -1,6 +1,10 @@
-"""Locust load testing scenarios for Agentic RAG API."""
+"""Locust load testing scenarios for Agentic RAG API.
 
-import random
+Note: This file uses random.choice() for selecting test queries.
+This is safe for load testing purposes and not used for cryptographic operations.
+"""
+
+import random  # nosec B311 - random is safe for non-cryptographic load testing
 import time
 
 import structlog
@@ -39,7 +43,7 @@ class AgenticRAGUser(HttpUser):
     @task(3)
     def chat_simple(self):
         """Simple chat request without streaming."""
-        query = random.choice(SAMPLE_QUERIES)
+        query = random.choice(SAMPLE_QUERIES)  # nosec B311
 
         with self.client.post(
             "/api/v1/chat",
@@ -73,7 +77,7 @@ class AgenticRAGUser(HttpUser):
     @task(2)
     def search_vector(self):
         """Vector search request."""
-        query = random.choice(SAMPLE_QUERIES)
+        query = random.choice(SAMPLE_QUERIES)  # nosec B311
 
         with self.client.post(
             "/api/v1/search",
@@ -105,7 +109,7 @@ class AgenticRAGUser(HttpUser):
     @task(2)
     def search_hybrid(self):
         """Hybrid search request."""
-        query = random.choice(SAMPLE_QUERIES)
+        query = random.choice(SAMPLE_QUERIES)  # nosec B311
 
         with self.client.post(
             "/api/v1/search",
@@ -135,7 +139,7 @@ class AgenticRAGUser(HttpUser):
     @task(1)
     def search_graph(self):
         """Graph search request."""
-        query = random.choice(SAMPLE_QUERIES)
+        query = random.choice(SAMPLE_QUERIES)  # nosec B311
 
         with self.client.post(
             "/api/v1/search",
@@ -172,7 +176,7 @@ class AgenticRAGUser(HttpUser):
             return
 
         # Create a follow-up question
-        previous_query = random.choice(
+        previous_query = random.choice(  # nosec B311
             self.query_history[-3:] if len(self.query_history) > 3 else self.query_history
         )
         follow_up = f"Tell me more about that. Specifically regarding: {previous_query}"
@@ -211,7 +215,7 @@ class AgenticRAGUser(HttpUser):
     @task(1)
     def streaming_chat(self):
         """Test streaming chat endpoint."""
-        query = random.choice(SAMPLE_QUERIES)
+        query = random.choice(SAMPLE_QUERIES)  # nosec B311
 
         with self.client.post(
             "/api/v1/chat/stream",

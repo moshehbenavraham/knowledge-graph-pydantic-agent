@@ -19,6 +19,7 @@ Tests cover:
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import openai
 import pytest
 
 from src.agentic_rag.ingestion.embedder import (
@@ -259,13 +260,24 @@ class TestEmbeddingGenerator:
         with pytest.raises(NotImplementedError, match="Nomic provider not yet implemented"):
             _ = generator.client
 
-    def test_create_client_ollama_not_implemented(self):
-        """Test that Ollama provider raises NotImplementedError."""
+    @patch("src.agentic_rag.ingestion.embedder.get_config")
+    def test_create_client_ollama(self, mock_get_config):
+        """Test that Ollama provider creates AsyncOpenAI client."""
+        # Mock config to return Ollama settings
+        mock_config = MagicMock()
+        mock_config.embedding.base_url = "http://localhost:11434/v1"
+        mock_config.embedding.api_key = "ollama"
+        mock_get_config.return_value = mock_config
+
         config = {"provider": "ollama", "enable_cache": False}
         generator = EmbeddingGenerator(config=config)
 
-        with pytest.raises(NotImplementedError, match="Ollama provider not yet implemented"):
-            _ = generator.client
+        # Should create AsyncOpenAI client with Ollama base URL
+        client = generator.client
+        assert client is not None
+        assert isinstance(client, openai.AsyncOpenAI)
+        # Verify it uses Ollama's base URL
+        assert "11434" in str(client.base_url)
 
     def test_create_client_unknown_provider(self):
         """Test that unknown provider raises ValueError."""

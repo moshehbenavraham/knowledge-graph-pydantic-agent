@@ -64,11 +64,11 @@ with patch.dict(os.environ, TEST_ENV_VARS):
     sys.path.append(str(Path(__file__).parent.parent.resolve() / "src"))
 
     # Import components for E2E testing
-    from pydantic_ai.messages import ModelRequest, ModelResponse
-
     from agent.agent import agent
-    from ui.streamlit_app import display_message_part, get_agent_deps, run_agent_with_streaming
+    from pydantic_ai.messages import ModelRequest, ModelResponse
     from ui.streamlit_ui_simple import run_agent
+
+    from ui.streamlit_app import display_message_part, get_agent_deps, run_agent_with_streaming
 
 
 class TestCompleteUserWorkflows:

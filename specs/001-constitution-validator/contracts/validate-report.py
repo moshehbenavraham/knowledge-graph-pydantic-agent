@@ -30,6 +30,7 @@ def validate_report(report_path: Path, schema_path: Path) -> bool:
         try:
             from jsonschema import validate
             from jsonschema.exceptions import ValidationError
+
             use_jsonschema = True
         except ImportError:
             print("⚠️  Warning: jsonschema not installed, performing basic validation only")
@@ -71,7 +72,7 @@ def validate_report(report_path: Path, schema_path: Path) -> bool:
             print(f"✗ Inconsistency: status=PASS but total_violations={total_violations}")
             return False
         if status == "FAIL" and total_violations == 0:
-            print(f"✗ Inconsistency: status=FAIL but total_violations=0")
+            print("✗ Inconsistency: status=FAIL but total_violations=0")
             return False
         print(f"✓ Status/violations consistent (violations: {total_violations})")
 

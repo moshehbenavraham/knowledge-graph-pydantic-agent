@@ -35,7 +35,18 @@ def get_llm_client():
 
 
 def get_model():
-    """Get the configured model for the agent."""
+    """
+    Get the configured model for the agent.
+
+    Supports multiple LLM providers:
+    - OpenAI: Direct OpenAI API
+    - Anthropic: Claude models via Anthropic API
+    - Ollama: Local LLMs via OpenAI-compatible API
+    - OpenRouter: Multiple models via OpenRouter API (OpenAI-compatible)
+
+    Returns:
+        Configured Pydantic AI model instance
+    """
     provider = clients_config.llm_provider.value
     llm = clients_config.llm_model
     api_key = clients_config.llm_api_key
@@ -56,6 +67,9 @@ def get_model():
         anthropic_model = model_map.get(llm, llm)
         return AnthropicModel(anthropic_model, api_key=api_key)
 
+    # OpenAI, Ollama, and OpenRouter all use OpenAI-compatible API
+    # Ollama exposes an OpenAI-compatible endpoint at http://localhost:11434/v1
+    # OpenRouter provides OpenAI-compatible API at https://openrouter.ai/api/v1
     return OpenAIChatModel(
         llm, provider=OpenAIProvider(base_url=clients_config.llm_base_url, api_key=api_key)
     )

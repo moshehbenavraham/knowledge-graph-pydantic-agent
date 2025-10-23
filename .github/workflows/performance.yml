@@ -179,41 +179,37 @@ jobs:
         run: |
           # Parse CSV and check if P95 response time is below 500ms
           if [ -f performance-metrics_stats.csv ] || [ -f stress-metrics_stats.csv ]; then
-            python -c "
+            python3 -c '
 import csv
 import sys
 
-threshold_p95 = 500  # milliseconds
-threshold_failure_rate = 0.01  # 1%
+threshold_p95 = 500
+threshold_failure_rate = 0.01
 
-csv_files = ['performance-metrics_stats.csv', 'stress-metrics_stats.csv',
-             'spike-metrics_stats.csv', 'endurance-metrics_stats.csv']
+csv_files = ["performance-metrics_stats.csv", "stress-metrics_stats.csv", "spike-metrics_stats.csv", "endurance-metrics_stats.csv"]
 
 for csv_file in csv_files:
     try:
-        with open(csv_file, 'r') as f:
+        with open(csv_file, "r") as f:
             reader = csv.DictReader(f)
             for row in reader:
-                if row.get('Type') == 'Request' and row.get('Name') == 'Aggregated':
-                    p95 = float(row.get('95%', 0))
-                    failures = float(row.get('Failure Count', 0))
-                    requests = float(row.get('Request Count', 1))
+                if row.get("Type") == "Request" and row.get("Name") == "Aggregated":
+                    p95 = float(row.get("95%", 0))
+                    failures = float(row.get("Failure Count", 0))
+                    requests = float(row.get("Request Count", 1))
                     failure_rate = failures / requests if requests > 0 else 0
-
-                    print(f'P95 Response Time: {p95}ms')
-                    print(f'Failure Rate: {failure_rate:.2%}')
-
+                    print(f"P95 Response Time: {p95}ms")
+                    print(f"Failure Rate: {failure_rate:.2%}")
                     if p95 > threshold_p95:
-                        print(f'WARNING: P95 response time ({p95}ms) exceeds threshold ({threshold_p95}ms)')
+                        print(f"WARNING: P95 response time ({p95}ms) exceeds threshold ({threshold_p95}ms)")
                         sys.exit(1)
                     if failure_rate > threshold_failure_rate:
-                        print(f'WARNING: Failure rate ({failure_rate:.2%}) exceeds threshold ({threshold_failure_rate:.2%})')
+                        print(f"WARNING: Failure rate ({failure_rate:.2%}) exceeds threshold ({threshold_failure_rate:.2%})")
                         sys.exit(1)
-
-                    print('Performance thresholds passed!')
+                    print("Performance thresholds passed!")
     except FileNotFoundError:
         continue
-            "
+'
           fi
 
       - name: Upload performance report

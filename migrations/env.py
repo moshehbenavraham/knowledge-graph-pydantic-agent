@@ -1,4 +1,10 @@
-"""Alembic environment configuration for database migrations."""
+"""Alembic environment configuration for database migrations.
+
+Note: This file intentionally uses os.getenv() instead of centralized config
+because Alembic migrations must be standalone and work independently from
+the main application. Migrations run in a special context with minimal
+dependencies.
+"""
 
 import os
 import sys
@@ -14,6 +20,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Load environment variables
 load_dotenv()
+
+# constitution-validator: disable (Principle II - migrations require standalone os.getenv)
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

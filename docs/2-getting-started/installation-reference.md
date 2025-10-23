@@ -275,10 +275,14 @@ ollama pull nomic-embed-text
 
 # Update .env for Phase 3
 LLM_PROVIDER=ollama
-LLM_BASE_URL=http://localhost:11434
+LLM_BASE_URL=http://localhost:11434/v1
+LLM_MODEL=llama3.1
 LLM_CHOICE=llama3.1
 EMBEDDING_PROVIDER=ollama
+EMBEDDING_BASE_URL=http://localhost:11434/v1
+EMBEDDING_MODEL=nomic-embed-text
 EMBEDDING_MODEL_CHOICE=nomic-embed-text
+EMBEDDING_DIMENSION=768
 
 # Phase 3 specific settings
 ENABLE_INTENT_ANALYSIS=true
@@ -323,6 +327,14 @@ make test           # Run test suite
 make test-coverage  # Run tests with coverage report
 make security       # Run security scans (Bandit, Safety, pip-audit)
 make check          # Run all checks (lint, type, test)
+```
+
+**Code Quality Analysis:**
+```bash
+make deadcode           # Find unused code with vulture (70% confidence)
+make complexity         # Analyze cyclomatic complexity with radon
+make docstring-coverage # Check docstring coverage with interrogate (75% minimum)
+make quality            # Run all quality checks (lint, security, deadcode, complexity, docstrings)
 ```
 
 **Running Services:**

@@ -134,17 +134,25 @@ class EmbeddingGenerator:
 
     def _create_client(self):
         """Create embedding client based on provider."""
+        config = get_config()
+
         if self.config["provider"] == "openai":
-            config = get_config()
             return openai.AsyncOpenAI(
                 api_key=config.embedding.api_key, base_url=config.embedding.base_url
             )
+
+        if self.config["provider"] == "ollama":
+            # Ollama uses OpenAI-compatible API
+            # Default Ollama base URL is http://localhost:11434/v1
+            base_url = config.embedding.base_url or "http://localhost:11434/v1"
+            # Ollama doesn't require a real API key
+            api_key = config.embedding.api_key or "ollama"
+            return openai.AsyncOpenAI(api_key=api_key, base_url=base_url)
+
         if self.config["provider"] == "nomic":
             # Nomic implementation
             raise NotImplementedError("Nomic provider not yet implemented")
-        if self.config["provider"] == "ollama":
-            # Ollama implementation
-            raise NotImplementedError("Ollama provider not yet implemented")
+
         raise ValueError(f"Unknown embedding provider: {self.config['provider']}")
 
     async def embed(self, text: str | list[str]) -> list[float] | list[list[float]]:

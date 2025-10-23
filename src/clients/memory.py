@@ -2,99 +2,90 @@ import os
 
 from mem0 import AsyncMemory, Memory
 
-from src.config import get_settings
-from src.config.clients import clients_config
+from src.config import clients
 
 
 def get_mem0_config():
     # Get configuration from centralized settings
-    get_settings()
+    # Note: Don't call get_settings() here as it may re-cache old values
+    # The clients.clients_config already has the current settings
 
     # Initialize config dictionary
     config = {}
 
     # Configure LLM based on provider
-    llm_provider = clients_config.llm_provider.value
+    # Use clients.clients_config to get current singleton instance (supports test reloading)
+    llm_provider = clients.clients_config.llm_provider.value
     if llm_provider in ("openai", "openrouter"):
         config["llm"] = {
             "provider": "openai",
             "config": {
-                "model": clients_config.llm_model,
+                "model": clients.clients_config.llm_model,
                 "temperature": 0.2,
                 "max_tokens": 2000,
             },
         }
 
         # Set API key in environment if not already set
-        if llm_provider == "openai" and clients_config.llm_api_key:
-            os.environ["OPENAI_API_KEY"] = clients_config.llm_api_key
+        if llm_provider == "openai" and clients.clients_config.llm_api_key:
+            os.environ["OPENAI_API_KEY"] = clients.clients_config.llm_api_key
 
         # For OpenRouter, set the specific API key
-        if llm_provider == "openrouter" and clients_config.llm_api_key:
-            os.environ["OPENROUTER_API_KEY"] = clients_config.llm_api_key
+        if llm_provider == "openrouter" and clients.clients_config.llm_api_key:
+            os.environ["OPENROUTER_API_KEY"] = clients.clients_config.llm_api_key
 
     elif llm_provider == "ollama":
         config["llm"] = {
             "provider": "ollama",
             "config": {
-                "model": clients_config.llm_model,
+                "model": clients.clients_config.llm_model,
                 "temperature": 0.2,
                 "max_tokens": 2000,
             },
         }
 
         # Set base URL for Ollama if provided
-        if clients_config.llm_base_url:
-            config["llm"]["config"]["ollama_base_url"] = clients_config.llm_base_url.replace(
-                "/v1", ""
+        if clients.clients_config.llm_base_url:
+            config["llm"]["config"]["ollama_base_url"] = (
+                clients.clients_config.llm_base_url.replace("/v1", "")
             )
 
     # Configure embedder based on provider
-    embedding_provider = clients_config.embedding_provider.value
+    embedding_provider = clients.clients_config.embedding_provider.value
     if embedding_provider == "openai":
         config["embedder"] = {
             "provider": "openai",
             "config": {
-                "model": clients_config.embedding_model,
-                "embedding_dims": clients_config.embedding_dimension,
+                "model": clients.clients_config.embedding_model,
+                "embedding_dims": clients.clients_config.embedding_dimension,
             },
         }
 
         # Set API key in environment if not already set
-        if clients_config.embedding_api_key:
-            os.environ["OPENAI_API_KEY"] = clients_config.embedding_api_key
+        if clients.clients_config.embedding_api_key:
+            os.environ["OPENAI_API_KEY"] = clients.clients_config.embedding_api_key
 
     elif embedding_provider == "ollama":
         config["embedder"] = {
             "provider": "ollama",
             "config": {
-                "model": clients_config.embedding_model,
-                "embedding_dims": clients_config.embedding_dimension,
+                "model": clients.clients_config.embedding_model,
+                "embedding_dims": clients.clients_config.embedding_dimension,
             },
         }
 
         # Set base URL for Ollama if provided
-        if clients_config.embedding_base_url:
+        if clients.clients_config.embedding_base_url:
             config["embedder"]["config"]["ollama_base_url"] = (
-                clients_config.embedding_base_url.replace("/v1", "")
+                clients.clients_config.embedding_base_url.replace("/v1", "")
             )
 
     # Configure Supabase vector store (using PostgreSQL connection string)
-    db_url = clients_config.database_url or ""
+    db_url = clients.clients_config.database_url or ""
 
-    # Extract project ref from username (postgres.{project-ref})
-    # and convert pooler URL to direct connection URL for SSL stability
-    if db_url and "pooler.supabase.com" in db_url:
-        import re
-
-        # Extract project ref from username (format: postgres.{project-ref})
-        match = re.search(r"postgres\.([^:]+)", db_url)
-        if match:
-            project_ref = match.group(1)
-            # Convert: aws-X-region.pooler.supabase.com:5432 -> db.{project-ref}.supabase.co:5432
-            db_url = re.sub(
-                r"@[^/]+pooler\.supabase\.com:\d+", f"@db.{project_ref}.supabase.co:5432", db_url
-            )
+    # WSL2 IPv6 compatibility: Keep pooler URL as-is (supports IPv4)
+    # Do NOT convert pooler.supabase.com to db.*.supabase.co (IPv6-only)
+    # The pooler URL provides IPv4 compatibility which is essential for WSL2 environments
 
     # Add SSL parameters for psycopg2 + SQLAlchemy stability
     if db_url and "sslmode" not in db_url:
@@ -106,7 +97,7 @@ def get_mem0_config():
         "config": {
             "connection_string": db_url,
             "collection_name": "mem0_memories",
-            "embedding_model_dims": clients_config.embedding_dimension,
+            "embedding_model_dims": clients.clients_config.embedding_dimension,
         },
     }
 
