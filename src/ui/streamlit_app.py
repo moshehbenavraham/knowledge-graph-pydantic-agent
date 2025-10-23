@@ -560,12 +560,54 @@ async def render_dashboard():
     # Note: DashboardHandler has internal caching (30s TTL) so this is efficient
     from src.agentic_rag.storage.connection_manager import get_connection_manager
 
+    # Show loading screen while initializing
+    loading_placeholder = st.empty()
+
     try:
-        # Use the singleton connection manager (does NOT close on exit)
-        conn_mgr = await get_connection_manager()
-        handler = DashboardHandler(conn_mgr)
+        with loading_placeholder.container():
+            st.markdown(
+                """
+                <style>
+                .dashboard-loading {
+                    text-align: center;
+                    padding: 3rem;
+                }
+                .dashboard-loading h3 {
+                    color: #1f77b4;
+                    font-size: 1.5rem;
+                    margin-bottom: 1rem;
+                }
+                </style>
+                <div class="dashboard-loading">
+                    <h3>🔄 Loading Dashboard...</h3>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+
+            # Step 1: Initialize connection manager
+            status_text.text("📡 Connecting to databases...")
+            progress_bar.progress(33)
+            conn_mgr = await get_connection_manager()
+
+            # Step 2: Create dashboard handler
+            status_text.text("🔧 Initializing dashboard handler...")
+            progress_bar.progress(66)
+            handler = DashboardHandler(conn_mgr)
+
+            # Step 3: Ready to render
+            status_text.text("✨ Loading analytics...")
+            progress_bar.progress(100)
+
+        # Clear loading screen and render dashboard
+        loading_placeholder.empty()
         await _render_dashboard_content(handler)
+
     except Exception as e:
+        loading_placeholder.empty()
         st.error(f"Failed to initialize dashboard: {e}")
         st.info("Please check your database connections (PostgreSQL and Neo4j)")
         return
@@ -574,14 +616,26 @@ async def render_dashboard():
 async def _render_dashboard_content(handler: DashboardHandler):
     """Render dashboard content with initialized handler."""
 
-    # Add refresh button
-    col1, col2 = st.columns([6, 1])
+    # Add refresh buttons
+    col1, col2, col3 = st.columns([5, 1, 1])
     with col2:
-        if st.button("🔄 Refresh"):
+        if st.button("🔄 Refresh", help="Clear cache and reload dashboard"):
             logger.info("Dashboard refresh button clicked - clearing cache and rerunning")
             handler.clear_cache()
             logger.debug("Dashboard cache cleared")
             st.rerun()
+    with col3:
+        if st.button("📊 Sync Views", help="Refresh materialized views with latest data"):
+            logger.info("Refresh views button clicked - updating materialized views")
+            with st.spinner("Refreshing analytics views..."):
+                success = await handler.refresh_materialized_views()
+                if success:
+                    st.success("✅ Views refreshed! Dashboard will reload.", icon="✅")
+                    logger.info("Materialized views refreshed successfully")
+                    st.rerun()
+                else:
+                    st.error("❌ Failed to refresh views. Check logs for details.", icon="❌")
+                    logger.error("Failed to refresh materialized views")
 
     st.divider()
 
@@ -641,6 +695,23 @@ async def _render_dashboard_content(handler: DashboardHandler):
 
         if series:
             df_series = pd.DataFrame(series)
+
+            # Show date range and data point count
+            if not df_series.empty:
+                min_date = df_series["timestamp"].min()
+                max_date = df_series["timestamp"].max()
+                data_points = len(df_series)
+                st.caption(
+                    f"📅 Data range: {min_date} to {max_date} "
+                    f"({data_points} data point{'s' if data_points != 1 else ''})"
+                )
+
+                # Debug logging
+                logger.info(
+                    f"Time series data: window={selected_window}, metric={selected_metric}, "
+                    f"rows={data_points}, date_range={min_date} to {max_date}"
+                )
+
             fig = px.line(
                 df_series,
                 x="timestamp",
@@ -653,6 +724,13 @@ async def _render_dashboard_content(handler: DashboardHandler):
             )
             fig.update_traces(mode="lines+markers")
             st.plotly_chart(fig, use_container_width=True)
+
+            # Note about materialized views for 7d/30d windows
+            if selected_window in ["7d", "30d"]:
+                st.caption(
+                    "💡 Note: Daily summaries may use materialized views. "
+                    "If data seems outdated, click '📊 Sync Views' button at the top to refresh."
+                )
         else:
             st.info(
                 f"No time-series data available for {selected_window} window. Run searches to populate analytics."
@@ -703,10 +781,11 @@ async def _render_dashboard_content(handler: DashboardHandler):
                 key="graph_layout",
             )
 
-        # Fetch graph data
-        graph_data = await handler.get_graph_data(limit=limit)
-        entities = graph_data.get("entities", [])
-        relationships = graph_data.get("relationships", [])
+        # Fetch graph data with loading indicator
+        with st.spinner(f"🔍 Loading knowledge graph (up to {limit} entities)..."):
+            graph_data = await handler.get_graph_data(limit=limit)
+            entities = graph_data.get("entities", [])
+            relationships = graph_data.get("relationships", [])
 
         if entities:
             # Filter out entities with None IDs

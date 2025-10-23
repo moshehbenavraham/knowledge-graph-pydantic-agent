@@ -93,7 +93,7 @@ class DashboardHandler:
 
             async with self.connection_manager.get_pg_connection() as conn:
                 # Get overall summary from search_analytics table
-                # nosec B608 - interval is from whitelist, not user input
+                # interval is from whitelist, not user input
                 summary = await conn.fetchrow(
                     f"""
                     SELECT
@@ -108,7 +108,7 @@ class DashboardHandler:
                         AVG(relationships_found) AS avg_relationships_found
                     FROM search_analytics
                     WHERE created_at >= NOW() - INTERVAL '{interval}'
-                    """
+                    """  # nosec B608
                 )
 
                 # Get strategy distribution from materialized view or table
@@ -123,7 +123,7 @@ class DashboardHandler:
                     )
                 else:
                     # Query directly for other windows
-                    # nosec B608 - interval is from whitelist, not user input
+                    # interval is from whitelist, not user input
                     strategies = await conn.fetch(
                         f"""
                         SELECT
@@ -133,7 +133,7 @@ class DashboardHandler:
                         WHERE created_at >= NOW() - INTERVAL '{interval}'
                         GROUP BY strategy_used
                         ORDER BY search_count DESC
-                        """
+                        """  # nosec B608
                     )
 
             # Process results
@@ -214,7 +214,7 @@ class DashboardHandler:
                 else:
                     interval_map = {"24h": "24 hours", "30d": "30 days"}
                     interval = interval_map.get(window, "7 days")
-                    # nosec B608 - interval is from whitelist, not user input
+                    # interval is from whitelist, not user input
                     rows = await conn.fetch(
                         f"""
                         SELECT
@@ -226,7 +226,7 @@ class DashboardHandler:
                         WHERE created_at >= NOW() - INTERVAL '{interval}'
                         GROUP BY detected_intent
                         ORDER BY search_count DESC
-                        """
+                        """  # nosec B608
                     )
 
             # Calculate percentages
@@ -413,7 +413,7 @@ class DashboardHandler:
                 # Query performance metrics with percentiles
                 # interval is from validated whitelist (24h/7d/30d), not user input
                 metrics_row = await conn.fetchrow(
-                    f"""  # noqa: S608  # nosec B608
+                    f"""
                     SELECT
                         AVG(vector_latency_ms) AS avg_vector_latency_ms,
                         AVG(graph_latency_ms) AS avg_graph_latency_ms,
@@ -426,7 +426,7 @@ class DashboardHandler:
                         COUNT(*) AS total_searches
                     FROM search_analytics
                     WHERE created_at >= NOW() - INTERVAL '{interval}'
-                    """
+                    """  # nosec B608
                 )
 
                 # Get latest system metrics if available (inside same connection context)
@@ -535,22 +535,55 @@ class DashboardHandler:
         try:
             async with self.connection_manager.get_pg_connection() as conn:
                 if window in {"7d", "30d"}:
-                    # Use daily_search_summary materialized view for day-level granularity
+                    # Try materialized view first, fallback to direct query
                     days = 7 if window == "7d" else 30
-                    rows = await conn.fetch(
-                        """
-                        SELECT
-                            date AS timestamp,
-                            total_searches AS searches,
-                            avg_latency_ms AS latency,
-                            cache_hits,
-                            graph_boosts
-                        FROM daily_search_summary
-                        WHERE date >= CURRENT_DATE - ($1::int) * INTERVAL '1 day'
-                        ORDER BY date ASC
-                        """,
-                        days,
-                    )
+                    interval = f"{days} days"
+
+                    try:
+                        # Try materialized view first
+                        rows = await conn.fetch(
+                            """
+                            SELECT
+                                date AS timestamp,
+                                total_searches AS searches,
+                                avg_latency_ms AS latency,
+                                cache_hits,
+                                graph_boosts
+                            FROM daily_search_summary
+                            WHERE date >= CURRENT_DATE - ($1::int) * INTERVAL '1 day'
+                            ORDER BY date ASC
+                            """,
+                            days,
+                        )
+
+                        # If materialized view returns no data, fall back to direct query
+                        if not rows:
+                            logger.warning(
+                                f"Materialized view returned no data for {window}, "
+                                f"falling back to direct query"
+                            )
+                            raise ValueError("No data in materialized view")
+
+                    except Exception as e:
+                        logger.warning(
+                            f"Materialized view query failed ({e}), using direct query instead"
+                        )
+                        # Fallback: Query search_analytics directly with daily aggregation
+                        # nosec B608
+                        rows = await conn.fetch(
+                            f"""
+                            SELECT
+                                DATE(created_at) AS timestamp,
+                                COUNT(*) AS searches,
+                                AVG(total_latency_ms) AS latency,
+                                COUNT(*) FILTER (WHERE cache_hit) AS cache_hits,
+                                COUNT(*) FILTER (WHERE graph_boost_applied) AS graph_boosts
+                            FROM search_analytics
+                            WHERE created_at >= NOW() - INTERVAL '{interval}'
+                            GROUP BY DATE(created_at)
+                            ORDER BY timestamp ASC
+                            """  # nosec B608
+                        )
                 else:
                     # For 24h window, use hourly aggregation
                     rows = await conn.fetch(
@@ -631,19 +664,19 @@ class DashboardHandler:
 
                     # interval is from validated whitelist (24h/30d), not user input
                     summary = await conn.fetchrow(
-                        f"""  # noqa: S608  # nosec B608
+                        f"""
                         SELECT
                             COUNT(*) AS total_calls,
                             COUNT(DISTINCT tool_name) AS unique_tools,
                             COUNT(*) FILTER (WHERE success = true)::float / NULLIF(COUNT(*), 0) AS avg_success_rate
                         FROM tool_usage_analytics
                         WHERE created_at >= NOW() - INTERVAL '{interval}'
-                        """
+                        """  # nosec B608
                     )
 
                     # interval is from validated whitelist (24h/30d), not user input
                     tools = await conn.fetch(
-                        f"""  # noqa: S608  # nosec B608
+                        f"""
                         SELECT
                             tool_name,
                             COUNT(*) as total_calls,
@@ -655,7 +688,7 @@ class DashboardHandler:
                         GROUP BY tool_name
                         ORDER BY total_calls DESC
                         LIMIT 20
-                        """
+                        """  # nosec B608
                     )
 
             return {
@@ -698,7 +731,7 @@ class DashboardHandler:
             async with self.connection_manager.get_pg_connection() as conn:
                 # interval is from validated whitelist (24h/7d/30d), not user input
                 stats = await conn.fetchrow(
-                    f"""  # noqa: S608  # nosec B608
+                    f"""
                     SELECT
                         COUNT(*) AS total_interactions,
                         COUNT(DISTINCT session_id) AS unique_sessions,
@@ -709,7 +742,7 @@ class DashboardHandler:
                         COUNT(*) FILTER (WHERE user_feedback IS NOT NULL) / NULLIF(COUNT(*), 0)::float AS feedback_rate
                     FROM agent_interactions
                     WHERE created_at >= NOW() - INTERVAL '{interval}'
-                    """
+                    """  # nosec B608
                 )
 
             return {
@@ -739,3 +772,25 @@ class DashboardHandler:
         """Clear all cached data."""
         self._cache.clear()
         logger.info("Dashboard cache cleared")
+
+    async def refresh_materialized_views(self) -> bool:
+        """
+        Refresh materialized views for analytics dashboards.
+
+        This updates the daily_search_summary, intent_distribution_7d,
+        and tool_performance_7d views with the latest data.
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            async with self.connection_manager.get_pg_connection() as conn:
+                # Call the refresh function from the analytics schema
+                await conn.execute("SELECT refresh_analytics_views();")
+                logger.info("Materialized views refreshed successfully")
+                # Clear cache after refresh so new data is fetched
+                self.clear_cache()
+                return True
+        except Exception:
+            logger.exception("Error refreshing materialized views")
+            return False

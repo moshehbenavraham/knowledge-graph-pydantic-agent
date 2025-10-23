@@ -571,6 +571,7 @@ class ConnectionManager:
 # Global connection manager instance
 _connection_manager: ConnectionManager | None = None
 _connection_manager_lock: asyncio.Lock | None = None
+_connection_manager_loop_id: int | None = None  # Track event loop ID
 
 
 async def get_connection_manager() -> ConnectionManager:
@@ -578,8 +579,9 @@ async def get_connection_manager() -> ConnectionManager:
     Get or create the global connection manager.
 
     Thread-safe singleton pattern with async lock to prevent race conditions.
+    Automatically reinitializes if the event loop has changed (e.g., Streamlit reruns).
     """
-    global _connection_manager, _connection_manager_lock
+    global _connection_manager, _connection_manager_lock, _connection_manager_loop_id
 
     # Create lock if needed (not async, so safe to do without lock)
     if _connection_manager_lock is None:
@@ -590,6 +592,33 @@ async def get_connection_manager() -> ConnectionManager:
     async with _connection_manager_lock:
         logger.info(">>> get_connection_manager() called (inside lock)")
         logger.info(f"_connection_manager is None: {_connection_manager is None}")
+
+        # Check if event loop has changed (Streamlit reruns create new event loops)
+        try:
+            current_loop = asyncio.get_running_loop()
+            current_loop_id = id(current_loop)
+            loop_changed = (
+                _connection_manager_loop_id is not None
+                and _connection_manager_loop_id != current_loop_id
+            )
+
+            if loop_changed:
+                logger.warning(
+                    f"Event loop changed (Streamlit rerun detected)! "
+                    f"Old: {_connection_manager_loop_id}, New: {current_loop_id}"
+                )
+                logger.info("Closing old connection manager and creating new one...")
+                if _connection_manager is not None:
+                    try:
+                        await _connection_manager.close()
+                    except Exception as e:
+                        logger.warning(f"Error closing old connection manager: {e}")
+                    _connection_manager = None
+                    _connection_manager_loop_id = None
+
+        except RuntimeError:
+            logger.warning("No running event loop found")
+            current_loop_id = None
 
         if _connection_manager is not None:
             logger.info(f"Returning existing connection manager: {id(_connection_manager)}")
@@ -621,7 +650,9 @@ async def get_connection_manager() -> ConnectionManager:
 
             # Only set global singleton if initialization succeeded
             _connection_manager = temp_connection_manager
+            _connection_manager_loop_id = current_loop_id  # Store current loop ID
             logger.info(f"Returning NEW connection manager: {id(_connection_manager)}")
+            logger.info(f"Stored event loop ID: {_connection_manager_loop_id}")
             return _connection_manager
 
         except Exception as e:
@@ -634,7 +665,7 @@ async def get_connection_manager() -> ConnectionManager:
 
 async def close_connections():
     """Close all connections."""
-    global _connection_manager
+    global _connection_manager, _connection_manager_loop_id
 
     if _connection_manager:
         # Shutdown analytics logger first
@@ -648,3 +679,4 @@ async def close_connections():
 
         await _connection_manager.close()
         _connection_manager = None
+        _connection_manager_loop_id = None
