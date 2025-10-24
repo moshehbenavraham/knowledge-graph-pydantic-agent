@@ -14,7 +14,7 @@ from pathlib import Path
 import yaml
 
 from src.auth.db import assign_role
-from src.clients.supabase_client import get_supabase_client
+from src.clients.database import get_supabase_client
 
 
 def load_yaml_config(config_path: Path) -> dict:

@@ -1,34 +1,10 @@
 # Authentication System - TODO
 
-**Status**: 🚧 In Progress (v1.7.0 - 87.4% complete)
+**Status**: ✅ v1.7.0 Complete | 🎯 Next: v1.8.0 OAuth Integration
 
 ---
 
-## 🔴 High Priority
-
-### Complete Test Suite (v1.7.0)
-**Time**: 2-3 hours | **Tests**: 139/159 passing (20 remaining failures)
-
-#### test_auth_db.py (14 failures remaining)
-- [ ] Fix `list_users` not returning proper data structure from mock
-- [ ] Fix `increment_failed_login` returning wrong count (expected 1, got 2; expected 5, got 6)
-- [ ] Fix `get_session_expired` not filtering expired sessions
-- [ ] Fix cleanup functions (`cleanup_expired_sessions`, `cleanup_reset_tokens`) returning mock objects instead of counts
-- [ ] Fix `verify_reset_token_expired` invalid salt error
-- [ ] Fix `use_reset_token_invalid` raising exception instead of returning False
-- [ ] Fix `update_oauth_tokens` returning dict instead of boolean
-- [ ] Fix `assign_role` returning dict instead of boolean
-- [ ] Fix `get_user_roles` returning empty list
-- [ ] Fix `check_permission_has_permission` returning False instead of True
-- [ ] Fix `create_user_without_password` username assertion
-
-#### test_password_reset.py (2 failures remaining)
-- [ ] Fix SMTP `login()` method not being called in mock
-- [ ] Fix authentication error test not detecting failed login
-
----
-
-## 🟡 Medium Priority
+## 🟡 High Priority
 
 ### OAuth Integration (v1.8.0)
 **Time**: 4-6 hours
@@ -50,7 +26,6 @@
 **Time**: 2-3 hours
 
 - [ ] Password strength meter (visual feedback during password entry)
-- [ ] Profile pictures support (upload + display)
 - [ ] "Remember me" checkbox (extended session duration)
 - [ ] Email verification for new users
 - [ ] Improved password reset email template

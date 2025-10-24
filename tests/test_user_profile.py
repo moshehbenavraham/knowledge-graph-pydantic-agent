@@ -7,13 +7,12 @@ Tests user profile operations:
 - Profile rendering (database + YAML modes)
 """
 
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
 
 from src.auth import user_profile
-
 
 # =====================================================
 # FIXTURES
@@ -128,7 +127,9 @@ async def test_get_user_info_exception():
 @pytest.mark.asyncio
 async def test_change_user_password_success(sample_user, mock_supabase_client):
     """Test successful password change."""
-    with patch("src.auth.db.verify_user_password", new_callable=AsyncMock, return_value=sample_user):
+    with patch(
+        "src.auth.db.verify_user_password", new_callable=AsyncMock, return_value=sample_user
+    ):
         with patch("src.auth.db.update_user_password", new_callable=AsyncMock, return_value=True):
             success, message = await user_profile.change_user_password(
                 username="testuser",
@@ -157,7 +158,9 @@ async def test_change_user_password_wrong_current():
 @pytest.mark.asyncio
 async def test_change_user_password_exception(sample_user):
     """Test password change with exception."""
-    with patch("src.auth.db.verify_user_password", new_callable=AsyncMock, return_value=sample_user):
+    with patch(
+        "src.auth.db.verify_user_password", new_callable=AsyncMock, return_value=sample_user
+    ):
         with patch(
             "src.auth.db.update_user_password",
             new_callable=AsyncMock,
@@ -290,7 +293,9 @@ async def test_complete_password_change_flow(sample_user, mock_supabase_client):
     assert is_strong is True
 
     # Step 3: Change password
-    with patch("src.auth.db.verify_user_password", new_callable=AsyncMock, return_value=sample_user):
+    with patch(
+        "src.auth.db.verify_user_password", new_callable=AsyncMock, return_value=sample_user
+    ):
         with patch("src.auth.db.update_user_password", new_callable=AsyncMock, return_value=True):
             success, message = await user_profile.change_user_password(
                 username="testuser",
@@ -428,7 +433,9 @@ async def test_get_user_info_with_missing_fields():
 @pytest.mark.asyncio
 async def test_change_password_with_same_password(sample_user, mock_supabase_client):
     """Test changing password to the same value (should still succeed)."""
-    with patch("src.auth.db.verify_user_password", new_callable=AsyncMock, return_value=sample_user):
+    with patch(
+        "src.auth.db.verify_user_password", new_callable=AsyncMock, return_value=sample_user
+    ):
         with patch("src.auth.db.update_user_password", new_callable=AsyncMock, return_value=True):
             success, message = await user_profile.change_user_password(
                 username="testuser",

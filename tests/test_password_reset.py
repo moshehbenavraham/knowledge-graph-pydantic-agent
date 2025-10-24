@@ -9,13 +9,12 @@ Tests all password reset functionality:
 """
 
 from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import pytest
 
 from src.auth import password_reset
-
 
 # =====================================================
 # FIXTURES
@@ -68,26 +67,22 @@ def mock_smtp_server():
 @pytest.mark.asyncio
 async def test_send_reset_email_smtp_success(mock_smtp_server):
     """Test successful SMTP email sending."""
-    with patch.dict(
-        "os.environ",
-        {
-            "SMTP_HOST": "smtp.gmail.com",
-            "SMTP_PORT": "587",
-            "SMTP_USER": "test@gmail.com",
-            "SMTP_PASSWORD": "testpass",
-            "SMTP_FROM_EMAIL": "noreply@test.com",
-        },
-    ):
-        result = await password_reset.send_reset_email_smtp(
-            email="recipient@example.com",
-            reset_token="token123",
-            reset_url="http://localhost:8501/reset",
-        )
+    # Patch module-level variables instead of os.environ (they're loaded at import time)
+    with patch("src.auth.password_reset.SMTP_HOST", "smtp.gmail.com"):
+        with patch("src.auth.password_reset.SMTP_PORT", 587):
+            with patch("src.auth.password_reset.SMTP_USER", "test@gmail.com"):
+                with patch("src.auth.password_reset.SMTP_PASSWORD", "testpass"):
+                    with patch("src.auth.password_reset.SMTP_FROM_EMAIL", "noreply@test.com"):
+                        result = await password_reset.send_reset_email_smtp(
+                            email="recipient@example.com",
+                            reset_token="token123",
+                            reset_url="http://localhost:8501/reset",
+                        )
 
-        assert result is True
-        mock_smtp_server.starttls.assert_called_once()
-        mock_smtp_server.login.assert_called_once_with("test@gmail.com", "testpass")
-        mock_smtp_server.send_message.assert_called_once()
+                        assert result is True
+                        mock_smtp_server.starttls.assert_called_once()
+                        mock_smtp_server.login.assert_called_once_with("test@gmail.com", "testpass")
+                        mock_smtp_server.send_message.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -132,25 +127,22 @@ async def test_send_reset_email_smtp_authentication_error():
 
     with patch("smtplib.SMTP") as mock_smtp:
         mock_smtp.return_value.__enter__.return_value = mock_server
-        mock_smtp.return_value.__exit__ = MagicMock()
+        # __exit__ should return None/False to allow exceptions to propagate
+        mock_smtp.return_value.__exit__ = MagicMock(return_value=None)
 
-        with patch.dict(
-            "os.environ",
-            {
-                "SMTP_HOST": "smtp.gmail.com",
-                "SMTP_PORT": "587",
-                "SMTP_USER": "test@gmail.com",
-                "SMTP_PASSWORD": "wrongpass",
-                "SMTP_FROM_EMAIL": "noreply@test.com",
-            },
-        ):
-            result = await password_reset.send_reset_email_smtp(
-                email="recipient@example.com",
-                reset_token="token123",
-                reset_url="http://localhost:8501/reset",
-            )
+        # Patch module-level variables instead of os.environ
+        with patch("src.auth.password_reset.SMTP_HOST", "smtp.gmail.com"):
+            with patch("src.auth.password_reset.SMTP_PORT", 587):
+                with patch("src.auth.password_reset.SMTP_USER", "test@gmail.com"):
+                    with patch("src.auth.password_reset.SMTP_PASSWORD", "wrongpass"):
+                        with patch("src.auth.password_reset.SMTP_FROM_EMAIL", "noreply@test.com"):
+                            result = await password_reset.send_reset_email_smtp(
+                                email="recipient@example.com",
+                                reset_token="token123",
+                                reset_url="http://localhost:8501/reset",
+                            )
 
-            assert result is False
+                            assert result is False
 
 
 @pytest.mark.asyncio
@@ -180,7 +172,9 @@ async def test_send_reset_email_smtp_provider(mock_smtp_server):
                 },
             ):
                 result = await password_reset.send_reset_email(
-                    email="test@example.com", reset_token="token123", reset_url="http://localhost:8501"
+                    email="test@example.com",
+                    reset_token="token123",
+                    reset_url="http://localhost:8501",
                 )
 
                 assert result is True
@@ -317,9 +311,7 @@ async def test_validate_reset_token_valid(sample_reset_token):
 async def test_validate_reset_token_invalid():
     """Test validation of invalid reset token."""
     with patch("src.auth.password_reset.verify_reset_token", return_value=None):
-        is_valid, message, token_record = await password_reset.validate_reset_token(
-            "invalid_token"
-        )
+        is_valid, message, token_record = await password_reset.validate_reset_token("invalid_token")
 
         assert is_valid is False
         assert "invalid" in message.lower() and "expired" in message.lower()

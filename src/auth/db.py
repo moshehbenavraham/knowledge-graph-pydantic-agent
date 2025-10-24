@@ -11,7 +11,7 @@ from typing import Any
 from uuid import UUID
 
 from src.auth.hash_password import hash_password, verify_password
-from src.clients.supabase_client import get_supabase_client
+from src.clients.database import get_supabase_client
 
 # =====================================================
 # USER MANAGEMENT

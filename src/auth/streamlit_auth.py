@@ -45,7 +45,7 @@ async def load_credentials_from_database() -> dict:
 
             username = user.get("username")
             # Get password_hash directly from database (without popping it)
-            from src.clients.supabase_client import get_supabase_client
+            from src.clients.database import get_supabase_client
 
             client = get_supabase_client()
             user_with_hash = (

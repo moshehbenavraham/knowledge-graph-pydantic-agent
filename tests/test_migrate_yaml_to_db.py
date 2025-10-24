@@ -10,14 +10,13 @@ Tests migration functionality:
 
 import tempfile
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import pytest
 import yaml
 
 from src.auth import migrate_yaml_to_db
-
 
 # =====================================================
 # FIXTURES
@@ -247,9 +246,7 @@ async def test_migrate_users_existing_user_skipped(temp_yaml_config, mock_supaba
     ):
         # Mock existing user
         mock_response = MagicMock()
-        mock_response.data = [
-            {"id": str(uuid4()), "username": "admin"}
-        ]  # User already exists
+        mock_response.data = [{"id": str(uuid4()), "username": "admin"}]  # User already exists
         mock_supabase_client.table().select().eq().execute.return_value = mock_response
 
         results = await migrate_yaml_to_db.migrate_users(temp_yaml_config)

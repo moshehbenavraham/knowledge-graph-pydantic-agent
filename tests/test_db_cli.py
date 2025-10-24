@@ -12,13 +12,12 @@ Tests all 8 CLI commands:
 - sessions: View/revoke sessions
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
 
 from src.auth import db_cli
-
 
 # =====================================================
 # FIXTURES
@@ -282,9 +281,7 @@ async def test_cmd_update_email(sample_user):
 
     with patch("src.auth.db_cli.get_user_by_username", return_value=sample_user):
         with patch("src.auth.db_cli.update_user", return_value=updated_user):
-            result = await db_cli.cmd_update(
-                username="testuser", new_email="newemail@example.com"
-            )
+            result = await db_cli.cmd_update(username="testuser", new_email="newemail@example.com")
 
             assert result == 0
 
@@ -391,9 +388,7 @@ async def test_cmd_update_password_user_not_found():
 async def test_cmd_update_password_error(sample_user):
     """Test password update error."""
     with patch("src.auth.db_cli.get_user_by_username", return_value=sample_user):
-        with patch(
-            "src.auth.db_cli.update_user_password", side_effect=Exception("Database error")
-        ):
+        with patch("src.auth.db_cli.update_user_password", side_effect=Exception("Database error")):
             result = await db_cli.cmd_update_password("testuser", "NewPassword123!")
 
             assert result == 1
@@ -582,9 +577,7 @@ async def test_complete_user_lifecycle(sample_user, sample_roles, sample_session
 
     with patch("src.auth.db_cli.get_user_by_username", return_value=sample_user):
         with patch("src.auth.db_cli.update_user", return_value=updated_user):
-            result = await db_cli.cmd_update(
-                username="testuser", new_email="newemail@example.com"
-            )
+            result = await db_cli.cmd_update(username="testuser", new_email="newemail@example.com")
             assert result == 0
 
     # Step 3: Assign admin role
@@ -641,6 +634,8 @@ async def test_session_management_flow(sample_user, sample_sessions):
     # Step 2: Revoke all sessions
     with patch("src.auth.db_cli.get_user_by_username", return_value=sample_user):
         with patch("src.auth.db_cli.get_user_sessions", return_value=sample_sessions):
-            with patch("src.auth.db_cli.revoke_all_user_sessions", return_value=len(sample_sessions)):
+            with patch(
+                "src.auth.db_cli.revoke_all_user_sessions", return_value=len(sample_sessions)
+            ):
                 result = await db_cli.cmd_sessions("testuser", revoke=True)
                 assert result == 0

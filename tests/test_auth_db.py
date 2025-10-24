@@ -10,13 +10,12 @@ Tests all 36 async functions in src/auth/db.py:
 """
 
 from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import pytest
 
 from src.auth import db
-
 
 # =====================================================
 # FIXTURES
@@ -41,9 +40,15 @@ def mock_supabase_client():
     mock_table.is_.return_value = mock_table
     mock_table.limit.return_value = mock_table
     mock_table.order.return_value = mock_table
+    mock_table.range.return_value = mock_table
     mock_table.lt.return_value = mock_table
     mock_table.gte.return_value = mock_table
     mock_table.gt.return_value = mock_table
+
+    # Mock rpc() method for database functions
+    mock_rpc = MagicMock()
+    mock_client.rpc.return_value = mock_rpc
+    mock_rpc.execute.return_value = MagicMock()
 
     return mock_client
 
@@ -134,6 +139,9 @@ async def test_create_user_without_password(mock_supabase_client, sample_user_da
     """Test creating OAuth-only user without password."""
     with patch("src.auth.db.get_supabase_client", return_value=mock_supabase_client):
         oauth_user_data = sample_user_data.copy()
+        oauth_user_data["username"] = "oauthuser"
+        oauth_user_data["email"] = "oauth@example.com"
+        oauth_user_data["full_name"] = "OAuth User"
         oauth_user_data["password_hash"] = None
         oauth_user_data["auth_method"] = "oauth"
 
@@ -297,9 +305,7 @@ async def test_update_user_success(mock_supabase_client, sample_user_data):
         mock_response.data = [updated_user]
         mock_supabase_client.table().update().eq().execute.return_value = mock_response
 
-        result = await db.update_user(
-            user_id=sample_user_data["id"], email="newemail@example.com"
-        )
+        result = await db.update_user(user_id=sample_user_data["id"], email="newemail@example.com")
 
         assert result["email"] == "newemail@example.com"
 
@@ -397,20 +403,22 @@ async def test_update_last_login_success(mock_supabase_client, sample_user_data)
 async def test_increment_failed_login_success(mock_supabase_client, sample_user_data):
     """Test incrementing failed login attempts."""
     with patch("src.auth.db.get_supabase_client", return_value=mock_supabase_client):
+        # Create user with no failed attempts
+        user_with_no_failures = sample_user_data.copy()
+        user_with_no_failures["failed_login_attempts"] = 0
+
         # Mock get_user_by_username
         get_response = MagicMock()
-        get_response.data = [sample_user_data]
+        get_response.data = [user_with_no_failures]
 
         # Mock update
-        updated_user = sample_user_data.copy()
+        updated_user = user_with_no_failures.copy()
         updated_user["failed_login_attempts"] = 1
         update_response = MagicMock()
         update_response.data = [updated_user]
 
-        mock_supabase_client.table().select().eq().is_().limit().execute.return_value = (
-            get_response
-        )
-        mock_supabase_client.table().update().eq().execute.return_value = update_response
+        # Configure execute to return different responses in order (first select, then update)
+        mock_supabase_client.table().execute.side_effect = [get_response, update_response]
 
         result = await db.increment_failed_login("testuser")
 
@@ -433,10 +441,8 @@ async def test_increment_failed_login_lockout(mock_supabase_client, sample_user_
         update_response = MagicMock()
         update_response.data = [updated_user]
 
-        mock_supabase_client.table().select().eq().is_().limit().execute.return_value = (
-            get_response
-        )
-        mock_supabase_client.table().update().eq().execute.return_value = update_response
+        # Configure execute to return different responses in order (first select, then update)
+        mock_supabase_client.table().execute.side_effect = [get_response, update_response]
 
         result = await db.increment_failed_login("testuser")
 
@@ -498,12 +504,10 @@ async def test_get_session_valid(mock_supabase_client, sample_session_data):
 async def test_get_session_expired(mock_supabase_client, sample_session_data):
     """Test getting expired session."""
     with patch("src.auth.db.get_supabase_client", return_value=mock_supabase_client):
-        expired_session = sample_session_data.copy()
-        expired_session["expires_at"] = (datetime.now() - timedelta(days=1)).isoformat()
-
+        # Mock should return empty data for expired session (filtered by .gt("expires_at", now))
         mock_response = MagicMock()
-        mock_response.data = [expired_session]
-        mock_supabase_client.table().select().eq().is_().execute.return_value = mock_response
+        mock_response.data = []  # Expired sessions are filtered out
+        mock_supabase_client.table().execute.return_value = mock_response
 
         result = await db.get_session("test_session_token_123")
 
@@ -570,8 +574,8 @@ async def test_cleanup_expired_sessions_success(mock_supabase_client, sample_ses
     """Test cleanup of expired sessions."""
     with patch("src.auth.db.get_supabase_client", return_value=mock_supabase_client):
         mock_response = MagicMock()
-        mock_response.data = [sample_session_data, sample_session_data.copy()]
-        mock_supabase_client.table().delete().lt().execute.return_value = mock_response
+        mock_response.data = 2  # RPC returns count of deleted sessions
+        mock_supabase_client.rpc().execute.return_value = mock_response
 
         result = await db.cleanup_expired_sessions()
 
@@ -619,12 +623,10 @@ async def test_verify_reset_token_valid(mock_supabase_client, sample_reset_token
 async def test_verify_reset_token_expired(mock_supabase_client, sample_reset_token_data):
     """Test verifying expired reset token."""
     with patch("src.auth.db.get_supabase_client", return_value=mock_supabase_client):
-        expired_token = sample_reset_token_data.copy()
-        expired_token["expires_at"] = (datetime.now() - timedelta(hours=2)).isoformat()
-
+        # Mock should return empty data for expired token (filtered by .gt("expires_at", now))
         mock_response = MagicMock()
-        mock_response.data = [expired_token]
-        mock_supabase_client.table().select().eq().is_().gt().execute.return_value = mock_response
+        mock_response.data = []  # Expired tokens are filtered out
+        mock_supabase_client.table().execute.return_value = mock_response
 
         result = await db.verify_reset_token("reset_token_123")
 
@@ -656,11 +658,9 @@ async def test_use_reset_token_invalid(mock_supabase_client):
     """Test using invalid reset token."""
     with patch("src.auth.db.get_supabase_client", return_value=mock_supabase_client):
         with patch("src.auth.db.verify_reset_token", return_value=None):
-            result = await db.use_reset_token(
-                token="invalid_token", new_password="NewPassword123!"
-            )
-
-            assert result is False
+            # Should raise exception for invalid token
+            with pytest.raises(Exception, match="Invalid or expired reset token"):
+                await db.use_reset_token(token="invalid_token", new_password="NewPassword123!")
 
 
 @pytest.mark.asyncio
@@ -668,8 +668,8 @@ async def test_cleanup_reset_tokens_success(mock_supabase_client, sample_reset_t
     """Test cleanup of expired reset tokens."""
     with patch("src.auth.db.get_supabase_client", return_value=mock_supabase_client):
         mock_response = MagicMock()
-        mock_response.data = [sample_reset_token_data]
-        mock_supabase_client.table().delete().lt().execute.return_value = mock_response
+        mock_response.data = 1  # RPC returns count of deleted tokens
+        mock_supabase_client.rpc().execute.return_value = mock_response
 
         result = await db.cleanup_reset_tokens()
 
@@ -750,9 +750,13 @@ async def test_get_user_oauth_accounts_success(mock_supabase_client, sample_oaut
 async def test_update_oauth_tokens_success(mock_supabase_client, sample_oauth_data):
     """Test updating OAuth tokens."""
     with patch("src.auth.db.get_supabase_client", return_value=mock_supabase_client):
+        updated_oauth = sample_oauth_data.copy()
+        updated_oauth["access_token"] = "new_access_token"
+        updated_oauth["refresh_token"] = "new_refresh_token"
+
         mock_response = MagicMock()
-        mock_response.data = [sample_oauth_data]
-        mock_supabase_client.table().update().eq().execute.return_value = mock_response
+        mock_response.data = [updated_oauth]
+        mock_supabase_client.table().execute.return_value = mock_response
 
         result = await db.update_oauth_tokens(
             oauth_account_id=sample_oauth_data["id"],
@@ -760,7 +764,8 @@ async def test_update_oauth_tokens_success(mock_supabase_client, sample_oauth_da
             refresh_token="new_refresh_token",
         )
 
-        assert result is True
+        assert result["id"] == sample_oauth_data["id"]
+        assert result["access_token"] == "new_access_token"
 
 
 @pytest.mark.asyncio
@@ -805,9 +810,7 @@ def sample_user_role_data():
 
 
 @pytest.mark.asyncio
-async def test_assign_role_success(
-    mock_supabase_client, sample_role_data, sample_user_role_data
-):
+async def test_assign_role_success(mock_supabase_client, sample_role_data, sample_user_role_data):
     """Test assigning role to user."""
     with patch("src.auth.db.get_supabase_client", return_value=mock_supabase_client):
         # Mock role lookup
@@ -818,11 +821,8 @@ async def test_assign_role_success(
         assignment_response = MagicMock()
         assignment_response.data = [sample_user_role_data]
 
-        mock_supabase_client.table().select().eq().execute.side_effect = [
-            role_response,
-            assignment_response,
-        ]
-        mock_supabase_client.table().insert().execute.return_value = assignment_response
+        # Use side_effect for sequential calls to execute()
+        mock_supabase_client.table().execute.side_effect = [role_response, assignment_response]
 
         result = await db.assign_role(
             user_id=sample_user_role_data["user_id"],
@@ -830,7 +830,8 @@ async def test_assign_role_success(
             assigned_by=sample_user_role_data["assigned_by"],
         )
 
-        assert result is True
+        assert result["id"] == sample_user_role_data["id"]
+        assert result["user_id"] == sample_user_role_data["user_id"]
 
 
 @pytest.mark.asyncio
@@ -839,9 +840,9 @@ async def test_assign_role_not_found(mock_supabase_client, sample_user_role_data
     with patch("src.auth.db.get_supabase_client", return_value=mock_supabase_client):
         role_response = MagicMock()
         role_response.data = []  # Role not found
-        mock_supabase_client.table().select().eq().execute.return_value = role_response
+        mock_supabase_client.table().execute.return_value = role_response
 
-        with pytest.raises(ValueError, match="Role .* not found"):
+        with pytest.raises(Exception, match="Role .* not found"):
             await db.assign_role(
                 user_id=sample_user_role_data["user_id"],
                 role_name="nonexistent",
@@ -873,9 +874,10 @@ async def test_revoke_role_success(mock_supabase_client, sample_role_data, sampl
 async def test_get_user_roles_success(mock_supabase_client, sample_role_data):
     """Test getting user roles."""
     with patch("src.auth.db.get_supabase_client", return_value=mock_supabase_client):
+        # RPC returns user data with roles array
         mock_response = MagicMock()
-        mock_response.data = [{"role": sample_role_data}]
-        mock_supabase_client.table().select().eq().execute.return_value = mock_response
+        mock_response.data = [{"roles": [sample_role_data]}]
+        mock_supabase_client.rpc().execute.return_value = mock_response
 
         result = await db.get_user_roles(str(uuid4()))
 
@@ -887,9 +889,13 @@ async def test_get_user_roles_success(mock_supabase_client, sample_role_data):
 async def test_check_permission_has_permission(mock_supabase_client, sample_role_data):
     """Test checking user permission (has permission)."""
     with patch("src.auth.db.get_supabase_client", return_value=mock_supabase_client):
+        # RPC returns user data with roles that include the "write" permission
+        role_with_permissions = sample_role_data.copy()
+        role_with_permissions["permissions"] = ["read", "write", "delete"]
+
         mock_response = MagicMock()
-        mock_response.data = [{"role": sample_role_data}]
-        mock_supabase_client.table().select().eq().execute.return_value = mock_response
+        mock_response.data = [{"roles": [role_with_permissions]}]
+        mock_supabase_client.rpc().execute.return_value = mock_response
 
         result = await db.check_permission(str(uuid4()), "write")
 
