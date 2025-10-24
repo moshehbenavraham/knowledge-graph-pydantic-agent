@@ -1,59 +1,51 @@
-# Authentication System - Remaining Work
+# Authentication System - TODO
 
-**Current Version**: v1.5.0 (Database-backed authentication)
-**Status**: ✅ Production Ready | **Last Updated**: 2025-10-24
-
----
-
-## ✅ COMPLETED (v1.5.0)
-
-Core authentication system with database backend, password reset, and user profiles is **production-ready**.
-
-See changelog: `docs/a-changelogs/current.md` (v1.5.0 section)
+**Status**: 🚧 In Progress (v1.7.0 - 87.4% complete)
 
 ---
 
-## 📋 REMAINING WORK
+## 🔴 High Priority
 
-### 🔴 High Priority (v1.6.0)
+### Complete Test Suite (v1.7.0)
+**Time**: 2-3 hours | **Tests**: 139/159 passing (20 remaining failures)
 
-#### 1. Comprehensive Automated Tests
-**Status**: Deferred | **Priority**: P1 | **Time**: 3-4 hours
+#### test_auth_db.py (14 failures remaining)
+- [ ] Fix `list_users` not returning proper data structure from mock
+- [ ] Fix `increment_failed_login` returning wrong count (expected 1, got 2; expected 5, got 6)
+- [ ] Fix `get_session_expired` not filtering expired sessions
+- [ ] Fix cleanup functions (`cleanup_expired_sessions`, `cleanup_reset_tokens`) returning mock objects instead of counts
+- [ ] Fix `verify_reset_token_expired` invalid salt error
+- [ ] Fix `use_reset_token_invalid` raising exception instead of returning False
+- [ ] Fix `update_oauth_tokens` returning dict instead of boolean
+- [ ] Fix `assign_role` returning dict instead of boolean
+- [ ] Fix `get_user_roles` returning empty list
+- [ ] Fix `check_permission_has_permission` returning False instead of True
+- [ ] Fix `create_user_without_password` username assertion
 
-**What's needed**:
-- [ ] Database module tests (`test_auth_db.py`)
-  - User CRUD operations (create, read, update, delete)
-  - Session management (create, revoke, cleanup)
-  - Password reset tokens (generate, verify, expire)
-  - Role assignments (assign, revoke, permissions)
-- [ ] Password reset flow tests (`test_password_reset.py`)
-  - Token generation and validation
-  - Email sending (mocked SMTP)
-  - Password strength validation
-  - Complete reset flow
-- [ ] User profile tests (`test_user_profile.py`)
-  - Password change with verification
-  - Session viewing and revocation
-  - Profile rendering (database + YAML modes)
-- [ ] Migration tests (`test_migrate_yaml_to_db.py`)
-  - YAML to database migration
-  - Backup creation
-  - Dry-run mode
-- [ ] CLI tests (`test_db_cli.py`)
-  - All 8 CLI commands
-  - Error handling
-  - Confirmation prompts
+#### test_password_reset.py (2 failures remaining)
+- [ ] Fix SMTP `login()` method not being called in mock
+- [ ] Fix authentication error test not detecting failed login
 
-**Current state**: 47 existing auth tests passing (password hashing, user management, flows, rate limiting)
+#### ✅ test_user_profile.py (COMPLETE - 0 failures)
+- [x] Fixed import paths for `verify_user_password` and `update_user_password`
+- [x] Added missing `mock_supabase_client` fixture
+- [x] Corrected patch paths to `src.auth.db`
+
+#### ✅ test_migrate_yaml_to_db.py (COMPLETE - 0 failures)
+- [x] Fixed Supabase client mock with dynamic `table()` method
+- [x] Resolved mock collision for existing user checks
+
+#### ✅ test_db_cli.py (COMPLETE - 0 failures)
+- [x] Fixed stdin mocking with `builtins.input`
+- [x] All CLI commands working
 
 ---
 
-### 🟡 Medium Priority (v1.6.0+)
+## 🟡 Medium Priority
 
-#### 2. OAuth Integration
-**Status**: Deferred | **Priority**: P3 | **Time**: 4-6 hours
+### OAuth Integration (v1.8.0)
+**Time**: 4-6 hours
 
-**What's needed**:
 - [ ] Install dependencies: `authlib`, `httpx`
 - [ ] Set up OAuth apps (Google Console, GitHub Settings)
 - [ ] Build `src/auth/oauth_handler.py`
@@ -61,20 +53,15 @@ See changelog: `docs/a-changelogs/current.md` (v1.5.0 section)
   - Token storage (encrypted in Supabase `auth_oauth_accounts`)
   - Token refresh logic
 - [ ] Add OAuth buttons to login UI
-  - "Login with Google" button
-  - "Login with GitHub" button
-  - Divider between OAuth and username/password
-- [ ] Test complete OAuth flow
-  - Google login → GitHub login → token refresh
+- [ ] Test complete OAuth flow (Google → GitHub → token refresh)
 
-**Note**: Database infrastructure already in place (`auth_oauth_accounts` table)
+**Note**: Database infrastructure already exists (`auth_oauth_accounts` table)
 
 ---
 
-#### 3. Enhanced UI/UX Features
-**Status**: Deferred | **Priority**: P2 | **Time**: 2-3 hours
+### Enhanced UI/UX Features (v1.9.0)
+**Time**: 2-3 hours
 
-**What's needed**:
 - [ ] Password strength meter (visual feedback during password entry)
 - [ ] Profile pictures support (upload + display)
 - [ ] "Remember me" checkbox (extended session duration)
@@ -83,10 +70,11 @@ See changelog: `docs/a-changelogs/current.md` (v1.5.0 section)
 
 ---
 
-#### 4. Advanced Security Features
-**Status**: Deferred | **Priority**: P3 | **Time**: 2-3 hours
+## 🟢 Low Priority
 
-**What's needed**:
+### Advanced Security Features (v2.0.0)
+**Time**: 2-3 hours
+
 - [ ] 2FA/TOTP support (`pyotp` library)
   - QR code generation for authenticator apps
   - Backup codes generation
@@ -97,74 +85,4 @@ See changelog: `docs/a-changelogs/current.md` (v1.5.0 section)
 
 ---
 
-## 🚀 QUICK REFERENCE
-
-### Current System Usage
-
-**Enable Database Mode**:
-```bash
-# In .env
-USE_DATABASE_AUTH=true
-AUTH_COOKIE_KEY=<generate-random-key>
-
-# Migrate users
-python -m src.auth.migrate_yaml_to_db
-
-# Start app
-make run-ui
-```
-
-**User Management**:
-```bash
-# Create user
-python -m src.auth.db_cli create --username USER --email EMAIL --name NAME --password PASS --role ROLE
-
-# List users
-python -m src.auth.db_cli list
-
-# Update password
-python -m src.auth.db_cli update-password --username USER --new-password PASS
-
-# Assign role
-python -m src.auth.db_cli role --username USER --action assign --role admin
-
-# View sessions
-python -m src.auth.db_cli sessions --username USER
-```
-
-**Rollback to YAML**:
-```bash
-# In .env
-USE_DATABASE_AUTH=false
-make run-ui
-```
-
----
-
-## 📚 DOCUMENTATION
-
-**Full Details**:
-- **Deployment Guide**: `docs/deployment/database_auth_deployment.md` (484 lines)
-- **Quick Start**: `docs/deployment/QUICKSTART_DATABASE_AUTH.md` (195 lines)
-- **Implementation Summary**: `docs/deployment/v1.5.0_implementation_summary.md` (467 lines)
-- **Changelog**: `docs/a-changelogs/current.md` (v1.5.0 section)
-
-**Architecture**:
-- **Database Schema**: `src/agentic_rag/storage/migrations/sql/005_auth_tables.sql`
-- **Database Module**: `src/auth/db.py` (1,063 lines, 36 async functions)
-- **CLI Tool**: `src/auth/db_cli.py` (439 lines, 8 commands)
-- **Password Reset**: `src/auth/password_reset.py` (293 lines)
-- **User Profile**: `src/auth/user_profile.py` (243 lines)
-
----
-
-## 🎯 NEXT STEPS
-
-1. **Now**: Deploy v1.5.0 to production
-2. **Short-term (v1.6.0)**: Write comprehensive automated tests
-3. **Medium-term (v1.6.0+)**: Implement OAuth integration
-4. **Long-term (v2.0.0)**: Advanced security features (2FA, email verification)
-
----
-
-**Version**: 1.5.0 | **Status**: Production Ready | **Completion**: 9/10 features (90%)
+**Last Updated**: 2025-10-24
