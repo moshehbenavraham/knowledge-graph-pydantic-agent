@@ -27,6 +27,7 @@ warnings.filterwarnings(
     message=".*verify.*parameter is deprecated.*",
 )
 
+from src.auth.streamlit_auth import render_logout_button, require_authentication
 from src.config import UIMode
 from src.config.ui import ui_config as config
 from src.ui.features import (
@@ -544,6 +545,10 @@ def render_sidebar():
                         st.metric("Memory", "✅ Active")
                     else:
                         st.metric("Memory", "❌ Off")
+
+        # Logout Section
+        st.divider()
+        render_logout_button(st.session_state.authenticator, st.session_state.name)
 
         # About Section
         st.divider()
@@ -1165,7 +1170,9 @@ async def handle_user_input(user_input: str):
             logger.info("NON-STREAMING mode - executing SimpleHandler.run_agent()...")
 
             with st.spinner("Thinking..."):
-                async with AsyncClient() as http_client:  # noqa: CONST-III-001 - UI context manager for request lifecycle
+                async with (
+                    AsyncClient() as http_client
+                ):  # noqa: CONST-III-001 - UI context manager for request lifecycle
                     logger.debug("HTTP client created, calling handler.run_agent()...")
 
                     result = await handler.run_agent(
@@ -1210,7 +1217,9 @@ async def handle_user_input(user_input: str):
                 "total": 0,
             }
 
-            async with AsyncClient() as http_client:  # noqa: CONST-III-001 - UI context manager for request lifecycle
+            async with (
+                AsyncClient() as http_client
+            ):  # noqa: CONST-III-001 - UI context manager for request lifecycle
                 logger.debug("HTTP client created, starting agent stream...")
 
                 # Show thinking indicator while waiting for first chunk
@@ -1350,6 +1359,13 @@ async def main():
             else "expanded"
         ),
     )
+
+    # Require authentication (Layer 2)
+    user_name, authenticator = require_authentication()
+    logger.info("User authenticated, loading main app", user=user_name)
+
+    # Store authenticator in session state for logout button
+    st.session_state.authenticator = authenticator
 
     initialize_session_state()
 

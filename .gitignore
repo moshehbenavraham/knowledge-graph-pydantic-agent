@@ -171,3 +171,4 @@ sessions/
 *.old
 backups/
 CLAUDE.md
+config/auth_config.yaml

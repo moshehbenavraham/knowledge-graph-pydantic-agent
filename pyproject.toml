@@ -84,6 +84,12 @@ rag = [
     "tiktoken>=0.7.0",
     "sentence-transformers>=3.3.1",
 ]
+auth = [
+    "streamlit-authenticator>=0.3.0",
+    "PyJWT>=2.8.0",
+    "bcrypt>=4.1.0",
+    "extra-streamlit-components>=0.1.60",
+]
 security = [
     "bandit>=1.7.5",
     "safety>=2.3.0",
