@@ -26,19 +26,6 @@
 - [ ] Fix SMTP `login()` method not being called in mock
 - [ ] Fix authentication error test not detecting failed login
 
-#### ✅ test_user_profile.py (COMPLETE - 0 failures)
-- [x] Fixed import paths for `verify_user_password` and `update_user_password`
-- [x] Added missing `mock_supabase_client` fixture
-- [x] Corrected patch paths to `src.auth.db`
-
-#### ✅ test_migrate_yaml_to_db.py (COMPLETE - 0 failures)
-- [x] Fixed Supabase client mock with dynamic `table()` method
-- [x] Resolved mock collision for existing user checks
-
-#### ✅ test_db_cli.py (COMPLETE - 0 failures)
-- [x] Fixed stdin mocking with `builtins.input`
-- [x] All CLI commands working
-
 ---
 
 ## 🟡 Medium Priority
