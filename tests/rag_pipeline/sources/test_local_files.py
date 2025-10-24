@@ -7,8 +7,8 @@ from unittest.mock import MagicMock, call, patch
 import pytest
 
 # Add src directory to path to import the module
-sys.path.append(str(Path(__file__).parent.parent.parent.parent.resolve() / "src"))
-from rag_pipeline.sources.local_files import LocalFileWatcher
+sys.path.append(str(Path(__file__).parent.parent.parent.parent.resolve()))
+from src.rag_pipeline.sources.local_files import LocalFileWatcher
 
 
 class TestLocalFileWatcher:
@@ -16,19 +16,19 @@ class TestLocalFileWatcher:
     def setup_mocks(self):
         # Mock external dependencies
         with (
-            patch("rag_pipeline.sources.local_files.os") as mock_os,
-            patch("rag_pipeline.sources.local_files.json") as mock_json,
-            patch("rag_pipeline.sources.local_files.time.sleep") as mock_sleep,
-            patch("rag_pipeline.sources.local_files.datetime") as mock_datetime,
-            patch("rag_pipeline.sources.local_files.mimetypes") as mock_mimetypes,
+            patch("src.rag_pipeline.sources.local_files.os") as mock_os,
+            patch("src.rag_pipeline.sources.local_files.json") as mock_json,
+            patch("src.rag_pipeline.sources.local_files.time.sleep") as mock_sleep,
+            patch("src.rag_pipeline.sources.local_files.datetime") as mock_datetime,
+            patch("src.rag_pipeline.sources.local_files.mimetypes") as mock_mimetypes,
             patch(
-                "rag_pipeline.sources.local_files.extract_text_from_file"
+                "src.rag_pipeline.sources.local_files.extract_text_from_file"
             ) as mock_extract_text_from_file,
             patch(
-                "rag_pipeline.sources.local_files.process_file_for_rag"
+                "src.rag_pipeline.sources.local_files.process_file_for_rag"
             ) as mock_process_file_for_rag,
             patch(
-                "rag_pipeline.sources.local_files.delete_document_by_file_id"
+                "src.rag_pipeline.sources.local_files.delete_document_by_file_id"
             ) as mock_delete_document_by_file_id,
         ):
 
@@ -213,13 +213,30 @@ class TestLocalFileWatcher:
         self.mock_extract_text_from_file.assert_not_called()
         self.mock_process_file_for_rag.assert_not_called()
 
-    @patch("rag_pipeline.sources.local_files.LocalFileWatcher.get_changes")
-    @patch("rag_pipeline.sources.local_files.LocalFileWatcher.check_for_deleted_files")
-    @patch("rag_pipeline.sources.local_files.LocalFileWatcher.process_file")
+    @patch("src.rag_pipeline.sources.local_files.LocalFileWatcher.get_changes")
+    @patch("src.rag_pipeline.sources.local_files.LocalFileWatcher.check_for_deleted_files")
+    @patch("src.rag_pipeline.sources.local_files.LocalFileWatcher.process_file")
     def test_watch_for_changes_initial_scan_and_loop(
         self, mock_process_file, mock_check_for_deleted_files, mock_get_changes
     ):
         watcher = LocalFileWatcher(watch_directory="/tmp/test_watch")  # nosec B108 - test usage
+
+        class TrackingDict(dict):
+            def __init__(self):
+                super().__init__()
+                self.added: set[str] = set()
+                self.removed: set[str] = set()
+
+            def __setitem__(self, key, value):  # type: ignore[override]
+                self.added.add(key)
+                super().__setitem__(key, value)
+
+            def __delitem__(self, key):  # type: ignore[override]
+                self.removed.add(key)
+                super().__delitem__(key)
+
+        tracking_known_files = TrackingDict()
+        watcher.known_files = tracking_known_files
 
         # Mock initial scan files
         mock_initial_files = [
@@ -247,6 +264,7 @@ class TestLocalFileWatcher:
                 }
             ],  # New file
             [],  # No more changes
+            [],  # Extra loop with no changes before stopping
             KeyboardInterrupt,  # Stop the loop
         ]
         mock_check_for_deleted_files.side_effect = [
@@ -257,8 +275,13 @@ class TestLocalFileWatcher:
 
         watcher.watch_for_changes(interval_seconds=1)
 
-        # Verify initial scan
-        assert "/tmp/test_watch/file1.txt" in watcher.known_files  # nosec B108 - test usage
+        # Verify initial scan populated known_files
+        assert (
+            "/tmp/test_watch/file1.txt" in tracking_known_files.added
+        )  # nosec B108 - test usage
+        assert (
+            "/tmp/test_watch/file2.txt" in tracking_known_files.added
+        )  # nosec B108 - test usage
         assert "/tmp/test_watch/file2.txt" in watcher.known_files  # nosec B108 - test usage
 
         # Verify subsequent loop iterations

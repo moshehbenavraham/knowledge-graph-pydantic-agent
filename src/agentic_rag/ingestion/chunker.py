@@ -17,6 +17,28 @@ from src.config import ChunkingStrategy
 logger = logging.getLogger(__name__)
 
 
+@dataclass
+class ChunkingConfig:
+    """Configuration for document chunking."""
+
+    chunk_size: int = 1000
+    chunk_overlap: int = 200
+    max_chunk_size: int = 2000
+    min_chunk_size: int = 100
+    use_semantic_splitting: bool = False
+    preserve_structure: bool = True
+    strategy: ChunkingStrategy = ChunkingStrategy.AUTO
+
+    def __post_init__(self):
+        """Validate configuration."""
+        if self.chunk_overlap >= self.chunk_size:
+            raise ValueError("Chunk overlap must be less than chunk size")
+        if self.min_chunk_size <= 0:
+            raise ValueError("Minimum chunk size must be positive")
+        if self.max_chunk_size < self.chunk_size:
+            self.max_chunk_size = self.chunk_size * 2
+
+
 def get_chunking_config():
     """Get chunking configuration from global settings."""
     config = get_config().ingestion
@@ -511,3 +533,32 @@ class SimpleChunker:
             end_char=end_pos,
             metadata=chunk_metadata,
         )
+
+
+def semantic_chunk(
+    content: str, chunk_size: int = 1000, overlap: int = 200, metadata: dict[str, Any] | None = None
+) -> list[dict[str, Any]]:
+    """
+    Simple wrapper function for chunking documents (for backward compatibility).
+
+    Args:
+        content: Document content to chunk
+        chunk_size: Target chunk size in characters
+        overlap: Overlap between chunks
+        metadata: Optional metadata for chunks
+
+    Returns:
+        List of dictionaries with 'content' key
+    """
+    config = {
+        "chunk_size": chunk_size,
+        "chunk_overlap": overlap,
+        "max_chunk_size": chunk_size * 2,
+        "min_chunk_size": 100,
+        "use_semantic_splitting": False,
+        "preserve_structure": True,
+        "strategy": ChunkingStrategy.AUTO,
+    }
+    chunker = SimpleChunker(config)
+    chunks = chunker.chunk(content, metadata)
+    return [{"content": chunk.content} for chunk in chunks]

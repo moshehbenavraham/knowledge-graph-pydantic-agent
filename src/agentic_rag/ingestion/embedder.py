@@ -8,6 +8,7 @@ with automatic retry logic and caching.
 import asyncio
 import hashlib
 import logging
+from dataclasses import dataclass
 from typing import Any
 
 import openai
@@ -15,6 +16,19 @@ import openai
 from src.agentic_rag.config import get_config
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class EmbeddingConfig:
+    """Configuration for embedding generation."""
+
+    provider: str = "openai"
+    model: str = "text-embedding-3-small"
+    dimension: int = 1536
+    batch_size: int = 100
+    enable_cache: bool = True
+    max_retries: int = 3
+    retry_delay: float = 1.0
 
 
 def get_embedding_config():
@@ -414,3 +428,23 @@ class MultiDimensionEmbedder:
             result["embedding_768"] = None
 
         return result
+
+
+async def generate_embeddings(texts: list[str], client: Any) -> list[list[float]]:
+    """
+    Simple wrapper function for generating embeddings (for backward compatibility).
+
+    Args:
+        texts: List of texts to embed
+        client: OpenAI client (or any embedding client)
+
+    Returns:
+        List of embedding vectors
+    """
+    # Use the client if it's already an EmbeddingGenerator
+    if hasattr(client, "embed_batch"):
+        return await client.embed_batch(texts)
+
+    # Otherwise, create a new generator with default config
+    generator = EmbeddingGenerator()
+    return await generator.embed_batch(texts)

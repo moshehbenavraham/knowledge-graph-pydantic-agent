@@ -19,51 +19,11 @@ logger = structlog.get_logger()
 router = APIRouter(prefix="/api/v1/analytics", tags=["analytics"])
 
 
-# ===== Response Models =====
-
-
-class SearchMetricsResponse(dict):
-    """Search metrics response model."""
-
-    pass
-
-
-class IntentDistributionResponse(dict):
-    """Intent distribution response model."""
-
-    pass
-
-
-class PerformanceMetricsResponse(dict):
-    """Performance metrics response model."""
-
-    pass
-
-
-class TimeSeriesResponse(list):
-    """Time-series data response model."""
-
-    pass
-
-
-class ToolUsageResponse(dict):
-    """Tool usage metrics response model."""
-
-    pass
-
-
-class AgentInteractionResponse(dict):
-    """Agent interaction metrics response model."""
-
-    pass
-
-
 # ===== Endpoints =====
 
 
 @router.get(
     "/search-metrics",
-    response_model=SearchMetricsResponse,
     summary="Get search metrics",
     description="Retrieve aggregated search statistics including latency, strategies, and boost rates.",
 )
@@ -104,7 +64,6 @@ async def get_search_metrics(
 
 @router.get(
     "/intent-distribution",
-    response_model=IntentDistributionResponse,
     summary="Get intent distribution",
     description="Retrieve percentage distribution of detected query intents.",
 )
@@ -140,7 +99,6 @@ async def get_intent_distribution(
 
 @router.get(
     "/performance-metrics",
-    response_model=PerformanceMetricsResponse,
     summary="Get performance metrics",
     description="Retrieve latency breakdown, percentiles, and cache statistics.",
 )
@@ -181,7 +139,6 @@ async def get_performance_metrics(
 
 @router.get(
     "/time-series",
-    response_model=TimeSeriesResponse,
     summary="Get time-series data",
     description="Retrieve time-series data for trending analysis and visualization.",
 )
@@ -223,7 +180,6 @@ async def get_time_series_data(
 
 @router.get(
     "/tool-usage",
-    response_model=ToolUsageResponse,
     summary="Get tool usage metrics",
     description="Retrieve tool usage statistics including success rates and execution times.",
 )
@@ -264,7 +220,6 @@ async def get_tool_usage_metrics(
 
 @router.get(
     "/agent-interactions",
-    response_model=AgentInteractionResponse,
     summary="Get agent interaction metrics",
     description="Retrieve agent-user interaction statistics including feedback and response times.",
 )

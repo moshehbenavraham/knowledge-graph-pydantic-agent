@@ -797,6 +797,8 @@ base_agent/
 ### Test Suite Overview
 The project includes comprehensive testing at multiple levels:
 
+**⏱️ Performance Note**: Full test suite contains **1,113 tests** and takes **~7-10 minutes** to complete (~10-15 minutes with coverage). **Always use timeouts of 15+ minutes** when running in CI/CD or automated scripts.
+
 **Unit Tests** (`tests/unit/`)
 - Core functionality tests with mocked dependencies
 - Run with `make test` or `pytest tests/unit/ -v`

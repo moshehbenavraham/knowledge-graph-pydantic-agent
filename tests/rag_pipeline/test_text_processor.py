@@ -15,9 +15,9 @@ with patch.dict(
     },
 ):
     # Add src directory to path to import the module
-    sys.path.append(str(Path(__file__).parent.parent.parent.resolve() / "src"))
+    sys.path.append(str(Path(__file__).parent.parent.parent.resolve()))
 
-    from rag_pipeline.common.text_processor import (
+    from src.rag_pipeline.common.text_processor import (
         chunk_text,
         create_embeddings,
         extract_rows_from_csv,
@@ -33,7 +33,7 @@ class TestTextProcessor:
     def mock_openai_client(self):
         # This fixture will run before each test in this class
         # and ensure the global openai_client is mocked
-        with patch("rag_pipeline.common.text_processor.OpenAI") as mock_openai:
+        with patch("src.rag_pipeline.common.text_processor.OpenAI") as mock_openai:
             mock_openai_instance = MagicMock()
             mock_openai.return_value = mock_openai_instance
             yield mock_openai_instance
@@ -77,9 +77,9 @@ class TestTextProcessor:
         # Test text shorter than chunk size
         assert chunk_text("short", chunk_size=10) == ["short"]
 
-    @patch("rag_pipeline.common.text_processor.tempfile.NamedTemporaryFile")
-    @patch("rag_pipeline.common.text_processor.os.remove")
-    @patch("rag_pipeline.common.text_processor.pypdf.PdfReader")
+    @patch("src.rag_pipeline.common.text_processor.tempfile.NamedTemporaryFile")
+    @patch("src.rag_pipeline.common.text_processor.os.remove")
+    @patch("src.rag_pipeline.common.text_processor.pypdf.PdfReader")
     def test_extract_text_from_pdf(self, mock_pdf_reader, mock_os_remove, mock_tempfile):
         mock_temp_file = MagicMock()
         mock_temp_file.name = "/tmp/test.pdf"  # nosec B108 - test usage

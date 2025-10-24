@@ -10,7 +10,7 @@ import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from prometheus_client import Counter, Histogram
 
-from src.agentic_rag.ingestion.pipeline import IngestionPipeline
+from src.agentic_rag.ingestion.pipeline import DocumentIngestionPipeline as IngestionPipeline
 from src.agentic_rag.storage.postgres_store import PostgresStore
 from src.api.dependencies import get_graphiti_client, get_postgres_store
 from src.api.models import (

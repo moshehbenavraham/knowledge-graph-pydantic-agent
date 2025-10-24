@@ -1,25 +1,23 @@
 import csv
 import io
-import os
+import sys
 import tempfile
 from pathlib import Path
 from typing import Any
 
 import pypdf
-from dotenv import load_dotenv
 from openai import OpenAI
 
-# Load environment variables from the project root .env file
-# Get the path to the project root (4_Pydantic_AI_Agent directory)
+# Add project root to path for imports
 project_root = Path(__file__).resolve().parent.parent.parent
-dotenv_path = project_root / ".env"
+sys.path.insert(0, str(project_root))
 
-# Force override of existing environment variables
-load_dotenv(dotenv_path, override=True)
+from src.config import get_settings
 
-# Initialize OpenAI client
-api_key = os.getenv("EMBEDDING_API_KEY", "") or "ollama"
-openai_client = OpenAI(api_key=api_key, base_url=os.getenv("EMBEDDING_BASE_URL"))
+# Initialize OpenAI client using centralized configuration
+settings = get_settings()
+api_key = settings.embedding_api_key or "ollama"
+openai_client = OpenAI(api_key=api_key, base_url=settings.embedding_base_url)
 
 
 def chunk_text(text: str, chunk_size: int = 400, overlap: int = 0) -> list[str]:
@@ -127,7 +125,7 @@ def create_embeddings(texts: list[str]) -> list[list[float]]:
         return []
 
     response = openai_client.embeddings.create(
-        model=os.getenv("EMBEDDING_MODEL_CHOICE"), input=texts
+        model=settings.embedding_model, input=texts
     )
 
     # Extract the embedding vectors from the response

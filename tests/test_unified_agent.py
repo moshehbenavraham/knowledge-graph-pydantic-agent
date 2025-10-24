@@ -36,7 +36,7 @@ with patch.dict(
 @pytest.fixture
 def mock_supabase():
     """Mock Supabase client."""
-    client = MagicMock(spec=Client)
+    client = MagicMock()
     # Mock RPC calls
     client.rpc = MagicMock()
     client.rpc.return_value.execute = MagicMock(
@@ -54,7 +54,7 @@ def mock_supabase():
 @pytest.fixture
 def mock_embedding_client():
     """Mock OpenAI embedding client."""
-    client = MagicMock(spec=AsyncOpenAI)
+    client = MagicMock()
     client.embeddings = MagicMock()
     client.embeddings.create = AsyncMock(
         return_value=MagicMock(data=[MagicMock(embedding=[0.1] * 1536)])
@@ -65,7 +65,7 @@ def mock_embedding_client():
 @pytest.fixture
 def mock_http_client():
     """Mock HTTP client."""
-    return MagicMock(spec=AsyncClient)
+    return MagicMock()
 
 
 @pytest.fixture

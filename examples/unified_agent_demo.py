@@ -38,7 +38,7 @@ async def demo_basic_usage():
     # Get clients
     supabase = get_supabase_client()
     embedding_client = get_embedding_client()
-    http_client = AsyncClient()
+    http_client = AsyncClient()  # noqa: CONST-III-001 - Example/demo code
 
     # Example queries to demonstrate different capabilities
     queries = [
@@ -82,7 +82,7 @@ async def demo_advanced_features():
     settings = get_settings()
     supabase = get_supabase_client()
     embedding_client = get_embedding_client()
-    http_client = AsyncClient()
+    http_client = AsyncClient()  # noqa: CONST-III-001 - Example/demo code
 
     # Create dependencies directly for more control
     deps = UnifiedAgentDeps(
@@ -138,7 +138,7 @@ async def demo_tool_specific():
     # Get clients
     supabase = get_supabase_client()
     embedding_client = get_embedding_client()
-    http_client = AsyncClient()
+    http_client = AsyncClient()  # noqa: CONST-III-001 - Example/demo code
 
     deps = UnifiedAgentDeps(
         supabase=supabase,

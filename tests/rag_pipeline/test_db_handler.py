@@ -17,8 +17,8 @@ with patch.dict(
     },
 ):
     # Add src directory to path to import the module
-    sys.path.append(str(Path(__file__).parent.parent.parent.resolve() / "src"))
-    from rag_pipeline.common.db_handler import (
+    sys.path.append(str(Path(__file__).parent.parent.parent.resolve()))
+    from src.rag_pipeline.common.db_handler import (
         delete_document_by_file_id,
         insert_document_chunks,
         insert_document_rows,
@@ -32,7 +32,7 @@ class TestDbHandler:
     def mock_supabase_client(self):
         # This fixture will run before each test in this class
         # and ensure the global supabase client is mocked
-        with patch("rag_pipeline.common.db_handler.create_client") as mock_create_client:
+        with patch("src.rag_pipeline.common.db_handler.create_client") as mock_create_client:
             mock_supabase_instance = MagicMock()
             mock_create_client.return_value = mock_supabase_instance
             yield mock_supabase_instance
@@ -227,15 +227,15 @@ class TestDbHandler:
         mock_table.insert.assert_has_calls(expected_calls, any_order=True)
         assert mock_insert_execute.call_count == len(rows)
 
-    @patch("rag_pipeline.common.db_handler.delete_document_by_file_id")
-    @patch("rag_pipeline.common.db_handler.insert_or_update_document_metadata")
-    @patch("rag_pipeline.common.db_handler.insert_document_rows")
-    @patch("rag_pipeline.common.db_handler.insert_document_chunks")
-    @patch("rag_pipeline.common.text_processor.is_tabular_file")
-    @patch("rag_pipeline.common.text_processor.extract_schema_from_csv")
-    @patch("rag_pipeline.common.text_processor.extract_rows_from_csv")
-    @patch("rag_pipeline.common.text_processor.chunk_text")
-    @patch("rag_pipeline.common.text_processor.create_embeddings")
+    @patch("src.rag_pipeline.common.db_handler.delete_document_by_file_id")
+    @patch("src.rag_pipeline.common.db_handler.insert_or_update_document_metadata")
+    @patch("src.rag_pipeline.common.db_handler.insert_document_rows")
+    @patch("src.rag_pipeline.common.db_handler.insert_document_chunks")
+    @patch("src.rag_pipeline.common.text_processor.is_tabular_file")
+    @patch("src.rag_pipeline.common.text_processor.extract_schema_from_csv")
+    @patch("src.rag_pipeline.common.text_processor.extract_rows_from_csv")
+    @patch("src.rag_pipeline.common.text_processor.chunk_text")
+    @patch("src.rag_pipeline.common.text_processor.create_embeddings")
     def test_process_file_for_rag_text_file(
         self,
         mock_create_embeddings,
@@ -277,15 +277,15 @@ class TestDbHandler:
         )
         assert result is True
 
-    @patch("rag_pipeline.common.db_handler.delete_document_by_file_id")
-    @patch("rag_pipeline.common.db_handler.insert_or_update_document_metadata")
-    @patch("rag_pipeline.common.db_handler.insert_document_rows")
-    @patch("rag_pipeline.common.db_handler.insert_document_chunks")
-    @patch("rag_pipeline.common.text_processor.is_tabular_file")
-    @patch("rag_pipeline.common.text_processor.extract_schema_from_csv")
-    @patch("rag_pipeline.common.text_processor.extract_rows_from_csv")
-    @patch("rag_pipeline.common.text_processor.chunk_text")
-    @patch("rag_pipeline.common.text_processor.create_embeddings")
+    @patch("src.rag_pipeline.common.db_handler.delete_document_by_file_id")
+    @patch("src.rag_pipeline.common.db_handler.insert_or_update_document_metadata")
+    @patch("src.rag_pipeline.common.db_handler.insert_document_rows")
+    @patch("src.rag_pipeline.common.db_handler.insert_document_chunks")
+    @patch("src.rag_pipeline.common.text_processor.is_tabular_file")
+    @patch("src.rag_pipeline.common.text_processor.extract_schema_from_csv")
+    @patch("src.rag_pipeline.common.text_processor.extract_rows_from_csv")
+    @patch("src.rag_pipeline.common.text_processor.chunk_text")
+    @patch("src.rag_pipeline.common.text_processor.create_embeddings")
     def test_process_file_for_rag_tabular_file(
         self,
         mock_create_embeddings,
@@ -336,15 +336,15 @@ class TestDbHandler:
         )
         assert result is True
 
-    @patch("rag_pipeline.common.db_handler.delete_document_by_file_id")
-    @patch("rag_pipeline.common.db_handler.insert_or_update_document_metadata")
-    @patch("rag_pipeline.common.db_handler.insert_document_rows")
-    @patch("rag_pipeline.common.db_handler.insert_document_chunks")
-    @patch("rag_pipeline.common.text_processor.is_tabular_file")
-    @patch("rag_pipeline.common.text_processor.extract_schema_from_csv")
-    @patch("rag_pipeline.common.text_processor.extract_rows_from_csv")
-    @patch("rag_pipeline.common.text_processor.chunk_text")
-    @patch("rag_pipeline.common.text_processor.create_embeddings")
+    @patch("src.rag_pipeline.common.db_handler.delete_document_by_file_id")
+    @patch("src.rag_pipeline.common.db_handler.insert_or_update_document_metadata")
+    @patch("src.rag_pipeline.common.db_handler.insert_document_rows")
+    @patch("src.rag_pipeline.common.db_handler.insert_document_chunks")
+    @patch("src.rag_pipeline.common.text_processor.is_tabular_file")
+    @patch("src.rag_pipeline.common.text_processor.extract_schema_from_csv")
+    @patch("src.rag_pipeline.common.text_processor.extract_rows_from_csv")
+    @patch("src.rag_pipeline.common.text_processor.chunk_text")
+    @patch("src.rag_pipeline.common.text_processor.create_embeddings")
     def test_process_file_for_rag_image_file(
         self,
         mock_create_embeddings,
@@ -386,15 +386,15 @@ class TestDbHandler:
         )
         assert result is True
 
-    @patch("rag_pipeline.common.db_handler.delete_document_by_file_id")
-    @patch("rag_pipeline.common.db_handler.insert_or_update_document_metadata")
-    @patch("rag_pipeline.common.db_handler.insert_document_rows")
-    @patch("rag_pipeline.common.db_handler.insert_document_chunks")
-    @patch("rag_pipeline.common.text_processor.is_tabular_file")
-    @patch("rag_pipeline.common.text_processor.extract_schema_from_csv")
-    @patch("rag_pipeline.common.text_processor.extract_rows_from_csv")
-    @patch("rag_pipeline.common.text_processor.chunk_text")
-    @patch("rag_pipeline.common.text_processor.create_embeddings")
+    @patch("src.rag_pipeline.common.db_handler.delete_document_by_file_id")
+    @patch("src.rag_pipeline.common.db_handler.insert_or_update_document_metadata")
+    @patch("src.rag_pipeline.common.db_handler.insert_document_rows")
+    @patch("src.rag_pipeline.common.db_handler.insert_document_chunks")
+    @patch("src.rag_pipeline.common.text_processor.is_tabular_file")
+    @patch("src.rag_pipeline.common.text_processor.extract_schema_from_csv")
+    @patch("src.rag_pipeline.common.text_processor.extract_rows_from_csv")
+    @patch("src.rag_pipeline.common.text_processor.chunk_text")
+    @patch("src.rag_pipeline.common.text_processor.create_embeddings")
     def test_process_file_for_rag_no_chunks(
         self,
         mock_create_embeddings,

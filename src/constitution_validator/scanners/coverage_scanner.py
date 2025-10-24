@@ -18,7 +18,7 @@ class CoverageScanner:
 
     def __init__(self):
         """Initialize coverage scanner."""
-        self.coverage_pattern = re.compile(r"TOTAL\s+\d+\s+\d+\s+(\d+)%")
+        self.coverage_pattern = re.compile(r"TOTAL\s+\d+\s+\d+\s+(\d+(?:\.\d+)?)%")
 
     def get_coverage(self, project_root: Path) -> float:
         """
@@ -42,6 +42,7 @@ class CoverageScanner:
                     "--cov-report=term-missing",
                     "--quiet",
                     "--no-header",
+                    "--continue-on-collection-errors",  # Don't stop on collection errors
                 ],
                 check=False,
                 cwd=project_root,
@@ -94,8 +95,8 @@ class CoverageScanner:
             return float(coverage_str)
 
         # Also try to find percentage in other formats
-        # Look for lines like "78% coverage"
-        alt_pattern = re.compile(r"(\d+)%\s+coverage", re.IGNORECASE)
+        # Look for lines like "78% coverage" or "78.5% coverage"
+        alt_pattern = re.compile(r"(\d+(?:\.\d+)?)%\s+coverage", re.IGNORECASE)
         alt_match = alt_pattern.search(output)
 
         if alt_match:

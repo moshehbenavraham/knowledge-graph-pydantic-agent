@@ -16,7 +16,6 @@ with patch.dict(
     sys.path.append(str(Path(__file__).parent.parent.resolve() / "src"))
     from tools.rag import (
         get_document_content_tool,
-        get_embedding,
         list_documents_tool,
         retrieve_relevant_documents_tool,
     )

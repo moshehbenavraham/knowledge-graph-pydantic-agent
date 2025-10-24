@@ -7,7 +7,6 @@ omit =
     */venv/*
     */.venv/*
     */migrations/*
-    */config/*
     */examples/*
     */docs/*
     */setup.py

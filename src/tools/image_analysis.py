@@ -1,5 +1,4 @@
 import base64
-import os
 
 from pydantic_ai import Agent, BinaryContent
 
@@ -18,15 +17,17 @@ try:
 except ImportError:
     AnthropicModel = None
 
+from src.config import get_settings
 from supabase.client import Client
 
 
 async def image_analysis_tool(supabase: Client, document_id: str, query: str) -> str:
     try:
-        # Environment variables for the vision model
-        provider = os.getenv("LLM_PROVIDER", "openai").lower()
-        llm = os.getenv("VISION_LLM_CHOICE", "gpt-5-mini")
-        api_key = os.getenv("LLM_API_KEY", "no-api-key-provided")
+        # Get configuration from centralized settings
+        settings = get_settings()
+        provider = settings.llm_provider.lower()
+        llm = settings.vision_llm_choice
+        api_key = settings.llm_api_key
 
         # Define the vision agent based on the provider
         if provider == "anthropic":
@@ -44,7 +45,7 @@ async def image_analysis_tool(supabase: Client, document_id: str, query: str) ->
             anthropic_model = model_map.get(llm, llm)
             model = AnthropicModel(anthropic_model, api_key=api_key)
         else:
-            base_url = os.getenv("LLM_BASE_URL", "https://api.openai.com/v1")
+            base_url = settings.llm_base_url
             model = OpenAIChatModel(
                 llm, provider=OpenAIProvider(base_url=base_url, api_key=api_key)
             )

@@ -3,7 +3,6 @@
 import asyncio
 import functools
 import logging
-import os
 import time
 from collections.abc import Callable
 from contextlib import asynccontextmanager, contextmanager
@@ -18,6 +17,8 @@ from prometheus_client import (
     start_http_server,
 )
 
+from src.config import get_settings
+
 try:
     import psutil
 except ImportError:
@@ -27,7 +28,8 @@ except ImportError:
 # Configure structured logging
 def configure_logging():
     """Configure structured logging with JSON output."""
-    log_level = os.getenv("LOG_LEVEL", "INFO").upper()
+    settings = get_settings()
+    log_level = settings.log_level.upper()
 
     structlog.configure(
         processors=[

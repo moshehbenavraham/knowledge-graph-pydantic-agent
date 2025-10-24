@@ -24,7 +24,7 @@ from src.api.models import (
     SourceDocument,
 )
 from src.api.streaming import sse_manager, websocket_manager
-from src.utils.cache import CacheManager
+from src.utils.cache import RedisCache
 
 logger = structlog.get_logger()
 
@@ -39,7 +39,7 @@ chat_duration = Histogram("chat_duration_seconds", "Chat request duration", ["en
 async def chat(
     request: ChatRequest,
     deps: UnifiedAgentDeps = Depends(get_agent_deps),
-    cache: CacheManager = Depends(get_cache_manager),
+    cache: RedisCache = Depends(get_cache_manager),
 ) -> ChatResponse:
     """
     Synchronous chat endpoint.
@@ -200,7 +200,7 @@ async def chat_websocket(
 
     try:
         # Accept connection
-        connection_id = await websocket_manager.connect(websocket)
+        connection_id = await websocket_manager.connect(websocket)  # noqa: CONST-III-001 - WebSocket connection, not client instantiation
 
         logger.info("websocket_chat_started", connection_id=connection_id)
 

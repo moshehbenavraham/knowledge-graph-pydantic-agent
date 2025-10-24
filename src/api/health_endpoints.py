@@ -1,11 +1,11 @@
 """Health check and monitoring API endpoints."""
 
-import os
 from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import JSONResponse
 
+from src.config import get_settings
 from src.utils.health import health_checker
 from src.utils.monitoring import logger, monitor
 from src.utils.rate_limiting import rate_limiter
@@ -16,11 +16,12 @@ router = APIRouter(prefix="/health", tags=["health"])
 @router.get("/")
 async def basic_health_check():
     """Basic health check endpoint."""
+    settings = get_settings()
     return {
         "status": "healthy",
         "timestamp": datetime.utcnow().isoformat(),
         "service": "luminari-ai-agent",
-        "version": os.getenv("APP_VERSION", "0.1.0"),
+        "version": settings.app_version,
     }
 
 
@@ -63,12 +64,13 @@ async def detailed_health_check():
 async def get_metrics():
     """Get system metrics and statistics."""
     try:
+        settings = get_settings()
         system_stats = monitor.get_system_stats()
 
         return {
             "timestamp": datetime.utcnow().isoformat(),
             "system": system_stats,
-            "prometheus_endpoint": f"http://localhost:{os.getenv('METRICS_PORT', '8000')}/metrics",
+            "prometheus_endpoint": f"http://localhost:{settings.metrics_port}/metrics",
         }
 
     except Exception as e:
@@ -229,18 +231,18 @@ async def startup_check():
 def initialize_monitoring():
     """Initialize monitoring and metrics collection."""
     try:
+        settings = get_settings()
         # Start metrics server if enabled
-        if os.getenv("ENABLE_METRICS", "true").lower() == "true":
-            metrics_port = int(os.getenv("METRICS_PORT", "8000"))
-            monitor.start_metrics_server(metrics_port)
+        if settings.enable_metrics:
+            monitor.start_metrics_server(settings.metrics_port)
 
         # Log initialization
 
         logger.info(
             "Monitoring initialized",
-            metrics_enabled=os.getenv("ENABLE_METRICS", "true"),
-            metrics_port=os.getenv("METRICS_PORT", "8000"),
-            log_level=os.getenv("LOG_LEVEL", "INFO"),
+            metrics_enabled=settings.enable_metrics,
+            metrics_port=settings.metrics_port,
+            log_level=settings.log_level,
         )
 
     except Exception as e:

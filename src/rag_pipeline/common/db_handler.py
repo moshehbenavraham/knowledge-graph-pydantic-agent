@@ -1,12 +1,9 @@
 import base64
 import json
-import os
 import sys
 import traceback
 from pathlib import Path
 from typing import Any
-
-from dotenv import load_dotenv
 
 from supabase import create_client  # type: ignore
 from supabase.client import Client
@@ -20,18 +17,15 @@ from text_processor import (
     is_tabular_file,
 )
 
-# Load environment variables from the project root .env file
-# Get the path to the project root (4_Pydantic_AI_Agent directory)
+# Add project root to path for imports
 project_root = Path(__file__).resolve().parent.parent.parent
-dotenv_path = project_root / ".env"
+sys.path.insert(0, str(project_root))
 
-# Force override of existing environment variables
-load_dotenv(dotenv_path, override=True)
+from src.config import get_settings
 
-# Initialize Supabase client
-supabase_url = os.getenv("SUPABASE_URL")
-supabase_key = os.getenv("SUPABASE_SERVICE_KEY")
-supabase: Client = create_client(supabase_url, supabase_key)
+# Initialize Supabase client using centralized configuration
+settings = get_settings()
+supabase: Client = create_client(settings.supabase_url, settings.supabase_service_key)  # noqa: CONST-III-001 - RAG pipeline module-level client using centralized config
 
 
 def delete_document_by_file_id(file_id: str) -> None:

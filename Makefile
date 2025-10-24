@@ -12,10 +12,10 @@ format:
 	bash -c "source .venv/bin/activate && black src/ tests/"
 	bash -c "source .venv/bin/activate && ruff check --fix src/ tests/"
 
-test:
+test:  ## Run test suite (1,113 tests, ~7-10 minutes)
 	bash -c "source .venv/bin/activate && pytest tests/"
 
-test-coverage:
+test-coverage:  ## Run tests with coverage (1,113 tests, ~10-15 minutes) - USE GENEROUS TIMEOUTS IN SCRIPTS
 	bash -c "source .venv/bin/activate && pytest --cov=src --cov-report=term-missing --cov-report=html tests/"
 
 lint:

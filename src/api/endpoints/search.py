@@ -28,7 +28,7 @@ from src.api.models import (
     SearchResult,
     SearchType,
 )
-from src.utils.cache import CacheManager
+from src.utils.cache import RedisCache
 
 logger = structlog.get_logger()
 
@@ -47,7 +47,7 @@ async def search(
     vector_search: VectorSearch = Depends(get_vector_search),
     hybrid_search: HybridSearch = Depends(get_hybrid_search),
     intent_analyzer: IntentAnalyzer = Depends(get_intent_analyzer),
-    cache: CacheManager = Depends(get_cache_manager),
+    cache: RedisCache = Depends(get_cache_manager),
 ) -> SearchResponse:
     """
     Unified search endpoint with strategy selection.

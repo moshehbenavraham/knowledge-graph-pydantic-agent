@@ -18,7 +18,7 @@ from src.agentic_rag.storage.graphiti_client import GraphitiClient
 from src.agentic_rag.storage.neo4j_store import Neo4jStore
 from src.agentic_rag.storage.postgres_store import PostgresStore
 from src.config import get_settings
-from src.utils.cache import CacheManager, get_cache
+from src.utils.cache import RedisCache, get_cache
 
 logger = structlog.get_logger()
 
@@ -27,7 +27,7 @@ _connection_manager: ConnectionManager | None = None
 _postgres_store: PostgresStore | None = None
 _neo4j_store: Neo4jStore | None = None
 _graphiti_client: GraphitiClient | None = None
-_cache_manager: CacheManager | None = None
+_cache_manager: RedisCache | None = None
 
 
 async def init_dependencies():
@@ -121,7 +121,7 @@ async def get_graphiti_client() -> GraphitiClient | None:
     return _graphiti_client
 
 
-async def get_cache_manager() -> CacheManager:
+async def get_cache_manager() -> RedisCache:
     """Get cache manager instance."""
     if _cache_manager is None:
         raise HTTPException(
@@ -158,7 +158,7 @@ async def get_intent_analyzer() -> IntentAnalyzer:
 async def get_agent_deps(
     postgres_store: PostgresStore = Depends(get_postgres_store),
     neo4j_store: Neo4jStore | None = Depends(get_neo4j_store),
-    cache_manager: CacheManager = Depends(get_cache_manager),
+    cache_manager: RedisCache = Depends(get_cache_manager),
 ) -> UnifiedAgentDeps:
     """
     Get unified agent dependencies.

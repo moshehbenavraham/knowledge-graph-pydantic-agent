@@ -12,6 +12,8 @@ from pydantic_ai.messages import (
 
 # Mock Streamlit functions before importing the app
 sys.modules["streamlit"] = MagicMock()
+sys.modules["streamlit.components"] = MagicMock()
+sys.modules["streamlit.components.v1"] = MagicMock()
 sys.modules["streamlit.runtime.scriptrunner.script_run_context"] = MagicMock()
 sys.modules["streamlit.runtime.caching"] = MagicMock()
 sys.modules["streamlit.session_state"] = MagicMock()

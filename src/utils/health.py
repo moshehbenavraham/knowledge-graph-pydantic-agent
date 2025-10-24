@@ -2,12 +2,13 @@
 
 import asyncio
 import contextlib
-import os
 import time
 from datetime import datetime
 
 import httpx
 from pydantic import BaseModel
+
+from src.config import get_settings
 
 try:
     from clients.database import get_supabase_client
@@ -57,9 +58,10 @@ class HealthChecker:
     """System health monitoring and checks."""
 
     def __init__(self):
+        settings = get_settings()
         self.start_time = time.time()
-        self.version = os.getenv("APP_VERSION", "0.1.0")
-        self.check_interval = int(os.getenv("HEALTH_CHECK_INTERVAL", "30"))
+        self.version = settings.app_version
+        self.check_interval = settings.health_check_interval
         self.component_checks = {}
         self.last_full_check = None
 
@@ -114,11 +116,12 @@ class HealthChecker:
             if not get_llm_client:
                 raise ImportError("LLM client not available")
 
+            settings = get_settings()
             client = get_llm_client()
 
             # Simple test request
             response = await client.chat.completions.create(
-                model=os.getenv("LLM_CHOICE", "gpt-5-mini"),
+                model=settings.llm_choice,
                 messages=[{"role": "user", "content": "Health check"}],
                 max_tokens=5,
             )
@@ -164,11 +167,12 @@ class HealthChecker:
             if not get_embedding_client:
                 raise ImportError("Embedding client not available")
 
+            settings = get_settings()
             client = get_embedding_client()
 
             # Simple embedding test
             response = await client.embeddings.create(
-                model=os.getenv("EMBEDDING_MODEL_CHOICE", "text-embedding-3-small"),
+                model=settings.embedding_model_choice,
                 input="health check",
             )
 
@@ -258,12 +262,13 @@ class HealthChecker:
         start_time = time.time()
 
         try:
-            brave_api_key = os.getenv("BRAVE_API_KEY")
-            searxng_url = os.getenv("SEARXNG_BASE_URL")
+            settings = get_settings()
+            brave_api_key = settings.brave_api_key
+            searxng_url = settings.searxng_base_url
 
             if brave_api_key:
                 # Test Brave API
-                async with httpx.AsyncClient() as client:
+                async with httpx.AsyncClient() as client:  # noqa: CONST-III-001 - Health check uses ephemeral client
                     response = await client.get(
                         "https://api.search.brave.com/res/v1/web/search",
                         params={"q": "health check", "count": 1},
@@ -291,7 +296,7 @@ class HealthChecker:
 
             elif searxng_url:
                 # Test SearXNG
-                async with httpx.AsyncClient() as client:
+                async with httpx.AsyncClient() as client:  # noqa: CONST-III-001 - Health check uses ephemeral client
                     response = await client.get(
                         f"{searxng_url}/search",
                         params={"q": "health check", "format": "json"},

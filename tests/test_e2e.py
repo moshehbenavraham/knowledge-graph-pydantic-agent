@@ -66,9 +66,9 @@ with patch.dict(os.environ, TEST_ENV_VARS):
     # Import components for E2E testing
     from pydantic_ai.messages import ModelRequest, ModelResponse
 
-    from agent.agent import agent
-    from ui.streamlit_app import display_message_part, get_agent_deps, run_agent_with_streaming
-    from ui.streamlit_ui_simple import run_agent
+    from agent.unified_agent import super_agent as agent
+    from ui.streamlit_app import display_message_part, initialize_session_state
+    from ui.features.base_handler import SimpleHandler
 
 
 class TestCompleteUserWorkflows:

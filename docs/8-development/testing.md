@@ -25,12 +25,17 @@ The Base Agent platform uses a comprehensive testing strategy that includes:
 - **Performance Tests**: Testing system performance under load
 - **Security Tests**: Testing security measures and vulnerabilities
 
-### Current Test Status (Phase 3)
+### Current Test Status (Updated 2025-10-24)
 
-- **Total Tests**: 164+ tests (including Phase 3 components)
-- **Passing Tests**: 76+ (Phase 3 additions pending)
-- **Test Coverage**: 75%+ (Phase 3 target achieved)
-- **Target Coverage**: 85% (enhanced for Phase 3)
+- **Total Tests**: 1,113 tests
+- **Passing Tests**: 684 (61.4% pass rate)
+- **Test Coverage**: 59.48% (target: 75%)
+- **Execution Time**: ~7-10 minutes (full suite), ~10-15 minutes (with coverage)
+
+**⏱️ Important**: The test suite is substantial and requires adequate timeout values:
+- **Recommended timeout**: 15+ minutes for full suite runs
+- **CI/CD pipelines**: Configure job timeouts to at least 20 minutes
+- **Local development**: Use `timeout 1800` (30 minutes) for safety
 
 ### Phase 3 Component Status
 
@@ -132,14 +137,19 @@ The test environment is automatically configured through `tests/conftest.py`:
 
 ### Basic Test Execution
 
+**⚠️ Timeout Warning**: When running the full test suite (1,113 tests), always use generous timeout values to avoid premature termination:
+
 ```bash
-# Run all tests
-python -m pytest
+# Run all tests (recommended with timeout for scripts/CI)
+timeout 1800 python -m pytest  # 30 minutes timeout
 
 # Run with verbose output
 python -m pytest -v
 
-# Run specific test file
+# Run with coverage (takes longer, ~10-15 minutes)
+timeout 1800 pytest --cov=src --cov-report=term-missing --cov-report=html
+
+# Run specific test file (fast, no timeout needed)
 python -m pytest tests/test_clients.py
 
 # Run specific test class
@@ -813,6 +823,8 @@ python -m pytest --memray tests/test_file.py
 
 Example workflow for automated testing:
 
+**⚠️ Critical**: The test suite contains 1,113 tests and takes 10-15 minutes with coverage. **Always configure adequate job timeouts** (20+ minutes recommended).
+
 ```yaml
 name: Test Suite
 
@@ -825,6 +837,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 25  # ⚠️ IMPORTANT: Full suite takes ~15 min, add buffer
     strategy:
       matrix:
         python-version: [3.12]
@@ -843,8 +856,9 @@ jobs:
         pip install -r requirements.txt
 
     - name: Run tests with coverage
+      timeout-minutes: 20  # ⚠️ Individual step timeout
       run: |
-        python -m pytest --cov=src --cov-report=xml --cov-fail-under=75
+        timeout 1200 python -m pytest --cov=src --cov-report=xml --cov-fail-under=75
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3

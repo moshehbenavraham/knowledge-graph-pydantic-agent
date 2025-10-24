@@ -2,7 +2,6 @@
 
 import hashlib
 import json
-import os
 import pickle  # nosec B403 - Used only for internal cache, not user input
 from collections.abc import Callable
 from functools import wraps
@@ -12,6 +11,8 @@ import redis
 import structlog
 from redis import ConnectionPool
 from redis.exceptions import RedisError
+
+from src.config import get_settings
 
 logger = structlog.get_logger()
 
@@ -41,7 +42,8 @@ class RedisCache:
         self._memory_cache: dict = {}
         self._redis_client: redis.Redis | None = None
 
-        redis_url = redis_url or os.getenv("REDIS_URL", "redis://localhost:6379/0")
+        settings = get_settings()
+        redis_url = redis_url or settings.redis_url
 
         try:
             # Create connection pool for better performance

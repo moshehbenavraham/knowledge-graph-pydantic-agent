@@ -100,6 +100,10 @@ class Settings(BaseSettings):
         default=False,
         description="Debug mode flag",
     )
+    app_version: str = Field(
+        default="0.1.0",
+        description="Application version",
+    )
 
     # Database Configuration - PostgreSQL/Supabase
     database_url: str | None = Field(
@@ -273,6 +277,10 @@ class Settings(BaseSettings):
         le=128000,
         description="Maximum tokens for LLM response",
     )
+    vision_llm_choice: str = Field(
+        default="gpt-4o-mini",
+        description="LLM model for vision tasks",
+    )
 
     # Performance Settings
     vector_search_timeout: float = Field(
@@ -377,6 +385,23 @@ class Settings(BaseSettings):
     cors_origins: str = Field(
         default="http://localhost:3000",
         description="CORS allowed origins (comma-separated)",
+    )
+
+    # Monitoring & Health Check Configuration
+    enable_metrics: bool = Field(
+        default=True,
+        description="Enable Prometheus metrics",
+    )
+    metrics_port: int = Field(
+        default=8000,
+        ge=1,
+        le=65535,
+        description="Prometheus metrics server port",
+    )
+    health_check_interval: int = Field(
+        default=30,
+        ge=5,
+        description="Health check interval (seconds)",
     )
 
     # UI Configuration

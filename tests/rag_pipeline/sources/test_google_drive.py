@@ -7,12 +7,26 @@ from pathlib import Path
 from unittest.mock import ANY, MagicMock, call, patch
 
 import pytest
-from google.auth.exceptions import RefreshError
-from google.oauth2.credentials import Credentials
 
-# Add src directory to path to import the module
-sys.path.append(str(Path(__file__).parent.parent.parent.parent.resolve() / "src"))
-from rag_pipeline.sources.google_drive import SCOPES, GoogleDriveWatcher
+# Try importing Google Drive dependencies - skip tests if not available
+try:
+    from google.auth.exceptions import RefreshError
+    from google.oauth2.credentials import Credentials
+
+    # Add src directory to path to import the module
+    sys.path.append(str(Path(__file__).parent.parent.parent.parent.resolve() / "src"))
+    from rag_pipeline.sources.google_drive import SCOPES, GoogleDriveWatcher
+
+    GOOGLE_DRIVE_AVAILABLE = True
+except ImportError:
+    GOOGLE_DRIVE_AVAILABLE = False
+    # Create dummy classes to prevent import errors
+    SCOPES = None
+    GoogleDriveWatcher = None
+
+pytestmark = pytest.mark.skipif(
+    not GOOGLE_DRIVE_AVAILABLE, reason="google-auth-oauthlib not installed (optional dependency)"
+)
 
 
 class TestGoogleDriveWatcher:
@@ -440,6 +454,23 @@ class TestGoogleDriveWatcher:
         watcher = GoogleDriveWatcher(folder_id="test_folder_id")
         watcher.service = self.mock_service
 
+        class TrackingDict(dict):
+            def __init__(self):
+                super().__init__()
+                self.added: set[str] = set()
+                self.removed: set[str] = set()
+
+            def __setitem__(self, key, value):  # type: ignore[override]
+                self.added.add(key)
+                super().__setitem__(key, value)
+
+            def __delitem__(self, key):  # type: ignore[override]
+                self.removed.add(key)
+                super().__delitem__(key)
+
+        tracking_known_files = TrackingDict()
+        watcher.known_files = tracking_known_files
+
         # Mock initial scan files
         mock_initial_files = [
             {
@@ -479,8 +510,9 @@ class TestGoogleDriveWatcher:
             watcher.watch_for_changes(interval_seconds=1)
 
             # Verify initial scan
+            assert "init_file1" in tracking_known_files.added
+            assert "init_file2" not in tracking_known_files.added  # Trashed file should not be added
             assert "init_file1" in watcher.known_files
-            assert "init_file2" not in watcher.known_files  # Trashed file should not be added
 
             # Verify subsequent loop iterations
             mock_get_changes.assert_has_calls(

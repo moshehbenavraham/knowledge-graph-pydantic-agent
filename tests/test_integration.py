@@ -38,7 +38,7 @@ with patch.dict(os.environ, TEST_ENV_VARS):
     sys.path.append(str(Path(__file__).parent.parent.resolve() / "src"))
 
     # Import components for integration testing
-    from agent.agent import AgentDeps
+    from agent.unified_agent import UnifiedAgentDeps as AgentDeps
     from clients.memory import get_mem0_config
     from tools.rag import list_documents_tool, retrieve_relevant_documents_tool
     from tools.sql_query import execute_sql_query_tool
