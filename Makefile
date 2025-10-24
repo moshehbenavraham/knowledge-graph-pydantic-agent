@@ -76,6 +76,30 @@ run-agentic-rag:
 dev:
 	bash -c "source .venv/bin/activate && PYTHONPATH=$(PWD):$$PYTHONPATH UI_MODE=$(or $(MODE),advanced) streamlit run src/ui/streamlit_app.py --server.runOnSave true"
 
+# ngrok Deployment
+ngrok-start:  ## Start ngrok tunnel manually
+	ngrok start base-agent-ui
+
+ngrok-ui:  ## Start Streamlit only (for manual ngrok)
+	bash -c "source .venv/bin/activate && \
+	  PYTHONPATH=$(PWD):$$PYTHONPATH UI_MODE=advanced \
+	  streamlit run src/ui/streamlit_app.py --server.port=8501"
+
+deploy-ngrok:  ## Start Streamlit + ngrok tunnel automatically
+	@echo "Starting Streamlit on port 8501..."
+	@bash -c "source .venv/bin/activate && \
+	  PYTHONPATH=$(PWD):$$PYTHONPATH UI_MODE=advanced \
+	  streamlit run src/ui/streamlit_app.py --server.port=8501" & \
+	sleep 5 && \
+	echo "Starting ngrok tunnel to aiwithapex.ngrok.io..." && \
+	ngrok start base-agent-ui
+
+ngrok-status:  ## Check ngrok tunnel status
+	@curl -s http://localhost:4040/api/tunnels | python -m json.tool
+
+ngrok-logs:  ## View ngrok access logs
+	@curl -s http://localhost:4040/api/requests/http | python -m json.tool
+
 # Docker
 docker-build:
 	docker-compose build
@@ -680,4 +704,4 @@ deploy-clean-all:
 	docker-compose -f docker/docker-compose.staging.yml down -v
 	docker-compose -f docker/docker-compose.prod.yml down -v
 
-.PHONY: setup check format test test-coverage lint security run-ui run-ui-simple run-ui-standard run-ui-advanced run-rag run-mcp run-api run-agentic-rag dev docker-build docker-run docker-stop db-setup db-migrate neo4j-init ingest ingest-clean clean clean-all requirements install-dev load-test load-test-headless stress-test monitoring-up monitoring-down monitoring-logs profile profile-memory db-migrate db-rollback db-history db-revision redis-cli redis-flush redis-stats redis-monitor api-test api-search api-metrics api-status full-stack-up full-stack-down benchmark poetry-install poetry-update poetry-lock poetry-export poetry-build poetry-shell poetry-check poetry-show tox tox-py311 tox-py312 tox-lint tox-security tox-parallel tox-recreate http-test http-chat http-search http-status http-metrics profile-api profile-ui profile-rag profile-tests profile-top profile-memory-api profile-memory-ui redis-commander-up redis-commander-down redis-commander-logs dev-setup dev-check dev-format dev-clean pre-commit-install pre-commit-run pre-commit-update full-test full-profile full-monitoring image-build image-build-api image-push image-push-api image-tag-release image-scan image-scan-full image-sbom image-sign image-verify deploy-dev deploy-dev-down deploy-staging deploy-staging-down deploy-prod deploy-prod-down health-check health-check-staging health-check-prod rollback-staging rollback-prod ci-supply-chain ci-deploy logs-app logs-api logs-all metrics-export image-clean deploy-clean-all
+.PHONY: setup check format test test-coverage lint security run-ui run-ui-simple run-ui-standard run-ui-advanced run-rag run-mcp run-api run-agentic-rag dev ngrok-start ngrok-ui deploy-ngrok ngrok-status ngrok-logs docker-build docker-run docker-stop db-setup db-migrate neo4j-init ingest ingest-clean clean clean-all requirements install-dev load-test load-test-headless stress-test monitoring-up monitoring-down monitoring-logs profile profile-memory db-migrate db-rollback db-history db-revision redis-cli redis-flush redis-stats redis-monitor api-test api-search api-metrics api-status full-stack-up full-stack-down benchmark poetry-install poetry-update poetry-lock poetry-export poetry-build poetry-shell poetry-check poetry-show tox tox-py311 tox-py312 tox-lint tox-security tox-parallel tox-recreate http-test http-chat http-search http-status http-metrics profile-api profile-ui profile-rag profile-tests profile-top profile-memory-api profile-memory-ui redis-commander-up redis-commander-down redis-commander-logs dev-setup dev-check dev-format dev-clean pre-commit-install pre-commit-run pre-commit-update full-test full-profile full-monitoring image-build image-build-api image-push image-push-api image-tag-release image-scan image-scan-full image-sbom image-sign image-verify deploy-dev deploy-dev-down deploy-staging deploy-staging-down deploy-prod deploy-prod-down health-check health-check-staging health-check-prod rollback-staging rollback-prod ci-supply-chain ci-deploy logs-app logs-api logs-all metrics-export image-clean deploy-clean-all

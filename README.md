@@ -251,6 +251,40 @@ See `docs/projects_ongoing/AGENTIC_GRAPH_RAG_PLAN.md` for detailed progress trac
   python examples/unified_agent_demo.py   # Interactive agent demonstration
   ```
 
+### Remote Deployment via ngrok
+
+Deploy the Streamlit UI remotely using ngrok for secure HTTPS access from anywhere:
+
+**Prerequisites:**
+- ngrok account with authtoken ([get one free](https://dashboard.ngrok.com/get-started/your-authtoken))
+- Configure in `.env`:
+  ```bash
+  NGROK_AUTHTOKEN=your_authtoken_here
+  NGROK_DOMAIN=your-custom-domain.ngrok.io  # Optional: requires Personal/Pro plan
+  NGROK_ENABLED=true
+  ```
+
+**Deployment Options:**
+```bash
+# Automatic deployment (Streamlit + ngrok in one command)
+make deploy-ngrok
+
+# Manual deployment (two terminals)
+make ngrok-ui        # Terminal 1: Start Streamlit on port 8501
+make ngrok-start     # Terminal 2: Start ngrok tunnel
+
+# Monitoring
+make ngrok-status    # Check tunnel status and public URL
+make ngrok-logs      # View access logs
+```
+
+**Configuration:**
+- ngrok config: `~/.config/ngrok/ngrok.yml`
+- Streamlit config: `.streamlit/config.toml` (optimized for ngrok)
+- Custom domain: Set `NGROK_DOMAIN` in `.env` for branded URLs
+
+**Access:** Your UI will be available at `https://your-domain.ngrok.io` (or the URL shown in `ngrok-status`)
+
 ## Configuration
 All configuration is managed through type-safe Pydantic models in `src/config/` that load from `.env`. Environment variables are organized into logical groups in `.env.example`:
 
