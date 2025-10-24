@@ -4,12 +4,15 @@ This module provides authentication integration for the Streamlit UI using
 streamlit-authenticator.
 """
 
+import asyncio
 from pathlib import Path
 
 import streamlit as st
 import streamlit_authenticator as stauth
 import structlog
 import yaml
+
+from src.auth.security import get_rate_limiter, log_auth_event
 
 logger = structlog.get_logger(__name__)
 
@@ -113,13 +116,63 @@ def render_login_page() -> tuple[str | None, str | None, bool | None]:
     st.markdown("### 🔐 Authentication Required")
     st.info("Please log in to access the Base Agent interface.")
 
-    # Render login widget
+    # Get rate limiter
+    rate_limiter = get_rate_limiter()
+
+    # Check if any user in form is locked out (we check after form submission)
+    # For now, render the login form
     name, authentication_status, username = authenticator.login(location="main")
 
     # Handle authentication status
     if authentication_status is False:
-        st.error("❌ Username or password is incorrect")
-        logger.warning("Failed login attempt", username=username)
+        # Failed login attempt
+        if username:
+            # Check if locked out
+            is_locked, remaining = rate_limiter.is_locked_out(username)
+
+            if is_locked:
+                minutes = int(remaining / 60) + 1
+                st.error(
+                    f"🔒 Account locked due to too many failed attempts. "
+                    f"Please try again in {minutes} minute(s)."
+                )
+                logger.error("Login attempt while locked out", username=username)
+            else:
+                # Record failed attempt
+                rate_limiter.record_failed_attempt(username)
+                remaining_attempts = rate_limiter.get_remaining_attempts(username)
+
+                if remaining_attempts > 0:
+                    st.error(
+                        f"❌ Username or password is incorrect. "
+                        f"{remaining_attempts} attempt(s) remaining."
+                    )
+                else:
+                    st.error(
+                        "🔒 Account locked due to too many failed attempts. "
+                        "Please try again in 15 minutes."
+                    )
+
+                logger.warning(
+                    "Failed login attempt",
+                    username=username,
+                    remaining_attempts=remaining_attempts,
+                )
+
+            # Log failed auth event
+            try:
+                asyncio.run(
+                    log_auth_event(
+                        event_type="login",
+                        username=username or "unknown",
+                        success=False,
+                        metadata={"locked_out": is_locked, "remaining_attempts": remaining_attempts}
+                        if not is_locked
+                        else {"locked_out": True},
+                    )
+                )
+            except Exception as e:
+                logger.warning("Failed to log auth event", error=str(e))
 
     elif authentication_status is None:
         st.warning("👋 Please enter your username and password")
@@ -139,9 +192,21 @@ def render_logout_button(authenticator: stauth.Authenticate, name: str) -> None:
         st.markdown(f"**👤 Logged in as:** {name}")
 
         if st.button("🚪 Logout", use_container_width=True):
+            username = st.session_state.get("username", "unknown")
             authenticator.logout(location="unrendered")
+
+            # Log logout event
+            try:
+                asyncio.run(
+                    log_auth_event(
+                        event_type="logout", username=username, success=True, metadata={"name": name}
+                    )
+                )
+            except Exception as e:
+                logger.warning("Failed to log logout event", error=str(e))
+
             st.session_state.clear()
-            logger.info("User logged out", name=name)
+            logger.info("User logged out", name=name, username=username)
             st.rerun()
 
 
@@ -176,6 +241,24 @@ def require_authentication() -> tuple[str, stauth.Authenticate]:
         # If authenticated, rerun to load main app
         if authentication_status is True:
             logger.info("User authenticated successfully", username=username, name=name)
+
+            # Record successful login in rate limiter
+            rate_limiter = get_rate_limiter()
+            rate_limiter.record_successful_login(username)
+
+            # Log successful auth event
+            try:
+                asyncio.run(
+                    log_auth_event(
+                        event_type="login",
+                        username=username,
+                        success=True,
+                        metadata={"name": name},
+                    )
+                )
+            except Exception as e:
+                logger.warning("Failed to log successful auth event", error=str(e))
+
             st.rerun()
 
         # Stop execution if not authenticated
