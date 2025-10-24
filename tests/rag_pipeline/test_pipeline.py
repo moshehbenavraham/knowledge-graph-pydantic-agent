@@ -157,7 +157,7 @@ class TestPipeline:
         # Verify watcher was initialized without arguments
         mock_google_drive_watcher.assert_called_once_with()
 
-    @patch.dict("sys.argv", ["pipeline.py", "--source", "local", "--interval", "120"])
+    @patch("sys.argv", ["pipeline.py", "--source", "local", "--interval", "120"])
     @patch("rag_pipeline.pipeline.LocalFileWatcher")
     def test_main_with_sys_argv(self, mock_local_file_watcher):
         """Test main function with actual sys.argv parsing."""
@@ -168,7 +168,7 @@ class TestPipeline:
 
         mock_local_watcher_instance.watch_for_changes.assert_called_once_with(120)
 
-    @patch.dict("sys.argv", ["pipeline.py", "--source", "google_drive"])
+    @patch("sys.argv", ["pipeline.py", "--source", "google_drive"])
     @patch("rag_pipeline.pipeline.GoogleDriveWatcher")
     def test_main_google_drive_default_interval_real_argv(self, mock_google_drive_watcher):
         """Test Google Drive with default interval using real argv."""
@@ -179,3 +179,74 @@ class TestPipeline:
 
         # Should use default 60 second interval
         mock_google_watcher_instance.watch_for_changes.assert_called_once_with(60)
+
+    @patch("sys.argv", ["pipeline.py", "--source", "local", "--interval", "0"])
+    @patch("rag_pipeline.pipeline.LocalFileWatcher")
+    def test_main_with_zero_interval(self, mock_local_file_watcher):
+        """Test with zero interval (edge case)."""
+        mock_local_watcher_instance = MagicMock()
+        mock_local_file_watcher.return_value = mock_local_watcher_instance
+
+        main()
+
+        mock_local_watcher_instance.watch_for_changes.assert_called_once_with(0)
+
+    @patch("sys.argv", ["pipeline.py", "--source", "local", "--interval", "-10"])
+    @patch("rag_pipeline.pipeline.LocalFileWatcher")
+    def test_main_with_negative_interval(self, mock_local_file_watcher):
+        """Test with negative interval (edge case)."""
+        mock_local_watcher_instance = MagicMock()
+        mock_local_file_watcher.return_value = mock_local_watcher_instance
+
+        main()
+
+        mock_local_watcher_instance.watch_for_changes.assert_called_once_with(-10)
+
+    @patch("sys.argv", ["pipeline.py", "--source", "local"])
+    @patch("rag_pipeline.pipeline.LocalFileWatcher")
+    def test_main_local_watcher_exception(self, mock_local_file_watcher):
+        """Test handling exception during watcher creation."""
+        mock_local_file_watcher.side_effect = Exception("Watcher initialization failed")
+
+        with pytest.raises(Exception, match="Watcher initialization failed"):
+            main()
+
+    @patch("sys.argv", ["pipeline.py", "--source", "google_drive"])
+    @patch("rag_pipeline.pipeline.GoogleDriveWatcher")
+    def test_main_google_drive_watch_exception(self, mock_google_drive_watcher):
+        """Test handling exception during watch_for_changes."""
+        mock_google_watcher_instance = MagicMock()
+        mock_google_watcher_instance.watch_for_changes.side_effect = Exception("Watch failed")
+        mock_google_drive_watcher.return_value = mock_google_watcher_instance
+
+        with pytest.raises(Exception, match="Watch failed"):
+            main()
+
+    @patch("sys.argv", ["pipeline.py", "--source", "local", "--interval", "999999"])
+    @patch("rag_pipeline.pipeline.LocalFileWatcher")
+    def test_main_with_very_large_interval(self, mock_local_file_watcher):
+        """Test with very large interval value."""
+        mock_local_watcher_instance = MagicMock()
+        mock_local_file_watcher.return_value = mock_local_watcher_instance
+
+        main()
+
+        mock_local_watcher_instance.watch_for_changes.assert_called_once_with(999999)
+
+    @patch("sys.argv", ["pipeline.py"])
+    def test_main_missing_required_source(self):
+        """Test that missing --source argument raises SystemExit."""
+        with pytest.raises(SystemExit):
+            main()
+
+    @patch("sys.argv", ["pipeline.py", "--source", "invalid_source"])
+    def test_main_invalid_source(self):
+        """Test that invalid source argument raises SystemExit."""
+        with pytest.raises(SystemExit):
+            main()
+
+    @patch("sys.argv", ["pipeline.py", "--source", "local", "--interval", "not_a_number"])
+    def test_main_invalid_interval_type(self):
+        """Test that non-integer interval raises SystemExit."""
+        with pytest.raises(SystemExit):
+            main()

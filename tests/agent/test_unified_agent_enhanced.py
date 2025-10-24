@@ -4,14 +4,12 @@ Enhanced tests for unified agent system.
 Target coverage: 50% → 75%+
 """
 
-from dataclasses import asdict
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from httpx import AsyncClient
 from openai import AsyncOpenAI
 from pydantic_ai import RunContext
-from supabase.client import Client
 
 from src.agent.unified_agent import (
     UnifiedAgentDeps,
@@ -21,6 +19,7 @@ from src.agent.unified_agent import (
     smart_search,
     super_agent,
 )
+from supabase.client import Client
 
 
 class TestUnifiedAgentDeps:
@@ -200,7 +199,9 @@ class TestSmartSearch:
             "chunks": [{"content": f"Result {i}"} for i in range(20)],
         }
 
-        with patch("src.agent.unified_agent.smart_search_tool", return_value=expected_result) as mock_tool:
+        with patch(
+            "src.agent.unified_agent.smart_search_tool", return_value=expected_result
+        ) as mock_tool:
             await smart_search(mock_ctx, query="test", limit=20)
 
             # Verify limit was passed
@@ -218,7 +219,9 @@ class TestSmartSearch:
         mock_ctx = MagicMock(spec=RunContext)
         mock_ctx.deps = deps
 
-        with patch("src.agent.unified_agent.smart_search_tool", side_effect=Exception("Search failed")):
+        with patch(
+            "src.agent.unified_agent.smart_search_tool", side_effect=Exception("Search failed")
+        ):
             result = await smart_search(mock_ctx, query="test", limit=10)
 
         assert "error" in result
@@ -294,7 +297,9 @@ class TestQueryKnowledgeGraph:
         mock_ctx = MagicMock(spec=RunContext)
         mock_ctx.deps = deps
 
-        with patch("src.agent.unified_agent.graph_query_tool", side_effect=Exception("Graph error")):
+        with patch(
+            "src.agent.unified_agent.graph_query_tool", side_effect=Exception("Graph error")
+        ):
             result = await query_knowledge_graph(mock_ctx, entity_name="Test")
 
         assert "error" in result
@@ -322,7 +327,9 @@ Document 1: Content here
 Document 2: More content
 Document 3: Final content"""
 
-        with patch("src.agent.unified_agent.retrieve_relevant_documents_tool", return_value=expected_result):
+        with patch(
+            "src.agent.unified_agent.retrieve_relevant_documents_tool", return_value=expected_result
+        ):
             result = await retrieve_documents(mock_ctx, query="test query", limit=10)
 
         assert "Found 3 relevant documents" in result
@@ -379,7 +386,7 @@ class TestSuperAgent:
     def test_super_agent_has_system_prompt(self):
         """Test that super agent has system prompt."""
         # Agent should have been initialized with system prompt
-        assert hasattr(super_agent, "_system_prompt")
+        assert hasattr(super_agent, "_system_prompts")
 
     def test_super_agent_deps_type(self):
         """Test that super agent uses correct deps type."""
@@ -389,7 +396,7 @@ class TestSuperAgent:
     def test_super_agent_retries(self):
         """Test that super agent has retry configuration."""
         # Agent should have retries configured
-        assert hasattr(super_agent, "_retries")
+        assert hasattr(super_agent, "_max_result_retries")
 
 
 class TestToolRegistration:
@@ -398,7 +405,7 @@ class TestToolRegistration:
     def test_smart_search_registered(self):
         """Test that smart_search tool is registered."""
         # Get registered tools
-        tools = super_agent._function_tools
+        tools = super_agent._function_toolset.tools
 
         # Check if smart_search is in tools
         tool_names = [tool.name for tool in tools.values()]
@@ -406,13 +413,13 @@ class TestToolRegistration:
 
     def test_query_knowledge_graph_registered(self):
         """Test that query_knowledge_graph tool is registered."""
-        tools = super_agent._function_tools
+        tools = super_agent._function_toolset.tools
         tool_names = [tool.name for tool in tools.values()]
         assert "query_knowledge_graph" in tool_names
 
     def test_retrieve_documents_registered(self):
         """Test that retrieve_documents tool is registered."""
-        tools = super_agent._function_tools
+        tools = super_agent._function_toolset.tools
         tool_names = [tool.name for tool in tools.values()]
         assert "retrieve_documents" in tool_names
 

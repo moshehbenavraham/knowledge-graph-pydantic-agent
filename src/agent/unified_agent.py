@@ -258,9 +258,13 @@ async def retrieve_documents(ctx: RunContext[UnifiedAgentDeps], query: str, limi
         Formatted string with relevant document chunks
     """
     logger.info(f"RAG retrieval for: {query}")
-    return await retrieve_relevant_documents_tool(
-        ctx.deps.supabase, ctx.deps.embedding_client, query
-    )
+    try:
+        return await retrieve_relevant_documents_tool(
+            ctx.deps.supabase, ctx.deps.embedding_client, query, limit=limit
+        )
+    except Exception as e:
+        logger.error(f"Document retrieval failed: {e}")
+        return f"Error: Document retrieval failed - {e!s}"
 
 
 @super_agent.tool
@@ -591,7 +595,8 @@ async def run_unified_agent(
     deps = UnifiedAgentDeps(
         supabase=supabase_client,
         embedding_client=embedding_client,
-        http_client=http_client or AsyncClient(),  # noqa: CONST-III-001 - Fallback client for convenience wrapper
+        http_client=http_client
+        or AsyncClient(),  # noqa: CONST-III-001 - Fallback client for convenience wrapper
         brave_api_key=agent_config.brave_api_key,
         searxng_base_url=agent_config.searxng_base_url,
         jina_api_key=agent_config.jina_api_key,
@@ -633,20 +638,19 @@ async def run_unified_agent(
 # Export the main components
 __all__ = [
     "UnifiedAgentDeps",
-    "run_unified_agent",
-    "super_agent",
-    # Tool functions (for testing)
     "add_memories",
-    "smart_search",
-    "query_knowledge_graph",
-    "retrieve_documents",
-    "list_all_documents",
-    "get_full_document",
-    "search_web",
-    "execute_sql",
     "analyze_image",
-    "execute_python_code",
-    "query_tabular_data",
     "comprehensive_search",
+    "execute_python_code",
+    "execute_sql",
+    "get_full_document",
     "iterative_search",
+    "list_all_documents",
+    "query_knowledge_graph",
+    "query_tabular_data",
+    "retrieve_documents",
+    "run_unified_agent",
+    "search_web",
+    "smart_search",
+    "super_agent",
 ]

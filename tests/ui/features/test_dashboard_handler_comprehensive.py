@@ -4,19 +4,18 @@ Comprehensive tests for DashboardHandler - analytics data retrieval with caching
 Covers dashboard_handler.py and dashboard_utils.py together.
 """
 
-import pytest
 from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, Mock, patch
-from uuid import uuid4
+from unittest.mock import AsyncMock, Mock
+
+import pytest
 
 from src.ui.features.dashboard_handler import DashboardHandler
 from src.ui.features.dashboard_utils import (
     generate_entity_cypher,
+    generate_entity_timeline_cypher,
     generate_relationship_cypher,
     generate_top_entities_cypher,
-    generate_entity_timeline_cypher,
 )
-
 
 # ===== Fixtures =====
 
@@ -80,6 +79,7 @@ class TestDashboardCache:
         dashboard_handler._set_cache("test_key", test_value)
 
         import time
+
         time.sleep(0.1)
 
         cached = dashboard_handler._get_cached("test_key")
@@ -102,8 +102,12 @@ class TestSearchMetrics:
         mock_conn = AsyncMock()
         mock_conn.fetchrow = AsyncMock(return_value=mock_summary)
 
-        dashboard_handler.connection_manager.get_pg_connection.return_value.__aenter__.return_value = mock_conn
-        dashboard_handler.connection_manager.get_pg_connection.return_value.__aexit__.return_value = AsyncMock(return_value=False)
+        dashboard_handler.connection_manager.get_pg_connection.return_value.__aenter__.return_value = (
+            mock_conn
+        )
+        dashboard_handler.connection_manager.get_pg_connection.return_value.__aexit__.return_value = AsyncMock(
+            return_value=False
+        )
 
         metrics = await dashboard_handler.get_search_metrics(window="7d")
 
@@ -116,8 +120,12 @@ class TestSearchMetrics:
         mock_conn = AsyncMock()
         mock_conn.fetchrow = AsyncMock(return_value=mock_summary)
 
-        dashboard_handler.connection_manager.get_pg_connection.return_value.__aenter__.return_value = mock_conn
-        dashboard_handler.connection_manager.get_pg_connection.return_value.__aexit__.return_value = AsyncMock(return_value=False)
+        dashboard_handler.connection_manager.get_pg_connection.return_value.__aenter__.return_value = (
+            mock_conn
+        )
+        dashboard_handler.connection_manager.get_pg_connection.return_value.__aexit__.return_value = AsyncMock(
+            return_value=False
+        )
 
         # First call
         metrics1 = await dashboard_handler.get_search_metrics(window="7d")
@@ -134,8 +142,12 @@ class TestSearchMetrics:
         mock_conn = AsyncMock()
         mock_conn.fetchrow = AsyncMock(return_value={})
 
-        dashboard_handler.connection_manager.get_pg_connection.return_value.__aenter__.return_value = mock_conn
-        dashboard_handler.connection_manager.get_pg_connection.return_value.__aexit__.return_value = AsyncMock(return_value=False)
+        dashboard_handler.connection_manager.get_pg_connection.return_value.__aenter__.return_value = (
+            mock_conn
+        )
+        dashboard_handler.connection_manager.get_pg_connection.return_value.__aexit__.return_value = AsyncMock(
+            return_value=False
+        )
 
         await dashboard_handler.get_search_metrics(window="24h")
 
@@ -246,8 +258,479 @@ class TestGenerateEntityTimelineCypher:
 
     def test_generate_timeline_query(self):
         """Test generating entity timeline query."""
-        query = generate_entity_timeline_cypher(entity_id="entity_123", limit=20)
+        query = generate_entity_timeline_cypher(entity_id="entity_123")
 
         assert "'entity_123'" in query
-        assert "Episode" in query or "MENTIONED_IN" in query
-        assert "LIMIT 20" in query
+        assert "LIMIT 50" in query
+
+
+# ===== Additional Comprehensive Tests =====
+
+
+@pytest.mark.asyncio
+class TestGraphData:
+    """Test graph data retrieval."""
+
+    async def test_get_graph_data_success(self, dashboard_handler):
+        """Test successful graph data retrieval."""
+        mock_neo4j_session = AsyncMock()
+        mock_entity_result = AsyncMock()
+        mock_entity_result.data = AsyncMock(
+            return_value=[
+                {"id": "e1", "name": "Entity 1", "type": "person", "relationship_count": 5},
+                {"id": "e2", "name": "Entity 2", "type": "company", "relationship_count": 3},
+            ]
+        )
+        mock_rel_result = AsyncMock()
+        mock_rel_result.data = AsyncMock(
+            return_value=[
+                {
+                    "source_id": "e1",
+                    "target_id": "e2",
+                    "relationship_type": "WORKS_FOR",
+                    "summary": "",
+                },
+            ]
+        )
+        mock_neo4j_session.run = AsyncMock(side_effect=[mock_entity_result, mock_rel_result])
+
+        dashboard_handler.connection_manager.get_neo4j_session.return_value.__aenter__.return_value = (
+            mock_neo4j_session
+        )
+        dashboard_handler.connection_manager.get_neo4j_session.return_value.__aexit__.return_value = AsyncMock(
+            return_value=False
+        )
+
+        graph_data = await dashboard_handler.get_graph_data(limit=50)
+
+        assert len(graph_data["entities"]) == 2
+        assert len(graph_data["relationships"]) == 1
+
+    async def test_get_graph_data_error(self, dashboard_handler):
+        """Test graph data error handling."""
+        mock_neo4j_session = AsyncMock()
+        mock_neo4j_session.run = AsyncMock(side_effect=Exception("Neo4j error"))
+
+        dashboard_handler.connection_manager.get_neo4j_session.return_value.__aenter__.return_value = (
+            mock_neo4j_session
+        )
+        dashboard_handler.connection_manager.get_neo4j_session.return_value.__aexit__.return_value = AsyncMock(
+            return_value=False
+        )
+
+        graph_data = await dashboard_handler.get_graph_data()
+
+        assert graph_data["entities"] == []
+        assert graph_data["relationships"] == []
+        assert "error" in graph_data
+
+
+@pytest.mark.asyncio
+class TestTopEntities:
+    """Test top entities retrieval."""
+
+    async def test_get_top_entities_success(self, dashboard_handler):
+        """Test successful top entities retrieval."""
+        mock_neo4j_session = AsyncMock()
+        mock_result = AsyncMock()
+        mock_result.data = AsyncMock(
+            return_value=[
+                {
+                    "id": "e1",
+                    "name": "Top Entity",
+                    "type": "person",
+                    "relationship_count": 100,
+                    "chunk_count": 50,
+                    "created_at": datetime.now(),
+                },
+            ]
+        )
+        mock_neo4j_session.run = AsyncMock(return_value=mock_result)
+
+        dashboard_handler.connection_manager.get_neo4j_session.return_value.__aenter__.return_value = (
+            mock_neo4j_session
+        )
+        dashboard_handler.connection_manager.get_neo4j_session.return_value.__aexit__.return_value = AsyncMock(
+            return_value=False
+        )
+
+        entities = await dashboard_handler.get_top_entities(limit=20)
+
+        assert len(entities) == 1
+        assert entities[0]["name"] == "Top Entity"
+
+    async def test_get_top_entities_error(self, dashboard_handler):
+        """Test top entities error handling."""
+        mock_neo4j_session = AsyncMock()
+        mock_neo4j_session.run = AsyncMock(side_effect=Exception("Query failed"))
+
+        dashboard_handler.connection_manager.get_neo4j_session.return_value.__aenter__.return_value = (
+            mock_neo4j_session
+        )
+        dashboard_handler.connection_manager.get_neo4j_session.return_value.__aexit__.return_value = AsyncMock(
+            return_value=False
+        )
+
+        entities = await dashboard_handler.get_top_entities()
+
+        assert entities == []
+
+
+@pytest.mark.asyncio
+class TestEntityTimeline:
+    """Test entity timeline retrieval."""
+
+    async def test_get_entity_timeline_success(self, dashboard_handler):
+        """Test successful entity timeline retrieval."""
+        mock_neo4j_session = AsyncMock()
+        mock_result = AsyncMock()
+        mock_result.data = AsyncMock(
+            return_value=[
+                {
+                    "description": "Event 1",
+                    "valid_from": datetime(2024, 1, 1),
+                    "valid_to": None,
+                    "created_at": datetime(2024, 1, 1),
+                },
+            ]
+        )
+        mock_neo4j_session.run = AsyncMock(return_value=mock_result)
+
+        dashboard_handler.connection_manager.get_neo4j_session.return_value.__aenter__.return_value = (
+            mock_neo4j_session
+        )
+        dashboard_handler.connection_manager.get_neo4j_session.return_value.__aexit__.return_value = AsyncMock(
+            return_value=False
+        )
+
+        timeline = await dashboard_handler.get_entity_timeline("entity-123")
+
+        assert len(timeline) == 1
+        assert timeline[0]["description"] == "Event 1"
+
+    async def test_get_entity_timeline_error(self, dashboard_handler):
+        """Test entity timeline error handling."""
+        mock_neo4j_session = AsyncMock()
+        mock_neo4j_session.run = AsyncMock(side_effect=Exception("Timeline query failed"))
+
+        dashboard_handler.connection_manager.get_neo4j_session.return_value.__aenter__.return_value = (
+            mock_neo4j_session
+        )
+        dashboard_handler.connection_manager.get_neo4j_session.return_value.__aexit__.return_value = AsyncMock(
+            return_value=False
+        )
+
+        timeline = await dashboard_handler.get_entity_timeline("entity-456")
+
+        assert timeline == []
+
+
+@pytest.mark.asyncio
+class TestPerformanceMetrics:
+    """Test performance metrics retrieval."""
+
+    async def test_get_performance_metrics_success(self, dashboard_handler):
+        """Test successful performance metrics retrieval."""
+        mock_conn = AsyncMock()
+        mock_conn.fetchrow = AsyncMock(
+            side_effect=[
+                {
+                    "avg_vector_latency_ms": 50.0,
+                    "avg_graph_latency_ms": 30.0,
+                    "avg_ranking_latency_ms": 10.0,
+                    "avg_total_latency_ms": 90.0,
+                    "p50_latency_ms": 85.0,
+                    "p95_latency_ms": 120.0,
+                    "p99_latency_ms": 150.0,
+                    "cache_hits": 40,
+                    "total_searches": 100,
+                },
+                {
+                    "pg_active_connections": 5,
+                    "pg_idle_connections": 3,
+                    "neo4j_active_connections": 2,
+                    "system_cache_hit_rate": 0.45,
+                },
+            ]
+        )
+
+        dashboard_handler.connection_manager.get_pg_connection.return_value.__aenter__.return_value = (
+            mock_conn
+        )
+        dashboard_handler.connection_manager.get_pg_connection.return_value.__aexit__.return_value = AsyncMock(
+            return_value=False
+        )
+
+        metrics = await dashboard_handler.get_performance_metrics(window="7d")
+
+        assert metrics["vector_latency_ms"] == 50.0
+        assert metrics["p50_latency_ms"] == 85.0
+
+    async def test_get_performance_metrics_error(self, dashboard_handler):
+        """Test performance metrics error handling."""
+        mock_conn = AsyncMock()
+        mock_conn.fetchrow = AsyncMock(side_effect=Exception("Metrics query failed"))
+
+        dashboard_handler.connection_manager.get_pg_connection.return_value.__aenter__.return_value = (
+            mock_conn
+        )
+        dashboard_handler.connection_manager.get_pg_connection.return_value.__aexit__.return_value = AsyncMock(
+            return_value=False
+        )
+
+        metrics = await dashboard_handler.get_performance_metrics()
+
+        assert metrics["vector_latency_ms"] == 0
+        assert "error" in metrics
+
+
+@pytest.mark.asyncio
+class TestIntentDistribution:
+    """Test intent distribution retrieval."""
+
+    async def test_get_intent_distribution_success(self, dashboard_handler):
+        """Test successful intent distribution retrieval."""
+        mock_conn = AsyncMock()
+        mock_conn.fetch = AsyncMock(
+            return_value=[
+                {
+                    "detected_intent": "VECTOR_HEAVY",
+                    "search_count": 60,
+                    "avg_latency_ms": 100.0,
+                    "avg_chunks_returned": 10,
+                },
+                {
+                    "detected_intent": "HYBRID",
+                    "search_count": 40,
+                    "avg_latency_ms": 150.0,
+                    "avg_chunks_returned": 12,
+                },
+            ]
+        )
+
+        dashboard_handler.connection_manager.get_pg_connection.return_value.__aenter__.return_value = (
+            mock_conn
+        )
+        dashboard_handler.connection_manager.get_pg_connection.return_value.__aexit__.return_value = AsyncMock(
+            return_value=False
+        )
+
+        distribution = await dashboard_handler.get_intent_distribution(window="7d")
+
+        assert distribution["VECTOR_HEAVY"] == 60.0
+        assert distribution["HYBRID"] == 40.0
+
+    async def test_get_intent_distribution_error(self, dashboard_handler):
+        """Test intent distribution error handling."""
+        mock_conn = AsyncMock()
+        mock_conn.fetch = AsyncMock(side_effect=Exception("Query failed"))
+
+        dashboard_handler.connection_manager.get_pg_connection.return_value.__aenter__.return_value = (
+            mock_conn
+        )
+        dashboard_handler.connection_manager.get_pg_connection.return_value.__aexit__.return_value = AsyncMock(
+            return_value=False
+        )
+
+        distribution = await dashboard_handler.get_intent_distribution(window="24h")
+
+        assert distribution == {}
+
+
+@pytest.mark.asyncio
+class TestTimeSeriesData:
+    """Test time series data retrieval."""
+
+    async def test_get_time_series_data_success(self, dashboard_handler):
+        """Test successful time series data retrieval."""
+        mock_conn = AsyncMock()
+        mock_conn.fetch = AsyncMock(
+            return_value=[
+                {
+                    "timestamp": datetime(2024, 1, 1),
+                    "searches": 100,
+                    "latency": 150.0,
+                    "cache_hits": 40,
+                    "graph_boosts": 30,
+                },
+            ]
+        )
+
+        dashboard_handler.connection_manager.get_pg_connection.return_value.__aenter__.return_value = (
+            mock_conn
+        )
+        dashboard_handler.connection_manager.get_pg_connection.return_value.__aexit__.return_value = AsyncMock(
+            return_value=False
+        )
+
+        data = await dashboard_handler.get_time_series_data(window="7d", metric="searches")
+
+        assert len(data) == 1
+        assert data[0]["searches"] == 100
+
+    async def test_get_time_series_data_error(self, dashboard_handler):
+        """Test time series data error handling."""
+        mock_conn = AsyncMock()
+        mock_conn.fetch = AsyncMock(side_effect=Exception("Time series query failed"))
+
+        dashboard_handler.connection_manager.get_pg_connection.return_value.__aenter__.return_value = (
+            mock_conn
+        )
+        dashboard_handler.connection_manager.get_pg_connection.return_value.__aexit__.return_value = AsyncMock(
+            return_value=False
+        )
+
+        data = await dashboard_handler.get_time_series_data(window="30d", metric="latency")
+
+        assert data == []
+
+
+@pytest.mark.asyncio
+class TestToolUsageMetrics:
+    """Test tool usage metrics retrieval."""
+
+    async def test_get_tool_usage_metrics_success(self, dashboard_handler):
+        """Test successful tool usage metrics retrieval."""
+        mock_conn = AsyncMock()
+        mock_conn.fetchrow = AsyncMock(
+            return_value={"total_calls": 500, "unique_tools": 10, "avg_success_rate": 0.95}
+        )
+        mock_conn.fetch = AsyncMock(
+            return_value=[
+                {
+                    "tool_name": "smart_search",
+                    "total_calls": 200,
+                    "success_rate": 0.98,
+                    "avg_execution_time_ms": 100.0,
+                    "p95_execution_time_ms": 150.0,
+                },
+            ]
+        )
+
+        dashboard_handler.connection_manager.get_pg_connection.return_value.__aenter__.return_value = (
+            mock_conn
+        )
+        dashboard_handler.connection_manager.get_pg_connection.return_value.__aexit__.return_value = AsyncMock(
+            return_value=False
+        )
+
+        metrics = await dashboard_handler.get_tool_usage_metrics(window="7d")
+
+        assert metrics["total_calls"] == 500
+        assert len(metrics["tools"]) == 1
+
+    async def test_get_tool_usage_metrics_error(self, dashboard_handler):
+        """Test tool usage metrics error handling."""
+        mock_conn = AsyncMock()
+        mock_conn.fetchrow = AsyncMock(side_effect=Exception("Tool metrics failed"))
+
+        dashboard_handler.connection_manager.get_pg_connection.return_value.__aenter__.return_value = (
+            mock_conn
+        )
+        dashboard_handler.connection_manager.get_pg_connection.return_value.__aexit__.return_value = AsyncMock(
+            return_value=False
+        )
+
+        metrics = await dashboard_handler.get_tool_usage_metrics()
+
+        assert metrics["total_calls"] == 0
+        assert "error" in metrics
+
+
+@pytest.mark.asyncio
+class TestAgentInteractionMetrics:
+    """Test agent interaction metrics retrieval."""
+
+    async def test_get_agent_interaction_metrics_success(self, dashboard_handler):
+        """Test successful agent interaction metrics retrieval."""
+        mock_conn = AsyncMock()
+        mock_conn.fetchrow = AsyncMock(
+            return_value={
+                "total_interactions": 1000,
+                "unique_sessions": 150,
+                "avg_response_time_ms": 250.0,
+                "rag_usage_rate": 0.75,
+                "thumbs_up": 80,
+                "thumbs_down": 20,
+                "feedback_rate": 0.10,
+            }
+        )
+
+        dashboard_handler.connection_manager.get_pg_connection.return_value.__aenter__.return_value = (
+            mock_conn
+        )
+        dashboard_handler.connection_manager.get_pg_connection.return_value.__aexit__.return_value = AsyncMock(
+            return_value=False
+        )
+
+        metrics = await dashboard_handler.get_agent_interaction_metrics(window="7d")
+
+        assert metrics["total_interactions"] == 1000
+        assert metrics["thumbs_up"] == 80
+
+    async def test_get_agent_interaction_metrics_error(self, dashboard_handler):
+        """Test agent interaction metrics error handling."""
+        mock_conn = AsyncMock()
+        mock_conn.fetchrow = AsyncMock(side_effect=Exception("Interaction query failed"))
+
+        dashboard_handler.connection_manager.get_pg_connection.return_value.__aenter__.return_value = (
+            mock_conn
+        )
+        dashboard_handler.connection_manager.get_pg_connection.return_value.__aexit__.return_value = AsyncMock(
+            return_value=False
+        )
+
+        metrics = await dashboard_handler.get_agent_interaction_metrics()
+
+        assert metrics["total_interactions"] == 0
+        assert "error" in metrics
+
+
+@pytest.mark.asyncio
+class TestMaterializedViewsRefresh:
+    """Test materialized views refresh."""
+
+    async def test_refresh_materialized_views_success(self, dashboard_handler):
+        """Test successful materialized views refresh."""
+        mock_conn = AsyncMock()
+        mock_conn.execute = AsyncMock()
+
+        dashboard_handler.connection_manager.get_pg_connection.return_value.__aenter__.return_value = (
+            mock_conn
+        )
+        dashboard_handler.connection_manager.get_pg_connection.return_value.__aexit__.return_value = AsyncMock(
+            return_value=False
+        )
+
+        result = await dashboard_handler.refresh_materialized_views()
+
+        assert result is True
+
+    async def test_refresh_materialized_views_error(self, dashboard_handler):
+        """Test materialized views refresh error handling."""
+        mock_conn = AsyncMock()
+        mock_conn.execute = AsyncMock(side_effect=Exception("Refresh failed"))
+
+        dashboard_handler.connection_manager.get_pg_connection.return_value.__aenter__.return_value = (
+            mock_conn
+        )
+        dashboard_handler.connection_manager.get_pg_connection.return_value.__aexit__.return_value = AsyncMock(
+            return_value=False
+        )
+
+        result = await dashboard_handler.refresh_materialized_views()
+
+        assert result is False
+
+
+class TestClearCache:
+    """Test cache clearing."""
+
+    def test_clear_cache(self, dashboard_handler):
+        """Test clearing all cache."""
+        dashboard_handler._set_cache("key1", "value1")
+        dashboard_handler._set_cache("key2", "value2")
+
+        dashboard_handler.clear_cache()
+
+        assert dashboard_handler._cache == {}

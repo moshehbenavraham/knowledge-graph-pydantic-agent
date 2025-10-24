@@ -1,16 +1,16 @@
 """Tests for analytics logger module."""
 
+from unittest.mock import AsyncMock, Mock
+
 import pytest
-from unittest.mock import AsyncMock, Mock, patch
-from datetime import datetime
 
 from src.agentic_rag.analytics import (
-    AnalyticsLogger,
-    SearchAnalyticsEvent,
-    ToolUsageEvent,
     AgentInteractionEvent,
+    AnalyticsLogger,
     IngestionAnalyticsEvent,
+    SearchAnalyticsEvent,
     SystemMetricsEvent,
+    ToolUsageEvent,
     get_analytics_logger,
 )
 
@@ -19,15 +19,19 @@ from src.agentic_rag.analytics import (
 def mock_connection_manager():
     """Create mock connection manager."""
     manager = Mock()
-    manager.get_pg_connection = AsyncMock()
 
     # Create mock connection
     mock_conn = Mock()
-    mock_conn.executemany = AsyncMock()
+    # Ensure executemany returns None (success) and doesn't raise
+    mock_conn.executemany = AsyncMock(return_value=None)
 
-    # Make get_pg_connection return async context manager
-    manager.get_pg_connection.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
-    manager.get_pg_connection.return_value.__aexit__ = AsyncMock(return_value=None)
+    # Create a proper async context manager mock
+    async_ctx_mgr = AsyncMock()
+    async_ctx_mgr.__aenter__.return_value = mock_conn
+    async_ctx_mgr.__aexit__.return_value = None
+
+    # Make get_pg_connection return the context manager
+    manager.get_pg_connection.return_value = async_ctx_mgr
 
     return manager
 
@@ -35,7 +39,9 @@ def mock_connection_manager():
 @pytest.fixture
 async def analytics_logger(mock_connection_manager):
     """Create analytics logger with mocked connection manager."""
-    logger = AnalyticsLogger(connection_manager=mock_connection_manager, batch_size=5, batch_interval_seconds=1.0)
+    logger = AnalyticsLogger(
+        connection_manager=mock_connection_manager, batch_size=5, batch_interval_seconds=1.0
+    )
     await logger.start()
     yield logger
     await logger.stop()
@@ -77,31 +83,48 @@ def test_tool_usage_event_creation():
 
 def test_agent_interaction_event_creation():
     """Test AgentInteractionEvent creation."""
+    from uuid import uuid4
+
+    session_id = uuid4()
     event = AgentInteractionEvent(
         user_message="Hello",
         agent_response="Hi there!",
-        session_id="test-123",
-        total_tokens=100,
+        session_id=session_id,
+        interaction_type="query",
+        response_time_ms=150.5,
+        model_used="test-model",
+        tokens_used=100,
     )
 
     assert event.user_message == "Hello"
     assert event.agent_response == "Hi there!"
-    assert event.session_id == "test-123"
-    assert event.total_tokens == 100
+    assert event.session_id == session_id
+    assert event.interaction_type == "query"
+    assert event.response_time_ms == 150.5
+    assert event.model_used == "test-model"
+    assert event.tokens_used == 100
 
 
 def test_ingestion_analytics_event_creation():
     """Test IngestionAnalyticsEvent creation."""
+    from uuid import uuid4
+
+    document_id = uuid4()
     event = IngestionAnalyticsEvent(
-        document_id="doc-123",
-        source_type="file",
+        document_id=document_id,
+        total_processing_time_ms=500.0,
+        file_size_bytes=1024,
+        file_type="pdf",
+        processing_mode="full",
         chunks_created=15,
-        processing_time_ms=500.0,
         success=True,
     )
 
-    assert event.document_id == "doc-123"
-    assert event.source_type == "file"
+    assert event.document_id == document_id
+    assert event.total_processing_time_ms == 500.0
+    assert event.file_size_bytes == 1024
+    assert event.file_type == "pdf"
+    assert event.processing_mode == "full"
     assert event.chunks_created == 15
     assert event.success is True
 
@@ -109,14 +132,20 @@ def test_ingestion_analytics_event_creation():
 def test_system_metrics_event_creation():
     """Test SystemMetricsEvent creation."""
     event = SystemMetricsEvent(
-        cpu_percent=45.5,
-        memory_percent=60.2,
-        active_connections=10,
+        pg_active_connections=5,
+        pg_idle_connections=3,
+        neo4j_active_connections=2,
+        active_sessions=10,
+        cache_hit_rate=0.85,
+        avg_response_time_ms=150.5,
     )
 
-    assert event.cpu_percent == 45.5
-    assert event.memory_percent == 60.2
-    assert event.active_connections == 10
+    assert event.pg_active_connections == 5
+    assert event.pg_idle_connections == 3
+    assert event.neo4j_active_connections == 2
+    assert event.active_sessions == 10
+    assert event.cache_hit_rate == 0.85
+    assert event.avg_response_time_ms == 150.5
 
 
 # ============================================================================
@@ -225,24 +254,29 @@ async def test_batch_flush_on_size_limit(mock_connection_manager):
     await logger.start()
 
     # Add 2 events to trigger flush
-    await logger.log_search(SearchAnalyticsEvent(
-        query_text="test1",
-        detected_intent="VECTOR_HEAVY",
-        strategy_used="VECTOR_HEAVY",
-        total_latency_ms=100.0,
-        chunks_returned=5,
-    ))
+    await logger.log_search(
+        SearchAnalyticsEvent(
+            query_text="test1",
+            detected_intent="VECTOR_HEAVY",
+            strategy_used="VECTOR_HEAVY",
+            total_latency_ms=100.0,
+            chunks_returned=5,
+        )
+    )
 
-    await logger.log_search(SearchAnalyticsEvent(
-        query_text="test2",
-        detected_intent="GRAPH_HEAVY",
-        strategy_used="GRAPH_HEAVY",
-        total_latency_ms=150.0,
-        chunks_returned=3,
-    ))
+    await logger.log_search(
+        SearchAnalyticsEvent(
+            query_text="test2",
+            detected_intent="GRAPH_HEAVY",
+            strategy_used="GRAPH_HEAVY",
+            total_latency_ms=150.0,
+            chunks_returned=3,
+        )
+    )
 
     # Should have flushed - wait for background task
     import asyncio
+
     await asyncio.sleep(0.1)
 
     await logger.stop()
@@ -283,7 +317,9 @@ async def test_error_handling_in_log_methods(mock_connection_manager):
     # Make executemany raise an exception
     mock_conn = Mock()
     mock_conn.executemany = AsyncMock(side_effect=Exception("DB Error"))
-    mock_connection_manager.get_pg_connection.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
+    mock_connection_manager.get_pg_connection.return_value.__aenter__ = AsyncMock(
+        return_value=mock_conn
+    )
 
     logger = AnalyticsLogger(connection_manager=mock_connection_manager, batch_size=5)
     await logger.start()
@@ -301,6 +337,7 @@ async def test_error_handling_in_log_methods(mock_connection_manager):
 
     # Flush will fail but should be handled gracefully
     import contextlib
+
     with contextlib.suppress(Exception):
         await logger._flush_search_events()
 
@@ -312,13 +349,15 @@ async def test_event_queue_management(analytics_logger):
     """Test event queue is managed correctly."""
     # Add multiple events
     for i in range(3):
-        await analytics_logger.log_search(SearchAnalyticsEvent(
-            query_text=f"test{i}",
-            detected_intent="VECTOR_HEAVY",
-            strategy_used="VECTOR_HEAVY",
-            total_latency_ms=100.0,
-            chunks_returned=5,
-        ))
+        await analytics_logger.log_search(
+            SearchAnalyticsEvent(
+                query_text=f"test{i}",
+                detected_intent="VECTOR_HEAVY",
+                strategy_used="VECTOR_HEAVY",
+                total_latency_ms=100.0,
+                chunks_returned=5,
+            )
+        )
 
     assert len(analytics_logger._search_queue) == 3
 
@@ -334,20 +373,24 @@ async def test_concurrent_logging(analytics_logger):
 
     # Log multiple events concurrently
     tasks = [
-        analytics_logger.log_search(SearchAnalyticsEvent(
-            query_text=f"test{i}",
-            detected_intent="VECTOR_HEAVY",
-            strategy_used="VECTOR_HEAVY",
-            total_latency_ms=100.0,
-            chunks_returned=5,
-        ))
+        analytics_logger.log_search(
+            SearchAnalyticsEvent(
+                query_text=f"test{i}",
+                detected_intent="VECTOR_HEAVY",
+                strategy_used="VECTOR_HEAVY",
+                total_latency_ms=100.0,
+                chunks_returned=5,
+            )
+        )
         for i in range(10)
     ]
 
     await asyncio.gather(*tasks)
 
-    # All events should be queued
-    assert len(analytics_logger._search_queue) >= 10
+    # Events should be logged (either in queue or already flushed due to batch size=5)
+    # Total events logged + queued should be >= 10
+    total_events = analytics_logger.events_logged + len(analytics_logger._search_queue)
+    assert total_events >= 10
 
 
 @pytest.mark.asyncio
