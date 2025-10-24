@@ -5,7 +5,6 @@ This module provides rate limiting, login attempt tracking, and security event l
 
 import time
 from collections import defaultdict
-from datetime import datetime, timedelta
 from typing import Any
 
 import structlog
@@ -78,10 +77,9 @@ class LoginRateLimiter:
             remaining = self._lockouts[username] - time.time()
             if remaining > 0:
                 return True, remaining
-            else:
-                # Lockout expired, clean up
-                del self._lockouts[username]
-                return False, 0.0
+            # Lockout expired, clean up
+            del self._lockouts[username]
+            return False, 0.0
 
         return False, 0.0
 

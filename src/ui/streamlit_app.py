@@ -27,7 +27,12 @@ warnings.filterwarnings(
     message=".*verify.*parameter is deprecated.*",
 )
 
-from src.auth.streamlit_auth import render_logout_button, require_authentication
+from src.auth.streamlit_auth import (
+    USE_DATABASE_AUTH,
+    render_logout_button,
+    require_authentication,
+)
+from src.auth.user_profile import render_user_profile, render_user_profile_simple
 from src.config import UIMode
 from src.config.ui import ui_config as config
 from src.ui.features import (
@@ -545,6 +550,29 @@ def render_sidebar():
                         st.metric("Memory", "✅ Active")
                     else:
                         st.metric("Memory", "❌ Off")
+
+        # User Profile Section (Database mode only)
+        if USE_DATABASE_AUTH:
+            # Full user profile with password change, sessions, etc.
+            username = st.session_state.get("username")
+            if username:
+                render_user_profile(username)
+        else:
+            # Simplified profile for YAML mode
+            username = st.session_state.get("username")
+            name = st.session_state.get("name")
+            if username and name:
+                # Try to get email from config if available
+                try:
+                    from src.auth.streamlit_auth import load_auth_config
+
+                    config = load_auth_config()
+                    user_data = config.get("credentials", {}).get("usernames", {}).get(username, {})
+                    email = user_data.get("email")
+                    render_user_profile_simple(username, name, email)
+                except Exception:
+                    # Fallback without email
+                    render_user_profile_simple(username, name)
 
         # Logout Section
         st.divider()
@@ -1359,6 +1387,15 @@ async def main():
             else "expanded"
         ),
     )
+
+    # Check if this is a password reset page request (query param: token)
+    query_params = st.query_params
+    if "token" in query_params:
+        # Render password reset page instead of main app
+        from src.auth.password_reset_page import render_password_reset_page
+
+        render_password_reset_page()
+        return  # Stop execution, don't load main app
 
     # Require authentication (Layer 2)
     user_name, authenticator = require_authentication()
