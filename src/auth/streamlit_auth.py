@@ -677,6 +677,17 @@ def require_authentication() -> tuple[str, stauth.Authenticate]:
             st.session_state.name = oauth_name
             st.session_state.username = oauth_username
 
+            # Enforce 2FA if required (database mode only)
+            if USE_DATABASE_AUTH:
+                from src.auth.enforce_2fa import enforce_2fa_if_required
+
+                # Check and enforce 2FA if required
+                can_proceed = enforce_2fa_if_required(oauth_username)
+                if not can_proceed:
+                    # 2FA setup or verification required
+                    # enforce_2fa_if_required() handles the UI
+                    st.stop()
+
             # Create database session
             if USE_DATABASE_AUTH:
                 try:
@@ -706,6 +717,17 @@ def require_authentication() -> tuple[str, stauth.Authenticate]:
             rate_limiter = get_rate_limiter()
             rate_limiter.record_successful_login(username)
 
+            # Enforce 2FA if required (database mode only)
+            if USE_DATABASE_AUTH:
+                from src.auth.enforce_2fa import enforce_2fa_if_required
+
+                # Check and enforce 2FA if required
+                can_proceed = enforce_2fa_if_required(username)
+                if not can_proceed:
+                    # 2FA setup or verification required
+                    # enforce_2fa_if_required() handles the UI
+                    st.stop()
+
             # Create database session (if database mode)
             if USE_DATABASE_AUTH:
                 try:
@@ -725,7 +747,7 @@ def require_authentication() -> tuple[str, stauth.Authenticate]:
                         event_type="login",
                         username=username,
                         success=True,
-                        metadata={"name": name},
+                        metadata={"name": name, "2fa_verified": st.session_state.get("2fa_verified", False)},
                     )
                 )
             except Exception as e:

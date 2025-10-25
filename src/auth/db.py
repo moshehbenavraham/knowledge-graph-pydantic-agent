@@ -1044,3 +1044,58 @@ async def check_permission(user_id: UUID | str, permission: str) -> bool:
             return True
 
     return False
+
+
+# =====================================================
+# TWO-FACTOR AUTHENTICATION MANAGEMENT
+# =====================================================
+
+
+async def set_2fa_requirement(username: str, required: bool) -> bool:
+    """
+    Set whether a user is required to use 2FA.
+
+    Args:
+        username: Username
+        required: True to require 2FA, False to make it optional
+
+    Returns:
+        True if successful
+
+    Raises:
+        Exception: If user not found or database error
+    """
+    client = get_supabase_client()
+
+    # Update requires_2fa column
+    response = (
+        client.table("auth_users")
+        .update({"requires_2fa": required})
+        .eq("username", username)
+        .execute()
+    )
+
+    if not response.data:
+        raise Exception(f"User '{username}' not found")
+
+    return True
+
+
+async def get_2fa_requirement(username: str) -> bool:
+    """
+    Check if a user is required to use 2FA.
+
+    Args:
+        username: Username
+
+    Returns:
+        True if 2FA is required, False otherwise
+
+    Raises:
+        Exception: If user not found or database error
+    """
+    user = await get_user_by_username(username)
+    if not user:
+        raise Exception(f"User '{username}' not found")
+
+    return user.get("requires_2fa", False)

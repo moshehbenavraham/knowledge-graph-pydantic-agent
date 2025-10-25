@@ -1,4 +1,4 @@
-"""OAuth authentication handler for Google and GitHub.
+"""OAuth authentication handler for Google, GitHub, Microsoft, and Apple.
 
 Provides OAuth 2.0 authentication flow integration with support for:
 - Authorization URL generation
@@ -40,6 +40,16 @@ GITHUB_AUTH_URL = "https://github.com/login/oauth/authorize"
 GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token"
 GITHUB_USER_URL = "https://api.github.com/user"
 GITHUB_SCOPES = ["read:user", "user:email"]
+
+MICROSOFT_AUTH_URL = "https://login.microsoftonline.com/common/oauth2/v2.0/authorize"
+MICROSOFT_TOKEN_URL = "https://login.microsoftonline.com/common/oauth2/v2.0/token"
+MICROSOFT_USERINFO_URL = "https://graph.microsoft.com/v1.0/me"
+MICROSOFT_SCOPES = ["openid", "email", "profile", "User.Read"]
+
+APPLE_AUTH_URL = "https://appleid.apple.com/auth/authorize"
+APPLE_TOKEN_URL = "https://appleid.apple.com/auth/token"
+APPLE_USERINFO_URL = "https://appleid.apple.com/auth/token"  # Apple returns user info in token response
+APPLE_SCOPES = ["name", "email"]
 
 # Token encryption key (should be set in environment)
 OAUTH_ENCRYPTION_KEY = os.getenv("OAUTH_ENCRYPTION_KEY")
@@ -95,14 +105,14 @@ class OAuthHandler:
         """Initialize OAuth handler.
 
         Args:
-            provider: OAuth provider name ('google' or 'github')
+            provider: OAuth provider name ('google', 'github', 'microsoft', or 'apple')
 
         Raises:
             ValueError: If provider not supported or credentials not configured
         """
         self.provider = provider.lower()
 
-        if self.provider not in ["google", "github"]:
+        if self.provider not in ["google", "github", "microsoft", "apple"]:
             raise ValueError(f"Unsupported OAuth provider: {provider}")
 
         # Get credentials from environment
@@ -134,11 +144,21 @@ class OAuthHandler:
             self.token_url = GOOGLE_TOKEN_URL
             self.userinfo_url = GOOGLE_USERINFO_URL
             self.scopes = GOOGLE_SCOPES
-        else:  # github
+        elif self.provider == "github":
             self.auth_url = GITHUB_AUTH_URL
             self.token_url = GITHUB_TOKEN_URL
             self.userinfo_url = GITHUB_USER_URL
             self.scopes = GITHUB_SCOPES
+        elif self.provider == "microsoft":
+            self.auth_url = MICROSOFT_AUTH_URL
+            self.token_url = MICROSOFT_TOKEN_URL
+            self.userinfo_url = MICROSOFT_USERINFO_URL
+            self.scopes = MICROSOFT_SCOPES
+        elif self.provider == "apple":
+            self.auth_url = APPLE_AUTH_URL
+            self.token_url = APPLE_TOKEN_URL
+            self.userinfo_url = APPLE_USERINFO_URL
+            self.scopes = APPLE_SCOPES
 
         logger.info(
             f"OAuth handler initialized for {self.provider}",
@@ -167,10 +187,17 @@ class OAuthHandler:
             "state": state,
         }
 
-        # GitHub requires access_type for offline access
+        # Provider-specific parameters
         if self.provider == "google":
             params["access_type"] = "offline"
             params["prompt"] = "consent"  # Force consent to get refresh token
+        elif self.provider == "microsoft":
+            params["response_mode"] = "query"
+            params["prompt"] = "select_account"
+        elif self.provider == "apple":
+            params["response_mode"] = "form_post"  # Apple requires form_post
+            # Apple requires nonce for id_token validation
+            params["nonce"] = secrets.token_urlsafe(32)
 
         authorization_url = f"{self.auth_url}?{urlencode(params)}"
 
@@ -286,7 +313,7 @@ class OAuthHandler:
                         "avatar_url": profile.get("picture"),
                         "email_verified": profile.get("verified_email", False),
                     }
-                else:  # github
+                elif self.provider == "github":
                     # GitHub may require additional API call for email
                     email = profile.get("email")
                     if not email:
@@ -309,6 +336,24 @@ class OAuthHandler:
                         "name": profile.get("name") or profile.get("login"),
                         "avatar_url": profile.get("avatar_url"),
                         "email_verified": bool(email),  # GitHub emails are verified
+                    }
+                elif self.provider == "microsoft":
+                    standardized = {
+                        "provider_user_id": profile.get("id"),
+                        "email": profile.get("mail") or profile.get("userPrincipalName"),
+                        "name": profile.get("displayName"),
+                        "avatar_url": None,  # Microsoft Graph requires separate API call for photo
+                        "email_verified": True,  # Microsoft emails are verified
+                    }
+                elif self.provider == "apple":
+                    # Apple provides user info in ID token (decoded JWT)
+                    # This is simplified - real implementation should decode ID token
+                    standardized = {
+                        "provider_user_id": profile.get("sub"),
+                        "email": profile.get("email"),
+                        "name": profile.get("name", {}).get("firstName", "") + " " + profile.get("name", {}).get("lastName", ""),
+                        "avatar_url": None,  # Apple doesn't provide profile pictures
+                        "email_verified": profile.get("email_verified", False),
                     }
 
                 standardized["raw"] = profile  # Keep raw data for reference
@@ -489,7 +534,7 @@ async def get_oauth_handler(provider: str) -> OAuthHandler:
     """Get OAuth handler for provider.
 
     Args:
-        provider: OAuth provider name ('google' or 'github')
+        provider: OAuth provider name ('google', 'github', 'microsoft', or 'apple')
 
     Returns:
         Configured OAuthHandler instance
@@ -504,7 +549,7 @@ async def initiate_oauth_flow(provider: str) -> tuple[str, str]:
     """Initiate OAuth authentication flow.
 
     Args:
-        provider: OAuth provider name ('google' or 'github')
+        provider: OAuth provider name ('google', 'github', 'microsoft', or 'apple')
 
     Returns:
         Tuple of (authorization_url, state)
@@ -520,7 +565,7 @@ async def complete_oauth_flow(provider: str, code: str, state: str | None = None
     """Complete OAuth authentication flow.
 
     Args:
-        provider: OAuth provider name ('google' or 'github')
+        provider: OAuth provider name ('google', 'github', 'microsoft', or 'apple')
         code: Authorization code from OAuth callback
         state: State parameter for CSRF validation (optional)
 
