@@ -10,7 +10,7 @@ import asyncio
 import streamlit as st
 import structlog
 
-from src.auth.db import get_2fa_requirement, get_user_roles, list_users, set_2fa_requirement
+from src.auth.db import get_user_roles, list_users, set_2fa_requirement
 
 logger = structlog.get_logger(__name__)
 
@@ -113,7 +113,9 @@ def render_2fa_management_ui() -> None:
                 current_requirement = user.get("requires_2fa", False)
 
                 # Display current status
-                st.markdown(f"**Current Status:** {'✅ 2FA Required' if current_requirement else '❌ 2FA Optional'}")
+                st.markdown(
+                    f"**Current Status:** {'✅ 2FA Required' if current_requirement else '❌ 2FA Optional'}"
+                )
 
                 # Get user's 2FA setup status
                 from src.auth.totp_2fa import get_totp_manager
@@ -133,7 +135,9 @@ def render_2fa_management_ui() -> None:
                         st.warning("⚠️ User has NOT configured 2FA yet")
 
                 except Exception as e:
-                    logger.error("Failed to get 2FA status", username=selected_username, error=str(e))
+                    logger.error(
+                        "Failed to get 2FA status", username=selected_username, error=str(e)
+                    )
                     st.warning("Could not retrieve 2FA setup status")
 
                 st.markdown("---")
@@ -167,7 +171,11 @@ def render_2fa_management_ui() -> None:
 
                 with col2:
                     if st.button(
-                        "❌ Make 2FA Optional" if current_requirement else "❌ 2FA Already Optional",
+                        (
+                            "❌ Make 2FA Optional"
+                            if current_requirement
+                            else "❌ 2FA Already Optional"
+                        ),
                         disabled=not current_requirement,
                         use_container_width=True,
                         type="secondary",
@@ -288,7 +296,9 @@ def render_user_2fa_settings(username: str) -> None:
                     new_codes = asyncio.run(backup_code_manager.generate_backup_codes(user_id))
                     st.success("✅ New backup codes generated!")
                     st.code("\n".join(new_codes), language=None)
-                    st.warning("⚠️ Save these codes securely. Previous backup codes are now invalid.")
+                    st.warning(
+                        "⚠️ Save these codes securely. Previous backup codes are now invalid."
+                    )
                 except Exception as e:
                     logger.error("Failed to regenerate backup codes", error=str(e))
                     st.error("Failed to regenerate backup codes")
@@ -297,7 +307,9 @@ def render_user_2fa_settings(username: str) -> None:
             if not requires_2fa:
                 st.markdown("---")
                 if st.button("❌ Disable 2FA", use_container_width=True, type="secondary"):
-                    st.warning("Are you sure you want to disable 2FA? This will reduce your account security.")
+                    st.warning(
+                        "Are you sure you want to disable 2FA? This will reduce your account security."
+                    )
                     if st.button("⚠️ Yes, Disable 2FA", type="primary"):
                         try:
                             success = asyncio.run(totp_manager.disable_2fa(user_id))

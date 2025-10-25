@@ -747,7 +747,10 @@ def require_authentication() -> tuple[str, stauth.Authenticate]:
                         event_type="login",
                         username=username,
                         success=True,
-                        metadata={"name": name, "2fa_verified": st.session_state.get("2fa_verified", False)},
+                        metadata={
+                            "name": name,
+                            "2fa_verified": st.session_state.get("2fa_verified", False),
+                        },
                     )
                 )
             except Exception as e:

@@ -6,8 +6,7 @@ Shows provider statistics, login trends, account growth, and adoption metrics.
 """
 
 import asyncio
-from datetime import datetime, timedelta
-from typing import Any, Dict, List
+from typing import Any
 
 import pandas as pd
 import plotly.express as px
@@ -31,7 +30,7 @@ async def refresh_analytics_views() -> bool:
         return False
 
 
-async def get_provider_summary() -> List[Dict[str, Any]]:
+async def get_provider_summary() -> list[dict[str, Any]]:
     """Get OAuth provider summary statistics."""
     try:
         client = get_supabase_client()
@@ -42,7 +41,7 @@ async def get_provider_summary() -> List[Dict[str, Any]]:
         return []
 
 
-async def get_login_activity(days: int = 30) -> List[Dict[str, Any]]:
+async def get_login_activity(days: int = 30) -> list[dict[str, Any]]:
     """Get OAuth login activity for last N days."""
     try:
         client = get_supabase_client()
@@ -53,7 +52,7 @@ async def get_login_activity(days: int = 30) -> List[Dict[str, Any]]:
         return []
 
 
-async def get_account_growth(days: int = 30) -> List[Dict[str, Any]]:
+async def get_account_growth(days: int = 30) -> list[dict[str, Any]]:
     """Get OAuth account growth for last N days."""
     try:
         client = get_supabase_client()
@@ -64,7 +63,7 @@ async def get_account_growth(days: int = 30) -> List[Dict[str, Any]]:
         return []
 
 
-async def get_multi_provider_users() -> List[Dict[str, Any]]:
+async def get_multi_provider_users() -> list[dict[str, Any]]:
     """Get users with multiple OAuth providers linked."""
     try:
         client = get_supabase_client()
@@ -75,7 +74,7 @@ async def get_multi_provider_users() -> List[Dict[str, Any]]:
         return []
 
 
-async def get_adoption_rate() -> List[Dict[str, Any]]:
+async def get_adoption_rate() -> list[dict[str, Any]]:
     """Get OAuth adoption rate metrics."""
     try:
         client = get_supabase_client()
@@ -239,7 +238,9 @@ def render_oauth_analytics_dashboard() -> None:
 
         if oauth_users:
             with col1:
-                st.metric("OAuth Users", f"{oauth_users['value']}", f"{oauth_users['percentage']:.1f}%")
+                st.metric(
+                    "OAuth Users", f"{oauth_users['value']}", f"{oauth_users['percentage']:.1f}%"
+                )
 
         if password_users:
             with col2:
@@ -399,9 +400,7 @@ def render_oauth_analytics_dashboard() -> None:
     multi_provider = asyncio.run(get_multi_provider_users())
 
     if multi_provider:
-        st.write(
-            f"Found **{len(multi_provider)}** user(s) with multiple OAuth providers linked."
-        )
+        st.write(f"Found **{len(multi_provider)}** user(s) with multiple OAuth providers linked.")
 
         df_multi = pd.DataFrame(multi_provider)
 

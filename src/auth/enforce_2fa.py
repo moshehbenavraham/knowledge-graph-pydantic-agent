@@ -10,7 +10,6 @@ to use 2FA (e.g., admin users). It handles:
 """
 
 import asyncio
-from typing import Optional, Tuple
 
 import streamlit as st
 import structlog
@@ -21,7 +20,7 @@ from src.auth.totp_2fa import get_backup_code_manager, get_totp_manager
 logger = structlog.get_logger(__name__)
 
 
-async def check_2fa_requirement(username: str) -> Tuple[bool, bool]:
+async def check_2fa_requirement(username: str) -> tuple[bool, bool]:
     """
     Check if user requires 2FA and if it's enabled.
 
@@ -125,9 +124,7 @@ def render_2fa_setup_required() -> None:
             else:
                 # Verify the code
                 try:
-                    is_valid = asyncio.run(
-                        totp_manager.verify_totp(user_id, verification_code)
-                    )
+                    is_valid = asyncio.run(totp_manager.verify_totp(user_id, verification_code))
 
                     if is_valid:
                         # Enable 2FA
@@ -236,12 +233,11 @@ def render_2fa_verification() -> bool:
                         st.success("✅ Verification successful!")
                         st.session_state["2fa_verified"] = True
                         return True
-                    else:
-                        st.error("❌ Invalid code. Please try again.")
-                        return False
+                    st.error("❌ Invalid code. Please try again.")
+                    return False
 
                 # Try backup code (8 characters)
-                elif len(clean_code) == 8:
+                if len(clean_code) == 8:
                     is_valid = asyncio.run(
                         backup_code_manager.verify_backup_code(user_id, clean_code)
                     )
@@ -254,13 +250,13 @@ def render_2fa_verification() -> bool:
                         )
                         st.session_state["2fa_verified"] = True
                         return True
-                    else:
-                        st.error("❌ Invalid backup code.")
-                        return False
-
-                else:
-                    st.error("❌ Invalid code format. Enter 6 digits or an 8-character backup code.")
+                    st.error("❌ Invalid backup code.")
                     return False
+
+                st.error(
+                    "❌ Invalid code format. Enter 6 digits or an 8-character backup code."
+                )
+                return False
 
             except Exception as e:
                 logger.error("2FA verification failed", username=username, error=str(e))

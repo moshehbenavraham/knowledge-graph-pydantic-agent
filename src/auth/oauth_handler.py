@@ -48,7 +48,9 @@ MICROSOFT_SCOPES = ["openid", "email", "profile", "User.Read"]
 
 APPLE_AUTH_URL = "https://appleid.apple.com/auth/authorize"
 APPLE_TOKEN_URL = "https://appleid.apple.com/auth/token"
-APPLE_USERINFO_URL = "https://appleid.apple.com/auth/token"  # Apple returns user info in token response
+APPLE_USERINFO_URL = (
+    "https://appleid.apple.com/auth/token"  # Apple returns user info in token response
+)
 APPLE_SCOPES = ["name", "email"]
 
 # Token encryption key (should be set in environment)
@@ -351,7 +353,9 @@ class OAuthHandler:
                     standardized = {
                         "provider_user_id": profile.get("sub"),
                         "email": profile.get("email"),
-                        "name": profile.get("name", {}).get("firstName", "") + " " + profile.get("name", {}).get("lastName", ""),
+                        "name": profile.get("name", {}).get("firstName", "")
+                        + " "
+                        + profile.get("name", {}).get("lastName", ""),
                         "avatar_url": None,  # Apple doesn't provide profile pictures
                         "email_verified": profile.get("email_verified", False),
                     }

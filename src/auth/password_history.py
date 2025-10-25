@@ -11,13 +11,12 @@ Features:
 - IP tracking for audit trail
 """
 
-import bcrypt
 from datetime import datetime
-from typing import List, Optional
 
-from supabase import Client
+import bcrypt
 
 from src.clients.database import get_supabase_client
+from supabase import Client
 
 
 class PasswordHistoryManager:
@@ -27,7 +26,7 @@ class PasswordHistoryManager:
 
     def __init__(self):
         """Initialize Password History Manager."""
-        self.client: Optional[Client] = None
+        self.client: Client | None = None
 
     async def _get_client(self) -> Client:
         """Get Supabase client (cached)."""
@@ -36,7 +35,7 @@ class PasswordHistoryManager:
         return self.client
 
     async def add_password_to_history(
-        self, user_id: str, password_hash: str, ip_address: Optional[str] = None
+        self, user_id: str, password_hash: str, ip_address: str | None = None
     ) -> None:
         """
         Add password hash to user's history.
@@ -124,7 +123,7 @@ class PasswordHistoryManager:
 
         return result.count if result.count else 0
 
-    async def get_password_change_dates(self, user_id: str) -> List[datetime]:
+    async def get_password_change_dates(self, user_id: str) -> list[datetime]:
         """
         Get dates of password changes for user.
 
@@ -195,15 +194,13 @@ class PasswordHistoryManager:
         """
         client = await self._get_client()
 
-        result = (
-            client.table("auth_password_history").delete().eq("user_id", user_id).execute()
-        )
+        result = client.table("auth_password_history").delete().eq("user_id", user_id).execute()
 
         return len(result.data) if result.data else 0
 
 
 # Singleton instance
-_password_history_manager: Optional[PasswordHistoryManager] = None
+_password_history_manager: PasswordHistoryManager | None = None
 
 
 def get_password_history_manager() -> PasswordHistoryManager:
@@ -253,7 +250,7 @@ async def validate_new_password(user_id: str, new_password: str) -> tuple[bool, 
 
 
 async def record_password_change(
-    user_id: str, password_hash: str, ip_address: Optional[str] = None
+    user_id: str, password_hash: str, ip_address: str | None = None
 ) -> None:
     """
     Record password change in history.

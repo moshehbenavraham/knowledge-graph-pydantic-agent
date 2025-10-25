@@ -7,7 +7,6 @@ Allows users to view, link, and unlink OAuth providers (Google, GitHub, Microsof
 
 import asyncio
 import os
-from typing import Dict, List
 
 import streamlit as st
 import structlog
@@ -55,7 +54,7 @@ def get_provider_icon(provider: str) -> str:
     return OAUTH_PROVIDERS.get(provider, {}).get("icon", "🔗")
 
 
-async def get_linked_oauth_accounts(username: str) -> List[Dict]:
+async def get_linked_oauth_accounts(username: str) -> list[dict]:
     """
     Get all linked OAuth accounts for a user.
 
@@ -293,7 +292,7 @@ def render_oauth_linking_callback_handler() -> None:
 
     # Determine which provider based on state
     provider = None
-    for provider_key in OAUTH_PROVIDERS.keys():
+    for provider_key in OAUTH_PROVIDERS:
         stored_state = st.session_state.get(f"oauth_link_state_{provider_key}")
         if stored_state and stored_state == state:
             provider = provider_key
@@ -312,9 +311,7 @@ def render_oauth_linking_callback_handler() -> None:
         result = asyncio.run(complete_oauth_flow(provider, code, state))
 
         # Account should now be linked
-        st.success(
-            f"✅ {get_provider_display_name(provider)} account linked successfully!"
-        )
+        st.success(f"✅ {get_provider_display_name(provider)} account linked successfully!")
         logger.info(
             "OAuth account linked via profile",
             provider=provider,
@@ -331,5 +328,5 @@ def render_oauth_linking_callback_handler() -> None:
 
     except Exception as e:
         logger.error("Failed to complete OAuth linking", provider=provider, error=str(e))
-        st.error(f"Failed to link {get_provider_display_name(provider)} account: {str(e)}")
+        st.error(f"Failed to link {get_provider_display_name(provider)} account: {e!s}")
         st.session_state.pop("oauth_linking_mode", None)

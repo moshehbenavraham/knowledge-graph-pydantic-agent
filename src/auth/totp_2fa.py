@@ -15,22 +15,20 @@ Dependencies:
 - bcrypt: Backup code hashing
 """
 
-import asyncio
 import base64
 import io
 import secrets
 import string
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple
 
 import bcrypt
 import pyotp
 import qrcode
 from cryptography.fernet import Fernet
-from supabase import Client
 
 from src.clients.database import get_supabase_client
 from src.config import get_settings
+from supabase import Client
 
 settings = get_settings()
 
@@ -38,7 +36,7 @@ settings = get_settings()
 class TOTPManager:
     """Manages TOTP (Time-based One-Time Password) operations for 2FA."""
 
-    def __init__(self, encryption_key: Optional[str] = None):
+    def __init__(self, encryption_key: str | None = None):
         """
         Initialize TOTP Manager.
 
@@ -52,7 +50,7 @@ class TOTPManager:
             # Generate key for testing/development only
             self.cipher = Fernet(Fernet.generate_key())
 
-        self.client: Optional[Client] = None
+        self.client: Client | None = None
 
     async def _get_client(self) -> Client:
         """Get Supabase client (cached)."""
@@ -96,9 +94,7 @@ class TOTPManager:
         decrypted_bytes = self.cipher.decrypt(encrypted_bytes)
         return decrypted_bytes.decode()
 
-    def generate_qr_code(
-        self, secret: str, username: str, issuer: str = "Base Agent"
-    ) -> str:
+    def generate_qr_code(self, secret: str, username: str, issuer: str = "Base Agent") -> str:
         """
         Generate QR code for authenticator app setup.
 
@@ -145,8 +141,8 @@ class TOTPManager:
         return totp.verify(code, valid_window=window)
 
     async def setup_2fa(
-        self, user_id: str, username: str, ip_address: Optional[str] = None
-    ) -> Dict[str, str]:
+        self, user_id: str, username: str, ip_address: str | None = None
+    ) -> dict[str, str]:
         """
         Initialize 2FA setup for a user.
 
@@ -184,7 +180,7 @@ class TOTPManager:
         return {"secret": secret, "qr_code": qr_code}
 
     async def verify_and_enable_2fa(
-        self, user_id: str, code: str, ip_address: Optional[str] = None
+        self, user_id: str, code: str, ip_address: str | None = None
     ) -> bool:
         """
         Verify TOTP code and enable 2FA for user.
@@ -251,7 +247,7 @@ class TOTPManager:
         return len(result.data) > 0
 
     async def verify_login_code(
-        self, user_id: str, code: str, ip_address: Optional[str] = None
+        self, user_id: str, code: str, ip_address: str | None = None
     ) -> bool:
         """
         Verify TOTP code during login.
@@ -306,10 +302,7 @@ class TOTPManager:
         client = await self._get_client()
 
         result = (
-            client.table("auth_totp_secrets")
-            .select("is_enabled")
-            .eq("user_id", user_id)
-            .execute()
+            client.table("auth_totp_secrets").select("is_enabled").eq("user_id", user_id).execute()
         )
 
         if not result.data:
@@ -329,12 +322,7 @@ class TOTPManager:
         """
         client = await self._get_client()
 
-        result = (
-            client.table("auth_users")
-            .select("requires_2fa")
-            .eq("id", user_id)
-            .execute()
-        )
+        result = client.table("auth_users").select("requires_2fa").eq("id", user_id).execute()
 
         if not result.data:
             return False
@@ -346,7 +334,7 @@ class TOTPManager:
         user_id: str,
         success: bool,
         code_type: str,
-        ip_address: Optional[str] = None,
+        ip_address: str | None = None,
     ) -> None:
         """
         Log 2FA verification attempt.
@@ -393,7 +381,7 @@ class BackupCodeManager:
 
     def __init__(self):
         """Initialize Backup Code Manager."""
-        self.client: Optional[Client] = None
+        self.client: Client | None = None
 
     async def _get_client(self) -> Client:
         """Get Supabase client (cached)."""
@@ -401,7 +389,7 @@ class BackupCodeManager:
             self.client = await get_supabase_client()
         return self.client
 
-    def generate_codes(self, count: int = CODE_COUNT) -> List[str]:
+    def generate_codes(self, count: int = CODE_COUNT) -> list[str]:
         """
         Generate random backup codes.
 
@@ -453,7 +441,7 @@ class BackupCodeManager:
 
     async def create_backup_codes(
         self, user_id: str, count: int = CODE_COUNT, expires_days: int = 90
-    ) -> List[str]:
+    ) -> list[str]:
         """
         Generate and store new backup codes for user.
 
@@ -498,7 +486,7 @@ class BackupCodeManager:
         return codes
 
     async def verify_and_use_backup_code(
-        self, user_id: str, code: str, ip_address: Optional[str] = None
+        self, user_id: str, code: str, ip_address: str | None = None
     ) -> bool:
         """
         Verify backup code and mark as used.
@@ -560,14 +548,12 @@ class BackupCodeManager:
         """
         client = await self._get_client()
 
-        result = client.rpc(
-            "get_unused_backup_codes_count", {"p_user_id": user_id}
-        ).execute()
+        result = client.rpc("get_unused_backup_codes_count", {"p_user_id": user_id}).execute()
 
         return result.data if result.data else 0
 
     async def _log_backup_attempt(
-        self, user_id: str, success: bool, ip_address: Optional[str] = None
+        self, user_id: str, success: bool, ip_address: str | None = None
     ) -> None:
         """
         Log backup code verification attempt.
@@ -590,11 +576,11 @@ class BackupCodeManager:
 
 
 # Singleton instances
-_totp_manager: Optional[TOTPManager] = None
-_backup_code_manager: Optional[BackupCodeManager] = None
+_totp_manager: TOTPManager | None = None
+_backup_code_manager: BackupCodeManager | None = None
 
 
-def get_totp_manager(encryption_key: Optional[str] = None) -> TOTPManager:
+def get_totp_manager(encryption_key: str | None = None) -> TOTPManager:
     """
     Get singleton TOTP Manager instance.
 

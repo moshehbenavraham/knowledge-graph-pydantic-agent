@@ -17,13 +17,12 @@ Features:
 """
 
 from datetime import datetime
-from typing import Optional, Tuple
 
 import httpx
-from supabase import Client
 
 from src.clients.database import get_supabase_client
 from src.config import get_settings
+from supabase import Client
 
 settings = get_settings()
 
@@ -41,8 +40,8 @@ class CaptchaManager:
     def __init__(
         self,
         provider: str = "hcaptcha",
-        site_key: Optional[str] = None,
-        secret_key: Optional[str] = None,
+        site_key: str | None = None,
+        secret_key: str | None = None,
     ):
         """
         Initialize CAPTCHA Manager.
@@ -55,13 +54,13 @@ class CaptchaManager:
         self.provider = provider.lower()
         self.site_key = site_key or self._get_site_key()
         self.secret_key = secret_key or self._get_secret_key()
-        self.client: Optional[Client] = None
+        self.client: Client | None = None
 
     def _get_site_key(self) -> str:
         """Get site key from environment based on provider."""
         if self.provider == "hcaptcha":
             return getattr(settings, "hcaptcha_site_key", "")
-        elif self.provider.startswith("recaptcha"):
+        if self.provider.startswith("recaptcha"):
             return getattr(settings, "recaptcha_site_key", "")
         return ""
 
@@ -69,7 +68,7 @@ class CaptchaManager:
         """Get secret key from environment based on provider."""
         if self.provider == "hcaptcha":
             return getattr(settings, "hcaptcha_secret_key", "")
-        elif self.provider.startswith("recaptcha"):
+        if self.provider.startswith("recaptcha"):
             return getattr(settings, "recaptcha_secret_key", "")
         return ""
 
@@ -91,9 +90,9 @@ class CaptchaManager:
     async def verify_response(
         self,
         response_token: str,
-        username: Optional[str] = None,
-        ip_address: Optional[str] = None,
-    ) -> Tuple[bool, Optional[str]]:
+        username: str | None = None,
+        ip_address: str | None = None,
+    ) -> tuple[bool, str | None]:
         """
         Verify CAPTCHA response with provider API.
 
@@ -143,9 +142,7 @@ class CaptchaManager:
             async with httpx.AsyncClient(timeout=self.VERIFY_TIMEOUT) as client:
                 response = await client.post(verify_url, data=data)
 
-            response_time_ms = int(
-                (datetime.utcnow() - start_time).total_seconds() * 1000
-            )
+            response_time_ms = int((datetime.utcnow() - start_time).total_seconds() * 1000)
 
             if response.status_code != 200:
                 error_msg = f"CAPTCHA API error: HTTP {response.status_code}"
@@ -196,9 +193,7 @@ class CaptchaManager:
             return (True, None)
 
         except httpx.TimeoutException:
-            response_time_ms = int(
-                (datetime.utcnow() - start_time).total_seconds() * 1000
-            )
+            response_time_ms = int((datetime.utcnow() - start_time).total_seconds() * 1000)
             await self._log_challenge(
                 username=username,
                 ip_address=ip_address,
@@ -208,16 +203,14 @@ class CaptchaManager:
             return (False, "CAPTCHA verification timeout")
 
         except Exception as e:
-            response_time_ms = int(
-                (datetime.utcnow() - start_time).total_seconds() * 1000
-            )
+            response_time_ms = int((datetime.utcnow() - start_time).total_seconds() * 1000)
             await self._log_challenge(
                 username=username,
                 ip_address=ip_address,
                 success=False,
                 response_time_ms=response_time_ms,
             )
-            return (False, f"CAPTCHA verification error: {str(e)}")
+            return (False, f"CAPTCHA verification error: {e!s}")
 
     def get_widget_html(self, theme: str = "light") -> str:
         """
@@ -238,13 +231,13 @@ class CaptchaManager:
             <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
             """
 
-        elif self.provider == "recaptcha_v2":
+        if self.provider == "recaptcha_v2":
             return f"""
             <div class="g-recaptcha" data-sitekey="{self.site_key}" data-theme="{theme}"></div>
             <script src="https://www.google.com/recaptcha/api.js" async defer></script>
             """
 
-        elif self.provider == "recaptcha_v3":
+        if self.provider == "recaptcha_v3":
             # reCAPTCHA v3 runs in background (no checkbox)
             return f"""
             <script src="https://www.google.com/recaptcha/api.js?render={self.site_key}"></script>
@@ -264,8 +257,8 @@ class CaptchaManager:
         self,
         success: bool,
         response_time_ms: int,
-        username: Optional[str] = None,
-        ip_address: Optional[str] = None,
+        username: str | None = None,
+        ip_address: str | None = None,
     ) -> None:
         """
         Log CAPTCHA challenge to database.
@@ -293,13 +286,13 @@ class CaptchaManager:
 
 
 # Singleton instance
-_captcha_manager: Optional[CaptchaManager] = None
+_captcha_manager: CaptchaManager | None = None
 
 
 def get_captcha_manager(
-    provider: Optional[str] = None,
-    site_key: Optional[str] = None,
-    secret_key: Optional[str] = None,
+    provider: str | None = None,
+    site_key: str | None = None,
+    secret_key: str | None = None,
 ) -> CaptchaManager:
     """
     Get singleton CAPTCHA Manager instance.
@@ -344,9 +337,9 @@ async def should_show_captcha(username: str, failed_attempts: int = 0) -> bool:
 
 async def verify_captcha(
     response_token: str,
-    username: Optional[str] = None,
-    ip_address: Optional[str] = None,
-) -> Tuple[bool, str]:
+    username: str | None = None,
+    ip_address: str | None = None,
+) -> tuple[bool, str]:
     """
     Verify CAPTCHA response.
 

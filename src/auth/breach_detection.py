@@ -15,12 +15,11 @@ API Documentation: https://haveibeenpwned.com/API/v3#PwnedPasswords
 
 import hashlib
 from datetime import datetime
-from typing import Optional, Tuple
 
 import httpx
-from supabase import Client
 
 from src.clients.database import get_supabase_client
+from supabase import Client
 
 
 class BreachDetectionManager:
@@ -31,7 +30,7 @@ class BreachDetectionManager:
 
     def __init__(self):
         """Initialize Breach Detection Manager."""
-        self.client: Optional[Client] = None
+        self.client: Client | None = None
 
     async def _get_client(self) -> Client:
         """Get Supabase client (cached)."""
@@ -56,8 +55,8 @@ class BreachDetectionManager:
         return sha1_hash.upper()
 
     async def check_password_breach(
-        self, password: str, user_id: Optional[str] = None, check_type: str = "manual"
-    ) -> Tuple[bool, int]:
+        self, password: str, user_id: str | None = None, check_type: str = "manual"
+    ) -> tuple[bool, int]:
         """
         Check if password has been exposed in data breaches.
 
@@ -137,7 +136,7 @@ class BreachDetectionManager:
             )
             return (False, 0)
 
-        except Exception as e:
+        except Exception:
             # Other error - log but don't block user
             await self._log_breach_check(
                 user_id=user_id,
@@ -148,9 +147,7 @@ class BreachDetectionManager:
             )
             return (False, 0)
 
-    async def get_breach_status(
-        self, password: str
-    ) -> Tuple[bool, int, Optional[str]]:
+    async def get_breach_status(self, password: str) -> tuple[bool, int, str | None]:
         """
         Check breach status and return user-friendly message.
 
@@ -189,7 +186,7 @@ class BreachDetectionManager:
 
         return (True, breach_count, message)
 
-    async def get_last_check(self, user_id: str) -> Optional[datetime]:
+    async def get_last_check(self, user_id: str) -> datetime | None:
         """
         Get timestamp of last breach check for user.
 
@@ -202,22 +199,15 @@ class BreachDetectionManager:
         client = await self._get_client()
 
         result = (
-            client.table("auth_users")
-            .select("last_breach_check_at")
-            .eq("id", user_id)
-            .execute()
+            client.table("auth_users").select("last_breach_check_at").eq("id", user_id).execute()
         )
 
         if not result.data or not result.data[0].get("last_breach_check_at"):
             return None
 
-        return datetime.fromisoformat(
-            result.data[0]["last_breach_check_at"].replace("Z", "+00:00")
-        )
+        return datetime.fromisoformat(result.data[0]["last_breach_check_at"].replace("Z", "+00:00"))
 
-    async def should_check_breach(
-        self, user_id: str, check_interval_days: int = 30
-    ) -> bool:
+    async def should_check_breach(self, user_id: str, check_interval_days: int = 30) -> bool:
         """
         Determine if breach check should be performed based on last check date.
 
@@ -242,8 +232,8 @@ class BreachDetectionManager:
         is_breached: bool,
         breach_count: int,
         check_type: str,
-        user_id: Optional[str] = None,
-        ip_address: Optional[str] = None,
+        user_id: str | None = None,
+        ip_address: str | None = None,
     ) -> None:
         """
         Log breach check to database.
@@ -279,7 +269,7 @@ class BreachDetectionManager:
 
 
 # Singleton instance
-_breach_detection_manager: Optional[BreachDetectionManager] = None
+_breach_detection_manager: BreachDetectionManager | None = None
 
 
 def get_breach_detection_manager() -> BreachDetectionManager:
@@ -301,8 +291,8 @@ def get_breach_detection_manager() -> BreachDetectionManager:
 
 
 async def check_password_safety(
-    password: str, user_id: Optional[str] = None, check_type: str = "manual"
-) -> Tuple[bool, str]:
+    password: str, user_id: str | None = None, check_type: str = "manual"
+) -> tuple[bool, str]:
     """
     Check if password is safe to use (not breached).
 
@@ -326,8 +316,8 @@ async def check_password_safety(
 
 
 async def validate_password_breach(
-    password: str, user_id: Optional[str] = None, check_type: str = "manual"
-) -> Tuple[bool, str]:
+    password: str, user_id: str | None = None, check_type: str = "manual"
+) -> tuple[bool, str]:
     """
     Validate password against breach database.
 
