@@ -9,7 +9,6 @@ Tests cover:
 - Token encryption/decryption
 """
 
-import os
 from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID
@@ -27,7 +26,6 @@ from src.auth.oauth_handler import (
     get_oauth_handler,
     initiate_oauth_flow,
 )
-
 
 # =====================================================
 # FIXTURES
@@ -533,7 +531,9 @@ async def test_handle_callback_new_user(
         patch.object(handler, "get_user_profile") as mock_get_profile,
         patch("src.auth.oauth_handler.get_user_by_email", return_value=None),  # No existing user
         patch("src.auth.oauth_handler.create_user", return_value=mock_user),
-        patch("src.auth.oauth_handler.get_oauth_account", return_value=None),  # No existing OAuth account
+        patch(
+            "src.auth.oauth_handler.get_oauth_account", return_value=None
+        ),  # No existing OAuth account
         patch("src.auth.oauth_handler.link_oauth_account", return_value=mock_oauth_account),
         patch("src.auth.oauth_handler.encrypt_token", side_effect=lambda x: f"encrypted_{x}"),
     ):

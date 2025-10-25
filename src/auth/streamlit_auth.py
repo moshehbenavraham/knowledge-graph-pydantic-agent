@@ -526,7 +526,7 @@ def initiate_oauth_login(provider: str) -> None:
 
     except Exception as e:
         logger.error(f"Failed to initiate OAuth login for {provider}", error=str(e))
-        st.error(f"OAuth login failed: {str(e)}")
+        st.error(f"OAuth login failed: {e!s}")
 
 
 def render_oauth_buttons() -> None:
@@ -593,7 +593,9 @@ def check_oauth_callback() -> tuple[str | None, str | None]:
     # Validate state (CSRF protection)
     stored_state = st.session_state.get(f"oauth_state_{provider}")
     if stored_state and stored_state != state:
-        logger.warning(f"OAuth state mismatch for {provider}", stored_state=stored_state, received_state=state)
+        logger.warning(
+            f"OAuth state mismatch for {provider}", stored_state=stored_state, received_state=state
+        )
         st.error("OAuth error: Invalid state parameter (CSRF protection)")
         st.query_params.clear()
         return None, None
@@ -611,14 +613,13 @@ def check_oauth_callback() -> tuple[str | None, str | None]:
 
             # Return user info
             return user["username"], user.get("full_name")
-        else:
-            st.error(f"{provider.capitalize()} login failed. Please try again.")
-            st.query_params.clear()
-            return None, None
+        st.error(f"{provider.capitalize()} login failed. Please try again.")
+        st.query_params.clear()
+        return None, None
 
     except Exception as e:
         logger.error(f"OAuth callback error for {provider}", error=str(e))
-        st.error(f"OAuth error: {str(e)}")
+        st.error(f"OAuth error: {e!s}")
         st.query_params.clear()
         return None, None
 

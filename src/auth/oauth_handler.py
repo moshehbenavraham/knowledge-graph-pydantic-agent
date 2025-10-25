@@ -8,7 +8,6 @@ Provides OAuth 2.0 authentication flow integration with support for:
 - Secure token storage in database
 """
 
-import json
 import os
 import secrets
 from datetime import datetime, timedelta
@@ -329,9 +328,7 @@ class OAuthHandler:
                 )
                 raise
 
-    async def handle_callback(
-        self, code: str, state: str | None = None
-    ) -> dict[str, Any]:
+    async def handle_callback(self, code: str, state: str | None = None) -> dict[str, Any]:
         """Handle OAuth callback and complete authentication flow.
 
         This method:
@@ -399,18 +396,14 @@ class OAuthHandler:
                 # Update existing OAuth tokens
                 encrypted_access_token = encrypt_token(token["access_token"])
                 encrypted_refresh_token = (
-                    encrypt_token(token["refresh_token"])
-                    if token.get("refresh_token")
-                    else None
+                    encrypt_token(token["refresh_token"]) if token.get("refresh_token") else None
                 )
 
                 token_expires_at = None
                 if token.get("expires_at"):
                     token_expires_at = datetime.fromtimestamp(token["expires_at"])
                 elif token.get("expires_in"):
-                    token_expires_at = datetime.now() + timedelta(
-                        seconds=token["expires_in"]
-                    )
+                    token_expires_at = datetime.now() + timedelta(seconds=token["expires_in"])
 
                 oauth_account = await update_oauth_tokens(
                     oauth_account_id=oauth_account["id"],
@@ -428,18 +421,14 @@ class OAuthHandler:
                 # Link new OAuth account
                 encrypted_access_token = encrypt_token(token["access_token"])
                 encrypted_refresh_token = (
-                    encrypt_token(token["refresh_token"])
-                    if token.get("refresh_token")
-                    else None
+                    encrypt_token(token["refresh_token"]) if token.get("refresh_token") else None
                 )
 
                 token_expires_at = None
                 if token.get("expires_at"):
                     token_expires_at = datetime.fromtimestamp(token["expires_at"])
                 elif token.get("expires_in"):
-                    token_expires_at = datetime.now() + timedelta(
-                        seconds=token["expires_in"]
-                    )
+                    token_expires_at = datetime.now() + timedelta(seconds=token["expires_in"])
 
                 oauth_account = await link_oauth_account(
                     user_id=user["id"],
@@ -527,9 +516,7 @@ async def initiate_oauth_flow(provider: str) -> tuple[str, str]:
     return handler.get_authorization_url()
 
 
-async def complete_oauth_flow(
-    provider: str, code: str, state: str | None = None
-) -> dict[str, Any]:
+async def complete_oauth_flow(provider: str, code: str, state: str | None = None) -> dict[str, Any]:
     """Complete OAuth authentication flow.
 
     Args:
