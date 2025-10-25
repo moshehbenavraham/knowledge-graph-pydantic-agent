@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS auth_email_verification_tokens (
 -- Indexes for auth_email_verification_tokens
 CREATE INDEX IF NOT EXISTS idx_auth_verify_tokens_user ON auth_email_verification_tokens(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_auth_verify_tokens_token ON auth_email_verification_tokens(token)
-    WHERE verified_at IS NULL AND expires_at > NOW();
+    WHERE verified_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_auth_verify_tokens_expires ON auth_email_verification_tokens(expires_at);
 
 -- =====================================================

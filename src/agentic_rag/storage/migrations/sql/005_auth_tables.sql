@@ -102,7 +102,7 @@ CREATE INDEX IF NOT EXISTS idx_auth_sessions_user ON auth_sessions(user_id, crea
 CREATE INDEX IF NOT EXISTS idx_auth_sessions_token ON auth_sessions(session_token) WHERE revoked_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_auth_sessions_expires ON auth_sessions(expires_at) WHERE revoked_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_auth_sessions_active ON auth_sessions(user_id, last_activity_at DESC)
-    WHERE revoked_at IS NULL AND expires_at > NOW();
+    WHERE revoked_at IS NULL;
 
 -- =====================================================
 -- TABLE: auth_password_reset_tokens
@@ -130,7 +130,7 @@ CREATE TABLE IF NOT EXISTS auth_password_reset_tokens (
 -- Indexes for auth_password_reset_tokens
 CREATE INDEX IF NOT EXISTS idx_auth_reset_tokens_user ON auth_password_reset_tokens(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_auth_reset_tokens_token ON auth_password_reset_tokens(token)
-    WHERE used_at IS NULL AND expires_at > NOW();
+    WHERE used_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_auth_reset_tokens_expires ON auth_password_reset_tokens(expires_at);
 
 -- =====================================================

@@ -126,7 +126,7 @@ Version 1.1.0 | Last Updated: October 2025
 #### 📋 [Changelogs](a-changelogs/index.md)
 Version history and release notes.
 
-- [Current Changelog](a-changelogs/current.md) - Latest changes
+- [Current Changelog](a-changelogs/changelog_current.md) - Latest changes
 - [Archive](a-changelogs/archive/) - Historical changelogs
 
 ---

@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ---
 
-## [1.9.0] - 2025-10-25
+## [1.9.0] - 2025-10-25 (Deployed: 2025-10-26)
 
 ### Added
 - **Password strength meter with visual feedback**
@@ -151,6 +151,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Multi-factor authentication (2FA/TOTP)
 - Remember me cookie synchronization with session duration
 - Email template customization via configuration
+
+### Deployment & Fixes (2025-10-26)
+- **Fixed PostgreSQL migration issues**:
+  - Removed `NOW()` function calls from index predicates in `005_auth_tables.sql`
+  - Removed `NOW()` function calls from index predicates in `006_email_verification.sql`
+  - Issue: PostgreSQL requires functions in index predicates to be marked IMMUTABLE
+  - Solution: Simplified WHERE clauses to use only NULL checks without time-based filters
+
+- **Successfully deployed to production Supabase**:
+  - Applied migration `005_auth_tables.sql` (415ms execution time)
+  - Applied migration `006_email_verification.sql` (333ms execution time)
+  - All 7 authentication tables created and indexed
+  - Database: `hokdgtbedrsenvldxbyx.supabase.co`
+
+- **Comprehensive testing completed**:
+  - ✅ Email verification flow (9 test steps, all passed)
+  - ✅ Password strength meter (3 test categories, all passed)
+  - ✅ Remember me checkbox (5 test steps, all passed)
+  - ✅ Session duration verification (30-day vs 90-day)
 
 ---
 ---
