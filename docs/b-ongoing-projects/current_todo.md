@@ -1,25 +1,25 @@
 # Authentication System - TODO
 
-**Status**: ✅ v1.8.0 Complete | 🎯 Next: v1.9.0 Enhanced UI/UX Features
+**Status**: ✅ v1.9.0 Complete | 🎯 Next: v2.0.0 Advanced Security Features
 
 ---
 
 ## 🟡 High Priority
 
-### Enhanced UI/UX Features (v1.9.0)
-**Time**: 2-3 hours
+### Database Migration & Deployment (v1.9.0)
+**Time**: 30 minutes
 
-- [ ] Password strength meter (visual feedback during password entry)
-- [ ] "Remember me" checkbox (extended session duration)
-- [ ] Email verification for new users
-- [ ] Improved password reset email template
+- [ ] Apply database migration 006_email_verification.sql to production
+- [ ] Test email verification flow end-to-end
+- [ ] Verify password strength meter in all locations
+- [ ] Test remember me checkbox functionality
 
 ---
 
 ## 🟢 Low Priority
 
 ### Advanced Security Features (v2.0.0)
-**Time**: 2-3 hours
+**Time**: 3-4 hours
 
 - [ ] 2FA/TOTP support (`pyotp` library)
   - QR code generation for authenticator apps
@@ -27,8 +27,16 @@
   - 2FA enforcement for admin users
 - [ ] CAPTCHA after failed login attempts
 - [ ] Password history (prevent reuse of last 5 passwords)
-- [ ] Email verification flow for new signups
+- [ ] Integration with haveibeenpwned.com for breach detection
+
+### Additional OAuth Providers (v2.0.0)
+**Time**: 2-3 hours
+
+- [ ] Microsoft OAuth integration
+- [ ] Apple OAuth integration
+- [ ] UI for linking/unlinking OAuth accounts in user profile
+- [ ] OAuth session analytics dashboard
 
 ---
 
-**Last Updated**: 2025-10-24
+**Last Updated**: 2025-10-25

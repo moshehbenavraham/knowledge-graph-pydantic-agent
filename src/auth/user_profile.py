@@ -20,7 +20,7 @@ from src.auth.db import (
     revoke_session,
     update_user_password,
 )
-from src.auth.password_reset import is_password_strong
+from src.auth.password_strength import is_password_strong, render_password_strength_meter
 
 logger = structlog.get_logger(__name__)
 
@@ -95,6 +95,33 @@ def render_user_profile(username: str):
         with st.sidebar.expander("📋 Account Info", expanded=False):
             st.markdown(f"**Username:** {user.get('username')}")
             st.markdown(f"**Email:** {user.get('email')}")
+
+            # Email verification status
+            is_verified = user.get("is_email_verified", False)
+            if is_verified:
+                verified_at = user.get("email_verified_at", "")[:10] if user.get("email_verified_at") else "N/A"
+                st.markdown(f"**Email Status:** ✅ Verified ({verified_at})")
+            else:
+                st.markdown("**Email Status:** ⚠️ Not Verified")
+                st.warning("Please verify your email address to enable all features.")
+
+                # Button to resend verification email
+                if st.button("📧 Resend Verification Email", key="resend_verification", use_container_width=True):
+                    try:
+                        from src.auth.email_verification import request_email_verification
+                        import os
+
+                        verification_url = os.getenv("VERIFICATION_URL", "http://localhost:8501")
+                        success, message = asyncio.run(request_email_verification(user["id"], verification_url))
+
+                        if success:
+                            st.success(message)
+                        else:
+                            st.error(message)
+                    except Exception as e:
+                        logger.error("Failed to resend verification email", error=str(e))
+                        st.error("Failed to send verification email. Please try again later.")
+
             st.markdown(f"**Name:** {user.get('full_name')}")
             st.markdown(
                 f"**Member Since:** {user.get('created_at', 'N/A')[:10] if user.get('created_at') else 'N/A'}"
@@ -105,39 +132,78 @@ def render_user_profile(username: str):
 
         # Change password section
         with st.sidebar.expander("🔑 Change Password", expanded=False):
-            with st.form("change_password_form", clear_on_submit=True):
-                current_password = st.text_input("Current Password", type="password")
-                new_password = st.text_input(
-                    "New Password",
-                    type="password",
-                    help="At least 8 characters with uppercase, lowercase, numbers, and special characters",
+            # Use session state for password change
+            if "change_password_inputs" not in st.session_state:
+                st.session_state.change_password_inputs = {
+                    "current": "",
+                    "new": "",
+                    "confirm": "",
+                }
+
+            current_password = st.text_input(
+                "Current Password",
+                type="password",
+                key="cp_current",
+                value=st.session_state.change_password_inputs["current"],
+            )
+
+            new_password = st.text_input(
+                "New Password",
+                type="password",
+                key="cp_new",
+                value=st.session_state.change_password_inputs["new"],
+            )
+
+            # Show password strength meter if new password entered
+            if new_password:
+                st.markdown(
+                    render_password_strength_meter(new_password),
+                    unsafe_allow_html=True,
                 )
-                confirm_password = st.text_input("Confirm New Password", type="password")
 
-                submit_button = st.form_submit_button("Change Password", use_container_width=True)
+            confirm_password = st.text_input(
+                "Confirm New Password",
+                type="password",
+                key="cp_confirm",
+                value=st.session_state.change_password_inputs["confirm"],
+            )
 
-                if submit_button:
-                    if not current_password or not new_password or not confirm_password:
-                        st.error("Please fill in all fields.")
-                    elif new_password != confirm_password:
-                        st.error("New passwords do not match.")
+            # Password match indicator
+            if new_password and confirm_password:
+                if new_password == confirm_password:
+                    st.success("✓ Passwords match")
+                else:
+                    st.error("✗ Passwords do not match")
+
+            if st.button("Change Password", use_container_width=True, key="cp_submit"):
+                if not current_password or not new_password or not confirm_password:
+                    st.error("Please fill in all fields.")
+                elif new_password != confirm_password:
+                    st.error("New passwords do not match.")
+                else:
+                    # Check password strength
+                    is_strong, message = is_password_strong(new_password)
+
+                    if not is_strong:
+                        st.error(message)
                     else:
-                        # Check password strength
-                        is_strong, message = is_password_strong(new_password)
+                        # Change password
+                        success, msg = asyncio.run(
+                            change_user_password(username, current_password, new_password)
+                        )
 
-                        if not is_strong:
-                            st.error(message)
+                        if success:
+                            st.success(msg)
+                            # Clear inputs on success
+                            st.session_state.change_password_inputs = {
+                                "current": "",
+                                "new": "",
+                                "confirm": "",
+                            }
+                            logger.info("User changed password via profile", username=username)
+                            st.rerun()
                         else:
-                            # Change password
-                            success, msg = asyncio.run(
-                                change_user_password(username, current_password, new_password)
-                            )
-
-                            if success:
-                                st.success(msg)
-                                logger.info("User changed password via profile", username=username)
-                            else:
-                                st.error(msg)
+                            st.error(msg)
 
         # Active sessions section
         with st.sidebar.expander("💻 Active Sessions", expanded=False):

@@ -1388,10 +1388,18 @@ async def main():
         ),
     )
 
-    # Check if this is a password reset page request (query param: token)
+    # Check if this is a password reset or email verification page request
     query_params = st.query_params
-    if "token" in query_params:
-        # Render password reset page instead of main app
+
+    # Email verification page (query params: token + action=verify)
+    if "token" in query_params and query_params.get("action") == "verify":
+        from src.auth.email_verification_page import render_email_verification_page
+
+        render_email_verification_page()
+        return  # Stop execution, don't load main app
+
+    # Password reset page (query param: token only, no action)
+    if "token" in query_params and "action" not in query_params:
         from src.auth.password_reset_page import render_password_reset_page
 
         render_password_reset_page()

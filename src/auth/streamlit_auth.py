@@ -228,6 +228,17 @@ def render_login_page() -> tuple[str | None, str | None, bool | None]:
     # Get rate limiter
     rate_limiter = get_rate_limiter()
 
+    # Remember me checkbox (before login form)
+    remember_me = st.checkbox(
+        "🔐 Remember me for 90 days",
+        value=False,
+        key="remember_me_checkbox",
+        help="Keep me logged in for 90 days instead of 30",
+    )
+
+    # Store remember_me in session state for later use
+    st.session_state.remember_me = remember_me
+
     # Check if any user in form is locked out (we check after form submission)
     # For now, render the login form
     name, authentication_status, username = authenticator.login(location="main")
@@ -379,11 +390,12 @@ def render_logout_button(authenticator: stauth.Authenticate, name: str) -> None:
             st.rerun()
 
 
-async def create_db_session(username: str) -> str | None:
+async def create_db_session(username: str, remember_me: bool = False) -> str | None:
     """Create database session for authenticated user.
 
     Args:
         username: Authenticated username
+        remember_me: If True, extends session duration to 90 days instead of 30
 
     Returns:
         Session token or None if failed
@@ -400,15 +412,24 @@ async def create_db_session(username: str) -> str | None:
             logger.error("User not found for session creation", username=username)
             return None
 
+        # Determine session duration based on remember_me
+        expires_in_days = 90 if remember_me else 30
+
         # Create session
         session = await create_session(
             user_id=user["id"],
-            expires_in_days=30,
+            expires_in_days=expires_in_days,
             session_type="web",
             user_agent=st.context.headers.get("User-Agent") if hasattr(st, "context") else None,
         )
 
-        logger.info("Database session created", username=username, session_id=session["id"])
+        logger.info(
+            "Database session created",
+            username=username,
+            session_id=session["id"],
+            remember_me=remember_me,
+            expires_in_days=expires_in_days,
+        )
         return session["session_token"]
 
     except Exception as e:
@@ -688,7 +709,9 @@ def require_authentication() -> tuple[str, stauth.Authenticate]:
             # Create database session (if database mode)
             if USE_DATABASE_AUTH:
                 try:
-                    session_token = asyncio.run(create_db_session(username))
+                    # Get remember_me preference from session state
+                    remember_me = st.session_state.get("remember_me", False)
+                    session_token = asyncio.run(create_db_session(username, remember_me=remember_me))
                     st.session_state.db_session_token = session_token
                 except Exception as e:
                     logger.warning("Failed to create database session", error=str(e))

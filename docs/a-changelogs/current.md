@@ -10,6 +10,151 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ---
 
+## [1.9.0] - 2025-10-25
+
+### Added
+- **Password strength meter with visual feedback**
+  - Real-time password strength analysis with color-coded indicators
+  - Detailed feedback on password requirements (length, character types)
+  - Visual progress bar showing password strength (0-100 score)
+  - Integrated into:
+    - User profile password change form
+    - Password reset completion page
+    - Comprehensive scoring algorithm with pattern detection
+  - New module: `src/auth/password_strength.py` (250+ lines)
+  - Checks for common patterns and penalizes weak passwords
+
+- **"Remember me" checkbox for extended sessions**
+  - Login page checkbox to extend session duration from 30 to 90 days
+  - Database session duration automatically adjusted based on user preference
+  - Enhanced session logging with remember_me metadata
+  - User-friendly UI with helpful tooltip explaining feature
+  - Session expiration tracking in database
+
+- **Email verification system for new users**
+  - Complete email verification flow for user registration security
+  - New database table: `auth_email_verification_tokens` (migration 006)
+  - Verification tokens with 24-hour expiration
+  - Automated verification emails with professional templates
+  - Verification status displayed in user profile
+  - "Resend verification email" button for unverified users
+  - New modules:
+    - `src/auth/email_verification.py` (300+ lines)
+    - `src/auth/email_verification_page.py` (100+ lines)
+  - Database migration: `006_email_verification.sql`
+  - RPC functions for token cleanup and verification status checks
+  - Integration with main app routing (`?token=...&action=verify`)
+
+- **Enhanced password reset email template**
+  - Professional, modern design with gradient branding
+  - Improved security notices and password tips
+  - Time-sensitive warnings with visual emphasis
+  - Better mobile responsiveness
+  - Clearer call-to-action buttons
+  - Consistent styling with verification emails
+
+### Changed
+- **Updated authentication UI/UX**
+  - Password change form now shows live password strength feedback
+  - Password match indicator for confirmation fields
+  - Session state management for password inputs (better UX)
+  - User profile shows email verification status with visual indicators
+
+- **Enhanced session management**
+  - `create_db_session()` now accepts `remember_me` parameter
+  - Extended logging for session creation with duration metadata
+  - Session duration configurable via user preference
+
+- **Improved email configuration**
+  - Unified email settings for both password reset and verification
+  - Updated `.env.example` with `VERIFICATION_URL` variable
+  - Better email provider abstraction for future extensibility
+
+### Technical Details
+- **Password Strength Module**: Comprehensive scoring (0-100) based on:
+  - Length (8+ chars required, 12+ bonus)
+  - Character diversity (uppercase, lowercase, digits, special chars)
+  - Pattern detection (repeated characters, sequences, common words)
+  - Visual feedback with HTML/CSS rendering for Streamlit
+  - Backend validation using same logic for consistency
+
+- **Email Verification Implementation**:
+  - Bcrypt-hashed tokens stored in database
+  - Automatic token cleanup via RPC function
+  - IP tracking for security audit trail
+  - Token verification flow separate from password reset
+  - Query parameter routing: `action=verify` distinguishes from password reset
+
+- **Remember Me Feature**:
+  - Checkbox state stored in session state
+  - Database session extended to 90 days when enabled
+  - Cookie remains 30 days (streamlit-authenticator limitation)
+  - Logging includes remember_me preference for analytics
+
+### Database Changes
+- **New table**: `auth_email_verification_tokens`
+  - Columns: id, user_id, token, token_hash, created_at, expires_at, verified_at, created_ip, verified_ip
+  - Indexes on user_id, token (active only), expires_at
+  - RPC functions: `cleanup_expired_verification_tokens()`, `has_unverified_email()`
+
+### Environment Variables
+- `VERIFICATION_URL`: Base URL for email verification page (default: `http://localhost:8501`)
+
+### Files Created/Modified
+**New files** (750+ lines total):
+- `src/auth/password_strength.py` (250 lines)
+- `src/auth/email_verification.py` (300 lines)
+- `src/auth/email_verification_page.py` (100 lines)
+- `src/agentic_rag/storage/migrations/sql/006_email_verification.sql` (65 lines)
+
+**Modified files**:
+- `src/auth/streamlit_auth.py` (+45 lines) - Remember me checkbox, session duration
+- `src/auth/user_profile.py` (+60 lines) - Password strength meter, email verification status
+- `src/auth/password_reset_page.py` (+30 lines) - Password strength meter integration
+- `src/auth/password_reset.py` (+35 lines) - Enhanced email template
+- `src/ui/streamlit_app.py` (+10 lines) - Email verification page routing
+- `.env.example` (+2 lines) - VERIFICATION_URL variable
+
+### Statistics
+- **Total new code**: 750+ lines across 4 new files
+- **Total modifications**: 180+ lines across 5 existing files
+- **Implementation time**: ~3 hours (as estimated)
+- **Database migrations**: 1 new migration (006_email_verification.sql)
+
+### User Experience Improvements
+1. **Password Creation**:
+   - Live feedback eliminates guesswork
+   - Clear requirements with checkmarks/crosses
+   - Color-coded strength indicator (red → yellow → green)
+   - Password match confirmation
+
+2. **Session Management**:
+   - User choice for session duration
+   - Clear explanation of "Remember me" feature
+   - Enhanced security with configurable timeouts
+
+3. **Email Security**:
+   - Verified email ensures account recovery works
+   - Professional email templates build trust
+   - Clear verification status in profile
+   - Easy resend option for verification emails
+
+4. **Overall Security**:
+   - Stronger passwords through real-time feedback
+   - Verified email addresses for account recovery
+   - Enhanced email templates with security tips
+   - Better user education through UI guidance
+
+### Future Enhancements (v2.0.0+)
+- Password strength requirements configurable via settings
+- Integration with haveibeenpwned.com for breach detection
+- Multi-factor authentication (2FA/TOTP)
+- Remember me cookie synchronization with session duration
+- Email template customization via configuration
+
+---
+---
+
 ## [1.8.0] - 2025-10-24
 
 ### Added

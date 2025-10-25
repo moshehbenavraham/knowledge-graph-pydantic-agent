@@ -10,11 +10,8 @@ import asyncio
 import streamlit as st
 import structlog
 
-from src.auth.password_reset import (
-    is_password_strong,
-    reset_password_with_token,
-    validate_reset_token,
-)
+from src.auth.password_reset import reset_password_with_token, validate_reset_token
+from src.auth.password_strength import is_password_strong, render_password_strength_meter
 
 logger = structlog.get_logger(__name__)
 
@@ -73,51 +70,77 @@ def render_password_reset_page():
 
         st.success("✅ Your reset link is valid. Enter your new password below.")
 
-        # Password reset form
-        with st.form("password_reset_form"):
-            new_password = st.text_input(
-                "New Password",
-                type="password",
-                help="At least 8 characters with uppercase, lowercase, numbers, and special characters",
+        # Use session state for password reset inputs
+        if "password_reset_inputs" not in st.session_state:
+            st.session_state.password_reset_inputs = {"new": "", "confirm": ""}
+
+        # Password inputs with live feedback (outside form)
+        new_password = st.text_input(
+            "New Password",
+            type="password",
+            key="pr_new",
+            value=st.session_state.password_reset_inputs["new"],
+        )
+
+        # Show password strength meter if password entered
+        if new_password:
+            st.markdown(
+                render_password_strength_meter(new_password),
+                unsafe_allow_html=True,
             )
-            confirm_password = st.text_input("Confirm New Password", type="password")
 
-            submit_button = st.form_submit_button("Reset Password", use_container_width=True)
+        confirm_password = st.text_input(
+            "Confirm New Password",
+            type="password",
+            key="pr_confirm",
+            value=st.session_state.password_reset_inputs["confirm"],
+        )
 
-            if submit_button:
-                # Validate passwords match
-                if not new_password or not confirm_password:
-                    st.error("❌ Please fill in both password fields.")
-                elif new_password != confirm_password:
-                    st.error("❌ Passwords do not match.")
+        # Password match indicator
+        if new_password and confirm_password:
+            if new_password == confirm_password:
+                st.success("✓ Passwords match")
+            else:
+                st.error("✗ Passwords do not match")
+
+        # Submit button (outside form for dynamic feedback)
+        if st.button("Reset Password", use_container_width=True, type="primary", key="pr_submit"):
+            # Validate passwords match
+            if not new_password or not confirm_password:
+                st.error("❌ Please fill in both password fields.")
+            elif new_password != confirm_password:
+                st.error("❌ Passwords do not match.")
+            else:
+                # Check password strength
+                is_strong, strength_message = is_password_strong(new_password)
+
+                if not is_strong:
+                    st.error(f"❌ {strength_message}")
                 else:
-                    # Check password strength
-                    is_strong, strength_message = is_password_strong(new_password)
+                    # Reset password
+                    try:
+                        success, reset_message = asyncio.run(
+                            reset_password_with_token(token, new_password)
+                        )
 
-                    if not is_strong:
-                        st.error(f"❌ {strength_message}")
-                    else:
-                        # Reset password
-                        try:
-                            success, reset_message = asyncio.run(
-                                reset_password_with_token(token, new_password)
-                            )
+                        if success:
+                            st.success(f"✅ {reset_message}")
+                            st.balloons()
+                            st.info("You can now log in with your new password.")
 
-                            if success:
-                                st.success(f"✅ {reset_message}")
-                                st.balloons()
-                                st.info("You can now log in with your new password.")
+                            # Clear inputs on success
+                            st.session_state.password_reset_inputs = {"new": "", "confirm": ""}
 
-                                # Show login link
-                                if st.button("Go to Login", use_container_width=True):
-                                    st.query_params.clear()  # Clear token from URL
-                                    st.switch_page("streamlit_app.py")  # Redirect to main app
-                            else:
-                                st.error(f"❌ {reset_message}")
+                            # Show login link
+                            if st.button("Go to Login", use_container_width=True, key="pr_login"):
+                                st.query_params.clear()  # Clear token from URL
+                                st.switch_page("streamlit_app.py")  # Redirect to main app
+                        else:
+                            st.error(f"❌ {reset_message}")
 
-                        except Exception as e:
-                            logger.error("Password reset failed", error=str(e))
-                            st.error("An error occurred. Please try again.")
+                    except Exception as e:
+                        logger.error("Password reset failed", error=str(e))
+                        st.error("An error occurred. Please try again.")
 
     except Exception as e:
         logger.error("Password reset page error", error=str(e))

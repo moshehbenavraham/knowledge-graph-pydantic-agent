@@ -53,7 +53,7 @@ async def send_reset_email_smtp(email: str, reset_token: str, reset_url: str) ->
         # Create reset link
         reset_link = f"{reset_url}?token={reset_token}"
 
-        # Email body (HTML)
+        # Email body (HTML) - Enhanced professional template
         html = f"""
         <html>
           <head></head>
@@ -62,17 +62,37 @@ async def send_reset_email_smtp(email: str, reset_token: str, reset_url: str) ->
               <h1 style="color: white; text-align: center;">🤖 Base Agent</h1>
               <div style="background: white; padding: 30px; border-radius: 10px; margin-top: 20px;">
                 <h2 style="color: #333;">Password Reset Request</h2>
-                <p>You requested to reset your password. Click the button below to create a new password:</p>
+                <p>We received a request to reset your password for your Base Agent account. Click the button below to create a new password:</p>
+
                 <div style="text-align: center; margin: 30px 0;">
                   <a href="{reset_link}" style="background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">Reset Password</a>
                 </div>
+
                 <p style="color: #666; font-size: 14px;">Or copy and paste this link into your browser:</p>
                 <p style="background: #f5f5f5; padding: 10px; border-radius: 5px; word-break: break-all; font-size: 12px; color: #666;">{reset_link}</p>
-                <p style="color: #666; font-size: 14px; margin-top: 30px;">
-                  <strong>This link will expire in 1 hour.</strong>
-                </p>
+
+                <div style="margin-top: 30px; padding: 15px; background: #fff3cd; border-radius: 6px; border-left: 4px solid #ffc107;">
+                  <p style="margin: 0; font-size: 14px; color: #856404;">
+                    <strong>⏱️ Time Sensitive:</strong> This link will expire in 1 hour for security reasons.
+                  </p>
+                </div>
+
+                <div style="margin-top: 20px; padding: 15px; background: #e8f4f8; border-radius: 6px; border-left: 4px solid #667eea;">
+                  <p style="margin: 0; font-size: 14px; color: #333;">
+                    <strong>💡 Password Tips:</strong><br>
+                    • Use at least 8 characters<br>
+                    • Include uppercase and lowercase letters<br>
+                    • Add numbers and special characters<br>
+                    • Avoid common words or patterns
+                  </p>
+                </div>
+
                 <p style="color: #999; font-size: 12px; margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px;">
-                  If you didn't request this password reset, you can safely ignore this email. Your password will not be changed.
+                  <strong>🔒 Security Notice:</strong> If you didn't request this password reset, please ignore this email. Your password will remain unchanged. For your security, consider changing your password if you believe your account may be compromised.
+                </p>
+
+                <p style="color: #999; font-size: 11px; text-align: center; margin-top: 15px;">
+                  This is an automated message from Base Agent. Please do not reply to this email.
                 </p>
               </div>
             </div>
