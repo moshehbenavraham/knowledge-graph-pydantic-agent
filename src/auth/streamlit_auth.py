@@ -711,7 +711,9 @@ def require_authentication() -> tuple[str, stauth.Authenticate]:
                 try:
                     # Get remember_me preference from session state
                     remember_me = st.session_state.get("remember_me", False)
-                    session_token = asyncio.run(create_db_session(username, remember_me=remember_me))
+                    session_token = asyncio.run(
+                        create_db_session(username, remember_me=remember_me)
+                    )
                     st.session_state.db_session_token = session_token
                 except Exception as e:
                     logger.warning("Failed to create database session", error=str(e))

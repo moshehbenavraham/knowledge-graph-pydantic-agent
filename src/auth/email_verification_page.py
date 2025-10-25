@@ -63,12 +63,16 @@ def render_email_verification_page():
 
         if not token_record:
             st.error("❌ This verification link is invalid or has expired.")
-            st.info("💡 Tip: Verification links expire after 24 hours. Request a new verification email if needed.")
+            st.info(
+                "💡 Tip: Verification links expire after 24 hours. Request a new verification email if needed."
+            )
 
             # Option to request new verification email
             st.markdown("---")
             st.markdown("### 📧 Need a new verification link?")
-            st.info("Please log in to your account and request a new verification email from your profile.")
+            st.info(
+                "Please log in to your account and request a new verification email from your profile."
+            )
             return
 
         # Token is valid, show verification confirmation
@@ -76,7 +80,9 @@ def render_email_verification_page():
         st.markdown("Click the button below to verify your email address.")
 
         # Verification button
-        if st.button("Verify My Email", use_container_width=True, type="primary", key="verify_submit"):
+        if st.button(
+            "Verify My Email", use_container_width=True, type="primary", key="verify_submit"
+        ):
             try:
                 # Use verification token
                 success = asyncio.run(use_verification_token(token))
@@ -104,7 +110,9 @@ def render_email_verification_page():
 
                 if "Invalid or expired" in str(e):
                     st.error("❌ This verification link is invalid or has already been used.")
-                    st.info("💡 Tip: Each verification link can only be used once. Request a new verification email if needed.")
+                    st.info(
+                        "💡 Tip: Each verification link can only be used once. Request a new verification email if needed."
+                    )
                 else:
                     st.error("❌ An error occurred. Please try again.")
 

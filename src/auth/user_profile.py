@@ -99,20 +99,31 @@ def render_user_profile(username: str):
             # Email verification status
             is_verified = user.get("is_email_verified", False)
             if is_verified:
-                verified_at = user.get("email_verified_at", "")[:10] if user.get("email_verified_at") else "N/A"
+                verified_at = (
+                    user.get("email_verified_at", "")[:10]
+                    if user.get("email_verified_at")
+                    else "N/A"
+                )
                 st.markdown(f"**Email Status:** ✅ Verified ({verified_at})")
             else:
                 st.markdown("**Email Status:** ⚠️ Not Verified")
                 st.warning("Please verify your email address to enable all features.")
 
                 # Button to resend verification email
-                if st.button("📧 Resend Verification Email", key="resend_verification", use_container_width=True):
+                if st.button(
+                    "📧 Resend Verification Email",
+                    key="resend_verification",
+                    use_container_width=True,
+                ):
                     try:
-                        from src.auth.email_verification import request_email_verification
                         import os
 
+                        from src.auth.email_verification import request_email_verification
+
                         verification_url = os.getenv("VERIFICATION_URL", "http://localhost:8501")
-                        success, message = asyncio.run(request_email_verification(user["id"], verification_url))
+                        success, message = asyncio.run(
+                            request_email_verification(user["id"], verification_url)
+                        )
 
                         if success:
                             st.success(message)

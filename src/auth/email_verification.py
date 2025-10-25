@@ -64,7 +64,9 @@ async def create_verification_token(
     if not response.data:
         raise Exception("Failed to create verification token")
 
-    logger.info("Email verification token created", user_id=user_id, expires_in_hours=expires_in_hours)
+    logger.info(
+        "Email verification token created", user_id=user_id, expires_in_hours=expires_in_hours
+    )
     return token
 
 
@@ -264,11 +266,15 @@ async def send_verification_email(
             token_preview=verification_token[:8] + "...",
         )
         # In development, log the token for testing
-        logger.debug("Verification token (dev only)", token=verification_token, url=verification_url)
+        logger.debug(
+            "Verification token (dev only)", token=verification_token, url=verification_url
+        )
         return False
 
     if EMAIL_PROVIDER == "smtp":
-        return await send_verification_email_smtp(email, verification_token, verification_url, user_name)
+        return await send_verification_email_smtp(
+            email, verification_token, verification_url, user_name
+        )
 
     logger.error("Unsupported email provider", provider=EMAIL_PROVIDER)
     return False
@@ -303,7 +309,9 @@ async def request_email_verification(user_id: str, verification_url: str) -> tup
         # Send verification email
         email = user.get("email")
         user_name = user.get("full_name", "User")
-        email_sent = await send_verification_email(email, verification_token, verification_url, user_name)
+        email_sent = await send_verification_email(
+            email, verification_token, verification_url, user_name
+        )
 
         if email_sent:
             logger.info("Verification email sent", user_id=user_id, email=email)
