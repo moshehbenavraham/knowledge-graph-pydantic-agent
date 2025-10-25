@@ -2,6 +2,7 @@
 
 This module provides authentication integration for the Streamlit UI using
 streamlit-authenticator with support for both YAML and database backends.
+Includes OAuth 2.0 support for Google and GitHub.
 """
 
 import asyncio
@@ -20,6 +21,11 @@ logger = structlog.get_logger(__name__)
 # Authentication backend configuration
 # Set USE_DATABASE_AUTH=true in .env to use database instead of YAML
 USE_DATABASE_AUTH = os.getenv("USE_DATABASE_AUTH", "false").lower() == "true"
+
+# OAuth configuration
+OAUTH_ENABLED = os.getenv("OAUTH_ENABLED", "false").lower() == "true"
+GOOGLE_OAUTH_ENABLED = os.getenv("GOOGLE_CLIENT_ID") and os.getenv("GOOGLE_CLIENT_SECRET")
+GITHUB_OAUTH_ENABLED = os.getenv("GITHUB_CLIENT_ID") and os.getenv("GITHUB_CLIENT_SECRET")
 
 
 async def load_credentials_from_database() -> dict:
@@ -282,6 +288,10 @@ def render_login_page() -> tuple[str | None, str | None, bool | None]:
     elif authentication_status is None:
         st.warning("👋 Please enter your username and password")
 
+    # OAuth login buttons (only in database mode with OAuth enabled)
+    if USE_DATABASE_AUTH and OAUTH_ENABLED:
+        render_oauth_buttons()
+
     # Password reset option (only in database mode)
     if USE_DATABASE_AUTH:
         st.markdown("---")
@@ -430,6 +440,189 @@ async def revoke_db_session(session_token: str | None) -> bool:
         return False
 
 
+async def handle_oauth_callback(provider: str, code: str, state: str | None = None) -> dict | None:
+    """Handle OAuth callback and authenticate user.
+
+    Args:
+        provider: OAuth provider name ('google' or 'github')
+        code: Authorization code from OAuth callback
+        state: State parameter for CSRF validation
+
+    Returns:
+        User data dictionary or None if failed
+    """
+    try:
+        from src.auth.oauth_handler import complete_oauth_flow
+
+        # Complete OAuth flow
+        result = await complete_oauth_flow(provider, code, state)
+
+        user = result["user"]
+        is_new_user = result["is_new_user"]
+
+        logger.info(
+            f"OAuth authentication successful for {provider}",
+            username=user["username"],
+            is_new_user=is_new_user,
+        )
+
+        # Log auth event
+        await log_auth_event(
+            event_type="login",
+            username=user["username"],
+            success=True,
+            metadata={
+                "provider": provider,
+                "is_new_user": is_new_user,
+                "auth_method": "oauth",
+            },
+        )
+
+        return user
+
+    except Exception as e:
+        logger.error(f"OAuth callback handling failed for {provider}", error=str(e))
+        # Log failed auth event
+        try:
+            await log_auth_event(
+                event_type="login",
+                username="unknown",
+                success=False,
+                metadata={
+                    "provider": provider,
+                    "error": str(e),
+                    "auth_method": "oauth",
+                },
+            )
+        except Exception as log_error:
+            logger.warning("Failed to log OAuth error event", error=str(log_error))
+
+        return None
+
+
+def initiate_oauth_login(provider: str) -> None:
+    """Initiate OAuth login flow.
+
+    Args:
+        provider: OAuth provider name ('google' or 'github')
+    """
+    try:
+        from src.auth.oauth_handler import initiate_oauth_flow
+
+        # Generate authorization URL with state
+        auth_url, state = asyncio.run(initiate_oauth_flow(provider))
+
+        # Store state in session for CSRF validation
+        st.session_state[f"oauth_state_{provider}"] = state
+
+        logger.info(f"Initiating OAuth login for {provider}", provider=provider)
+
+        # Redirect to OAuth provider
+        st.markdown(
+            f'<meta http-equiv="refresh" content="0;url={auth_url}">',
+            unsafe_allow_html=True,
+        )
+        st.stop()
+
+    except Exception as e:
+        logger.error(f"Failed to initiate OAuth login for {provider}", error=str(e))
+        st.error(f"OAuth login failed: {str(e)}")
+
+
+def render_oauth_buttons() -> None:
+    """Render OAuth login buttons for enabled providers."""
+    if not OAUTH_ENABLED or not USE_DATABASE_AUTH:
+        return  # OAuth only supported in database mode
+
+    st.markdown("---")
+    st.markdown("### Or sign in with")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if GOOGLE_OAUTH_ENABLED:
+            if st.button("🔵 Google", use_container_width=True, key="google_oauth"):
+                initiate_oauth_login("google")
+
+    with col2:
+        if GITHUB_OAUTH_ENABLED:
+            if st.button("⚫ GitHub", use_container_width=True, key="github_oauth"):
+                initiate_oauth_login("github")
+
+
+def check_oauth_callback() -> tuple[str | None, str | None]:
+    """Check for OAuth callback parameters in URL.
+
+    Returns:
+        Tuple of (username, name) if OAuth callback successful, else (None, None)
+    """
+    if not OAUTH_ENABLED or not USE_DATABASE_AUTH:
+        return None, None
+
+    # Check for OAuth callback parameters
+    query_params = st.query_params
+
+    # Check for 'code' parameter (OAuth callback)
+    code = query_params.get("code")
+    state = query_params.get("state")
+
+    if not code:
+        return None, None
+
+    # Determine provider from state or URL path
+    provider = None
+    if "google" in str(query_params):
+        provider = "google"
+    elif "github" in str(query_params):
+        provider = "github"
+
+    # Fallback: check session state for stored OAuth state
+    if not provider:
+        for prov in ["google", "github"]:
+            stored_state = st.session_state.get(f"oauth_state_{prov}")
+            if stored_state == state:
+                provider = prov
+                break
+
+    if not provider:
+        logger.warning("Could not determine OAuth provider from callback")
+        st.error("OAuth error: Invalid provider")
+        st.query_params.clear()
+        return None, None
+
+    # Validate state (CSRF protection)
+    stored_state = st.session_state.get(f"oauth_state_{provider}")
+    if stored_state and stored_state != state:
+        logger.warning(f"OAuth state mismatch for {provider}", stored_state=stored_state, received_state=state)
+        st.error("OAuth error: Invalid state parameter (CSRF protection)")
+        st.query_params.clear()
+        return None, None
+
+    # Handle OAuth callback
+    try:
+        user = asyncio.run(handle_oauth_callback(provider, code, state))
+
+        if user:
+            # Clear OAuth state from session
+            st.session_state.pop(f"oauth_state_{provider}", None)
+
+            # Clear query parameters
+            st.query_params.clear()
+
+            # Return user info
+            return user["username"], user.get("full_name")
+        else:
+            st.error(f"{provider.capitalize()} login failed. Please try again.")
+            st.query_params.clear()
+            return None, None
+
+    except Exception as e:
+        logger.error(f"OAuth callback error for {provider}", error=str(e))
+        st.error(f"OAuth error: {str(e)}")
+        st.query_params.clear()
+        return None, None
+
+
 def require_authentication() -> tuple[str, stauth.Authenticate]:
     """Require authentication for the application.
 
@@ -448,6 +641,30 @@ def require_authentication() -> tuple[str, stauth.Authenticate]:
         st.session_state.name = None
         st.session_state.username = None
         st.session_state.db_session_token = None
+
+    # Check for OAuth callback first (before showing login page)
+    if st.session_state.authentication_status is not True:
+        oauth_username, oauth_name = check_oauth_callback()
+
+        if oauth_username and oauth_name:
+            # OAuth authentication successful
+            logger.info("OAuth authentication successful", username=oauth_username, name=oauth_name)
+
+            # Update session state
+            st.session_state.authentication_status = True
+            st.session_state.name = oauth_name
+            st.session_state.username = oauth_username
+
+            # Create database session
+            if USE_DATABASE_AUTH:
+                try:
+                    session_token = asyncio.run(create_db_session(oauth_username))
+                    st.session_state.db_session_token = session_token
+                except Exception as e:
+                    logger.warning("Failed to create database session for OAuth user", error=str(e))
+
+            # Rerun to load main app
+            st.rerun()
 
     # If not authenticated, show login page
     if st.session_state.authentication_status is not True:

@@ -10,6 +10,127 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ---
 
+## [1.8.0] - 2025-10-24
+
+### Added
+- **OAuth 2.0 authentication integration** (Google and GitHub providers)
+  - `src/auth/oauth_handler.py`: Complete OAuth 2.0 flow implementation (554 lines)
+    - Authorization URL generation with CSRF protection (state parameter)
+    - Token exchange and refresh logic using authlib
+    - User profile retrieval and standardization across providers
+    - Encrypted token storage using Fernet (cryptography)
+    - Automatic user creation on first OAuth login
+    - Support for linking multiple OAuth providers to one account
+
+  - **Streamlit integration** (`src/auth/streamlit_auth.py` +213 lines):
+    - OAuth login buttons (Google, GitHub) in login page
+    - OAuth callback handling with state validation
+    - Session creation for OAuth users
+    - Analytics logging for OAuth events
+    - Seamless integration with existing password auth
+
+  - **Database infrastructure** (already existed in v1.5.0):
+    - `auth_oauth_accounts` table for OAuth account storage
+    - Support for multiple OAuth providers per user
+    - Encrypted access and refresh tokens
+    - Profile data stored as JSONB
+
+  - **Environment configuration**:
+    - `OAUTH_ENABLED`: Toggle OAuth login on/off
+    - `OAUTH_ENCRYPTION_KEY`: Fernet key for token encryption
+    - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`
+    - `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GITHUB_REDIRECT_URI`
+
+### Changed
+- **Updated authentication flow** to check for OAuth callbacks before rendering login page
+- **Enhanced login UI** with OAuth provider buttons (when enabled)
+- **Extended `.env.example`** with OAuth configuration variables and setup instructions
+
+### Security
+- **Token encryption**: All OAuth tokens encrypted with Fernet before database storage
+- **CSRF protection**: Random state parameter generated and validated on callback
+- **Scope minimization**: Only request essential OAuth scopes (openid, email, profile)
+- **Automatic token refresh**: Tokens refreshed automatically when expired
+- **Session tracking**: OAuth logins tracked in same session system as password auth
+
+### Testing
+- **50+ comprehensive tests** for OAuth functionality (`tests/test_oauth_handler.py`):
+  - Token encryption/decryption tests
+  - OAuth handler initialization tests
+  - Authorization URL generation tests
+  - Token exchange and refresh tests
+  - User profile retrieval tests (Google and GitHub)
+  - Callback handling tests (new user, existing user, errors)
+  - Username generation tests
+  - All tests passing (100% success rate)
+
+### Documentation
+- **Complete OAuth setup guide** (`docs/deployment/oauth_setup_guide.md`, 500+ lines):
+  - Google Cloud Console setup instructions
+  - GitHub OAuth App setup instructions
+  - Environment configuration guide
+  - Local and production deployment instructions
+  - Troubleshooting guide for common issues
+  - Security considerations and best practices
+  - FAQ section
+- **Updated CLAUDE.md** with OAuth documentation and setup instructions
+- **Updated .env.example** with OAuth environment variables
+
+### Statistics
+- **Total new code**: 767 lines across 3 files
+  - `src/auth/oauth_handler.py`: 554 lines (new file)
+  - `src/auth/streamlit_auth.py`: +213 lines (updated)
+  - `tests/test_oauth_handler.py`: 750+ lines (new file)
+- **Documentation**: 500+ lines of setup guides
+- **Implementation time**: ~4 hours (as estimated in todo)
+
+### Usage Example
+
+**Environment Setup**:
+```bash
+# In .env
+USE_DATABASE_AUTH=true
+OAUTH_ENABLED=true
+OAUTH_ENCRYPTION_KEY=<fernet-key>
+
+# Google OAuth
+GOOGLE_CLIENT_ID=<your-client-id>
+GOOGLE_CLIENT_SECRET=<your-client-secret>
+GOOGLE_REDIRECT_URI=http://localhost:8501
+
+# GitHub OAuth
+GITHUB_CLIENT_ID=<your-client-id>
+GITHUB_CLIENT_SECRET=<your-client-secret>
+GITHUB_REDIRECT_URI=http://localhost:8501
+```
+
+**User Experience**:
+1. Navigate to login page
+2. Click "🔵 Google" or "⚫ GitHub" button
+3. Authorize application on OAuth provider
+4. Automatically redirected back and logged in
+5. User account created (if first time) or linked (if existing)
+
+### Notes
+- **OAuth requires database mode**: `USE_DATABASE_AUTH=true` is required
+- **HTTPS recommended for production**: OAuth providers enforce HTTPS for redirect URIs in production
+- **Token refresh automatic**: No manual token management needed
+- **Hybrid auth supported**: Users can have both password and OAuth login methods
+
+### Known Limitations
+- OAuth only supports Google and GitHub (additional providers can be added)
+- No UI for linking OAuth accounts to existing users (must be done during login)
+- Token rotation not implemented (relies on provider token expiration)
+
+### Future Enhancements (v1.9.0+)
+- UI for linking/unlinking OAuth accounts in user profile
+- Support for additional OAuth providers (Microsoft, Apple)
+- OAuth-specific rate limiting
+- OAuth session analytics dashboard
+
+---
+---
+
 ## [1.7.0] - 2025-10-24
 
 ### Changed

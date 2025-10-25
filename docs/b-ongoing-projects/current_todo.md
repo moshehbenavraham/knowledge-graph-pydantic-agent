@@ -1,26 +1,10 @@
 # Authentication System - TODO
 
-**Status**: ✅ v1.7.0 Complete | 🎯 Next: v1.8.0 OAuth Integration
+**Status**: ✅ v1.8.0 Complete | 🎯 Next: v1.9.0 Enhanced UI/UX Features
 
 ---
 
 ## 🟡 High Priority
-
-### OAuth Integration (v1.8.0)
-**Time**: 4-6 hours
-
-- [ ] Install dependencies: `authlib`, `httpx`
-- [ ] Set up OAuth apps (Google Console, GitHub Settings)
-- [ ] Build `src/auth/oauth_handler.py`
-  - OAuth flow implementation (authorization, callback, token exchange)
-  - Token storage (encrypted in Supabase `auth_oauth_accounts`)
-  - Token refresh logic
-- [ ] Add OAuth buttons to login UI
-- [ ] Test complete OAuth flow (Google → GitHub → token refresh)
-
-**Note**: Database infrastructure already exists (`auth_oauth_accounts` table)
-
----
 
 ### Enhanced UI/UX Features (v1.9.0)
 **Time**: 2-3 hours
