@@ -156,7 +156,7 @@ def render_2fa_setup_required() -> None:
                             st.session_state.pop("2fa_setup_secret", None)
 
                             # Add continue button
-                            if st.button("Continue to Base Agent", type="primary"):
+                            if st.button("Continue to Luminari Agent", type="primary"):
                                 st.rerun()
 
                         else:

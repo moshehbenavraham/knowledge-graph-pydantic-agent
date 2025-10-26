@@ -177,8 +177,17 @@ class VectorSearch:
         start_time = datetime.now()
         self._stats["searches"] += 1
 
+        logger.info(
+            f"┌─ VECTOR SEARCH STARTING\n"
+            f"│  Query: {query[:80]}{'...' if len(query) > 80 else ''}\n"
+            f"│  Limit: {limit}, Threshold: {similarity_threshold}, Filters: {filters or 'None'}"
+        )
+
         # Generate query embedding
+        embed_start = datetime.now()
         query_embedding = await self.embedder.embed(query)
+        embed_time = (datetime.now() - embed_start).total_seconds()
+        logger.info(f"│  → Embedding generated: {len(query_embedding)}d in {embed_time:.3f}s")
 
         # Check cache
         if self.cache:
@@ -186,24 +195,46 @@ class VectorSearch:
             cached = self.cache.get(cache_key)
             if cached:
                 self._stats["cache_hits"] += 1
-                logger.debug(f"Cache hit for query: {query[:50]}...")
+                latency = (datetime.now() - start_time).total_seconds()
+                logger.info(
+                    f"│  ✓ CACHE HIT! Returning {len(cached[:limit])} cached results\n"
+                    f"└─ Vector search completed in {latency:.3f}s (cached)"
+                )
                 return cached[:limit]
             self._stats["cache_misses"] += 1
+            logger.info("│  → Cache miss, executing database search...")
 
         # Perform search
+        search_start = datetime.now()
         results = await self._search_vectors(
             query_embedding, limit * 2, filters, similarity_threshold  # Get more for filtering
         )
+        search_time = (datetime.now() - search_start).total_seconds()
 
         # Cache results
         if self.cache and results:
             self.cache.set(cache_key, results)
+            logger.info("│  → Results cached for future queries")
 
         # Update stats
         latency = (datetime.now() - start_time).total_seconds()
         self._stats["total_latency"] += latency
 
-        logger.info(f"Vector search completed in {latency:.3f}s, found {len(results)} results")
+        # Log result details
+        if results:
+            avg_similarity = sum(r.similarity for r in results) / len(results)
+            top_similarity = results[0].similarity if results else 0
+            logger.info(
+                f"│  ✓ Database search: {len(results)} results in {search_time:.3f}s\n"
+                f"│  Similarity scores: top={top_similarity:.3f}, avg={avg_similarity:.3f}\n"
+                f"│  Returning: {len(results[:limit])} chunks (after limit)\n"
+                f"└─ Vector search completed in {latency:.3f}s (total)"
+            )
+        else:
+            logger.info(
+                f"│  ⚠ No results found matching threshold {similarity_threshold}\n"
+                f"└─ Vector search completed in {latency:.3f}s (no results)"
+            )
 
         return results[:limit]
 
@@ -226,9 +257,14 @@ class VectorSearch:
         Returns:
             List of chunk results
         """
+        embedding_dim = len(query_embedding)
+        logger.debug(
+            f"│  → Executing pgvector query: embedding_{embedding_dim}, "
+            f"limit={limit}, threshold={similarity_threshold}"
+        )
+
         async with self.connection_manager.get_pg_connection() as conn:
             # Build query based on embedding dimension
-            embedding_dim = len(query_embedding)
             embedding_column = f"embedding_{embedding_dim}"
 
             # Optimized query with IVFFlat index

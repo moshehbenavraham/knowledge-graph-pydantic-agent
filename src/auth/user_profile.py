@@ -25,7 +25,7 @@ from src.auth.password_strength import is_password_strong, render_password_stren
 logger = structlog.get_logger(__name__)
 
 
-async def get_user_info(username: str) -> dict | None:
+def get_user_info(username: str) -> dict | None:
     """Get user information from database.
 
     Args:
@@ -42,7 +42,7 @@ async def get_user_info(username: str) -> dict | None:
         return None
 
 
-async def change_user_password(
+def change_user_password(
     username: str, current_password: str, new_password: str
 ) -> tuple[bool, str]:
     """Change user password.
@@ -85,7 +85,7 @@ def render_user_profile(username: str):
 
     # Get user info
     try:
-        user = asyncio.run(get_user_info(username))
+        user = get_user_info(username)
 
         if not user:
             st.sidebar.error("Failed to load user information")
@@ -199,8 +199,8 @@ def render_user_profile(username: str):
                         st.error(message)
                     else:
                         # Change password
-                        success, msg = asyncio.run(
-                            change_user_password(username, current_password, new_password)
+                        success, msg = change_user_password(
+                            username, current_password, new_password
                         )
 
                         if success:
@@ -219,7 +219,7 @@ def render_user_profile(username: str):
         # Active sessions section
         with st.sidebar.expander("💻 Active Sessions", expanded=False):
             try:
-                sessions = asyncio.run(get_user_sessions(user["id"], active_only=True))
+                sessions = get_user_sessions(user["id"], active_only=True)
 
                 if not sessions:
                     st.info("No active sessions found.")
@@ -254,7 +254,7 @@ def render_user_profile(username: str):
                             use_container_width=True,
                         ):
                             try:
-                                success = asyncio.run(revoke_session(session["session_token"]))
+                                success = revoke_session(session["session_token"])
                                 if success:
                                     st.success("Session revoked successfully!")
                                     st.rerun()
@@ -283,7 +283,7 @@ def render_user_profile(username: str):
                                         "⚠️ This will log you out from all devices. Click again to confirm."
                                     )
                                 else:
-                                    count = asyncio.run(revoke_all_user_sessions(user["id"]))
+                                    count = revoke_all_user_sessions(user["id"])
                                     st.success(f"Revoked {count} session(s).")
                                     st.info("You will be logged out. Please log in again.")
                                     del st.session_state.confirm_revoke_all

@@ -314,7 +314,7 @@ def render_login_page() -> tuple[str | None, str | None, bool | None]:
         })();Luminari Agent
         </script>
         <div class="auth-container">
-            <div class="auth-title">🤖 Base Agent</div>
+            <div class="auth-title">🤖 Luminari Agent</div>
             <div class="auth-subtitle">Advanced RAG AI Assistant</div>
         </div>
         """,
@@ -322,7 +322,7 @@ def render_login_page() -> tuple[str | None, str | None, bool | None]:
     )
 
     st.markdown("### 🔐 Authentication Required")
-    st.info("Please log in to access the Base Agent interface.")
+    st.info("Please log in to access the Luminari Agent interface.")
 
     # Get rate limiter
     rate_limiter = get_rate_limiter()

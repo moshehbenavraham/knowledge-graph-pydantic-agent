@@ -161,6 +161,13 @@ class GraphSearch:
         start_time = datetime.now()
         self._stats["searches"] += 1
 
+        logger.info(
+            f"┌─ GRAPH SEARCH STARTING (Neo4j + Graphiti)\n"
+            f"│  Query: {query[:80]}{'...' if len(query) > 80 else ''}\n"
+            f"│  Limit per category: {limit}\n"
+            f"│  → Launching 3 parallel searches: facts, entities, relationships"
+        )
+
         # Execute parallel searches
         tasks = [
             self._search_facts(query, limit),
@@ -175,6 +182,11 @@ class GraphSearch:
         entities = results[1] if not isinstance(results[1], Exception) else []
         relationships = results[2] if not isinstance(results[2], Exception) else []
 
+        # Log any exceptions
+        for result, name in zip(results, ["facts", "entities", "relationships"], strict=False):
+            if isinstance(result, Exception):
+                logger.warning(f"│  ⚠ {name.capitalize()} search failed: {result}")
+
         # Extract unique chunk references
         chunk_refs = self._extract_chunk_refs(facts, entities, relationships)
 
@@ -186,9 +198,10 @@ class GraphSearch:
         self._stats["relationships_found"] += len(relationships)
 
         logger.info(
-            f"Graph search completed in {query_time:.3f}s: "
-            f"{len(facts)} facts, {len(entities)} entities, "
-            f"{len(relationships)} relationships"
+            f"│  ✓ Parallel searches completed\n"
+            f"│  Results: {len(facts)} facts, {len(entities)} entities, {len(relationships)} relationships\n"
+            f"│  Chunk references: {len(chunk_refs)} unique chunks\n"
+            f"└─ Graph search completed in {query_time:.3f}s"
         )
 
         return GraphSearchResult(
@@ -211,6 +224,7 @@ class GraphSearch:
             List of facts
         """
         try:
+            logger.debug(f"│    → Searching facts via Graphiti (limit={limit})...")
             # Use Graphiti's search method
             results = await self.graphiti_client.search(query, limit=limit)
 
@@ -230,10 +244,11 @@ class GraphSearch:
                         )
                     )
 
+            logger.debug(f"│    ✓ Facts search: found {len(facts)} results")
             return facts
 
         except Exception as e:
-            logger.warning(f"Fact search failed: {e}")
+            logger.warning(f"│    ✗ Fact search failed: {e}")
             return []
 
     async def _search_entities(self, query: str, limit: int) -> list[GraphEntity]:
@@ -248,6 +263,7 @@ class GraphSearch:
             List of entities
         """
         try:
+            logger.debug(f"│    → Searching entities via Neo4j Cypher (limit={limit})...")
             # Build Cypher query for entity search
             cypher = """
             MATCH (e:Entity)
@@ -275,10 +291,11 @@ class GraphSearch:
                     )
                 )
 
+            logger.debug(f"│    ✓ Entity search: found {len(entities)} results")
             return entities
 
         except Exception as e:
-            logger.warning(f"Entity search failed: {e}")
+            logger.warning(f"│    ✗ Entity search failed: {e}")
             return []
 
     async def _search_relationships(self, query: str, limit: int) -> list[GraphRelationship]:
@@ -293,13 +310,18 @@ class GraphSearch:
             List of relationships
         """
         try:
+            logger.debug(f"│    → Searching relationships via Neo4j Cypher (limit={limit})...")
             # First find relevant entities
             entities = await self._search_entities(query, 10)
 
             if not entities:
+                logger.debug("│    ✓ Relationship search: 0 (no entities found)")
                 return []
 
             entity_ids = [e.id for e in entities]
+            logger.debug(
+                f"│      Found {len(entity_ids)} entities, searching their relationships..."
+            )
 
             # Find relationships involving these entities
             cypher = """
@@ -330,10 +352,11 @@ class GraphSearch:
                     )
                 )
 
+            logger.debug(f"│    ✓ Relationship search: found {len(relationships)} results")
             return relationships
 
         except Exception as e:
-            logger.warning(f"Relationship search failed: {e}")
+            logger.warning(f"│    ✗ Relationship search failed: {e}")
             return []
 
     async def find_entity_timeline(self, entity_name: str, limit: int = 20) -> list[GraphFact]:

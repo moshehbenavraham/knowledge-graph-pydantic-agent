@@ -128,7 +128,17 @@ class HybridSearch:
 
         self._stats["strategies"][strategy.value] += 1
 
-        logger.info(f"Hybrid search using strategy: {strategy.value}")
+        logger.info(
+            f"\n{'=' * 80}\n"
+            f"HYBRID SEARCH STARTING\n"
+            f"Query: {query[:100]}{'...' if len(query) > 100 else ''}\n"
+            f"Strategy: {strategy.value}\n"
+            f"Intent: {intent.value if intent else 'Not analyzed'}\n"
+            f"Graph Enabled: {self.config.performance.enable_graph}\n"
+            f"Parallel Enabled: {self.config.performance.enable_parallel_search}\n"
+            f"Limit: {limit}\n"
+            f"{'=' * 80}"
+        )
 
         # Execute search based on strategy
         if strategy == SearchStrategy.VECTOR_ONLY:
@@ -177,23 +187,43 @@ class HybridSearch:
 
         # Map intent to strategy
         if intent == SearchIntent.VECTOR_HEAVY:
-            return SearchStrategy.VECTOR_ONLY
-
-        if intent == SearchIntent.GRAPH_HEAVY:
+            selected = SearchStrategy.VECTOR_ONLY
+            reason = "Intent is VECTOR_HEAVY - semantic content search optimal"
+        elif intent == SearchIntent.GRAPH_HEAVY:
             # Use graph if enabled
             if self.config.performance.enable_graph:
-                return SearchStrategy.GRAPH_ONLY
-            return SearchStrategy.VECTOR_ONLY
-
-        if intent in [SearchIntent.TEMPORAL, SearchIntent.ENTITY_FOCUSED]:
+                selected = SearchStrategy.GRAPH_ONLY
+                reason = "Intent is GRAPH_HEAVY and graph is enabled - using graph-only search"
+            else:
+                selected = SearchStrategy.VECTOR_ONLY
+                reason = (
+                    "Intent is GRAPH_HEAVY but graph is DISABLED - falling back to vector search"
+                )
+        elif intent in [SearchIntent.TEMPORAL, SearchIntent.ENTITY_FOCUSED]:
             # These benefit from hybrid approach
             if self.config.performance.enable_graph:
-                return SearchStrategy.HYBRID
-            return SearchStrategy.VECTOR_ONLY
+                selected = SearchStrategy.HYBRID
+                reason = f"Intent is {intent.value} - benefits from hybrid approach (graph enabled)"
+            else:
+                selected = SearchStrategy.VECTOR_ONLY
+                reason = f"Intent is {intent.value} but graph is DISABLED - using vector search"
+        elif self.config.performance.enable_graph:
+            selected = SearchStrategy.ADAPTIVE
+            reason = "Intent is HYBRID - using adaptive strategy (graph enabled)"
+        else:
+            selected = SearchStrategy.VECTOR_ONLY
+            reason = "Intent is HYBRID but graph is DISABLED - using vector search"
 
-        if self.config.performance.enable_graph:
-            return SearchStrategy.ADAPTIVE
-        return SearchStrategy.VECTOR_ONLY
+        logger.info(
+            f"STRATEGY SELECTION: {selected.value}\n"
+            f"  Reason: {reason}\n"
+            f"  Intent: {intent.value} (confidence: {intent_result.confidence:.2f})\n"
+            f"  Entities mentioned: {len(intent_result.entities_mentioned)}\n"
+            f"  Relationship indicators: {len(intent_result.relationship_indicators)}\n"
+            f"  Temporal markers: {len(intent_result.temporal_markers)}"
+        )
+
+        return selected
 
     async def _vector_only_search(self, query: str, limit: int) -> HybridSearchResult:
         """
@@ -206,7 +236,13 @@ class HybridSearch:
         Returns:
             Search result
         """
+        logger.info("▶ Executing VECTOR_ONLY search strategy")
+        start = datetime.now()
+
         chunks = await self.vector_search.search(query, limit)
+
+        elapsed = (datetime.now() - start).total_seconds()
+        logger.info(f"✓ VECTOR_ONLY search completed: {len(chunks)} chunks in {elapsed:.3f}s")
 
         return HybridSearchResult(chunks=chunks, metadata={"search_type": "vector_only"})
 
@@ -222,6 +258,9 @@ class HybridSearch:
         Returns:
             Search result
         """
+        logger.info("▶ Executing GRAPH_ONLY search strategy")
+        start = datetime.now()
+
         # Perform graph search
         graph_results = await self.graph_search.search(query, limit)
 
@@ -238,6 +277,13 @@ class HybridSearch:
 
             if chunk_uuids:
                 chunks = await self.vector_search.get_chunks_by_ids(chunk_uuids)
+
+        elapsed = (datetime.now() - start).total_seconds()
+        logger.info(
+            f"✓ GRAPH_ONLY search completed in {elapsed:.3f}s: "
+            f"{len(chunks)} chunks, {len(graph_results.facts)} facts, "
+            f"{len(graph_results.entities)} entities, {len(graph_results.relationships)} relationships"
+        )
 
         return HybridSearchResult(
             chunks=chunks,
@@ -259,14 +305,20 @@ class HybridSearch:
         Returns:
             Search result
         """
+        logger.info("▶ Executing HYBRID search strategy (vector + graph in parallel)")
+        start = datetime.now()
+
         # Execute searches in parallel
         if self.config.performance.enable_parallel_search:
+            logger.info("  → Launching parallel vector and graph searches...")
             vector_task = asyncio.create_task(self.vector_search.search(query, limit * 2))
             graph_task = asyncio.create_task(self.graph_search.search(query, limit))
 
             vector_results, graph_results = await asyncio.gather(vector_task, graph_task)
+            logger.info("  ✓ Parallel searches completed")
         else:
             # Sequential execution
+            logger.info("  → Sequential execution (parallel disabled)")
             vector_results = await self.vector_search.search(query, limit * 2)
             graph_results = await self.graph_search.search(query, limit)
 
@@ -276,7 +328,17 @@ class HybridSearch:
         )
 
         # Rank and limit results
+        logger.info("  → Ranking and merging results...")
         ranked_chunks = self.ranker.rank_chunks(boosted_chunks, limit)
+
+        elapsed = (datetime.now() - start).total_seconds()
+        logger.info(
+            f"✓ HYBRID search completed in {elapsed:.3f}s:\n"
+            f"  Vector results: {len(vector_results)}\n"
+            f"  Graph results: {len(graph_results.facts)} facts, {len(graph_results.entities)} entities\n"
+            f"  Final ranked chunks: {len(ranked_chunks)}\n"
+            f"  Boosts applied: {self._stats['graph_boosts']} graph, {self._stats['entity_boosts']} entity"
+        )
 
         return HybridSearchResult(
             chunks=ranked_chunks,
@@ -303,25 +365,41 @@ class HybridSearch:
         Returns:
             Search result
         """
+        logger.info("▶ Executing ADAPTIVE search strategy")
+        start = datetime.now()
+
         # Start with fast vector search
+        logger.info("  → Phase 1: Initial vector search (5 results)")
         initial_chunks = await self.vector_search.search(query, 5)
 
         # Check if we need graph search
         need_graph = False
+        reasons = []
 
         # Low similarity scores suggest need for graph
         if not initial_chunks or all(c.similarity < 0.7 for c in initial_chunks):
             need_graph = True
+            reasons.append("low similarity scores")
 
         # Multiple entities mentioned suggests graph search
         if intent_result and len(intent_result.entities_mentioned) >= 2:
             need_graph = True
+            reasons.append(f"{len(intent_result.entities_mentioned)} entities mentioned")
 
         if need_graph and self.config.performance.enable_graph:
+            logger.info(f"  → Phase 2: Switching to HYBRID search (reasons: {', '.join(reasons)})")
             # Perform full hybrid search
             return await self._hybrid_search(query, limit, intent_result)
+
         # Continue with vector-only
+        logger.info("  → Phase 2: Continuing with vector-only search")
         more_chunks = await self.vector_search.search(query, limit)
+
+        elapsed = (datetime.now() - start).total_seconds()
+        logger.info(
+            f"✓ ADAPTIVE search completed in {elapsed:.3f}s: {len(more_chunks)} chunks (vector-only)"
+        )
+
         return HybridSearchResult(chunks=more_chunks, metadata={"search_type": "adaptive_vector"})
 
     async def _boost_with_graph_context(

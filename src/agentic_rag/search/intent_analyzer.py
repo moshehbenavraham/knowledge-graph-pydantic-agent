@@ -181,9 +181,18 @@ class IntentAnalyzer:
         # Update statistics
         self._stats["intents"][primary_intent.value] += 1
 
-        logger.debug(
-            f"Intent analysis: {primary_intent.value} "
-            f"(confidence: {confidence:.2f}) for query: {query[:100]}..."
+        # Comprehensive logging
+        logger.info(
+            "=" * 80 + "\n"
+            f"INTENT ANALYSIS COMPLETE\n"
+            f"Query: {query[:100]}{'...' if len(query) > 100 else ''}\n"
+            f"Primary Intent: {primary_intent.value} (confidence: {confidence:.2f})\n"
+            f"Intent Scores: {', '.join(f'{k.value}={v:.2f}' for k, v in sorted(scores.items(), key=lambda x: x[1], reverse=True))}\n"
+            f"Entities: {entities if entities else 'None'}\n"
+            f"Temporal Markers: {temporal_markers if temporal_markers else 'None'}\n"
+            f"Relationship Indicators: {relationship_indicators if relationship_indicators else 'None'}\n"
+            f"Fact Indicators: {fact_indicators if fact_indicators else 'None'}\n"
+            f"=" * 80
         )
 
         return IntentAnalysisResult(

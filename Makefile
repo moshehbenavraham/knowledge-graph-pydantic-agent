@@ -85,8 +85,10 @@ ngrok-ui:  ## Start Streamlit only (for manual ngrok)
 	  PYTHONPATH=$(PWD):$$PYTHONPATH UI_MODE=advanced \
 	  streamlit run src/ui/streamlit_app.py --server.port=8501"
 
-deploy-ngrok:  ## Start Streamlit + ngrok tunnel automatically (logs to logs/ngrok_auth_logs/)
+deploy-ngrok:  ## Start Streamlit + ngrok tunnel automatically (logs to logs/ngrok_auth_logs/, auto-cleanup >3 days)
 	@mkdir -p logs/ngrok_auth_logs
+	@echo "Cleaning up logs older than 3 days..."
+	@find logs/ngrok_auth_logs -name "*.log" -type f -mtime +3 -delete 2>/dev/null || true
 	@echo "Starting Streamlit on port 8501..."
 	@bash -c "source .venv/bin/activate && \
 	  PYTHONPATH=$(PWD):$$PYTHONPATH UI_MODE=advanced \
