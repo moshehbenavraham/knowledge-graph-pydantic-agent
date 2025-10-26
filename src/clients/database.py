@@ -1,7 +1,6 @@
-from supabase.client import Client, ClientOptions
-
 from src.config.clients import clients_config
 from supabase import create_client  # type: ignore
+from supabase.client import Client, ClientOptions
 
 
 def get_supabase_client() -> Client:

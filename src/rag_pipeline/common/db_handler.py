@@ -5,9 +5,8 @@ import traceback
 from pathlib import Path
 from typing import Any
 
-from supabase.client import Client
-
 from supabase import create_client  # type: ignore
+from supabase.client import Client
 
 sys.path.append(str(Path(__file__).parent.resolve()))
 from text_processor import (

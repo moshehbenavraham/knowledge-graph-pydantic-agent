@@ -25,7 +25,6 @@ from dotenv import load_dotenv
 from httpx import AsyncClient
 from openai import AsyncOpenAI
 from pydantic_ai import Agent, RunContext
-from supabase.client import Client
 
 from src.clients.llm import get_model
 from src.config.agent import agent_config
@@ -39,6 +38,7 @@ from src.tools import (
     web_search_tool,
 )
 from src.tools.rag import graph_query_tool, smart_search_tool
+from supabase.client import Client
 
 # Load environment
 load_dotenv()
