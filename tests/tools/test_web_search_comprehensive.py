@@ -5,7 +5,6 @@ Tests all web search providers (Jina, Brave, SearXNG) with success/failure scena
 rate limiting, performance tracking, and provider selection logic.
 """
 
-import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
@@ -18,7 +17,6 @@ from src.tools.web_search import (
     searxng_web_search,
     web_search_tool,
 )
-
 
 # ============================================================================
 # Fixtures
@@ -66,9 +64,7 @@ async def test_jina_read_url_success(mock_http_client, jina_api_key):
     mock_response.raise_for_status = MagicMock()
     mock_http_client.get.return_value = mock_response
 
-    result = await jina_read_url(
-        "https://example.com/article", mock_http_client, jina_api_key
-    )
+    result = await jina_read_url("https://example.com/article", mock_http_client, jina_api_key)
 
     assert "Test Article" in result
     assert "This is test content from the URL." in result
@@ -80,9 +76,7 @@ async def test_jina_read_url_long_content_truncation(mock_http_client, jina_api_
     """Test that long content is truncated to 3000 characters."""
     long_content = "a" * 5000
     mock_response = MagicMock()
-    mock_response.json.return_value = {
-        "data": {"title": "Long Article", "content": long_content}
-    }
+    mock_response.json.return_value = {"data": {"title": "Long Article", "content": long_content}}
     mock_response.raise_for_status = MagicMock()
     mock_http_client.get.return_value = mock_response
 
@@ -144,9 +138,7 @@ async def test_jina_read_url_timeout(mock_http_client, jina_api_key):
 async def test_jina_read_url_special_characters(mock_http_client, jina_api_key):
     """Test URL encoding with special characters."""
     mock_response = MagicMock()
-    mock_response.json.return_value = {
-        "data": {"title": "Special", "content": "Content"}
-    }
+    mock_response.json.return_value = {"data": {"title": "Special", "content": "Content"}}
     mock_response.raise_for_status = MagicMock()
     mock_http_client.get.return_value = mock_response
 
@@ -291,7 +283,10 @@ async def test_jina_web_search_limits_to_five_results(mock_http_client, jina_api
     """Test that only top 5 results are returned."""
     mock_response = MagicMock()
     mock_response.json.return_value = {
-        "data": [{"title": f"Result {i}", "content": f"Content {i}", "url": f"https://example.com/{i}"} for i in range(10)]
+        "data": [
+            {"title": f"Result {i}", "content": f"Content {i}", "url": f"https://example.com/{i}"}
+            for i in range(10)
+        ]
     }
     mock_response.raise_for_status = MagicMock()
     mock_http_client.get.return_value = mock_response
@@ -361,7 +356,11 @@ async def test_brave_web_search_limits_to_three_results(mock_http_client, brave_
     mock_response.json.return_value = {
         "web": {
             "results": [
-                {"title": f"Result {i}", "description": f"Desc {i}", "url": f"https://example.com/{i}"}
+                {
+                    "title": f"Result {i}",
+                    "description": f"Desc {i}",
+                    "url": f"https://example.com/{i}",
+                }
                 for i in range(10)
             ]
         }
@@ -600,7 +599,9 @@ async def test_searxng_web_search_correct_params(mock_http_client, searxng_base_
 async def test_web_search_tool_explicit_jina(mock_http_client, jina_api_key):
     """Test explicit Jina provider selection."""
     mock_response = MagicMock()
-    mock_response.json.return_value = {"data": [{"title": "Jina", "content": "Content", "url": "https://example.com"}]}
+    mock_response.json.return_value = {
+        "data": [{"title": "Jina", "content": "Content", "url": "https://example.com"}]
+    }
     mock_response.raise_for_status = MagicMock()
     mock_http_client.get.return_value = mock_response
 
@@ -615,7 +616,11 @@ async def test_web_search_tool_explicit_jina(mock_http_client, jina_api_key):
 async def test_web_search_tool_explicit_brave(mock_http_client, brave_api_key):
     """Test explicit Brave provider selection."""
     mock_response = MagicMock()
-    mock_response.json.return_value = {"web": {"results": [{"title": "Brave", "description": "Desc", "url": "https://example.com"}]}}
+    mock_response.json.return_value = {
+        "web": {
+            "results": [{"title": "Brave", "description": "Desc", "url": "https://example.com"}]
+        }
+    }
     mock_response.raise_for_status = MagicMock()
     mock_http_client.get.return_value = mock_response
 
@@ -630,7 +635,9 @@ async def test_web_search_tool_explicit_brave(mock_http_client, brave_api_key):
 async def test_web_search_tool_explicit_searxng(mock_http_client, searxng_base_url):
     """Test explicit SearXNG provider selection."""
     mock_response = MagicMock()
-    mock_response.json.return_value = {"results": [{"title": "SearXNG", "url": "https://example.com", "content": "Content"}]}
+    mock_response.json.return_value = {
+        "results": [{"title": "SearXNG", "url": "https://example.com", "content": "Content"}]
+    }
     mock_response.raise_for_status = MagicMock()
     mock_http_client.get.return_value = mock_response
 
@@ -650,7 +657,9 @@ async def test_web_search_tool_auto_select_jina_priority(
 ):
     """Test auto-selection prioritizes Jina when all providers available."""
     mock_response = MagicMock()
-    mock_response.json.return_value = {"data": [{"title": "Jina", "content": "Content", "url": "https://example.com"}]}
+    mock_response.json.return_value = {
+        "data": [{"title": "Jina", "content": "Content", "url": "https://example.com"}]
+    }
     mock_response.raise_for_status = MagicMock()
     mock_http_client.get.return_value = mock_response
 
@@ -672,7 +681,11 @@ async def test_web_search_tool_auto_select_brave_fallback(
 ):
     """Test auto-selection falls back to Brave when Jina not available."""
     mock_response = MagicMock()
-    mock_response.json.return_value = {"web": {"results": [{"title": "Brave", "description": "Desc", "url": "https://example.com"}]}}
+    mock_response.json.return_value = {
+        "web": {
+            "results": [{"title": "Brave", "description": "Desc", "url": "https://example.com"}]
+        }
+    }
     mock_response.raise_for_status = MagicMock()
     mock_http_client.get.return_value = mock_response
 
@@ -690,11 +703,15 @@ async def test_web_search_tool_auto_select_brave_fallback(
 async def test_web_search_tool_auto_select_searxng_fallback(mock_http_client, searxng_base_url):
     """Test auto-selection falls back to SearXNG when Jina and Brave not available."""
     mock_response = MagicMock()
-    mock_response.json.return_value = {"results": [{"title": "SearXNG", "url": "https://example.com", "content": "Content"}]}
+    mock_response.json.return_value = {
+        "results": [{"title": "SearXNG", "url": "https://example.com", "content": "Content"}]
+    }
     mock_response.raise_for_status = MagicMock()
     mock_http_client.get.return_value = mock_response
 
-    result = await web_search_tool("test query", mock_http_client, searxng_base_url=searxng_base_url)
+    result = await web_search_tool(
+        "test query", mock_http_client, searxng_base_url=searxng_base_url
+    )
 
     assert "SearXNG" in result
 
@@ -713,9 +730,7 @@ async def test_web_search_tool_no_providers_configured(mock_http_client):
 @pytest.mark.asyncio
 async def test_web_search_tool_explicit_provider_not_available(mock_http_client):
     """Test error when explicit provider requested but not configured."""
-    result = await web_search_tool(
-        "test query", mock_http_client, search_provider="jina"
-    )
+    result = await web_search_tool("test query", mock_http_client, search_provider="jina")
 
     assert "Search provider 'jina' not available or not configured" in result
 
@@ -725,9 +740,7 @@ async def test_web_search_tool_exception_handling(mock_http_client, jina_api_key
     """Test that exceptions are caught and returned as error messages."""
     mock_http_client.get.side_effect = Exception("Network error")
 
-    result = await web_search_tool(
-        "test query", mock_http_client, jina_api_key=jina_api_key
-    )
+    result = await web_search_tool("test query", mock_http_client, jina_api_key=jina_api_key)
 
     assert "Web search failed" in result
     assert "Network error" in result
@@ -737,7 +750,9 @@ async def test_web_search_tool_exception_handling(mock_http_client, jina_api_key
 async def test_web_search_tool_case_insensitive_provider(mock_http_client, jina_api_key):
     """Test that provider selection is case-insensitive."""
     mock_response = MagicMock()
-    mock_response.json.return_value = {"data": [{"title": "Jina", "content": "Content", "url": "https://example.com"}]}
+    mock_response.json.return_value = {
+        "data": [{"title": "Jina", "content": "Content", "url": "https://example.com"}]
+    }
     mock_response.raise_for_status = MagicMock()
     mock_http_client.get.return_value = mock_response
 
@@ -754,7 +769,9 @@ async def test_web_search_tool_case_insensitive_provider(mock_http_client, jina_
 async def test_web_search_tool_logging(mock_logger, mock_http_client, jina_api_key):
     """Test that appropriate logging occurs."""
     mock_response = MagicMock()
-    mock_response.json.return_value = {"data": [{"title": "Result", "content": "Content", "url": "https://example.com"}]}
+    mock_response.json.return_value = {
+        "data": [{"title": "Result", "content": "Content", "url": "https://example.com"}]
+    }
     mock_response.raise_for_status = MagicMock()
     mock_http_client.get.return_value = mock_response
 
@@ -789,7 +806,9 @@ async def test_web_search_tool_error_logging(mock_logger, mock_http_client, jina
 async def test_performance_tracking_applied(mock_track_perf, mock_http_client, jina_api_key):
     """Test that performance tracking decorator is applied."""
     mock_response = MagicMock()
-    mock_response.json.return_value = {"data": [{"title": "Result", "content": "Content", "url": "https://example.com"}]}
+    mock_response.json.return_value = {
+        "data": [{"title": "Result", "content": "Content", "url": "https://example.com"}]
+    }
     mock_response.raise_for_status = MagicMock()
     mock_http_client.get.return_value = mock_response
 
@@ -802,7 +821,9 @@ async def test_performance_tracking_applied(mock_track_perf, mock_http_client, j
 async def test_rate_limiting_applied(mock_rate_limit, mock_http_client, jina_api_key):
     """Test that rate limiting decorator is applied."""
     mock_response = MagicMock()
-    mock_response.json.return_value = {"data": [{"title": "Result", "content": "Content", "url": "https://example.com"}]}
+    mock_response.json.return_value = {
+        "data": [{"title": "Result", "content": "Content", "url": "https://example.com"}]
+    }
     mock_response.raise_for_status = MagicMock()
     mock_http_client.get.return_value = mock_response
 
@@ -819,7 +840,9 @@ async def test_rate_limiting_applied(mock_rate_limit, mock_http_client, jina_api
 async def test_web_search_unicode_query(mock_http_client, jina_api_key):
     """Test handling of Unicode characters in query."""
     mock_response = MagicMock()
-    mock_response.json.return_value = {"data": [{"title": "Unicode", "content": "Content", "url": "https://example.com"}]}
+    mock_response.json.return_value = {
+        "data": [{"title": "Unicode", "content": "Content", "url": "https://example.com"}]
+    }
     mock_response.raise_for_status = MagicMock()
     mock_http_client.get.return_value = mock_response
 

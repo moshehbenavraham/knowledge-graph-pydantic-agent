@@ -1,6 +1,6 @@
 {
   "dashboard": {
-    "title": "Base Agent - Agentic RAG Platform",
+    "title": "Luminari Agent - Agentic RAG Platform",
     "tags": ["base-agent", "rag", "production"],
     "timezone": "utc",
     "schemaVersion": 16,

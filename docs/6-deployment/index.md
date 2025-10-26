@@ -1,6 +1,6 @@
 # Deployment
 
-Production deployment guides and best practices for Base Agent.
+Production deployment guides and best practices for Luminari Agent.
 
 ## Deployment Guides
 

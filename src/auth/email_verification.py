@@ -22,7 +22,7 @@ SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USER = os.getenv("SMTP_USER", "")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
-SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", "noreply@baseagent.local")
+SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", "max@aiwithapex.com")
 
 
 async def create_verification_token(
@@ -182,7 +182,7 @@ async def send_verification_email_smtp(
     try:
         # Create message
         msg = MIMEMultipart("alternative")
-        msg["Subject"] = "Verify Your Email - Base Agent"
+        msg["Subject"] = "Verify Your Email - Luminari Agent"
         msg["From"] = SMTP_FROM_EMAIL
         msg["To"] = email
 
@@ -195,10 +195,10 @@ async def send_verification_email_smtp(
           <head></head>
           <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
             <div style="max-width: 600px; margin: 0 auto; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px;">
-              <h1 style="color: white; text-align: center;">🤖 Base Agent</h1>
+              <h1 style="color: white; text-align: center;">🤖 Luminari Agent</h1>
               <div style="background: white; padding: 30px; border-radius: 10px; margin-top: 20px;">
                 <h2 style="color: #333;">Welcome, {user_name}!</h2>
-                <p>Thank you for registering with Base Agent. To complete your registration and activate your account, please verify your email address.</p>
+                <p>Thank you for registering with Luminari Agent. To complete your registration and activate your account, please verify your email address.</p>
 
                 <div style="text-align: center; margin: 30px 0;">
                   <a href="{verification_link}" style="background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">Verify Email Address</a>
@@ -292,7 +292,7 @@ async def request_email_verification(user_id: str, verification_url: str) -> tup
     """
     try:
         # Get user info
-        user = await get_user_by_id(user_id)
+        user = get_user_by_id(user_id)
 
         if not user:
             logger.error("User not found for verification", user_id=user_id)
@@ -338,7 +338,7 @@ async def check_user_email_verified(user_id: str) -> bool:
         True if email is verified
     """
     try:
-        user = await get_user_by_id(user_id)
+        user = get_user_by_id(user_id)
         return user.get("is_email_verified", False) if user else False
     except Exception:
         return False

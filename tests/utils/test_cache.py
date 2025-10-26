@@ -6,7 +6,7 @@ Tests cache manager with Redis and in-memory fallback.
 
 import asyncio
 import pickle
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from redis.exceptions import ConnectionError as RedisConnectionError

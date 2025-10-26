@@ -11,12 +11,12 @@ Covers:
 """
 
 import json
-import pytest
 from unittest.mock import Mock, patch
-from uuid import UUID, uuid4
+from uuid import uuid4
+
+import pytest
 
 from src.agentic_rag.storage.supabase_rest_store import SupabaseRestStore
-
 
 # ===== Fixtures =====
 
@@ -31,11 +31,11 @@ def mock_supabase_client():
 @pytest.fixture
 def supabase_store(mock_supabase_client):
     """Create SupabaseRestStore with mocked client."""
-    with patch("src.agentic_rag.storage.supabase_rest_store.create_client", return_value=mock_supabase_client):
-        store = SupabaseRestStore(
-            supabase_url="https://test.supabase.co",
-            supabase_key="test_key"
-        )
+    with patch(
+        "src.agentic_rag.storage.supabase_rest_store.create_client",
+        return_value=mock_supabase_client,
+    ):
+        store = SupabaseRestStore(supabase_url="https://test.supabase.co", supabase_key="test_key")
         return store
 
 
@@ -76,13 +76,12 @@ class TestStoreDocument:
         mock_result = Mock()
         mock_result.data = [{"id": str(doc_id)}]
 
-        supabase_store.client.table.return_value.insert.return_value.execute.return_value = mock_result
+        supabase_store.client.table.return_value.insert.return_value.execute.return_value = (
+            mock_result
+        )
 
         result_id = await supabase_store.store_document(
-            title="Test Doc",
-            source="test.pdf",
-            content="Test content",
-            metadata={"page": 1}
+            title="Test Doc", source="test.pdf", content="Test content", metadata={"page": 1}
         )
 
         assert result_id == doc_id
@@ -94,12 +93,12 @@ class TestStoreDocument:
         mock_result = Mock()
         mock_result.data = [{"id": str(doc_id)}]
 
-        supabase_store.client.table.return_value.insert.return_value.execute.return_value = mock_result
+        supabase_store.client.table.return_value.insert.return_value.execute.return_value = (
+            mock_result
+        )
 
         await supabase_store.store_document(
-            title="Test Doc",
-            source="test.pdf",
-            content="Test content"
+            title="Test Doc", source="test.pdf", content="Test content"
         )
 
         # Verify metadata defaults to empty dict
@@ -112,14 +111,18 @@ class TestStoreDocument:
         mock_result = Mock()
         mock_result.data = []
 
-        supabase_store.client.table.return_value.insert.return_value.execute.return_value = mock_result
+        supabase_store.client.table.return_value.insert.return_value.execute.return_value = (
+            mock_result
+        )
 
         with pytest.raises(ValueError, match="No document ID returned"):
             await supabase_store.store_document("Test", "test.pdf", "content")
 
     async def test_store_document_error_handling(self, supabase_store):
         """Test error handling during document storage."""
-        supabase_store.client.table.return_value.insert.return_value.execute.side_effect = Exception("DB error")
+        supabase_store.client.table.return_value.insert.return_value.execute.side_effect = (
+            Exception("DB error")
+        )
 
         with pytest.raises(Exception, match="DB error"):
             await supabase_store.store_document("Test", "test.pdf", "content")
@@ -143,7 +146,9 @@ class TestStoreChunks:
         mock_result = Mock()
         mock_result.data = [{"id": str(chunk_id)} for chunk_id in chunk_ids]
 
-        supabase_store.client.table.return_value.insert.return_value.execute.return_value = mock_result
+        supabase_store.client.table.return_value.insert.return_value.execute.return_value = (
+            mock_result
+        )
 
         result_ids = await supabase_store.store_chunks(sample_document_id, chunks)
 
@@ -164,7 +169,9 @@ class TestStoreChunks:
         mock_result = Mock()
         mock_result.data = [{"id": str(chunk_id)}]
 
-        supabase_store.client.table.return_value.insert.return_value.execute.return_value = mock_result
+        supabase_store.client.table.return_value.insert.return_value.execute.return_value = (
+            mock_result
+        )
 
         await supabase_store.store_chunks(sample_document_id, chunks)
 
@@ -190,7 +197,9 @@ class TestStoreChunks:
         mock_result = Mock()
         mock_result.data = [{"id": str(chunk_id)}]
 
-        supabase_store.client.table.return_value.insert.return_value.execute.return_value = mock_result
+        supabase_store.client.table.return_value.insert.return_value.execute.return_value = (
+            mock_result
+        )
 
         await supabase_store.store_chunks(sample_document_id, chunks)
 
@@ -206,7 +215,9 @@ class TestStoreChunks:
         mock_result = Mock()
         mock_result.data = None
 
-        supabase_store.client.table.return_value.insert.return_value.execute.return_value = mock_result
+        supabase_store.client.table.return_value.insert.return_value.execute.return_value = (
+            mock_result
+        )
 
         with pytest.raises(ValueError, match="No chunk IDs returned"):
             await supabase_store.store_chunks(sample_document_id, chunks)
@@ -227,16 +238,17 @@ class TestUpdateChunkMetadata:
         mock_select_result = Mock()
         mock_select_result.data = [{"metadata": {"existing": "value"}}]
 
-        supabase_store.client.table.return_value.select.return_value.eq.return_value.execute.return_value = mock_select_result
+        supabase_store.client.table.return_value.select.return_value.eq.return_value.execute.return_value = (
+            mock_select_result
+        )
 
         # Mock update
         mock_update_result = Mock()
-        supabase_store.client.table.return_value.update.return_value.eq.return_value.execute.return_value = mock_update_result
-
-        await supabase_store.update_chunk_metadata(
-            chunk_id,
-            {"new_field": "new_value"}
+        supabase_store.client.table.return_value.update.return_value.eq.return_value.execute.return_value = (
+            mock_update_result
         )
+
+        await supabase_store.update_chunk_metadata(chunk_id, {"new_field": "new_value"})
 
         # Verify update was called
         assert supabase_store.client.table.return_value.update.called
@@ -248,12 +260,11 @@ class TestUpdateChunkMetadata:
         mock_select_result = Mock()
         mock_select_result.data = [{"metadata": {"existing": "value"}}]
 
-        supabase_store.client.table.return_value.select.return_value.eq.return_value.execute.return_value = mock_select_result
-
-        await supabase_store.update_chunk_metadata(
-            chunk_id,
-            {"new_field": "new_value"}
+        supabase_store.client.table.return_value.select.return_value.eq.return_value.execute.return_value = (
+            mock_select_result
         )
+
+        await supabase_store.update_chunk_metadata(chunk_id, {"new_field": "new_value"})
 
         # Verify merged metadata
         call_args = supabase_store.client.table.return_value.update.call_args
@@ -268,7 +279,9 @@ class TestUpdateChunkMetadata:
         mock_select_result = Mock()
         mock_select_result.data = [{"metadata": json.dumps({"existing": "value"})}]
 
-        supabase_store.client.table.return_value.select.return_value.eq.return_value.execute.return_value = mock_select_result
+        supabase_store.client.table.return_value.select.return_value.eq.return_value.execute.return_value = (
+            mock_select_result
+        )
 
         await supabase_store.update_chunk_metadata(chunk_id, {"new": "value"})
 
@@ -284,7 +297,9 @@ class TestUpdateChunkMetadata:
         mock_select_result = Mock()
         mock_select_result.data = []
 
-        supabase_store.client.table.return_value.select.return_value.eq.return_value.execute.return_value = mock_select_result
+        supabase_store.client.table.return_value.select.return_value.eq.return_value.execute.return_value = (
+            mock_select_result
+        )
 
         # Should not raise, just log warning
         await supabase_store.update_chunk_metadata(chunk_id, {"field": "value"})
@@ -318,7 +333,7 @@ class TestSearchSimilar:
                 "query_embedding": query_embedding,
                 "match_threshold": 0.7,
                 "match_count": 10,
-            }
+            },
         )
 
     async def test_search_similar_no_results(self, supabase_store):
@@ -356,13 +371,17 @@ class TestGetDocument:
     async def test_get_document_success(self, supabase_store, sample_document_id):
         """Test retrieving existing document."""
         mock_result = Mock()
-        mock_result.data = [{
-            "id": str(sample_document_id),
-            "title": "Test Doc",
-            "content": "Test content",
-        }]
+        mock_result.data = [
+            {
+                "id": str(sample_document_id),
+                "title": "Test Doc",
+                "content": "Test content",
+            }
+        ]
 
-        supabase_store.client.table.return_value.select.return_value.eq.return_value.execute.return_value = mock_result
+        supabase_store.client.table.return_value.select.return_value.eq.return_value.execute.return_value = (
+            mock_result
+        )
 
         doc = await supabase_store.get_document(sample_document_id)
 
@@ -374,7 +393,9 @@ class TestGetDocument:
         mock_result = Mock()
         mock_result.data = []
 
-        supabase_store.client.table.return_value.select.return_value.eq.return_value.execute.return_value = mock_result
+        supabase_store.client.table.return_value.select.return_value.eq.return_value.execute.return_value = (
+            mock_result
+        )
 
         doc = await supabase_store.get_document(sample_document_id)
 
@@ -396,7 +417,9 @@ class TestGetChunks:
             {"id": str(uuid4()), "content": "Chunk 2", "chunk_index": 1},
         ]
 
-        supabase_store.client.table.return_value.select.return_value.eq.return_value.order.return_value.execute.return_value = mock_result
+        supabase_store.client.table.return_value.select.return_value.eq.return_value.order.return_value.execute.return_value = (
+            mock_result
+        )
 
         chunks = await supabase_store.get_chunks(sample_document_id)
 
@@ -408,7 +431,9 @@ class TestGetChunks:
         mock_result = Mock()
         mock_result.data = []
 
-        supabase_store.client.table.return_value.select.return_value.eq.return_value.order.return_value.execute.return_value = mock_result
+        supabase_store.client.table.return_value.select.return_value.eq.return_value.order.return_value.execute.return_value = (
+            mock_result
+        )
 
         chunks = await supabase_store.get_chunks(sample_document_id)
 
@@ -425,7 +450,9 @@ class TestDeleteDocument:
     async def test_delete_document_success(self, supabase_store, sample_document_id):
         """Test successful document deletion."""
         mock_result = Mock()
-        supabase_store.client.table.return_value.delete.return_value.eq.return_value.execute.return_value = mock_result
+        supabase_store.client.table.return_value.delete.return_value.eq.return_value.execute.return_value = (
+            mock_result
+        )
 
         result = await supabase_store.delete_document(sample_document_id)
 
@@ -435,7 +462,9 @@ class TestDeleteDocument:
 
     async def test_delete_document_error(self, supabase_store, sample_document_id):
         """Test error handling during deletion."""
-        supabase_store.client.table.return_value.delete.return_value.eq.return_value.execute.side_effect = Exception("Delete failed")
+        supabase_store.client.table.return_value.delete.return_value.eq.return_value.execute.side_effect = Exception(
+            "Delete failed"
+        )
 
         result = await supabase_store.delete_document(sample_document_id)
 

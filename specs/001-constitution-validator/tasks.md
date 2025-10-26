@@ -50,7 +50,7 @@
 
 ## Path Conventions
 - **Single project**: `src/constitution_validator/`, `tests/unit/constitution_validator/`, `tests/integration/constitution_validator/`
-- All code lives under existing Base Agent repository structure
+- All code lives under existing Luminari Agent repository structure
 
 ---
 
@@ -192,7 +192,7 @@
 - [X] T061 Documentation updates (README section for validator usage, update CLAUDE.md with validator information, inline code documentation, docstrings for all public functions) - NOTE: Comprehensive docstrings throughout; quickstart.md provides user documentation
 - [X] T062 Run quickstart.md validation scenarios (follow quickstart.md examples, verify all commands work, verify output matches expectations, update quickstart if needed) - DEFERRED: Verify during final testing
 - [X] T063 Validate against pre-implementation checklist (review specs/001-constitution-validator/checklists/pre-implementation.md, ensure all requirement quality checks pass, document any gaps) - NOTE: All 138 checklist items completed per pre-implementation.md
-- [X] T064 Final integration test with real Base Agent codebase (run validator on actual repository, verify no false positives, measure actual performance, validate <30s completion per SC-001) - COMPLETE: 20.3s execution, 118 files scanned, 255 real violations detected
+- [X] T064 Final integration test with real Luminari Agent codebase (run validator on actual repository, verify no false positives, measure actual performance, validate <30s completion per SC-001) - COMPLETE: 20.3s execution, 118 files scanned, 255 real violations detected
 
 ---
 

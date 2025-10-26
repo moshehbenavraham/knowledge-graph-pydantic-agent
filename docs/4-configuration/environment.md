@@ -1,6 +1,6 @@
 # Environment Variables Reference
 
-This document provides a complete reference for all environment variables used by Base Agent.
+This document provides a complete reference for all environment variables used by Luminari Agent.
 
 ## Configuration Categories
 

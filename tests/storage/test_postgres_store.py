@@ -5,11 +5,9 @@ Tests all CRUD operations, search functionality, session management,
 sync queue operations, and statistics gathering.
 """
 
-import json
 from contextlib import asynccontextmanager
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import UUID, uuid4
+from unittest.mock import MagicMock
+from uuid import uuid4
 
 import pytest
 
@@ -174,9 +172,7 @@ class TestStoreChunks:
 
         mock_connection.set_fetchrow({"id": chunk_id})
 
-        chunks = [
-            {"content": "Chunk without embeddings", "metadata": {}, "token_count": 50}
-        ]
+        chunks = [{"content": "Chunk without embeddings", "metadata": {}, "token_count": 50}]
 
         result = await postgres_store.store_chunks(doc_id, chunks)
 
@@ -204,9 +200,7 @@ class TestUpdateChunkMetadata:
         assert "UPDATE chunks" in update_query
 
     @pytest.mark.asyncio
-    async def test_update_chunk_metadata_with_entity_refs(
-        self, postgres_store, mock_connection
-    ):
+    async def test_update_chunk_metadata_with_entity_refs(self, postgres_store, mock_connection):
         """Test metadata update with entity references."""
         chunk_id = uuid4()
         mock_connection.set_fetchval('{"existing": "data"}')
@@ -558,9 +552,7 @@ class TestListDocuments:
         """Test document listing with source filter."""
         mock_connection.set_fetch([])
 
-        results = await postgres_store.list_documents(
-            limit=10, offset=0, source_filter="%.pdf"
-        )
+        results = await postgres_store.list_documents(limit=10, offset=0, source_filter="%.pdf")
 
         query = mock_connection.executed_queries[0][0]
         assert "d.source LIKE $3" in query
@@ -570,9 +562,7 @@ class TestListDocuments:
         """Test document listing with custom sorting."""
         mock_connection.set_fetch([])
 
-        await postgres_store.list_documents(
-            limit=10, offset=0, sort_by="title", sort_order="asc"
-        )
+        await postgres_store.list_documents(limit=10, offset=0, sort_by="title", sort_order="asc")
 
         query = mock_connection.executed_queries[0][0]
         assert "ORDER BY d.title ASC" in query
@@ -617,9 +607,7 @@ class TestGetDocumentChunks:
     """Tests for get_document_chunks method."""
 
     @pytest.mark.asyncio
-    async def test_get_document_chunks_without_embeddings(
-        self, postgres_store, mock_connection
-    ):
+    async def test_get_document_chunks_without_embeddings(self, postgres_store, mock_connection):
         """Test getting chunks without embeddings."""
         doc_id = uuid4()
         mock_connection.set_fetch(
@@ -636,9 +624,7 @@ class TestGetDocumentChunks:
         assert "embedding_1536" not in query
 
     @pytest.mark.asyncio
-    async def test_get_document_chunks_with_embeddings(
-        self, postgres_store, mock_connection
-    ):
+    async def test_get_document_chunks_with_embeddings(self, postgres_store, mock_connection):
         """Test getting chunks with embeddings."""
         doc_id = uuid4()
         mock_connection.set_fetch([])
@@ -742,11 +728,11 @@ class TestGetStatistics:
                     "chunks_with_768_embeddings": 400,
                     "avg_token_count": 250.5,
                 }
-            elif "sessions" in query.lower():
+            if "sessions" in query.lower():
                 return {"total_sessions": 50, "total_messages": 300}
-            elif "graph_sync_queue" in query.lower():
+            if "graph_sync_queue" in query.lower():
                 return {"pending_syncs": 10, "failed_syncs": 2, "completed_syncs": 200}
-            elif "search_cache" in query.lower():
+            if "search_cache" in query.lower():
                 return {
                     "cached_searches": 1000,
                     "avg_cache_hits": 5.2,

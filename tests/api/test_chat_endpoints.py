@@ -1,8 +1,10 @@
 """Comprehensive tests for chat API endpoints."""
 
+from unittest.mock import Mock, patch
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
 from fastapi.testclient import TestClient
+
 from src.api.main import app
 
 
@@ -37,11 +39,13 @@ def mock_agent_result():
     """Create mock agent result."""
     result = Mock()
     result.data = "This is a test response from the agent."
-    result.usage = Mock(return_value={
-        "total_tokens": 150,
-        "prompt_tokens": 100,
-        "completion_tokens": 50,
-    })
+    result.usage = Mock(
+        return_value={
+            "total_tokens": 150,
+            "prompt_tokens": 100,
+            "completion_tokens": 50,
+        }
+    )
     result.all_messages = Mock(return_value=[])
     return result
 
@@ -120,7 +124,9 @@ async def test_chat_with_sources(client, mock_agent_deps, mock_cache):
     # Create mock agent result with messages
     result = Mock()
     result.data = "Paris is the capital of France."
-    result.usage = Mock(return_value={"total_tokens": 100, "prompt_tokens": 70, "completion_tokens": 30})
+    result.usage = Mock(
+        return_value={"total_tokens": 100, "prompt_tokens": 70, "completion_tokens": 30}
+    )
 
     # Mock message with tool call
     tool_part = Mock()
@@ -232,14 +238,18 @@ async def test_chat_cache_storage(client, mock_agent_deps, mock_cache, mock_agen
 @pytest.mark.asyncio
 async def test_chat_stream_success(client, mock_agent_deps):
     """Test successful streaming chat request."""
+
     async def mock_stream_generator():
-        yield "data: {\"type\": \"text\", \"content\": \"Hello\"}\n\n"
-        yield "data: {\"type\": \"text\", \"content\": \" world\"}\n\n"
-        yield "data: {\"type\": \"done\"}\n\n"
+        yield 'data: {"type": "text", "content": "Hello"}\n\n'
+        yield 'data: {"type": "text", "content": " world"}\n\n'
+        yield 'data: {"type": "done"}\n\n'
 
     with (
         patch("src.api.endpoints.chat.get_agent_deps", return_value=mock_agent_deps),
-        patch("src.api.endpoints.chat.sse_manager.stream_agent_response", return_value=mock_stream_generator()),
+        patch(
+            "src.api.endpoints.chat.sse_manager.stream_agent_response",
+            return_value=mock_stream_generator(),
+        ),
     ):
         response = client.post(
             "/api/v1/chat/stream",
@@ -255,12 +265,16 @@ async def test_chat_stream_success(client, mock_agent_deps):
 @pytest.mark.asyncio
 async def test_chat_stream_with_parameters(client, mock_agent_deps):
     """Test streaming chat with custom parameters."""
+
     async def mock_stream_generator():
-        yield "data: {\"type\": \"text\", \"content\": \"Test\"}\n\n"
+        yield 'data: {"type": "text", "content": "Test"}\n\n'
 
     with (
         patch("src.api.endpoints.chat.get_agent_deps", return_value=mock_agent_deps),
-        patch("src.api.endpoints.chat.sse_manager.stream_agent_response", return_value=mock_stream_generator()) as mock_stream,
+        patch(
+            "src.api.endpoints.chat.sse_manager.stream_agent_response",
+            return_value=mock_stream_generator(),
+        ) as mock_stream,
     ):
         response = client.post(
             "/api/v1/chat/stream",
@@ -280,7 +294,10 @@ async def test_chat_stream_error(client, mock_agent_deps):
     """Test streaming chat when stream fails."""
     with (
         patch("src.api.endpoints.chat.get_agent_deps", return_value=mock_agent_deps),
-        patch("src.api.endpoints.chat.sse_manager.stream_agent_response", side_effect=Exception("Stream failed")),
+        patch(
+            "src.api.endpoints.chat.sse_manager.stream_agent_response",
+            side_effect=Exception("Stream failed"),
+        ),
     ):
         response = client.post(
             "/api/v1/chat/stream",

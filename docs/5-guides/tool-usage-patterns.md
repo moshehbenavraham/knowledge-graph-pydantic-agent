@@ -1,6 +1,6 @@
 # Tool Usage Patterns
 
-This guide demonstrates effective patterns for using the various tools available in the Base Agent system, including Phase 3 Agent Intelligence Layer capabilities with advanced search orchestration.
+This guide demonstrates effective patterns for using the various tools available in the Luminari Agent system, including Phase 3 Agent Intelligence Layer capabilities with advanced search orchestration.
 
 ## Table of Contents
 
@@ -759,7 +759,7 @@ Phase 3 Quality Assurance:
 
 ## Conclusion
 
-Effective tool usage in the Base Agent system requires:
+Effective tool usage in the Luminari Agent system requires:
 
 1. **Understanding each tool's strengths and limitations**
 2. **Combining tools strategically for comprehensive analysis**

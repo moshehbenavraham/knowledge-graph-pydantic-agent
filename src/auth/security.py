@@ -193,7 +193,10 @@ async def log_auth_event(
     success: bool,
     metadata: dict[str, Any] | None = None,
 ) -> None:
-    """Log authentication event to analytics system.
+    """Log authentication event (currently logged to auth tables only).
+
+    Note: Analytics system integration disabled until dedicated auth event model is added.
+    Auth events are already logged to auth_sessions and other auth-specific tables.
 
     Args:
         event_type: Type of auth event (login, logout, password_change, etc.)
@@ -201,36 +204,12 @@ async def log_auth_event(
         success: Whether the event was successful
         metadata: Optional additional metadata
     """
-    try:
-        from src.agentic_rag.analytics import (
-            AgentInteractionEvent,
-            get_analytics_logger,
-        )
-
-        # Create interaction event for auth
-        event = AgentInteractionEvent(
-            user_id=username,
-            query_text=f"AUTH:{event_type}",
-            response_text="Success" if success else "Failed",
-            model_used="streamlit-authenticator",
-            latency_ms=0.0,
-            total_tokens=0,
-            prompt_tokens=0,
-            completion_tokens=0,
-            feedback_score=1.0 if success else 0.0,
-            metadata_json=metadata or {},
-        )
-
-        analytics_logger = get_analytics_logger()
-        await analytics_logger.log_interaction(event)
-
-        logger.info(
-            "Auth event logged to analytics",
-            event_type=event_type,
-            username=username,
-            success=success,
-        )
-
-    except Exception as e:
-        # Don't fail auth operations if logging fails
-        logger.warning("Failed to log auth event to analytics", error=str(e))
+    # TODO: Add dedicated auth event model to analytics system
+    # For now, auth events are logged to database auth tables (auth_sessions, etc.)
+    logger.info(
+        "Auth event",
+        event_type=event_type,
+        username=username,
+        success=success,
+        metadata=metadata or {},
+    )

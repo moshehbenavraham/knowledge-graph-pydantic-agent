@@ -65,11 +65,11 @@ async def get_linked_oauth_accounts(username: str) -> list[dict]:
         List of linked OAuth account records
     """
     try:
-        user = await get_user_by_username(username)
+        user = get_user_by_username(username)
         if not user:
             return []
 
-        accounts = await get_user_oauth_accounts(user["id"])
+        accounts = get_user_oauth_accounts(user["id"])
         return [acc for acc in accounts if acc.get("is_active", True)]
 
     except Exception as e:
@@ -260,7 +260,7 @@ def render_oauth_account_management() -> None:
                 **Security Notes:**
                 - We only access basic profile information (name, email)
                 - You can unlink accounts at any time
-                - Unlinking an account won't delete your Base Agent account
+                - Unlinking an account won't delete your Luminari Agent account
                 - We encrypt all OAuth tokens before storing them
                 """
             )

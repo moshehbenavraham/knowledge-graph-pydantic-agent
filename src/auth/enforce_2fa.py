@@ -9,8 +9,6 @@ to use 2FA (e.g., admin users). It handles:
 - Managing 2FA verification state in session
 """
 
-import asyncio
-
 import streamlit as st
 import structlog
 
@@ -20,7 +18,7 @@ from src.auth.totp_2fa import get_backup_code_manager, get_totp_manager
 logger = structlog.get_logger(__name__)
 
 
-async def check_2fa_requirement(username: str) -> tuple[bool, bool]:
+def check_2fa_requirement(username: str) -> tuple[bool, bool]:
     """
     Check if user requires 2FA and if it's enabled.
 
@@ -31,7 +29,7 @@ async def check_2fa_requirement(username: str) -> tuple[bool, bool]:
         Tuple of (requires_2fa, is_2fa_enabled)
     """
     try:
-        user = await get_user_by_username(username)
+        user = get_user_by_username(username)
         if not user:
             return False, False
 
@@ -39,8 +37,7 @@ async def check_2fa_requirement(username: str) -> tuple[bool, bool]:
 
         # Check if 2FA is actually enabled
         totp_manager = get_totp_manager()
-        status = await totp_manager.get_2fa_status(user["id"])
-        is_2fa_enabled = status.get("is_enabled", False)
+        is_2fa_enabled = totp_manager.is_2fa_enabled(user["id"])
 
         return requires_2fa, is_2fa_enabled
 
@@ -69,7 +66,7 @@ def render_2fa_setup_required() -> None:
 
     # Get user info
     try:
-        user = asyncio.run(get_user_by_username(username))
+        user = get_user_by_username(username)
         if not user:
             st.error("User not found. Please log in again.")
             return
@@ -87,7 +84,7 @@ def render_2fa_setup_required() -> None:
             )
 
             # Generate secret and QR code
-            secret = asyncio.run(totp_manager.generate_and_store_secret(user_id))
+            secret = totp_manager.generate_and_store_secret(user_id)
             qr_code = totp_manager.generate_qr_code(secret, username)
 
             # Store secret in session for verification
@@ -114,7 +111,7 @@ def render_2fa_setup_required() -> None:
             placeholder="123456",
         )
 
-        col1, col2 = st.columns([1, 3])
+        col1, _col2 = st.columns([1, 3])
         with col1:
             verify_button = st.button("✅ Verify & Enable 2FA", use_container_width=True)
 
@@ -124,17 +121,15 @@ def render_2fa_setup_required() -> None:
             else:
                 # Verify the code
                 try:
-                    is_valid = asyncio.run(totp_manager.verify_totp(user_id, verification_code))
+                    is_valid = totp_manager.verify_totp(user_id, verification_code)
 
                     if is_valid:
                         # Enable 2FA
-                        success = asyncio.run(totp_manager.enable_2fa(user_id, verification_code))
+                        success = totp_manager.enable_2fa(user_id, verification_code)
 
                         if success:
                             # Generate backup codes
-                            backup_codes = asyncio.run(
-                                backup_code_manager.generate_backup_codes(user_id)
-                            )
+                            backup_codes = backup_code_manager.generate_backup_codes(user_id)
 
                             st.success("✅ 2FA enabled successfully!")
                             st.balloons()
@@ -195,7 +190,7 @@ def render_2fa_verification() -> bool:
 
     # Get user info
     try:
-        user = asyncio.run(get_user_by_username(username))
+        user = get_user_by_username(username)
         if not user:
             st.error("User not found. Please log in again.")
             return False
@@ -212,7 +207,7 @@ def render_2fa_verification() -> bool:
             placeholder="123456 or XXXX-XXXX",
         )
 
-        col1, col2 = st.columns([1, 2])
+        col1, _col2 = st.columns([1, 2])
         with col1:
             verify_button = st.button("🔐 Verify", use_container_width=True)
 
@@ -227,7 +222,7 @@ def render_2fa_verification() -> bool:
             try:
                 # Try TOTP first (6 digits)
                 if len(clean_code) == 6 and clean_code.isdigit():
-                    is_valid = asyncio.run(totp_manager.verify_totp(user_id, clean_code))
+                    is_valid = totp_manager.verify_totp(user_id, clean_code)
 
                     if is_valid:
                         st.success("✅ Verification successful!")
@@ -238,9 +233,7 @@ def render_2fa_verification() -> bool:
 
                 # Try backup code (8 characters)
                 if len(clean_code) == 8:
-                    is_valid = asyncio.run(
-                        backup_code_manager.verify_backup_code(user_id, clean_code)
-                    )
+                    is_valid = backup_code_manager.verify_backup_code(user_id, clean_code)
 
                     if is_valid:
                         st.success("✅ Backup code accepted!")
@@ -253,9 +246,7 @@ def render_2fa_verification() -> bool:
                     st.error("❌ Invalid backup code.")
                     return False
 
-                st.error(
-                    "❌ Invalid code format. Enter 6 digits or an 8-character backup code."
-                )
+                st.error("❌ Invalid code format. Enter 6 digits or an 8-character backup code.")
                 return False
 
             except Exception as e:
@@ -292,7 +283,7 @@ def enforce_2fa_if_required(username: str) -> bool:
     """
     try:
         # Check if 2FA is required
-        requires_2fa, is_2fa_enabled = asyncio.run(check_2fa_requirement(username))
+        requires_2fa, is_2fa_enabled = check_2fa_requirement(username)
 
         # If 2FA not required, allow access
         if not requires_2fa:

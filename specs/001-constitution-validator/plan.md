@@ -9,12 +9,12 @@ Build a Python 3.11+ CLI tool that validates code changes against the six consti
 
 ## Technical Context
 
-**Language/Version**: Python 3.11+ (matching Base Agent requirements)
+**Language/Version**: Python 3.11+ (matching Luminari Agent requirements)
 **Primary Dependencies**: Click (CLI), ast (code analysis), GitPython (commit validation), pytest-cov (coverage), pathspec (.gitignore patterns)
 **Storage**: File-based (reads .specify/memory/constitution.md, .constitution-ignore)
 **Testing**: pytest with 75%+ coverage requirement
 **Target Platform**: Linux/macOS/WSL development environments
-**Project Type**: Single (CLI tool integrated into existing Base Agent repository)
+**Project Type**: Single (CLI tool integrated into existing Luminari Agent repository)
 **Performance Goals**: <30s full codebase validation, <5s pre-commit validation (incremental)
 **Constraints**: Zero dependencies on runtime databases, must work in air-gapped environments
 **Scale/Scope**: ~10-50k LOC codebases, validate against 6 principles with ~20-30 rule checks
@@ -120,7 +120,7 @@ tests/
 pyproject.toml                        # Updated with new CLI entry point
 ```
 
-**Structure Decision**: Single project structure (Option 1) as this is a CLI tool integrated into the existing Base Agent repository. No separate frontend/backend or mobile components. All code lives under `src/constitution_validator/` with corresponding test structure.
+**Structure Decision**: Single project structure (Option 1) as this is a CLI tool integrated into the existing Luminari Agent repository. No separate frontend/backend or mobile components. All code lives under `src/constitution_validator/` with corresponding test structure.
 
 ## Complexity Tracking
 

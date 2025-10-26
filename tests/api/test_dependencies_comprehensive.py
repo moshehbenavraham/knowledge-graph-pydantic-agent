@@ -28,7 +28,6 @@ from src.api.dependencies import (
     init_dependencies,
 )
 
-
 # ============================================================================
 # Fixtures
 # ============================================================================
@@ -408,9 +407,7 @@ async def test_get_intent_analyzer(mock_ia_class):
 @pytest.mark.asyncio
 @patch("src.api.dependencies.get_settings")
 @patch("src.api.dependencies.UnifiedAgentDeps")
-async def test_get_agent_deps_full(
-    mock_deps_class, mock_get_settings, mock_settings
-):
+async def test_get_agent_deps_full(mock_deps_class, mock_get_settings, mock_settings):
     """Test getting agent dependencies with all features enabled."""
     mock_get_settings.return_value = mock_settings
     mock_postgres = AsyncMock()
@@ -437,9 +434,7 @@ async def test_get_agent_deps_full(
 @pytest.mark.asyncio
 @patch("src.api.dependencies.get_settings")
 @patch("src.api.dependencies.UnifiedAgentDeps")
-async def test_get_agent_deps_minimal(
-    mock_deps_class, mock_get_settings
-):
+async def test_get_agent_deps_minimal(mock_deps_class, mock_get_settings):
     """Test getting agent dependencies with features disabled."""
     minimal_settings = MagicMock()
     minimal_settings.enable_web_search = False
@@ -797,8 +792,9 @@ async def test_get_api_settings_all_fields(mock_get_settings, mock_settings):
 @pytest.mark.asyncio
 async def test_concurrent_health_checks():
     """Test concurrent health check calls."""
-    import src.api.dependencies as deps
     import asyncio
+
+    import src.api.dependencies as deps
 
     mock_postgres = AsyncMock()
     mock_postgres.health_check = AsyncMock(return_value=True)

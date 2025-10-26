@@ -6,7 +6,6 @@ Target: 85%+ coverage of search endpoints.
 """
 
 from unittest.mock import AsyncMock, Mock, patch
-from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
@@ -45,7 +44,9 @@ class TestSmartSearchEndpoint:
 
     def test_smart_search_success(self, test_client, mock_search_dependencies):
         """Test successful smart search."""
-        with patch("src.api.endpoints.search.smart_search_tool", new_callable=AsyncMock) as mock_search:
+        with patch(
+            "src.api.endpoints.search.smart_search_tool", new_callable=AsyncMock
+        ) as mock_search:
             mock_search.return_value = {
                 "query": "test query",
                 "intent": "VECTOR_HEAVY",
@@ -54,15 +55,15 @@ class TestSmartSearchEndpoint:
                 "facts": [],
             }
 
-            response = test_client.post(
-                "/search/smart", json={"query": "test query", "limit": 10}
-            )
+            response = test_client.post("/search/smart", json={"query": "test query", "limit": 10})
 
             assert response.status_code in [200, 503]
 
     def test_smart_search_with_intent_analysis(self, test_client, mock_search_dependencies):
         """Test smart search with intent analysis enabled."""
-        with patch("src.api.endpoints.search.smart_search_tool", new_callable=AsyncMock) as mock_search:
+        with patch(
+            "src.api.endpoints.search.smart_search_tool", new_callable=AsyncMock
+        ) as mock_search:
             mock_search.return_value = {
                 "query": "Find documents about AI",
                 "intent": "HYBRID",
@@ -87,7 +88,9 @@ class TestSmartSearchEndpoint:
 
     def test_smart_search_with_limit(self, test_client, mock_search_dependencies):
         """Test smart search with custom limit."""
-        with patch("src.api.endpoints.search.smart_search_tool", new_callable=AsyncMock) as mock_search:
+        with patch(
+            "src.api.endpoints.search.smart_search_tool", new_callable=AsyncMock
+        ) as mock_search:
             mock_search.return_value = {"query": "test", "chunks": [], "entities": [], "facts": []}
 
             response = test_client.post("/search/smart", json={"query": "test", "limit": 50})
@@ -96,7 +99,9 @@ class TestSmartSearchEndpoint:
 
     def test_smart_search_vector_heavy_intent(self, test_client, mock_search_dependencies):
         """Test smart search detecting VECTOR_HEAVY intent."""
-        with patch("src.api.endpoints.search.smart_search_tool", new_callable=AsyncMock) as mock_search:
+        with patch(
+            "src.api.endpoints.search.smart_search_tool", new_callable=AsyncMock
+        ) as mock_search:
             mock_search.return_value = {
                 "query": "semantic similarity query",
                 "intent": "VECTOR_HEAVY",
@@ -114,7 +119,9 @@ class TestSmartSearchEndpoint:
 
     def test_smart_search_graph_heavy_intent(self, test_client, mock_search_dependencies):
         """Test smart search detecting GRAPH_HEAVY intent."""
-        with patch("src.api.endpoints.search.smart_search_tool", new_callable=AsyncMock) as mock_search:
+        with patch(
+            "src.api.endpoints.search.smart_search_tool", new_callable=AsyncMock
+        ) as mock_search:
             mock_search.return_value = {
                 "query": "How is X related to Y?",
                 "intent": "GRAPH_HEAVY",
@@ -132,7 +139,9 @@ class TestSmartSearchEndpoint:
 
     def test_smart_search_error_handling(self, test_client, mock_search_dependencies):
         """Test smart search error handling."""
-        with patch("src.api.endpoints.search.smart_search_tool", new_callable=AsyncMock) as mock_search:
+        with patch(
+            "src.api.endpoints.search.smart_search_tool", new_callable=AsyncMock
+        ) as mock_search:
             mock_search.side_effect = Exception("Search error")
 
             response = test_client.post("/search/smart", json={"query": "test"})
@@ -162,9 +171,7 @@ class TestVectorSearchEndpoint:
         ) as mock_search:
             mock_search.return_value = "Results..."
 
-            response = test_client.post(
-                "/search/vector", json={"query": "test", "limit": 5}
-            )
+            response = test_client.post("/search/vector", json={"query": "test", "limit": 5})
 
             assert response.status_code in [200, 503]
 
@@ -185,7 +192,9 @@ class TestGraphSearchEndpoint:
 
     def test_graph_search_entity_facts(self, test_client, mock_search_dependencies):
         """Test graph search for entity facts."""
-        with patch("src.api.endpoints.search.graph_query_tool", new_callable=AsyncMock) as mock_search:
+        with patch(
+            "src.api.endpoints.search.graph_query_tool", new_callable=AsyncMock
+        ) as mock_search:
             mock_search.return_value = {
                 "entity": "OpenAI",
                 "facts": [
@@ -203,7 +212,9 @@ class TestGraphSearchEndpoint:
 
     def test_graph_search_relationships(self, test_client, mock_search_dependencies):
         """Test graph search for entity relationships."""
-        with patch("src.api.endpoints.search.graph_query_tool", new_callable=AsyncMock) as mock_search:
+        with patch(
+            "src.api.endpoints.search.graph_query_tool", new_callable=AsyncMock
+        ) as mock_search:
             mock_search.return_value = {
                 "entity": "OpenAI",
                 "relationships": [
@@ -225,7 +236,9 @@ class TestGraphSearchEndpoint:
 
     def test_graph_search_temporal_facts(self, test_client, mock_search_dependencies):
         """Test graph search for temporal facts."""
-        with patch("src.api.endpoints.search.graph_query_tool", new_callable=AsyncMock) as mock_search:
+        with patch(
+            "src.api.endpoints.search.graph_query_tool", new_callable=AsyncMock
+        ) as mock_search:
             mock_search.return_value = {
                 "entity": "OpenAI",
                 "timeline": [
@@ -256,7 +269,9 @@ class TestHybridSearchEndpoint:
 
     def test_hybrid_search_success(self, test_client, mock_search_dependencies):
         """Test successful hybrid search."""
-        with patch("src.api.endpoints.search.comprehensive_search", new_callable=AsyncMock) as mock_search:
+        with patch(
+            "src.api.endpoints.search.comprehensive_search", new_callable=AsyncMock
+        ) as mock_search:
             mock_search.return_value = {
                 "query": "test query",
                 "vector_results": [{"content": "Vec match", "score": 0.9}],
@@ -278,7 +293,9 @@ class TestHybridSearchEndpoint:
 
     def test_hybrid_search_vector_only(self, test_client, mock_search_dependencies):
         """Test hybrid search with vector only."""
-        with patch("src.api.endpoints.search.comprehensive_search", new_callable=AsyncMock) as mock_search:
+        with patch(
+            "src.api.endpoints.search.comprehensive_search", new_callable=AsyncMock
+        ) as mock_search:
             mock_search.return_value = {
                 "query": "test",
                 "vector_results": [],
@@ -295,7 +312,9 @@ class TestHybridSearchEndpoint:
 
     def test_hybrid_search_graph_only(self, test_client, mock_search_dependencies):
         """Test hybrid search with graph only."""
-        with patch("src.api.endpoints.search.comprehensive_search", new_callable=AsyncMock) as mock_search:
+        with patch(
+            "src.api.endpoints.search.comprehensive_search", new_callable=AsyncMock
+        ) as mock_search:
             mock_search.return_value = {
                 "query": "test",
                 "vector_results": [],
@@ -317,7 +336,9 @@ class TestSearchCache:
     def test_cache_hit_returns_cached_results(self, test_client, mock_search_dependencies):
         """Test cache hit returns cached results."""
         with (
-            patch("src.api.endpoints.search.smart_search_tool", new_callable=AsyncMock) as mock_search,
+            patch(
+                "src.api.endpoints.search.smart_search_tool", new_callable=AsyncMock
+            ) as mock_search,
             patch("src.api.endpoints.search.get_cache") as mock_cache,
         ):
             mock_cache.return_value = {"cached": "results"}
@@ -329,7 +350,9 @@ class TestSearchCache:
     def test_cache_miss_calls_search(self, test_client, mock_search_dependencies):
         """Test cache miss triggers search."""
         with (
-            patch("src.api.endpoints.search.smart_search_tool", new_callable=AsyncMock) as mock_search,
+            patch(
+                "src.api.endpoints.search.smart_search_tool", new_callable=AsyncMock
+            ) as mock_search,
             patch("src.api.endpoints.search.get_cache") as mock_cache,
         ):
             mock_cache.return_value = None
@@ -354,7 +377,9 @@ class TestSearchRateLimiting:
 
     def test_concurrent_searches_within_limit(self, test_client, mock_search_dependencies):
         """Test concurrent searches within rate limit."""
-        with patch("src.api.endpoints.search.smart_search_tool", new_callable=AsyncMock) as mock_search:
+        with patch(
+            "src.api.endpoints.search.smart_search_tool", new_callable=AsyncMock
+        ) as mock_search:
             mock_search.return_value = {"query": "test", "chunks": []}
 
             responses = []

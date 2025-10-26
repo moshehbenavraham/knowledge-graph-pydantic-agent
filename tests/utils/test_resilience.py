@@ -6,7 +6,6 @@ Tests circuit breaker pattern and retry logic with exponential backoff.
 
 import asyncio
 import time
-from unittest.mock import MagicMock, patch
 
 import aiohttp
 import pytest
@@ -155,9 +154,7 @@ class TestCircuitBreakerClass:
 
     def test_circuit_transitions_to_half_open(self):
         """Test circuit transitions to half-open after recovery timeout."""
-        breaker = CircuitBreaker(
-            failure_threshold=2, recovery_timeout=0.1, name="test_half_open"
-        )
+        breaker = CircuitBreaker(failure_threshold=2, recovery_timeout=0.1, name="test_half_open")
 
         def failing_func():
             raise ValueError("Test error")
@@ -177,9 +174,7 @@ class TestCircuitBreakerClass:
 
     def test_successful_call_in_half_open_closes_circuit(self):
         """Test successful call in half-open state closes circuit."""
-        breaker = CircuitBreaker(
-            failure_threshold=2, recovery_timeout=0.1, name="test_recovery"
-        )
+        breaker = CircuitBreaker(failure_threshold=2, recovery_timeout=0.1, name="test_recovery")
 
         def failing_func():
             raise ValueError("Test error")
@@ -204,9 +199,7 @@ class TestCircuitBreakerClass:
 
     def test_failed_call_in_half_open_reopens_circuit(self):
         """Test failed call in half-open state reopens circuit."""
-        breaker = CircuitBreaker(
-            failure_threshold=2, recovery_timeout=0.1, name="test_reopen"
-        )
+        breaker = CircuitBreaker(failure_threshold=2, recovery_timeout=0.1, name="test_reopen")
 
         def failing_func():
             raise ValueError("Test error")
@@ -379,9 +372,7 @@ class TestRetryStrategyClass:
 
     def test_calculate_delay_with_max(self):
         """Test delay calculation respects max_delay."""
-        strategy = RetryStrategy(
-            base_delay=1.0, exponential_base=2.0, jitter=False, max_delay=5.0
-        )
+        strategy = RetryStrategy(base_delay=1.0, exponential_base=2.0, jitter=False, max_delay=5.0)
 
         assert strategy.calculate_delay(0) == 1.0
         assert strategy.calculate_delay(1) == 2.0

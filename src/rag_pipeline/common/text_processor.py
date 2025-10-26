@@ -124,9 +124,7 @@ def create_embeddings(texts: list[str]) -> list[list[float]]:
     if not texts:
         return []
 
-    response = openai_client.embeddings.create(
-        model=settings.embedding_model, input=texts
-    )
+    response = openai_client.embeddings.create(model=settings.embedding_model, input=texts)
 
     # Extract the embedding vectors from the response
     embeddings = [item.embedding for item in response.data]

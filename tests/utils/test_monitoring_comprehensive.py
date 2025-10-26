@@ -9,7 +9,6 @@ import time
 from unittest.mock import MagicMock, patch
 
 import pytest
-from prometheus_client import REGISTRY
 
 from src.utils.monitoring import (
     PerformanceMonitor,
@@ -209,7 +208,9 @@ class TestTrackDatabaseQuery:
                 with mon.track_database_query("SELECT", "users"):
                     time.sleep(0.01)
 
-                mock_count.labels.assert_called_with(operation="SELECT", table="users", status="success")
+                mock_count.labels.assert_called_with(
+                    operation="SELECT", table="users", status="success"
+                )
                 mock_duration.labels.assert_called()
 
     def test_track_database_query_error(self):

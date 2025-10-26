@@ -1,6 +1,6 @@
 # Database & Agentic RAG System Documentation
 
-This document provides comprehensive documentation for the Base Agent's enhanced database architecture and **Agentic RAG (Retrieval-Augmented Generation)** system that combines PostgreSQL/Supabase for content storage with Neo4j knowledge graphs for intelligent search and reasoning.
+This document provides comprehensive documentation for the Luminari Agent's enhanced database architecture and **Agentic RAG (Retrieval-Augmented Generation)** system that combines PostgreSQL/Supabase for content storage with Neo4j knowledge graphs for intelligent search and reasoning.
 
 ## 🎯 Phase 3 Complete: Agent Intelligence Layer
 

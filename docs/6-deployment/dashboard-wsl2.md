@@ -237,5 +237,5 @@ Your GraphRAG Analytics Dashboard is **fully deployed and operational** on WSL2!
 
 **Last Updated:** 2025-10-15
 **Dashboard Version:** 1.0.0
-**Base Agent Version:** 1.0.1
+**Luminari Agent Version:** 1.0.1
 **Environment:** WSL2 Ubuntu with Python 3.12.3

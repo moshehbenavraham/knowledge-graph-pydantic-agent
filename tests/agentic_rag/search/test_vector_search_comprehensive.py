@@ -16,17 +16,17 @@ Covers:
 """
 
 import json
-import pytest
-from datetime import datetime, timedelta
+from datetime import timedelta
 from unittest.mock import AsyncMock, Mock, patch
-from uuid import UUID, uuid4
+from uuid import uuid4
+
+import pytest
 
 from src.agentic_rag.search.vector_search import (
-    VectorSearch,
     ChunkResult,
     SearchCache,
+    VectorSearch,
 )
-
 
 # ===== Fixtures =====
 
@@ -84,7 +84,9 @@ class TestVectorSearchInit:
 
     def test_init_requires_connection_manager(self):
         """Test that initialization requires connection manager."""
-        with pytest.raises(ValueError, match="VectorSearch requires an initialized ConnectionManager"):
+        with pytest.raises(
+            ValueError, match="VectorSearch requires an initialized ConnectionManager"
+        ):
             VectorSearch(None)
 
     def test_init_with_connection_manager(self, mock_connection_manager, mock_config):
@@ -146,24 +148,32 @@ class TestVectorSearch:
         assert len(results) == 1
         assert vector_search._stats["cache_hits"] == 1
 
-    async def test_search_performs_query_on_cache_miss(self, vector_search, sample_embedding, sample_chunk_result):
+    async def test_search_performs_query_on_cache_miss(
+        self, vector_search, sample_embedding, sample_chunk_result
+    ):
         """Test that search performs query on cache miss."""
         vector_search.embedder.embed = AsyncMock(return_value=sample_embedding)
         vector_search.cache.get = Mock(return_value=None)
 
-        with patch.object(vector_search, "_search_vectors", new=AsyncMock(return_value=[sample_chunk_result])):
+        with patch.object(
+            vector_search, "_search_vectors", new=AsyncMock(return_value=[sample_chunk_result])
+        ):
             results = await vector_search.search("test query", limit=10)
 
             assert len(results) == 1
             assert vector_search._stats["cache_misses"] == 1
 
-    async def test_search_caches_results(self, vector_search, sample_embedding, sample_chunk_result):
+    async def test_search_caches_results(
+        self, vector_search, sample_embedding, sample_chunk_result
+    ):
         """Test that search caches results."""
         vector_search.embedder.embed = AsyncMock(return_value=sample_embedding)
         vector_search.cache.get = Mock(return_value=None)
         vector_search.cache.set = Mock()
 
-        with patch.object(vector_search, "_search_vectors", new=AsyncMock(return_value=[sample_chunk_result])):
+        with patch.object(
+            vector_search, "_search_vectors", new=AsyncMock(return_value=[sample_chunk_result])
+        ):
             await vector_search.search("test query", limit=10)
 
             vector_search.cache.set.assert_called_once()
@@ -222,8 +232,12 @@ class TestSearchVectors:
         }
         mock_conn.fetch = AsyncMock(return_value=[mock_row])
 
-        vector_search.connection_manager.get_pg_connection.return_value.__aenter__.return_value = mock_conn
-        vector_search.connection_manager.get_pg_connection.return_value.__aexit__.return_value = AsyncMock(return_value=False)
+        vector_search.connection_manager.get_pg_connection.return_value.__aenter__.return_value = (
+            mock_conn
+        )
+        vector_search.connection_manager.get_pg_connection.return_value.__aexit__.return_value = (
+            AsyncMock(return_value=False)
+        )
 
         results = await vector_search._search_vectors(
             sample_embedding, limit=10, filters=None, similarity_threshold=0.0
@@ -239,8 +253,12 @@ class TestSearchVectors:
         mock_conn = AsyncMock()
         mock_conn.fetch = AsyncMock(return_value=[])
 
-        vector_search.connection_manager.get_pg_connection.return_value.__aenter__.return_value = mock_conn
-        vector_search.connection_manager.get_pg_connection.return_value.__aexit__.return_value = AsyncMock(return_value=False)
+        vector_search.connection_manager.get_pg_connection.return_value.__aenter__.return_value = (
+            mock_conn
+        )
+        vector_search.connection_manager.get_pg_connection.return_value.__aexit__.return_value = (
+            AsyncMock(return_value=False)
+        )
 
         await vector_search._search_vectors(
             embedding_1536, limit=10, filters=None, similarity_threshold=0.0
@@ -256,8 +274,12 @@ class TestSearchVectors:
         mock_conn = AsyncMock()
         mock_conn.fetch = AsyncMock(return_value=[])
 
-        vector_search.connection_manager.get_pg_connection.return_value.__aenter__.return_value = mock_conn
-        vector_search.connection_manager.get_pg_connection.return_value.__aexit__.return_value = AsyncMock(return_value=False)
+        vector_search.connection_manager.get_pg_connection.return_value.__aenter__.return_value = (
+            mock_conn
+        )
+        vector_search.connection_manager.get_pg_connection.return_value.__aexit__.return_value = (
+            AsyncMock(return_value=False)
+        )
 
         await vector_search._search_vectors(
             sample_embedding, limit=10, filters=None, similarity_threshold=0.0
@@ -275,8 +297,12 @@ class TestSearchVectors:
         mock_conn = AsyncMock()
         mock_conn.fetch = AsyncMock(return_value=[])
 
-        vector_search.connection_manager.get_pg_connection.return_value.__aenter__.return_value = mock_conn
-        vector_search.connection_manager.get_pg_connection.return_value.__aexit__.return_value = AsyncMock(return_value=False)
+        vector_search.connection_manager.get_pg_connection.return_value.__aenter__.return_value = (
+            mock_conn
+        )
+        vector_search.connection_manager.get_pg_connection.return_value.__aexit__.return_value = (
+            AsyncMock(return_value=False)
+        )
 
         await vector_search._search_vectors(
             sample_embedding, limit=10, filters=filters, similarity_threshold=0.0
@@ -300,14 +326,20 @@ class TestSearchSimilarChunks:
         mock_embedding = [0.1] * 1536
 
         mock_conn = AsyncMock()
-        mock_conn.fetchrow = AsyncMock(return_value={
-            "content": "Test content",
-            "embedding_1536": mock_embedding,
-            "embedding_768": None,
-        })
+        mock_conn.fetchrow = AsyncMock(
+            return_value={
+                "content": "Test content",
+                "embedding_1536": mock_embedding,
+                "embedding_768": None,
+            }
+        )
 
-        vector_search.connection_manager.get_pg_connection.return_value.__aenter__.return_value = mock_conn
-        vector_search.connection_manager.get_pg_connection.return_value.__aexit__.return_value = AsyncMock(return_value=False)
+        vector_search.connection_manager.get_pg_connection.return_value.__aenter__.return_value = (
+            mock_conn
+        )
+        vector_search.connection_manager.get_pg_connection.return_value.__aexit__.return_value = (
+            AsyncMock(return_value=False)
+        )
 
         with patch.object(vector_search, "_search_vectors", new=AsyncMock(return_value=[])):
             results = await vector_search.search_similar_chunks(chunk_id, limit=5)
@@ -324,8 +356,12 @@ class TestSearchSimilarChunks:
         mock_conn = AsyncMock()
         mock_conn.fetchrow = AsyncMock(return_value=None)
 
-        vector_search.connection_manager.get_pg_connection.return_value.__aenter__.return_value = mock_conn
-        vector_search.connection_manager.get_pg_connection.return_value.__aexit__.return_value = AsyncMock(return_value=False)
+        vector_search.connection_manager.get_pg_connection.return_value.__aenter__.return_value = (
+            mock_conn
+        )
+        vector_search.connection_manager.get_pg_connection.return_value.__aexit__.return_value = (
+            AsyncMock(return_value=False)
+        )
 
         results = await vector_search.search_similar_chunks(chunk_id, limit=5)
 
@@ -336,14 +372,20 @@ class TestSearchSimilarChunks:
         chunk_id = uuid4()
 
         mock_conn = AsyncMock()
-        mock_conn.fetchrow = AsyncMock(return_value={
-            "content": "Test content",
-            "embedding_1536": None,
-            "embedding_768": None,
-        })
+        mock_conn.fetchrow = AsyncMock(
+            return_value={
+                "content": "Test content",
+                "embedding_1536": None,
+                "embedding_768": None,
+            }
+        )
 
-        vector_search.connection_manager.get_pg_connection.return_value.__aenter__.return_value = mock_conn
-        vector_search.connection_manager.get_pg_connection.return_value.__aexit__.return_value = AsyncMock(return_value=False)
+        vector_search.connection_manager.get_pg_connection.return_value.__aenter__.return_value = (
+            mock_conn
+        )
+        vector_search.connection_manager.get_pg_connection.return_value.__aexit__.return_value = (
+            AsyncMock(return_value=False)
+        )
 
         results = await vector_search.search_similar_chunks(chunk_id, limit=5)
 
@@ -385,8 +427,12 @@ class TestGetChunksByIds:
         mock_conn = AsyncMock()
         mock_conn.fetch = AsyncMock(return_value=mock_rows)
 
-        vector_search.connection_manager.get_pg_connection.return_value.__aenter__.return_value = mock_conn
-        vector_search.connection_manager.get_pg_connection.return_value.__aexit__.return_value = AsyncMock(return_value=False)
+        vector_search.connection_manager.get_pg_connection.return_value.__aenter__.return_value = (
+            mock_conn
+        )
+        vector_search.connection_manager.get_pg_connection.return_value.__aexit__.return_value = (
+            AsyncMock(return_value=False)
+        )
 
         results = await vector_search.get_chunks_by_ids(chunk_ids)
 
@@ -417,8 +463,12 @@ class TestGetChunksByIds:
         mock_conn = AsyncMock()
         mock_conn.fetch = AsyncMock(return_value=[mock_row])
 
-        vector_search.connection_manager.get_pg_connection.return_value.__aenter__.return_value = mock_conn
-        vector_search.connection_manager.get_pg_connection.return_value.__aexit__.return_value = AsyncMock(return_value=False)
+        vector_search.connection_manager.get_pg_connection.return_value.__aenter__.return_value = (
+            mock_conn
+        )
+        vector_search.connection_manager.get_pg_connection.return_value.__aexit__.return_value = (
+            AsyncMock(return_value=False)
+        )
 
         results = await vector_search.get_chunks_by_ids(chunk_ids)
 
@@ -465,6 +515,7 @@ class TestSearchCache:
 
         # Give it a moment to expire
         import time
+
         time.sleep(0.1)
 
         cached = cache.get("test_key")
@@ -539,12 +590,16 @@ class TestStatistics:
         assert "avg_latency" in stats
 
     @pytest.mark.asyncio
-    async def test_get_stats_cache_hit_rate(self, vector_search, sample_embedding, sample_chunk_result):
+    async def test_get_stats_cache_hit_rate(
+        self, vector_search, sample_embedding, sample_chunk_result
+    ):
         """Test cache hit rate calculation."""
         vector_search.embedder.embed = AsyncMock(return_value=sample_embedding)
         vector_search.cache.get = Mock(side_effect=[None, [sample_chunk_result]])
 
-        with patch.object(vector_search, "_search_vectors", new=AsyncMock(return_value=[sample_chunk_result])):
+        with patch.object(
+            vector_search, "_search_vectors", new=AsyncMock(return_value=[sample_chunk_result])
+        ):
             await vector_search.search("query 1", limit=10)  # Cache miss
             await vector_search.search("query 2", limit=10)  # Cache hit
 

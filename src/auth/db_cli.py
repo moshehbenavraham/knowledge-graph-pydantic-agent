@@ -33,7 +33,7 @@ async def cmd_create(
 ):
     """Create a new user."""
     try:
-        user = await create_user(
+        user = create_user(
             username=username,
             email=email,
             full_name=full_name,
@@ -43,7 +43,7 @@ async def cmd_create(
         )
 
         # Assign role
-        await assign_role(user["id"], role)
+        assign_role(user["id"], role)
 
         print("\n✅ User created successfully!")
         print(f"   ID:       {user['id']}")
@@ -63,7 +63,7 @@ async def cmd_create(
 async def cmd_list(limit: int = 100, include_deleted: bool = False):
     """List all users."""
     try:
-        users = await list_users(limit=limit, include_deleted=include_deleted)
+        users = list_users(limit=limit, include_deleted=include_deleted)
 
         if not users:
             print("\n⚠️  No users found\n")
@@ -94,18 +94,18 @@ async def cmd_list(limit: int = 100, include_deleted: bool = False):
 async def cmd_get(username: str):
     """Get detailed user information."""
     try:
-        user = await get_user_by_username(username)
+        user = get_user_by_username(username)
 
         if not user:
             print(f"\n❌ User not found: {username}\n")
             return 1
 
         # Get roles
-        roles = await get_user_roles(user["id"])
+        roles = get_user_roles(user["id"])
         role_names = [r.get("role_name") for r in roles] if roles else []
 
         # Get active sessions
-        sessions = await get_user_sessions(user["id"], active_only=True)
+        sessions = get_user_sessions(user["id"], active_only=True)
 
         print("\n👤 User Details:")
         print(f"   ID:           {user['id']}")
@@ -141,7 +141,7 @@ async def cmd_update(
     """Update user information."""
     try:
         # Get existing user
-        user = await get_user_by_username(username)
+        user = get_user_by_username(username)
         if not user:
             print(f"\n❌ User not found: {username}\n")
             return 1
@@ -164,7 +164,7 @@ async def cmd_update(
             return 1
 
         # Update user
-        updated = await update_user(user["id"], **updates)
+        updated = update_user(user["id"], **updates)
 
         print("\n✅ User updated successfully!")
         print(f"   Username: {updated['username']}")
@@ -183,13 +183,13 @@ async def cmd_update_password(username: str, new_password: str):
     """Update user password."""
     try:
         # Get existing user
-        user = await get_user_by_username(username)
+        user = get_user_by_username(username)
         if not user:
             print(f"\n❌ User not found: {username}\n")
             return 1
 
         # Update password
-        await update_user_password(user["id"], new_password)
+        update_user_password(user["id"], new_password)
 
         print(f"\n✅ Password updated successfully for user: {username}\n")
 
@@ -204,7 +204,7 @@ async def cmd_delete(username: str, permanent: bool = False):
     """Delete user (soft or hard delete)."""
     try:
         # Get existing user
-        user = await get_user_by_username(username)
+        user = get_user_by_username(username)
         if not user:
             print(f"\n❌ User not found: {username}\n")
             return 1
@@ -219,7 +219,7 @@ async def cmd_delete(username: str, permanent: bool = False):
             return 1
 
         # Delete user
-        await delete_user(user["id"], soft_delete=not permanent)
+        delete_user(user["id"], soft_delete=not permanent)
 
         print(f"\n✅ User deleted successfully: {username}\n")
 
@@ -234,13 +234,13 @@ async def cmd_role(username: str, action: str, role_name: str):
     """Assign or revoke a role."""
     try:
         # Get existing user
-        user = await get_user_by_username(username)
+        user = get_user_by_username(username)
         if not user:
             print(f"\n❌ User not found: {username}\n")
             return 1
 
         if action == "assign":
-            await assign_role(user["id"], role_name)
+            assign_role(user["id"], role_name)
             print(f"\n✅ Role '{role_name}' assigned to user: {username}\n")
         elif action == "revoke":
             await revoke_role(user["id"], role_name)
@@ -260,18 +260,18 @@ async def cmd_sessions(username: str, revoke: bool = False):
     """List or revoke user sessions."""
     try:
         # Get existing user
-        user = await get_user_by_username(username)
+        user = get_user_by_username(username)
         if not user:
             print(f"\n❌ User not found: {username}\n")
             return 1
 
         if revoke:
             # Revoke all sessions
-            count = await revoke_all_user_sessions(user["id"])
+            count = revoke_all_user_sessions(user["id"])
             print(f"\n✅ Revoked {count} session(s) for user: {username}\n")
         else:
             # List active sessions
-            sessions = await get_user_sessions(user["id"], active_only=True)
+            sessions = get_user_sessions(user["id"], active_only=True)
 
             if not sessions:
                 print(f"\n⚠️  No active sessions for user: {username}\n")

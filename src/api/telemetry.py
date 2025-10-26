@@ -1,5 +1,5 @@
 """
-OpenTelemetry instrumentation for the Base Agent API.
+OpenTelemetry instrumentation for the Luminari Agent API.
 
 Provides distributed tracing, metrics, and logging integration.
 """

@@ -14,7 +14,6 @@ Covers:
 - Event loop handling
 """
 
-import asyncio
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, Mock, patch
 
@@ -28,7 +27,6 @@ from src.agentic_rag.storage.connection_manager import (
     close_connections,
     get_connection_manager,
 )
-
 
 # ===== Test Data & Fixtures =====
 
@@ -99,13 +97,11 @@ class TestConnectionManagerInit:
 
     async def test_initialize_all_services(self, connection_manager):
         """Test initializing all services."""
-        with patch.object(
-            connection_manager, "_init_postgresql", new=AsyncMock()
-        ) as mock_pg, patch.object(
-            connection_manager, "_init_neo4j", new=AsyncMock()
-        ) as mock_neo4j, patch.object(
-            connection_manager, "_init_redis", new=AsyncMock()
-        ) as mock_redis:
+        with (
+            patch.object(connection_manager, "_init_postgresql", new=AsyncMock()) as mock_pg,
+            patch.object(connection_manager, "_init_neo4j", new=AsyncMock()) as mock_neo4j,
+            patch.object(connection_manager, "_init_redis", new=AsyncMock()) as mock_redis,
+        ):
             await connection_manager.initialize()
 
             mock_pg.assert_called_once()
@@ -116,13 +112,11 @@ class TestConnectionManagerInit:
         """Test initialization with graph disabled."""
         connection_manager.config["enable_graph"] = False
 
-        with patch.object(
-            connection_manager, "_init_postgresql", new=AsyncMock()
-        ) as mock_pg, patch.object(
-            connection_manager, "_init_neo4j", new=AsyncMock()
-        ) as mock_neo4j, patch.object(
-            connection_manager, "_init_redis", new=AsyncMock()
-        ) as mock_redis:
+        with (
+            patch.object(connection_manager, "_init_postgresql", new=AsyncMock()) as mock_pg,
+            patch.object(connection_manager, "_init_neo4j", new=AsyncMock()) as mock_neo4j,
+            patch.object(connection_manager, "_init_redis", new=AsyncMock()) as mock_redis,
+        ):
             await connection_manager.initialize()
 
             mock_pg.assert_called_once()
@@ -133,13 +127,11 @@ class TestConnectionManagerInit:
         """Test initialization with Redis disabled."""
         connection_manager.config["enable_redis_cache"] = False
 
-        with patch.object(
-            connection_manager, "_init_postgresql", new=AsyncMock()
-        ) as mock_pg, patch.object(
-            connection_manager, "_init_neo4j", new=AsyncMock()
-        ) as mock_neo4j, patch.object(
-            connection_manager, "_init_redis", new=AsyncMock()
-        ) as mock_redis:
+        with (
+            patch.object(connection_manager, "_init_postgresql", new=AsyncMock()) as mock_pg,
+            patch.object(connection_manager, "_init_neo4j", new=AsyncMock()) as mock_neo4j,
+            patch.object(connection_manager, "_init_redis", new=AsyncMock()) as mock_redis,
+        ):
             await connection_manager.initialize()
 
             mock_pg.assert_called_once()
@@ -149,19 +141,23 @@ class TestConnectionManagerInit:
     async def test_initialize_handles_critical_failure(self, connection_manager):
         """Test that critical service failures are raised."""
         with patch.object(
-            connection_manager, "_init_postgresql", new=AsyncMock(side_effect=Exception("PG failed"))
+            connection_manager,
+            "_init_postgresql",
+            new=AsyncMock(side_effect=Exception("PG failed")),
         ):
             with pytest.raises(Exception, match="PG failed"):
                 await connection_manager.initialize()
 
     async def test_initialize_handles_non_critical_failure(self, connection_manager):
         """Test that Redis failures don't stop initialization."""
-        with patch.object(
-            connection_manager, "_init_postgresql", new=AsyncMock()
-        ), patch.object(connection_manager, "_init_neo4j", new=AsyncMock()), patch.object(
-            connection_manager,
-            "_init_redis",
-            new=AsyncMock(side_effect=Exception("Redis failed")),
+        with (
+            patch.object(connection_manager, "_init_postgresql", new=AsyncMock()),
+            patch.object(connection_manager, "_init_neo4j", new=AsyncMock()),
+            patch.object(
+                connection_manager,
+                "_init_redis",
+                new=AsyncMock(side_effect=Exception("Redis failed")),
+            ),
         ):
             # Should not raise (Redis is non-critical)
             await connection_manager.initialize()
@@ -340,9 +336,12 @@ class TestNeo4jDriver:
         mock_driver.session.return_value.__aexit__.return_value = AsyncMock(return_value=False)
         mock_session.run.return_value = mock_result
 
-        with patch(
-            "src.agentic_rag.storage.connection_manager.AsyncGraphDatabase.driver"
-        ) as mock_create, patch("src.agentic_rag.storage.connection_manager.TrustSystemCAs"):
+        with (
+            patch(
+                "src.agentic_rag.storage.connection_manager.AsyncGraphDatabase.driver"
+            ) as mock_create,
+            patch("src.agentic_rag.storage.connection_manager.TrustSystemCAs"),
+        ):
             mock_create.return_value = mock_driver
 
             await connection_manager._init_neo4j()
@@ -735,13 +734,13 @@ class TestSingletonPattern:
 
     async def test_get_connection_manager_creates_singleton(self):
         """Test that get_connection_manager creates and returns singleton."""
-        with patch(
-            "src.agentic_rag.storage.connection_manager.config"
-        ) as mock_config, patch.object(
-            ConnectionManager, "initialize", new=AsyncMock()
-        ), patch(
-            "src.agentic_rag.storage.connection_manager.initialize_analytics_logger",
-            new=AsyncMock(),
+        with (
+            patch("src.agentic_rag.storage.connection_manager.config") as mock_config,
+            patch.object(ConnectionManager, "initialize", new=AsyncMock()),
+            patch(
+                "src.agentic_rag.storage.connection_manager.initialize_analytics_logger",
+                new=AsyncMock(),
+            ),
         ):
             mock_config.dict.return_value = {"database_url": "test"}
 
@@ -756,15 +755,14 @@ class TestSingletonPattern:
         # Clean up first
         await close_connections()
 
-        with patch(
-            "src.agentic_rag.storage.connection_manager.config"
-        ) as mock_config, patch.object(
-            ConnectionManager, "initialize", new=AsyncMock()
-        ), patch.object(
-            ConnectionManager, "close", new=AsyncMock()
-        ), patch(
-            "src.agentic_rag.storage.connection_manager.initialize_analytics_logger",
-            new=AsyncMock(),
+        with (
+            patch("src.agentic_rag.storage.connection_manager.config") as mock_config,
+            patch.object(ConnectionManager, "initialize", new=AsyncMock()),
+            patch.object(ConnectionManager, "close", new=AsyncMock()),
+            patch(
+                "src.agentic_rag.storage.connection_manager.initialize_analytics_logger",
+                new=AsyncMock(),
+            ),
         ):
             mock_config.dict.return_value = {"database_url": "test"}
 
@@ -787,12 +785,13 @@ class TestSingletonPattern:
         # Clean up first
         await close_connections()
 
-        with patch(
-            "src.agentic_rag.storage.connection_manager.config"
-        ) as mock_config, patch.object(
-            ConnectionManager,
-            "initialize",
-            new=AsyncMock(side_effect=Exception("Init failed")),
+        with (
+            patch("src.agentic_rag.storage.connection_manager.config") as mock_config,
+            patch.object(
+                ConnectionManager,
+                "initialize",
+                new=AsyncMock(side_effect=Exception("Init failed")),
+            ),
         ):
             mock_config.dict.return_value = {"database_url": "test"}
 
@@ -806,18 +805,18 @@ class TestSingletonPattern:
 
     async def test_close_connections_global(self):
         """Test close_connections clears global singleton."""
-        with patch(
-            "src.agentic_rag.storage.connection_manager.config"
-        ) as mock_config, patch.object(
-            ConnectionManager, "initialize", new=AsyncMock()
-        ), patch.object(
-            ConnectionManager, "close", new=AsyncMock()
-        ), patch(
-            "src.agentic_rag.storage.connection_manager.initialize_analytics_logger",
-            new=AsyncMock(),
-        ), patch(
-            "src.agentic_rag.storage.connection_manager.shutdown_analytics_logger",
-            new=AsyncMock(),
+        with (
+            patch("src.agentic_rag.storage.connection_manager.config") as mock_config,
+            patch.object(ConnectionManager, "initialize", new=AsyncMock()),
+            patch.object(ConnectionManager, "close", new=AsyncMock()),
+            patch(
+                "src.agentic_rag.storage.connection_manager.initialize_analytics_logger",
+                new=AsyncMock(),
+            ),
+            patch(
+                "src.agentic_rag.storage.connection_manager.shutdown_analytics_logger",
+                new=AsyncMock(),
+            ),
         ):
             mock_config.dict.return_value = {"database_url": "test"}
 

@@ -13,14 +13,24 @@ import streamlit as st
 import streamlit_authenticator as stauth
 import structlog
 import yaml
+from dotenv import load_dotenv
 
 from src.auth.security import get_rate_limiter, log_auth_event
+
+# Load .env file BEFORE reading environment variables
+load_dotenv()
 
 logger = structlog.get_logger(__name__)
 
 # Authentication backend configuration
 # Set USE_DATABASE_AUTH=true in .env to use database instead of YAML
 USE_DATABASE_AUTH = os.getenv("USE_DATABASE_AUTH", "false").lower() == "true"
+
+logger.info(
+    "Environment variable loaded",
+    use_database_auth_raw=os.getenv("USE_DATABASE_AUTH"),
+    use_database_auth_parsed=USE_DATABASE_AUTH,
+)
 
 # OAuth configuration
 OAUTH_ENABLED = os.getenv("OAUTH_ENABLED", "false").lower() == "true"
@@ -39,17 +49,32 @@ async def load_credentials_from_database() -> dict:
     """
     from src.auth.db import list_users
 
+    logger.info("=" * 80)
+    logger.info("LOADING CREDENTIALS FROM DATABASE")
+
     try:
-        users = await list_users(limit=1000, include_deleted=False)
+        logger.debug("Calling list_users(limit=1000, include_deleted=False)")
+        users = list_users(limit=1000, include_deleted=False)
+        logger.info("Users retrieved from database", total_users=len(users))
 
         # Convert to streamlit-authenticator format
         credentials = {"usernames": {}}
 
         for user in users:
-            if not user.get("is_active"):
+            username = user.get("username")
+            is_active = user.get("is_active")
+
+            logger.debug(
+                "Processing user",
+                username=username,
+                is_active=is_active,
+                has_email=bool(user.get("email")),
+            )
+
+            if not is_active:
+                logger.debug("Skipping inactive user", username=username)
                 continue  # Skip inactive users
 
-            username = user.get("username")
             # Get password_hash directly from database (without popping it)
             from src.clients.database import get_supabase_client
 
@@ -66,17 +91,30 @@ async def load_credentials_from_database() -> dict:
                 user_with_hash.data[0].get("password_hash") if user_with_hash.data else None
             )
 
+            logger.debug(
+                "Retrieved password hash for user",
+                username=username,
+                has_password_hash=bool(password_hash),
+                password_hash_length=len(password_hash) if password_hash else 0,
+            )
+
             credentials["usernames"][username] = {
                 "email": user.get("email"),
                 "name": user.get("full_name"),
                 "password": password_hash,
             }
 
-        logger.info("Loaded credentials from database", user_count=len(credentials["usernames"]))
+        logger.info(
+            "Credentials loaded from database successfully",
+            total_users_loaded=len(credentials["usernames"]),
+            usernames_list=list(credentials["usernames"].keys()),
+        )
         return credentials
 
     except Exception as e:
-        logger.error("Failed to load credentials from database", error=str(e))
+        logger.error(
+            "Failed to load credentials from database", error=str(e), error_type=type(e).__name__
+        )
         raise
 
 
@@ -96,21 +134,26 @@ def load_auth_config(config_path: str = "config/auth_config.yaml") -> dict:
         FileNotFoundError: If config file doesn't exist (YAML mode)
         Exception: If database query fails (database mode)
     """
+    logger.info("=" * 80)
+    logger.info(
+        "LOADING AUTHENTICATION CONFIGURATION",
+        config_path=config_path,
+        use_database_auth=USE_DATABASE_AUTH,
+    )
+
     config_file = Path(config_path)
 
     # Load base config from YAML (for cookie settings, etc.)
     if not config_file.exists():
+        logger.warning("Auth config file does not exist", config_path=config_path)
         # If database mode, we still need a minimal config
         if USE_DATABASE_AUTH:
-            logger.warning(
-                "Auth config not found, using defaults for database mode",
-                config_path=config_path,
-            )
+            logger.info("Using default configuration for database mode")
             config = {
                 "cookie": {
-                    "name": "base_agent_auth_cookie",
+                    "name": "luminari_agent_auth_cookie",
                     "key": os.getenv(
-                        "AUTH_COOKIE_KEY", "base_agent_secret_key_2025"
+                        "AUTH_COOKIE_KEY", "luminari_agent_secret_key_2025"
                     ),  # Use env var in production
                     "expiry_days": 30,
                 },
@@ -121,31 +164,55 @@ def load_auth_config(config_path: str = "config/auth_config.yaml") -> dict:
                     "auto_logout_minutes": 30,
                 },
             }
+            logger.debug("Default config created", has_cookie_config=bool(config.get("cookie")))
         else:
+            logger.error("Cannot proceed without config file in YAML mode")
             raise FileNotFoundError(
                 f"Authentication config not found: {config_path}\n"
                 "Please create config/auth_config.yaml or set USE_DATABASE_AUTH=true."
             )
     else:
+        logger.info("Auth config file found, loading...", config_path=config_path)
         with open(config_file) as f:
             config = yaml.safe_load(f)
+        logger.debug("YAML config loaded", has_credentials=bool(config.get("credentials")))
 
     # Load credentials based on backend
     if USE_DATABASE_AUTH:
-        logger.info("Using database authentication backend")
+        logger.info("Using database authentication backend - loading credentials from database")
         # Load credentials from database
         try:
+            # Streamlit runs in an event loop, so we need to handle this carefully
+            import nest_asyncio
+
+            nest_asyncio.apply()
+
             credentials = asyncio.run(load_credentials_from_database())
             config["credentials"] = credentials
+            logger.info(
+                "Database credentials loaded into config",
+                user_count=len(credentials.get("usernames", {})),
+            )
         except Exception as e:
-            logger.error("Failed to load database credentials, falling back to YAML", error=str(e))
+            logger.error(
+                "Failed to load database credentials, attempting fallback to YAML",
+                error=str(e),
+                error_type=type(e).__name__,
+            )
             # Fallback to YAML if available
             if "credentials" not in config:
+                logger.error("No credentials available - neither database nor YAML")
                 raise
+            logger.warning("Using YAML credentials as fallback")
     else:
-        logger.info("Using YAML authentication backend")
-        # Credentials already in config from YAML
+        logger.info("Using YAML authentication backend - credentials from config file")
+        if "credentials" in config:
+            user_count = len(config["credentials"].get("usernames", {}))
+            logger.debug("YAML credentials found", user_count=user_count)
+        else:
+            logger.error("No credentials found in YAML config")
 
+    logger.info("Authentication configuration loaded successfully")
     return config
 
 
@@ -179,17 +246,24 @@ def render_login_page() -> tuple[str | None, str | None, bool | None]:
     Returns:
         Tuple of (name, username, authentication_status)
     """
-    # Load config
-    try:
-        config = load_auth_config()
-    except FileNotFoundError as e:
-        st.error(str(e))
-        st.stop()
+    # Load config and authenticator ONCE and cache in session_state
+    # This prevents component registration issues on reruns
+    if "auth_config" not in st.session_state:
+        try:
+            logger.info("Loading auth config for first time - caching in session_state")
+            st.session_state.auth_config = load_auth_config()
+        except FileNotFoundError as e:
+            st.error(str(e))
+            st.stop()
 
-    # Get authenticator
-    authenticator = get_authenticator(config)
+    if "authenticator" not in st.session_state:
+        logger.info("Creating authenticator for first time - caching in session_state")
+        st.session_state.authenticator = get_authenticator(st.session_state.auth_config)
 
-    # Render login form
+    # Use cached instances
+    authenticator = st.session_state.authenticator
+
+    # Render login form with console warning suppression
     st.markdown(
         """
         <style>
@@ -214,6 +288,31 @@ def render_login_page() -> tuple[str | None, str | None, bool | None]:
             margin-bottom: 2rem;
         }
         </style>
+        <script>
+        // Suppress harmless Streamlit component warnings
+        (function() {
+            const originalError = console.error;
+            const originalWarn = console.warn;
+
+            console.error = function() {
+                const msg = arguments[0];
+                if (typeof msg === 'string' &&
+                    (msg.includes('unregistered ComponentInstance') ||
+                     msg.includes('Unrecognized feature'))) {
+                    return; // Suppress these specific warnings
+                }
+                originalError.apply(console, arguments);
+            };
+
+            console.warn = function() {
+                const msg = arguments[0];
+                if (typeof msg === 'string' && msg.includes('Unrecognized feature')) {
+                    return; // Suppress permission policy warnings
+                }
+                originalWarn.apply(console, arguments);
+            };
+        })();Luminari Agent
+        </script>
         <div class="auth-container">
             <div class="auth-title">🤖 Base Agent</div>
             <div class="auth-subtitle">Advanced RAG AI Assistant</div>
@@ -241,14 +340,78 @@ def render_login_page() -> tuple[str | None, str | None, bool | None]:
 
     # Check if any user in form is locked out (we check after form submission)
     # For now, render the login form
-    name, authentication_status, username = authenticator.login(location="main")
+    logger.info("=" * 80)
+    logger.info("RENDERING LOGIN FORM - Awaiting credentials")
 
-    # Handle authentication status
+    try:
+        logger.debug("Calling authenticator.login() with location='main', key='login_form'")
+
+        # Call login to render the form - it returns None but writes to session_state
+        authenticator.login(
+            location="main",
+            key="login_form",
+            fields={
+                "Form name": "Login",
+                "Username": "Username",
+                "Password": "Password",
+                "Login": "Login",
+            },
+        )
+
+        # Read authentication status from session_state (written by authenticator.login())
+        authentication_status = st.session_state.get("authentication_status")
+        name = st.session_state.get("name")
+        username = st.session_state.get("username")
+
+        logger.info(
+            "Authentication state from session_state",
+            authentication_status=authentication_status,
+            name=name,
+            username=username,
+            status_type=type(authentication_status).__name__,
+        )
+
+        # Log authentication attempt if there was one
+        if authentication_status is not None:
+            logger.info(
+                "LOGIN ATTEMPT DETECTED",
+                username=username,
+                name=name,
+                authentication_status=authentication_status,
+                status_type=type(authentication_status).__name__,
+            )
+
+    except Exception as e:
+        # Handle any component initialization errors gracefully
+        logger.error(
+            "Authenticator login error - exception caught",
+            error=str(e),
+            error_type=type(e).__name__,
+        )
+        # Return None values to allow retry
+        return None, None, None
+
+    # Handle authentication status BEFORE showing OAuth/password reset
+    logger.info("=" * 80)
+    logger.info("PROCESSING AUTHENTICATION STATUS", authentication_status=authentication_status)
+
     if authentication_status is False:
         # Failed login attempt
+        logger.warning(
+            "AUTHENTICATION FAILED - Invalid credentials",
+            username=username,
+            has_username=bool(username),
+        )
+
         if username:
             # Check if locked out
             is_locked, remaining = rate_limiter.is_locked_out(username)
+            logger.info(
+                "Rate limit check",
+                username=username,
+                is_locked=is_locked,
+                remaining_seconds=remaining,
+            )
 
             if is_locked:
                 minutes = int(remaining / 60) + 1
@@ -256,11 +419,20 @@ def render_login_page() -> tuple[str | None, str | None, bool | None]:
                     f"🔒 Account locked due to too many failed attempts. "
                     f"Please try again in {minutes} minute(s)."
                 )
-                logger.error("Login attempt while locked out", username=username)
+                logger.error(
+                    "Login attempt while locked out",
+                    username=username,
+                    remaining_minutes=minutes,
+                )
             else:
                 # Record failed attempt
                 rate_limiter.record_failed_attempt(username)
                 remaining_attempts = rate_limiter.get_remaining_attempts(username)
+                logger.info(
+                    "Failed attempt recorded",
+                    username=username,
+                    remaining_attempts=remaining_attempts,
+                )
 
                 if remaining_attempts > 0:
                     st.error(
@@ -293,13 +465,18 @@ def render_login_page() -> tuple[str | None, str | None, bool | None]:
                         ),
                     )
                 )
+                logger.debug("Failed auth event logged to analytics", username=username)
             except Exception as e:
                 logger.warning("Failed to log auth event", error=str(e))
 
     elif authentication_status is None:
+        logger.debug(
+            "Authentication status is None - form displayed but not submitted or credentials empty"
+        )
         st.warning("👋 Please enter your username and password")
 
     # OAuth login buttons (only in database mode with OAuth enabled)
+    # Render on all page loads to make them visible
     if USE_DATABASE_AUTH and OAUTH_ENABLED:
         render_oauth_buttons()
 
@@ -407,7 +584,7 @@ async def create_db_session(username: str, remember_me: bool = False) -> str | N
         from src.auth.db import create_session, get_user_by_username
 
         # Get user ID
-        user = await get_user_by_username(username)
+        user = get_user_by_username(username)
         if not user:
             logger.error("User not found for session creation", username=username)
             return None
@@ -416,7 +593,7 @@ async def create_db_session(username: str, remember_me: bool = False) -> str | N
         expires_in_days = 90 if remember_me else 30
 
         # Create session
-        session = await create_session(
+        session = create_session(
             user_id=user["id"],
             expires_in_days=expires_in_days,
             session_type="web",
@@ -452,7 +629,7 @@ async def revoke_db_session(session_token: str | None) -> bool:
     try:
         from src.auth.db import revoke_session
 
-        success = await revoke_session(session_token)
+        success = revoke_session(session_token)
         logger.info("Database session revoked", success=success)
         return success
 
@@ -555,20 +732,24 @@ def render_oauth_buttons() -> None:
     if not OAUTH_ENABLED or not USE_DATABASE_AUTH:
         return  # OAuth only supported in database mode
 
-    st.markdown("---")
-    st.markdown("### Or sign in with")
+    try:
+        st.markdown("---")
+        st.markdown("### Or sign in with")
 
-    col1, col2 = st.columns(2)
+        col1, col2 = st.columns(2)
 
-    with col1:
-        if GOOGLE_OAUTH_ENABLED:
-            if st.button("🔵 Google", use_container_width=True, key="google_oauth"):
-                initiate_oauth_login("google")
+        with col1:
+            if GOOGLE_OAUTH_ENABLED:
+                if st.button("🔵 Google", use_container_width=True, key="google_oauth"):
+                    initiate_oauth_login("google")
 
-    with col2:
-        if GITHUB_OAUTH_ENABLED:
-            if st.button("⚫ GitHub", use_container_width=True, key="github_oauth"):
-                initiate_oauth_login("github")
+        with col2:
+            if GITHUB_OAUTH_ENABLED:
+                if st.button("⚫ GitHub", use_container_width=True, key="github_oauth"):
+                    initiate_oauth_login("github")
+    except Exception as e:
+        # Silently handle component initialization errors
+        logger.debug("OAuth button rendering error (non-critical)", error=str(e))
 
 
 def check_oauth_callback() -> tuple[str | None, str | None]:
@@ -768,7 +949,12 @@ def require_authentication() -> tuple[str, stauth.Authenticate]:
         name=st.session_state.name,
     )
 
-    # Get authenticator for logout functionality
-    authenticator = get_authenticator()
+    # Get authenticator for logout functionality (use cached instance)
+    if "authenticator" in st.session_state:
+        authenticator = st.session_state.authenticator
+    else:
+        # Fallback: create new one if not in session (shouldn't happen)
+        logger.warning("Authenticator not found in session_state, creating new one")
+        authenticator = get_authenticator()
 
     return st.session_state.name, authenticator

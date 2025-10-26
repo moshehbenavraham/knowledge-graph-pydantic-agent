@@ -6,7 +6,7 @@ Target coverage: 23% → 75%+
 
 import asyncio
 import json
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID
 
 import pytest
@@ -46,9 +46,7 @@ class TestSSEManager:
     def test_format_event_with_id(self):
         """Test SSE event formatting with ID."""
         manager = SSEManager()
-        event = manager._format_event(
-            event="test", data={"message": "hello"}, event_id="test-123"
-        )
+        event = manager._format_event(event="test", data={"message": "hello"}, event_id="test-123")
 
         assert "id: test-123" in event
         assert "event: test" in event
@@ -147,9 +145,7 @@ class TestSSEManager:
         mock_agent.run_stream = MagicMock(return_value=mock_result)
 
         events = []
-        async for event in manager.stream_agent_response(
-            mock_agent, "test message", None
-        ):
+        async for event in manager.stream_agent_response(mock_agent, "test message", None):
             events.append(event)
 
         # Should have start, content chunks, and done events
@@ -177,9 +173,7 @@ class TestSSEManager:
 
         events = []
         with pytest.raises(asyncio.CancelledError):
-            async for event in manager.stream_agent_response(
-                mock_agent, "test message", None
-            ):
+            async for event in manager.stream_agent_response(mock_agent, "test message", None):
                 events.append(event)
 
         # Should have start and cancelled events

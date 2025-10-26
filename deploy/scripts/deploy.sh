@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ===============================================
 # Deployment Script with Health Checks
-# Base Agent - Agentic RAG Platform
+# Luminari Agent - Agentic RAG Platform
 # ===============================================
 
 set -euo pipefail

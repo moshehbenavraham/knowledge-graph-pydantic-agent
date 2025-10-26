@@ -11,14 +11,10 @@ Covers:
 - Error handling, metrics, logging
 """
 
-import json
-from typing import Any
-from unittest import mock
-from unittest.mock import ANY, AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from fastapi import status
-from fastapi.testclient import TestClient
 
 
 @pytest.fixture
@@ -45,11 +41,9 @@ def mock_agent_result():
     """Mock agent result."""
     result = Mock()
     result.data = "This is a test response"
-    result.usage = Mock(return_value={
-        "total_tokens": 100,
-        "prompt_tokens": 50,
-        "completion_tokens": 50
-    })
+    result.usage = Mock(
+        return_value={"total_tokens": 100, "prompt_tokens": 50, "completion_tokens": 50}
+    )
     result.all_messages = Mock(return_value=[])
     return result
 
@@ -59,17 +53,18 @@ class TestChatEndpoint:
 
     def test_chat_success(self, mock_agent_deps, mock_cache, mock_agent_result):
         """Test successful chat request."""
-        from src.api.endpoints.chat import chat, ChatRequest
+        from src.api.endpoints.chat import ChatRequest, chat
 
         with patch("src.api.endpoints.chat.super_agent") as mock_agent:
             mock_agent.run = AsyncMock(return_value=mock_agent_result)
 
             import asyncio
+
             request = ChatRequest(
                 message="Hello",
                 session_id="test_session",
                 search_strategy="hybrid",
-                include_sources=False
+                include_sources=False,
             )
 
             response = asyncio.run(chat(request, mock_agent_deps, mock_cache))
@@ -81,7 +76,7 @@ class TestChatEndpoint:
 
     def test_chat_with_cache_hit(self, mock_agent_deps, mock_agent_result):
         """Test chat request with cache hit."""
-        from src.api.endpoints.chat import chat, ChatRequest
+        from src.api.endpoints.chat import ChatRequest, chat
 
         cached_data = {
             "response": "Cached response",
@@ -95,18 +90,16 @@ class TestChatEndpoint:
                 "tokens_used": 50,
                 "tokens_prompt": 25,
                 "tokens_completion": 25,
-                "cache_hit": True
-            }
+                "cache_hit": True,
+            },
         }
 
         mock_cache = Mock()
         mock_cache.get = Mock(return_value=cached_data)
 
         import asyncio
-        request = ChatRequest(
-            message="Hello",
-            stream=False
-        )
+
+        request = ChatRequest(message="Hello", stream=False)
 
         response = asyncio.run(chat(request, mock_agent_deps, mock_cache))
 
@@ -115,7 +108,7 @@ class TestChatEndpoint:
 
     def test_chat_with_sources(self, mock_agent_deps, mock_cache):
         """Test chat request with source extraction."""
-        from src.api.endpoints.chat import chat, ChatRequest
+        from src.api.endpoints.chat import ChatRequest, chat
 
         # Create mock messages with tool calls
         mock_part = Mock()
@@ -126,7 +119,7 @@ class TestChatEndpoint:
                 "content": "Document content here",
                 "similarity": 0.95,
                 "metadata": {"author": "Test"},
-                "chunk_index": 0
+                "chunk_index": 0,
             }
         ]
 
@@ -147,10 +140,8 @@ class TestChatEndpoint:
                 ]
 
                 import asyncio
-                request = ChatRequest(
-                    message="Search query",
-                    include_sources=True
-                )
+
+                request = ChatRequest(message="Search query", include_sources=True)
 
                 response = asyncio.run(chat(request, mock_agent_deps, mock_cache))
 
@@ -159,17 +150,14 @@ class TestChatEndpoint:
 
     def test_chat_with_parameters(self, mock_agent_deps, mock_cache, mock_agent_result):
         """Test chat with max_tokens and temperature parameters."""
-        from src.api.endpoints.chat import chat, ChatRequest
+        from src.api.endpoints.chat import ChatRequest, chat
 
         with patch("src.api.endpoints.chat.super_agent") as mock_agent:
             mock_agent.run = AsyncMock(return_value=mock_agent_result)
 
             import asyncio
-            request = ChatRequest(
-                message="Test",
-                max_tokens=500,
-                temperature=0.7
-            )
+
+            request = ChatRequest(message="Test", max_tokens=500, temperature=0.7)
 
             response = asyncio.run(chat(request, mock_agent_deps, mock_cache))
 
@@ -181,13 +169,15 @@ class TestChatEndpoint:
 
     def test_chat_error_handling(self, mock_agent_deps, mock_cache):
         """Test chat error handling."""
-        from src.api.endpoints.chat import chat, ChatRequest
         from fastapi import HTTPException
+
+        from src.api.endpoints.chat import ChatRequest, chat
 
         with patch("src.api.endpoints.chat.super_agent") as mock_agent:
             mock_agent.run = AsyncMock(side_effect=Exception("Agent failed"))
 
             import asyncio
+
             request = ChatRequest(message="Test")
 
             with pytest.raises(HTTPException) as exc_info:
@@ -198,16 +188,14 @@ class TestChatEndpoint:
 
     def test_chat_caches_response(self, mock_agent_deps, mock_cache, mock_agent_result):
         """Test that response is cached."""
-        from src.api.endpoints.chat import chat, ChatRequest
+        from src.api.endpoints.chat import ChatRequest, chat
 
         with patch("src.api.endpoints.chat.super_agent") as mock_agent:
             mock_agent.run = AsyncMock(return_value=mock_agent_result)
 
             import asyncio
-            request = ChatRequest(
-                message="Cache me",
-                stream=False
-            )
+
+            request = ChatRequest(message="Cache me", stream=False)
 
             asyncio.run(chat(request, mock_agent_deps, mock_cache))
 
@@ -222,7 +210,7 @@ class TestChatStreamEndpoint:
 
     def test_chat_stream_success(self, mock_agent_deps):
         """Test successful streaming chat."""
-        from src.api.endpoints.chat import chat_stream, ChatRequest
+        from src.api.endpoints.chat import ChatRequest, chat_stream
 
         async def mock_stream(*args, **kwargs):
             yield "data: chunk1\n\n"
@@ -232,6 +220,7 @@ class TestChatStreamEndpoint:
             mock_sse.stream_agent_response = mock_stream
 
             import asyncio
+
             request = ChatRequest(message="Stream this")
 
             response = asyncio.run(chat_stream(request, mock_agent_deps))
@@ -241,7 +230,7 @@ class TestChatStreamEndpoint:
 
     def test_chat_stream_with_parameters(self, mock_agent_deps):
         """Test streaming with agent parameters."""
-        from src.api.endpoints.chat import chat_stream, ChatRequest
+        from src.api.endpoints.chat import ChatRequest, chat_stream
 
         async def mock_stream(*args, **kwargs):
             # Verify parameters were passed
@@ -253,23 +242,22 @@ class TestChatStreamEndpoint:
             mock_sse.stream_agent_response = mock_stream
 
             import asyncio
-            request = ChatRequest(
-                message="Test",
-                max_tokens=300,
-                temperature=0.8
-            )
+
+            request = ChatRequest(message="Test", max_tokens=300, temperature=0.8)
 
             asyncio.run(chat_stream(request, mock_agent_deps))
 
     def test_chat_stream_error(self, mock_agent_deps):
         """Test streaming error handling."""
-        from src.api.endpoints.chat import chat_stream, ChatRequest
         from fastapi import HTTPException
+
+        from src.api.endpoints.chat import ChatRequest, chat_stream
 
         with patch("src.api.endpoints.chat.sse_manager") as mock_sse:
             mock_sse.stream_agent_response = AsyncMock(side_effect=Exception("Stream error"))
 
             import asyncio
+
             request = ChatRequest(message="Test")
 
             with pytest.raises(HTTPException) as exc_info:
@@ -362,13 +350,10 @@ class TestFeedbackEndpoint:
     @pytest.mark.asyncio
     async def test_submit_feedback_success(self):
         """Test successful feedback submission."""
-        from src.api.endpoints.chat import submit_feedback, FeedbackRequest
+        from src.api.endpoints.chat import FeedbackRequest, submit_feedback
 
         feedback = FeedbackRequest(
-            message_id="msg_123",
-            rating=5,
-            comment="Great response!",
-            issues=["accuracy"]
+            message_id="msg_123", rating=5, comment="Great response!", issues=["accuracy"]
         )
 
         response = await submit_feedback(feedback)
@@ -379,13 +364,11 @@ class TestFeedbackEndpoint:
     @pytest.mark.asyncio
     async def test_submit_feedback_error(self):
         """Test feedback submission error handling."""
-        from src.api.endpoints.chat import submit_feedback, FeedbackRequest
         from fastapi import HTTPException
 
-        feedback = FeedbackRequest(
-            message_id="msg_123",
-            rating=3
-        )
+        from src.api.endpoints.chat import FeedbackRequest, submit_feedback
+
+        feedback = FeedbackRequest(message_id="msg_123", rating=3)
 
         with patch("src.api.endpoints.chat.uuid4", side_effect=Exception("DB error")):
             with pytest.raises(HTTPException) as exc_info:
@@ -420,8 +403,9 @@ class TestSessionHistoryEndpoint:
     @pytest.mark.asyncio
     async def test_get_session_history_error(self):
         """Test session history error handling."""
-        from src.api.endpoints.chat import get_session_history
         from fastapi import HTTPException
+
+        from src.api.endpoints.chat import get_session_history
 
         with patch("src.api.endpoints.chat.logger") as mock_logger:
             mock_logger.info = Mock(side_effect=Exception("DB error"))
@@ -456,15 +440,15 @@ class TestExtractSourcesHelper:
                 "content": "This is document 1 content",
                 "similarity": 0.92,
                 "metadata": {"source": "file.pdf"},
-                "chunk_index": 0
+                "chunk_index": 0,
             },
             {
                 "id": "doc2",
                 "content": "This is document 2 content",
                 "similarity": 0.88,
                 "metadata": {"source": "file2.pdf"},
-                "chunk_index": 1
-            }
+                "chunk_index": 1,
+            },
         ]
 
         mock_message = Mock()
@@ -485,13 +469,7 @@ class TestExtractSourcesHelper:
 
         mock_part = Mock()
         mock_part.tool_name = "smart_search"
-        mock_part.tool_return = [
-            {
-                "id": "doc1",
-                "content": long_content,
-                "similarity": 0.95
-            }
-        ]
+        mock_part.tool_return = [{"id": "doc1", "content": long_content, "similarity": 0.95}]
 
         mock_message = Mock()
         mock_message.parts = [mock_part]

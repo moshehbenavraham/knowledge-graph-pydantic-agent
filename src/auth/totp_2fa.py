@@ -52,10 +52,10 @@ class TOTPManager:
 
         self.client: Client | None = None
 
-    async def _get_client(self) -> Client:
+    def _get_client(self) -> Client:
         """Get Supabase client (cached)."""
         if not self.client:
-            self.client = await get_supabase_client()
+            self.client = get_supabase_client()
         return self.client
 
     def generate_secret(self) -> str:
@@ -94,14 +94,14 @@ class TOTPManager:
         decrypted_bytes = self.cipher.decrypt(encrypted_bytes)
         return decrypted_bytes.decode()
 
-    def generate_qr_code(self, secret: str, username: str, issuer: str = "Base Agent") -> str:
+    def generate_qr_code(self, secret: str, username: str, issuer: str = "Luminari Agent") -> str:
         """
         Generate QR code for authenticator app setup.
 
         Args:
             secret: Base32-encoded TOTP secret
             username: User's username or email
-            issuer: Application name (default: "Base Agent")
+            issuer: Application name (default: "Luminari Agent")
 
         Returns:
             Base64-encoded PNG image of QR code
@@ -140,7 +140,7 @@ class TOTPManager:
         totp = pyotp.TOTP(secret)
         return totp.verify(code, valid_window=window)
 
-    async def setup_2fa(
+    def setup_2fa(
         self, user_id: str, username: str, ip_address: str | None = None
     ) -> dict[str, str]:
         """
@@ -157,7 +157,7 @@ class TOTPManager:
         Returns:
             Dictionary with 'secret' and 'qr_code' (base64-encoded PNG)
         """
-        client = await self._get_client()
+        client = self._get_client()
 
         # Generate new TOTP secret
         secret = self.generate_secret()
@@ -179,9 +179,7 @@ class TOTPManager:
 
         return {"secret": secret, "qr_code": qr_code}
 
-    async def verify_and_enable_2fa(
-        self, user_id: str, code: str, ip_address: str | None = None
-    ) -> bool:
+    def verify_and_enable_2fa(self, user_id: str, code: str, ip_address: str | None = None) -> bool:
         """
         Verify TOTP code and enable 2FA for user.
 
@@ -193,7 +191,7 @@ class TOTPManager:
         Returns:
             True if code verified and 2FA enabled, False otherwise
         """
-        client = await self._get_client()
+        client = self._get_client()
 
         # Get user's TOTP secret
         result = (
@@ -212,7 +210,7 @@ class TOTPManager:
         # Verify code
         if not self.verify_code(secret, code):
             # Log failed attempt
-            await self._log_2fa_attempt(user_id, False, "totp", ip_address)
+            self._log_2fa_attempt(user_id, False, "totp", ip_address)
             return False
 
         # Enable 2FA
@@ -221,11 +219,11 @@ class TOTPManager:
         ).eq("user_id", user_id).execute()
 
         # Log successful verification
-        await self._log_2fa_attempt(user_id, True, "totp", ip_address)
+        self._log_2fa_attempt(user_id, True, "totp", ip_address)
 
         return True
 
-    async def disable_2fa(self, user_id: str) -> bool:
+    def disable_2fa(self, user_id: str) -> bool:
         """
         Disable 2FA for user.
 
@@ -235,7 +233,7 @@ class TOTPManager:
         Returns:
             True if 2FA was disabled, False if user didn't have 2FA
         """
-        client = await self._get_client()
+        client = self._get_client()
 
         result = (
             client.table("auth_totp_secrets")
@@ -246,9 +244,7 @@ class TOTPManager:
 
         return len(result.data) > 0
 
-    async def verify_login_code(
-        self, user_id: str, code: str, ip_address: str | None = None
-    ) -> bool:
+    def verify_login_code(self, user_id: str, code: str, ip_address: str | None = None) -> bool:
         """
         Verify TOTP code during login.
 
@@ -260,10 +256,10 @@ class TOTPManager:
         Returns:
             True if code is valid, False otherwise
         """
-        client = await self._get_client()
+        client = self._get_client()
 
         # Check rate limiting (max 5 failures per hour)
-        failure_count = await self._count_recent_failures(user_id)
+        failure_count = self._count_recent_failures(user_id)
         if failure_count >= 5:
             return False
 
@@ -285,11 +281,11 @@ class TOTPManager:
         is_valid = self.verify_code(secret, code)
 
         # Log attempt
-        await self._log_2fa_attempt(user_id, is_valid, "totp", ip_address)
+        self._log_2fa_attempt(user_id, is_valid, "totp", ip_address)
 
         return is_valid
 
-    async def is_2fa_enabled(self, user_id: str) -> bool:
+    def is_2fa_enabled(self, user_id: str) -> bool:
         """
         Check if 2FA is enabled for user.
 
@@ -299,7 +295,7 @@ class TOTPManager:
         Returns:
             True if 2FA is enabled, False otherwise
         """
-        client = await self._get_client()
+        client = self._get_client()
 
         result = (
             client.table("auth_totp_secrets").select("is_enabled").eq("user_id", user_id).execute()
@@ -310,7 +306,7 @@ class TOTPManager:
 
         return result.data[0]["is_enabled"]
 
-    async def requires_2fa(self, user_id: str) -> bool:
+    def requires_2fa(self, user_id: str) -> bool:
         """
         Check if user is required to have 2FA (e.g., admin users).
 
@@ -320,7 +316,7 @@ class TOTPManager:
         Returns:
             True if 2FA is required for this user, False otherwise
         """
-        client = await self._get_client()
+        client = self._get_client()
 
         result = client.table("auth_users").select("requires_2fa").eq("id", user_id).execute()
 
@@ -329,7 +325,7 @@ class TOTPManager:
 
         return result.data[0].get("requires_2fa", False)
 
-    async def _log_2fa_attempt(
+    def _log_2fa_attempt(
         self,
         user_id: str,
         success: bool,
@@ -345,7 +341,7 @@ class TOTPManager:
             code_type: Type of code ('totp' or 'backup')
             ip_address: IP address of attempt
         """
-        client = await self._get_client()
+        client = self._get_client()
 
         data = {
             "user_id": user_id,
@@ -356,7 +352,7 @@ class TOTPManager:
 
         client.table("auth_2fa_attempts").insert(data).execute()
 
-    async def _count_recent_failures(self, user_id: str) -> int:
+    def _count_recent_failures(self, user_id: str) -> int:
         """
         Count failed 2FA attempts in last hour.
 
@@ -366,7 +362,7 @@ class TOTPManager:
         Returns:
             Number of failed attempts in last hour
         """
-        client = await self._get_client()
+        client = self._get_client()
 
         result = client.rpc("count_recent_2fa_failures", {"p_user_id": user_id}).execute()
 
@@ -383,10 +379,10 @@ class BackupCodeManager:
         """Initialize Backup Code Manager."""
         self.client: Client | None = None
 
-    async def _get_client(self) -> Client:
+    def _get_client(self) -> Client:
         """Get Supabase client (cached)."""
         if not self.client:
-            self.client = await get_supabase_client()
+            self.client = get_supabase_client()
         return self.client
 
     def generate_codes(self, count: int = CODE_COUNT) -> list[str]:
@@ -439,7 +435,7 @@ class BackupCodeManager:
         code_normalized = code.replace("-", "").upper()
         return bcrypt.checkpw(code_normalized.encode(), code_hash.encode())
 
-    async def create_backup_codes(
+    def create_backup_codes(
         self, user_id: str, count: int = CODE_COUNT, expires_days: int = 90
     ) -> list[str]:
         """
@@ -455,7 +451,7 @@ class BackupCodeManager:
         Returns:
             List of backup codes (plaintext, for user to save)
         """
-        client = await self._get_client()
+        client = self._get_client()
 
         # Generate codes
         codes = self.generate_codes(count)
@@ -485,7 +481,7 @@ class BackupCodeManager:
 
         return codes
 
-    async def verify_and_use_backup_code(
+    def verify_and_use_backup_code(
         self, user_id: str, code: str, ip_address: str | None = None
     ) -> bool:
         """
@@ -499,7 +495,7 @@ class BackupCodeManager:
         Returns:
             True if code is valid and unused, False otherwise
         """
-        client = await self._get_client()
+        client = self._get_client()
 
         # Get all unused backup codes for user
         result = (
@@ -512,7 +508,7 @@ class BackupCodeManager:
 
         if not result.data:
             # Log failed attempt
-            await self._log_backup_attempt(user_id, False, ip_address)
+            self._log_backup_attempt(user_id, False, ip_address)
             return False
 
         # Check each code
@@ -528,15 +524,15 @@ class BackupCodeManager:
                 ).eq("id", backup_code["id"]).execute()
 
                 # Log successful attempt
-                await self._log_backup_attempt(user_id, True, ip_address)
+                self._log_backup_attempt(user_id, True, ip_address)
 
                 return True
 
         # No matching code found
-        await self._log_backup_attempt(user_id, False, ip_address)
+        self._log_backup_attempt(user_id, False, ip_address)
         return False
 
-    async def get_unused_count(self, user_id: str) -> int:
+    def get_unused_count(self, user_id: str) -> int:
         """
         Get count of unused backup codes for user.
 
@@ -546,13 +542,13 @@ class BackupCodeManager:
         Returns:
             Number of unused, non-expired backup codes
         """
-        client = await self._get_client()
+        client = self._get_client()
 
         result = client.rpc("get_unused_backup_codes_count", {"p_user_id": user_id}).execute()
 
         return result.data if result.data else 0
 
-    async def _log_backup_attempt(
+    def _log_backup_attempt(
         self, user_id: str, success: bool, ip_address: str | None = None
     ) -> None:
         """
@@ -563,7 +559,7 @@ class BackupCodeManager:
             success: Whether verification succeeded
             ip_address: IP address of attempt
         """
-        client = await self._get_client()
+        client = self._get_client()
 
         data = {
             "user_id": user_id,

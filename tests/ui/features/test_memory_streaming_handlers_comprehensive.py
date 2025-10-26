@@ -6,13 +6,17 @@ Covers:
 - StreamingHandler: Streaming event processing, tool call tracking
 """
 
-import pytest
 from unittest.mock import AsyncMock, Mock, patch
-from pydantic_ai.messages import ModelRequest, ModelResponse, PartStartEvent, PartDeltaEvent, TextPartDelta
+
+import pytest
+from pydantic_ai.messages import (
+    ModelRequest,
+    ModelResponse,
+    PartStartEvent,
+)
 
 from src.ui.features.memory_handler import MemoryHandler
 from src.ui.features.streaming_handler import StreamingHandler
-
 
 # ===== Fixtures =====
 
@@ -65,7 +69,9 @@ class TestMemoryHandlerInit:
 
     def test_init_handles_mem0_failure(self, memory_config):
         """Test that Mem0 initialization failure is handled gracefully."""
-        with patch("src.ui.features.memory_handler.get_mem0_client", side_effect=Exception("Mem0 error")):
+        with patch(
+            "src.ui.features.memory_handler.get_mem0_client", side_effect=Exception("Mem0 error")
+        ):
             handler = MemoryHandler(memory_config)
 
             # Should not raise, just set client to None
@@ -95,7 +101,9 @@ class TestGetMemories:
 
     def test_get_memories_no_client(self, memory_config):
         """Test memory retrieval when client is not available."""
-        with patch("src.ui.features.memory_handler.get_mem0_client", side_effect=Exception("Error")):
+        with patch(
+            "src.ui.features.memory_handler.get_mem0_client", side_effect=Exception("Error")
+        ):
             handler = MemoryHandler(memory_config)
             handler.memory_client = None
 
@@ -150,7 +158,9 @@ class TestStoreMemories:
 
     def test_store_interaction_no_client(self, memory_config):
         """Test storing interaction when client not available."""
-        with patch("src.ui.features.memory_handler.get_mem0_client", side_effect=Exception("Error")):
+        with patch(
+            "src.ui.features.memory_handler.get_mem0_client", side_effect=Exception("Error")
+        ):
             handler = MemoryHandler(memory_config)
             handler.memory_client = None
 
@@ -320,8 +330,10 @@ class TestMemoryStreamingIntegration:
         mock_mem0_client = Mock()
         mock_mem0_client.search.return_value = {"results": [{"memory": "Test memory"}]}
 
-        with patch("src.ui.features.memory_handler.get_mem0_client", return_value=mock_mem0_client), \
-             patch("src.ui.features.streaming_handler.super_agent") as mock_agent:
+        with (
+            patch("src.ui.features.memory_handler.get_mem0_client", return_value=mock_mem0_client),
+            patch("src.ui.features.streaming_handler.super_agent") as mock_agent,
+        ):
 
             mock_agent.iter.return_value.__aenter__ = AsyncMock()
             mock_agent.iter.return_value.__aexit__ = AsyncMock(return_value=False)

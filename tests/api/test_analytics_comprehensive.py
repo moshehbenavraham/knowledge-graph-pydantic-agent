@@ -4,9 +4,10 @@ Comprehensive tests for analytics endpoints.
 Tests dashboard queries, metrics aggregation, and performance tracking.
 """
 
-import pytest
 from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
+
+import pytest
 from fastapi.testclient import TestClient
 
 from src.api.main import app
@@ -93,9 +94,7 @@ class TestAnalyticsEndpoints:
             return_value={"rows": mock_analytics_data["interactions"]}
         )
 
-        response = client.get(
-            "/api/v1/analytics/interactions", params={"limit": 100, "offset": 0}
-        )
+        response = client.get("/api/v1/analytics/interactions", params={"limit": 100, "offset": 0})
 
         assert response.status_code in [200, 404, 503]
 

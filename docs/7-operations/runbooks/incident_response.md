@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This runbook provides step-by-step procedures for responding to incidents in the Base Agent / Agentic RAG platform.
+This runbook provides step-by-step procedures for responding to incidents in the Luminari Agent / Agentic RAG platform.
 
 ## Incident Severity Levels
 
@@ -63,7 +63,7 @@ docker stats
 
 # Check metrics
 # Open Grafana: http://grafana.example.com
-# Dashboard: "Base Agent - Agentic RAG Platform"
+# Dashboard: "Luminari Agent - Agentic RAG Platform"
 
 # Check recent deployments
 cat deploy/backups/production/current-deployment.txt

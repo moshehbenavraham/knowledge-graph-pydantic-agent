@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ===============================================
 # Rollback Script
-# Base Agent - Agentic RAG Platform
+# Luminari Agent - Agentic RAG Platform
 # ===============================================
 
 set -euo pipefail

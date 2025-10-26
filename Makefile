@@ -85,14 +85,15 @@ ngrok-ui:  ## Start Streamlit only (for manual ngrok)
 	  PYTHONPATH=$(PWD):$$PYTHONPATH UI_MODE=advanced \
 	  streamlit run src/ui/streamlit_app.py --server.port=8501"
 
-deploy-ngrok:  ## Start Streamlit + ngrok tunnel automatically
+deploy-ngrok:  ## Start Streamlit + ngrok tunnel automatically (logs to logs/ngrok_auth_logs/)
+	@mkdir -p logs/ngrok_auth_logs
 	@echo "Starting Streamlit on port 8501..."
 	@bash -c "source .venv/bin/activate && \
 	  PYTHONPATH=$(PWD):$$PYTHONPATH UI_MODE=advanced \
-	  streamlit run src/ui/streamlit_app.py --server.port=8501" & \
+	  streamlit run src/ui/streamlit_app.py --server.port=8501 2>&1 | tee logs/ngrok_auth_logs/streamlit_$$(date +%Y%m%d_%H%M%S).log" & \
 	sleep 5 && \
 	echo "Starting ngrok tunnel to aiwithapex.ngrok.io..." && \
-	ngrok start base-agent-ui
+	ngrok start base-agent-ui 2>&1 | tee logs/ngrok_auth_logs/ngrok_$$(date +%Y%m%d_%H%M%S).log
 
 ngrok-status:  ## Check ngrok tunnel status
 	@curl -s http://localhost:4040/api/tunnels | python -m json.tool

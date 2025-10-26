@@ -511,7 +511,9 @@ class TestGoogleDriveWatcher:
 
             # Verify initial scan
             assert "init_file1" in tracking_known_files.added
-            assert "init_file2" not in tracking_known_files.added  # Trashed file should not be added
+            assert (
+                "init_file2" not in tracking_known_files.added
+            )  # Trashed file should not be added
             assert "init_file1" in watcher.known_files
 
             # Verify subsequent loop iterations

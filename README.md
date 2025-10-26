@@ -1,4 +1,4 @@
-# Base Agent
+# Luminari Agent
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -7,7 +7,7 @@
 
 **Version 1.4.0** | **API Version 0.8.0** | **Package:** `luminari-ai-agent`
 
-Base Agent is a unified AI assistant built on [Pydantic-AI](https://github.com/pydantic/pydantic-ai)
+Luminari Agent is a unified AI assistant built on [Pydantic-AI](https://github.com/pydantic/pydantic-ai)
 that combines retrieval augmented generation, knowledge graph search, long-term memory, and
 extensible tooling. The project ships with a Streamlit UI, a production-ready FastAPI service with
 streaming support, and supporting pipelines for ingestion and evaluation so the same agent logic
@@ -70,7 +70,7 @@ Version 1.4.0 delivers **production-ready two-layer authentication** with defens
   - Configured in `~/.config/ngrok/ngrok.yml`
   - Verified with curl testing (401 without credentials)
 - **Layer 2 (Application)**: User account authentication with streamlit-authenticator
-  - Beautiful gradient login page with Base Agent branding
+  - Beautiful gradient login page with Luminari Agent branding
   - Bcrypt password hashing (12 rounds, industry standard)
   - Session management with 30-day cookie + 30-minute idle timeout
   - Logout button in sidebar with session clearing

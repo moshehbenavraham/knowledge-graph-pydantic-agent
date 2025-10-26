@@ -1,6 +1,6 @@
 # Deployment Guide
 
-This guide covers deploying the Base Agent AI assistant in various environments.
+This guide covers deploying the Luminari Agent AI assistant in various environments.
 
 ## Table of Contents
 - [Prerequisites](#prerequisites)

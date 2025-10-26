@@ -6,7 +6,7 @@
 
 ## Overview
 
-This guide documents the complete deployment process for Base Agent on WSL2 Ubuntu, using cloud services for databases to minimize local infrastructure.
+This guide documents the complete deployment process for Luminari Agent on WSL2 Ubuntu, using cloud services for databases to minimize local infrastructure.
 
 ## ⚠️ Resource Requirements
 

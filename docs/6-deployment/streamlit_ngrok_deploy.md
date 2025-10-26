@@ -7,11 +7,11 @@
 
 ## Overview
 
-Deploy Base Agent with public HTTPS access via ngrok tunnel.
+Deploy Luminari Agent with public HTTPS access via ngrok tunnel.
 
 **Security Architecture**:
 ```
-Internet -> ngrok (HTTP Basic Auth) -> Streamlit (Database Auth) -> Base Agent
+Internet -> ngrok (HTTP Basic Auth) -> Streamlit (Database Auth) -> Luminari Agent
 ```
 
 **Features**:
@@ -54,7 +54,7 @@ make ngrok-status
 ## Prerequisites
 
 **Required**:
-- Base Agent v1.5.0+
+- Luminari Agent v1.5.0+
 - Supabase account with project
 - Neo4j Aura account with database
 - ngrok account (free tier works)
@@ -262,7 +262,7 @@ SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=your-email@gmail.com
 SMTP_PASSWORD=your_app_password  # Gmail: Use App Password with 2FA
-SMTP_FROM_EMAIL=noreply@baseagent.local
+SMTP_FROM_EMAIL=noreply@luminariagent.local
 PASSWORD_RESET_URL=https://your-domain.ngrok.io/reset-password
 VERIFICATION_URL=https://your-domain.ngrok.io
 ```
@@ -271,7 +271,7 @@ VERIFICATION_URL=https://your-domain.ngrok.io
 
 Add to `.env`:
 ```bash
-TOTP_ISSUER_NAME=Base Agent
+TOTP_ISSUER_NAME=Luminari Agent
 BACKUP_CODE_COUNT=10
 BACKUP_CODE_EXPIRY_DAYS=90
 ```
@@ -324,7 +324,7 @@ cookie:
 credentials:
   usernames:
     admin:
-      email: "admin@baseagent.local"
+      email: "max@aiwithapex.com"
       name: "Administrator"
       password: "$2b$12$..."  # Use hash_password.py
 

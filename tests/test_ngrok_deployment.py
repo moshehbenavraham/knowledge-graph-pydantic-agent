@@ -141,7 +141,9 @@ class TestStreamlitConfiguration:
         server = config["server"]
 
         assert server["port"] == 8501, "Server port must be 8501"
-        assert server["address"] == "0.0.0.0", "Server must bind to 0.0.0.0"  # nosec B104 - Required for ngrok tunnel access
+        assert (
+            server["address"] == "0.0.0.0"
+        ), "Server must bind to 0.0.0.0"  # nosec B104 - Required for ngrok tunnel access
         assert server["headless"] is True, "Server must be headless"
         assert server["enableCORS"] is False, "CORS should be disabled (ngrok handles)"
         assert (
@@ -413,11 +415,14 @@ class TestNgrokIntegration:
         import subprocess  # nosec B404 - Required for testing ngrok CLI availability
 
         try:
-            result = subprocess.run(  # nosec B607 - Testing ngrok command availability, not user input
-                ["ngrok", "version"],
-                check=False, capture_output=True,
-                text=True,
-                timeout=5,
+            result = (
+                subprocess.run(  # nosec B607 - Testing ngrok command availability, not user input
+                    ["ngrok", "version"],
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                )
             )
             assert result.returncode == 0, "ngrok command must be available"
             assert "ngrok version" in result.stdout.lower(), "ngrok must report version"
@@ -433,7 +438,8 @@ class TestNgrokIntegration:
         try:
             result = subprocess.run(  # nosec B607 - Testing ngrok config validation, not user input
                 ["ngrok", "config", "check"],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 timeout=10,
             )

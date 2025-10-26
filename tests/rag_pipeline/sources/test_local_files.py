@@ -276,12 +276,8 @@ class TestLocalFileWatcher:
         watcher.watch_for_changes(interval_seconds=1)
 
         # Verify initial scan populated known_files
-        assert (
-            "/tmp/test_watch/file1.txt" in tracking_known_files.added
-        )  # nosec B108 - test usage
-        assert (
-            "/tmp/test_watch/file2.txt" in tracking_known_files.added
-        )  # nosec B108 - test usage
+        assert "/tmp/test_watch/file1.txt" in tracking_known_files.added  # nosec B108 - test usage
+        assert "/tmp/test_watch/file2.txt" in tracking_known_files.added  # nosec B108 - test usage
         assert "/tmp/test_watch/file2.txt" in watcher.known_files  # nosec B108 - test usage
 
         # Verify subsequent loop iterations

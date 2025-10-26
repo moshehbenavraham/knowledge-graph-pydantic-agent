@@ -14,12 +14,11 @@ Covers:
 - watch_for_changes() initial scan and continuous monitoring
 """
 
-import io
 import json
 import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
-from unittest.mock import ANY, MagicMock, Mock, PropertyMock, mock_open, patch
+from unittest.mock import Mock, mock_open, patch
 
 import pytest
 from google.auth.exceptions import RefreshError
@@ -31,12 +30,10 @@ def temp_config_file():
     with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".json") as f:
         config = {
             "supported_mime_types": ["application/pdf", "text/plain"],
-            "export_mime_types": {
-                "application/vnd.google-apps.document": "text/plain"
-            },
+            "export_mime_types": {"application/vnd.google-apps.document": "text/plain"},
             "text_processing": {"default_chunk_size": 400, "default_chunk_overlap": 0},
             "last_check_time": "2024-01-01T12:00:00.000Z",
-            "watch_folder_id": "test_folder_id"
+            "watch_folder_id": "test_folder_id",
         }
         json.dump(config, f)
         temp_path = f.name
@@ -50,10 +47,12 @@ def temp_config_file():
 @pytest.fixture
 def mock_google_apis():
     """Mock Google API modules."""
-    with patch("src.rag_pipeline.sources.google_drive.build") as mock_build, \
-         patch("src.rag_pipeline.sources.google_drive.Credentials") as mock_creds, \
-         patch("src.rag_pipeline.sources.google_drive.InstalledAppFlow") as mock_flow, \
-         patch("src.rag_pipeline.sources.google_drive.Request") as mock_request:
+    with (
+        patch("src.rag_pipeline.sources.google_drive.build") as mock_build,
+        patch("src.rag_pipeline.sources.google_drive.Credentials") as mock_creds,
+        patch("src.rag_pipeline.sources.google_drive.InstalledAppFlow") as mock_flow,
+        patch("src.rag_pipeline.sources.google_drive.Request") as mock_request,
+    ):
         yield {
             "build": mock_build,
             "credentials": mock_creds,
@@ -87,7 +86,7 @@ class TestGoogleDriveWatcherInit:
             watcher = GoogleDriveWatcher(
                 credentials_path="custom_creds.json",
                 token_path="custom_token.json",
-                folder_id="folder123"
+                folder_id="folder123",
             )
 
             assert watcher.credentials_path == "custom_creds.json"
@@ -325,12 +324,14 @@ class TestGetFolderContents:
 
         mock_service = Mock()
         mock_files_list = Mock()
-        mock_files_list.execute = Mock(return_value={
-            "files": [
-                {"id": "file1", "name": "doc1.pdf", "mimeType": "application/pdf"},
-                {"id": "file2", "name": "doc2.txt", "mimeType": "text/plain"}
-            ]
-        })
+        mock_files_list.execute = Mock(
+            return_value={
+                "files": [
+                    {"id": "file1", "name": "doc1.pdf", "mimeType": "application/pdf"},
+                    {"id": "file2", "name": "doc2.txt", "mimeType": "text/plain"},
+                ]
+            }
+        )
         mock_service.files().list = Mock(return_value=mock_files_list)
 
         with patch.object(GoogleDriveWatcher, "load_config"):
@@ -349,29 +350,25 @@ class TestGetFolderContents:
         mock_service = Mock()
 
         # First call: returns files and has subfolders
-        files_response = {
-            "files": [{"id": "file1", "name": "doc.pdf"}]
-        }
+        files_response = {"files": [{"id": "file1", "name": "doc.pdf"}]}
 
         # Second call for subfolders: finds one subfolder
-        folder_response = {
-            "files": [{"id": "subfolder1"}]
-        }
+        folder_response = {"files": [{"id": "subfolder1"}]}
 
         # Third call for subfolder contents
-        subfolder_files_response = {
-            "files": [{"id": "file2", "name": "subdoc.txt"}]
-        }
+        subfolder_files_response = {"files": [{"id": "file2", "name": "subdoc.txt"}]}
 
         # Fourth call for subfolder's subfolders (none)
         empty_folder_response = {"files": []}
 
-        mock_execute = Mock(side_effect=[
-            files_response,
-            folder_response,
-            subfolder_files_response,
-            empty_folder_response
-        ])
+        mock_execute = Mock(
+            side_effect=[
+                files_response,
+                folder_response,
+                subfolder_files_response,
+                empty_folder_response,
+            ]
+        )
 
         mock_service.files().list().execute = mock_execute
         mock_service.files().list = Mock(return_value=Mock(execute=mock_execute))
@@ -428,9 +425,7 @@ class TestGetChanges:
 
         mock_service = Mock()
         mock_list = Mock()
-        mock_list.execute = Mock(return_value={
-            "files": [{"id": "file1"}, {"id": "file2"}]
-        })
+        mock_list.execute = Mock(return_value={"files": [{"id": "file1"}, {"id": "file2"}]})
         mock_service.files().list = Mock(return_value=mock_list)
 
         with patch.object(GoogleDriveWatcher, "load_config"):
@@ -478,7 +473,9 @@ class TestDownloadFile:
 
         # Mock MediaIoBaseDownload
         file_content = b"test file content"
-        with patch("src.rag_pipeline.sources.google_drive.MediaIoBaseDownload") as mock_downloader_class:
+        with patch(
+            "src.rag_pipeline.sources.google_drive.MediaIoBaseDownload"
+        ) as mock_downloader_class:
             mock_downloader = Mock()
             mock_downloader.next_chunk = Mock(return_value=(Mock(), True))
             mock_downloader_class.return_value = mock_downloader
@@ -507,7 +504,9 @@ class TestDownloadFile:
         mock_service.files().export_media = Mock(return_value=mock_request)
 
         file_content = b"exported content"
-        with patch("src.rag_pipeline.sources.google_drive.MediaIoBaseDownload") as mock_downloader_class:
+        with patch(
+            "src.rag_pipeline.sources.google_drive.MediaIoBaseDownload"
+        ) as mock_downloader_class:
             mock_downloader = Mock()
             mock_downloader.next_chunk = Mock(return_value=(Mock(), True))
             mock_downloader_class.return_value = mock_downloader
@@ -516,9 +515,7 @@ class TestDownloadFile:
                 watcher = GoogleDriveWatcher()
                 watcher.service = mock_service
                 watcher.config = {
-                    "export_mime_types": {
-                        "application/vnd.google-apps.document": "text/plain"
-                    }
+                    "export_mime_types": {"application/vnd.google-apps.document": "text/plain"}
                 }
 
                 with patch("io.BytesIO") as mock_bytesio:
@@ -527,8 +524,7 @@ class TestDownloadFile:
                     mock_bytesio.return_value = mock_buffer
 
                     result = watcher.download_file(
-                        "file_id",
-                        "application/vnd.google-apps.document"
+                        "file_id", "application/vnd.google-apps.document"
                     )
 
         assert result == file_content
@@ -542,14 +538,14 @@ class TestDownloadFile:
         mock_request = Mock()
         mock_service.files().get_media = Mock(return_value=mock_request)
 
-        with patch("src.rag_pipeline.sources.google_drive.MediaIoBaseDownload") as mock_downloader_class:
+        with patch(
+            "src.rag_pipeline.sources.google_drive.MediaIoBaseDownload"
+        ) as mock_downloader_class:
             mock_downloader = Mock()
             # Simulate 3 chunks
-            mock_downloader.next_chunk = Mock(side_effect=[
-                (Mock(), False),
-                (Mock(), False),
-                (Mock(), True)
-            ])
+            mock_downloader.next_chunk = Mock(
+                side_effect=[(Mock(), False), (Mock(), False), (Mock(), True)]
+            )
             mock_downloader_class.return_value = mock_downloader
 
             with patch.object(GoogleDriveWatcher, "load_config"):
@@ -590,14 +586,11 @@ class TestProcessFile:
         """Test processing a trashed file."""
         from src.rag_pipeline.sources.google_drive import GoogleDriveWatcher
 
-        file = {
-            "id": "file1",
-            "name": "doc.pdf",
-            "mimeType": "application/pdf",
-            "trashed": True
-        }
+        file = {"id": "file1", "name": "doc.pdf", "mimeType": "application/pdf", "trashed": True}
 
-        with patch("src.rag_pipeline.sources.google_drive.delete_document_by_file_id") as mock_delete:
+        with patch(
+            "src.rag_pipeline.sources.google_drive.delete_document_by_file_id"
+        ) as mock_delete:
             with patch.object(GoogleDriveWatcher, "load_config"):
                 watcher = GoogleDriveWatcher()
                 watcher.known_files = {"file1": "2024-01-01"}
@@ -611,12 +604,7 @@ class TestProcessFile:
         """Test processing file with unsupported MIME type."""
         from src.rag_pipeline.sources.google_drive import GoogleDriveWatcher
 
-        file = {
-            "id": "file1",
-            "name": "image.png",
-            "mimeType": "image/png",
-            "trashed": False
-        }
+        file = {"id": "file1", "name": "image.png", "mimeType": "image/png", "trashed": False}
 
         with patch.object(GoogleDriveWatcher, "load_config"):
             with patch.object(GoogleDriveWatcher, "download_file") as mock_download:
@@ -632,12 +620,7 @@ class TestProcessFile:
         """Test processing file when download fails."""
         from src.rag_pipeline.sources.google_drive import GoogleDriveWatcher
 
-        file = {
-            "id": "file1",
-            "name": "doc.pdf",
-            "mimeType": "application/pdf",
-            "trashed": False
-        }
+        file = {"id": "file1", "name": "doc.pdf", "mimeType": "application/pdf", "trashed": False}
 
         with patch.object(GoogleDriveWatcher, "load_config"):
             with patch.object(GoogleDriveWatcher, "download_file", return_value=None):
@@ -653,16 +636,13 @@ class TestProcessFile:
         """Test processing file when text extraction fails."""
         from src.rag_pipeline.sources.google_drive import GoogleDriveWatcher
 
-        file = {
-            "id": "file1",
-            "name": "doc.pdf",
-            "mimeType": "application/pdf",
-            "trashed": False
-        }
+        file = {"id": "file1", "name": "doc.pdf", "mimeType": "application/pdf", "trashed": False}
 
         with patch.object(GoogleDriveWatcher, "load_config"):
             with patch.object(GoogleDriveWatcher, "download_file", return_value=b"content"):
-                with patch("src.rag_pipeline.sources.google_drive.extract_text_from_file", return_value=""):
+                with patch(
+                    "src.rag_pipeline.sources.google_drive.extract_text_from_file", return_value=""
+                ):
                     watcher = GoogleDriveWatcher()
                     watcher.config = {"supported_mime_types": ["application/pdf"]}
 
@@ -681,13 +661,19 @@ class TestProcessFile:
             "mimeType": "application/pdf",
             "webViewLink": "https://drive.google.com/file/file1",
             "modifiedTime": "2024-01-01T12:00:00.000Z",
-            "trashed": False
+            "trashed": False,
         }
 
         with patch.object(GoogleDriveWatcher, "load_config"):
             with patch.object(GoogleDriveWatcher, "download_file", return_value=b"content"):
-                with patch("src.rag_pipeline.sources.google_drive.extract_text_from_file", return_value="Extracted text"):
-                    with patch("src.rag_pipeline.sources.google_drive.process_file_for_rag", return_value=True):
+                with patch(
+                    "src.rag_pipeline.sources.google_drive.extract_text_from_file",
+                    return_value="Extracted text",
+                ):
+                    with patch(
+                        "src.rag_pipeline.sources.google_drive.process_file_for_rag",
+                        return_value=True,
+                    ):
                         watcher = GoogleDriveWatcher()
                         watcher.config = {"supported_mime_types": ["application/pdf"]}
 
@@ -732,10 +718,9 @@ class TestCheckForDeletedFiles:
         from src.rag_pipeline.sources.google_drive import GoogleDriveWatcher
 
         mock_service = Mock()
-        mock_service.files().get().execute = Mock(return_value={
-            "trashed": True,
-            "name": "trashed_file.pdf"
-        })
+        mock_service.files().get().execute = Mock(
+            return_value={"trashed": True, "name": "trashed_file.pdf"}
+        )
 
         with patch.object(GoogleDriveWatcher, "load_config"):
             watcher = GoogleDriveWatcher()
@@ -801,17 +786,21 @@ class TestWatchForChanges:
         from src.rag_pipeline.sources.google_drive import GoogleDriveWatcher
 
         mock_service = Mock()
-        mock_service.files().list().execute = Mock(return_value={
-            "files": [
-                {"id": "file1", "modifiedTime": "2024-01-01T00:00:00.000Z", "trashed": False},
-                {"id": "file2", "modifiedTime": "2024-01-02T00:00:00.000Z", "trashed": False}
-            ]
-        })
+        mock_service.files().list().execute = Mock(
+            return_value={
+                "files": [
+                    {"id": "file1", "modifiedTime": "2024-01-01T00:00:00.000Z", "trashed": False},
+                    {"id": "file2", "modifiedTime": "2024-01-02T00:00:00.000Z", "trashed": False},
+                ]
+            }
+        )
 
         with patch.object(GoogleDriveWatcher, "load_config"):
             with patch.object(GoogleDriveWatcher, "get_changes", return_value=[]):
                 with patch.object(GoogleDriveWatcher, "check_for_deleted_files", return_value=[]):
-                    with patch("time.sleep", side_effect=KeyboardInterrupt):  # Exit after one iteration
+                    with patch(
+                        "time.sleep", side_effect=KeyboardInterrupt
+                    ):  # Exit after one iteration
                         watcher = GoogleDriveWatcher()
                         watcher.service = mock_service
                         watcher.folder_id = None
@@ -833,14 +822,16 @@ class TestWatchForChanges:
             "name": "doc.pdf",
             "mimeType": "application/pdf",
             "modifiedTime": "2024-01-01T00:00:00.000Z",
-            "trashed": False
+            "trashed": False,
         }
 
         with patch.object(GoogleDriveWatcher, "load_config"):
             with patch.object(GoogleDriveWatcher, "authenticate"):
                 with patch.object(GoogleDriveWatcher, "get_changes", return_value=[changed_file]):
                     with patch.object(GoogleDriveWatcher, "process_file") as mock_process:
-                        with patch.object(GoogleDriveWatcher, "check_for_deleted_files", return_value=[]):
+                        with patch.object(
+                            GoogleDriveWatcher, "check_for_deleted_files", return_value=[]
+                        ):
                             with patch("time.sleep", side_effect=KeyboardInterrupt):
                                 watcher = GoogleDriveWatcher()
                                 watcher.service = Mock()
@@ -860,8 +851,12 @@ class TestWatchForChanges:
         with patch.object(GoogleDriveWatcher, "load_config"):
             with patch.object(GoogleDriveWatcher, "authenticate"):
                 with patch.object(GoogleDriveWatcher, "get_changes", return_value=[]):
-                    with patch.object(GoogleDriveWatcher, "check_for_deleted_files", return_value=["file1"]):
-                        with patch("src.rag_pipeline.sources.google_drive.delete_document_by_file_id") as mock_delete:
+                    with patch.object(
+                        GoogleDriveWatcher, "check_for_deleted_files", return_value=["file1"]
+                    ):
+                        with patch(
+                            "src.rag_pipeline.sources.google_drive.delete_document_by_file_id"
+                        ) as mock_delete:
                             with patch("time.sleep", side_effect=KeyboardInterrupt):
                                 watcher = GoogleDriveWatcher()
                                 watcher.service = Mock()
@@ -882,7 +877,9 @@ class TestWatchForChanges:
 
         with patch.object(GoogleDriveWatcher, "load_config"):
             with patch.object(GoogleDriveWatcher, "authenticate"):
-                with patch.object(GoogleDriveWatcher, "get_changes", side_effect=Exception("API error")):
+                with patch.object(
+                    GoogleDriveWatcher, "get_changes", side_effect=Exception("API error")
+                ):
                     watcher = GoogleDriveWatcher()
                     watcher.service = Mock()
                     watcher.initialized = True

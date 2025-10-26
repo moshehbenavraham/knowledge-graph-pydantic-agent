@@ -413,13 +413,13 @@ class OAuthHandler:
                 )
 
             # Step 3: Get or create user account
-            user = await get_user_by_email(profile["email"])
+            user = get_user_by_email(profile["email"])
             is_new_user = False
 
             if not user:
                 # Create new user with OAuth authentication
                 username = self._generate_username(profile)
-                user = await create_user(
+                user = create_user(
                     username=username,
                     email=profile["email"],
                     full_name=profile["name"] or profile["email"],
@@ -436,7 +436,7 @@ class OAuthHandler:
                 )
 
             # Step 4: Check if OAuth account already linked
-            oauth_account = await get_oauth_account(
+            oauth_account = get_oauth_account(
                 provider=self.provider,
                 provider_user_id=profile["provider_user_id"],
             )
@@ -479,7 +479,7 @@ class OAuthHandler:
                 elif token.get("expires_in"):
                     token_expires_at = datetime.now() + timedelta(seconds=token["expires_in"])
 
-                oauth_account = await link_oauth_account(
+                oauth_account = link_oauth_account(
                     user_id=user["id"],
                     provider=self.provider,
                     provider_user_id=profile["provider_user_id"],

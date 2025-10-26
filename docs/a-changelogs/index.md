@@ -1,6 +1,6 @@
 # Changelogs
 
-Version history and release notes for Base Agent.
+Version history and release notes for Luminari Agent.
 
 ## Current Version
 

@@ -4,8 +4,7 @@ Comprehensive tests for SupabaseRestStore.
 Tests REST API operations for document and chunk storage using Supabase client.
 """
 
-import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 from uuid import UUID, uuid4
 
 import pytest
@@ -128,9 +127,7 @@ def supabase_store(mock_supabase_client):
     """Provide SupabaseRestStore with mocked client."""
     with patch("src.agentic_rag.storage.supabase_rest_store.create_client") as mock_create:
         mock_create.return_value = mock_supabase_client
-        store = SupabaseRestStore(
-            supabase_url="https://test.supabase.co", supabase_key="test_key"
-        )
+        store = SupabaseRestStore(supabase_url="https://test.supabase.co", supabase_key="test_key")
         store.client = mock_supabase_client
         return store
 
@@ -174,9 +171,7 @@ class TestStoreDocument:
         mock_supabase_client.tables["documents"].set_response([])
 
         with pytest.raises(ValueError, match="No document ID returned"):
-            await supabase_store.store_document(
-                title="Test", source="test.pdf", content="Content"
-            )
+            await supabase_store.store_document(title="Test", source="test.pdf", content="Content")
 
     @pytest.mark.asyncio
     async def test_store_document_exception(self, supabase_store, mock_supabase_client):
@@ -189,9 +184,7 @@ class TestStoreDocument:
         mock_table.execute = mock_execute_with_error
 
         with pytest.raises(Exception, match="Database connection failed"):
-            await supabase_store.store_document(
-                title="Test", source="test.pdf", content="Content"
-            )
+            await supabase_store.store_document(title="Test", source="test.pdf", content="Content")
 
 
 class TestStoreChunks:
@@ -290,9 +283,7 @@ class TestUpdateChunkMetadata:
         chunk_id = uuid4()
 
         # Mock select to return existing metadata
-        mock_supabase_client.tables["chunks"].set_response(
-            [{"metadata": {"existing": "data"}}]
-        )
+        mock_supabase_client.tables["chunks"].set_response([{"metadata": {"existing": "data"}}])
 
         await supabase_store.update_chunk_metadata(chunk_id, {"new_field": "new_value"})
 
@@ -318,9 +309,7 @@ class TestUpdateChunkMetadata:
         assert table.update_data["entity_refs"] == ["entity1", "entity2"]
 
     @pytest.mark.asyncio
-    async def test_update_chunk_metadata_not_found(
-        self, supabase_store, mock_supabase_client
-    ):
+    async def test_update_chunk_metadata_not_found(self, supabase_store, mock_supabase_client):
         """Test metadata update when chunk not found."""
         chunk_id = uuid4()
 
@@ -330,9 +319,7 @@ class TestUpdateChunkMetadata:
         await supabase_store.update_chunk_metadata(chunk_id, {"field": "value"})
 
     @pytest.mark.asyncio
-    async def test_update_chunk_metadata_json_string(
-        self, supabase_store, mock_supabase_client
-    ):
+    async def test_update_chunk_metadata_json_string(self, supabase_store, mock_supabase_client):
         """Test metadata update when existing metadata is JSON string."""
         chunk_id = uuid4()
 
@@ -547,16 +534,12 @@ class TestEdgeCases:
             await supabase_store.store_chunks(doc_id, [])
 
     @pytest.mark.asyncio
-    async def test_search_with_custom_embedding_column(
-        self, supabase_store, mock_supabase_client
-    ):
+    async def test_search_with_custom_embedding_column(self, supabase_store, mock_supabase_client):
         """Test search with custom embedding column parameter."""
         mock_supabase_client.set_rpc_response("match_chunks", [])
 
         embedding = [0.1] * 768
-        results = await supabase_store.search_similar(
-            embedding, embedding_column="embedding_768"
-        )
+        results = await supabase_store.search_similar(embedding, embedding_column="embedding_768")
 
         assert len(results) == 0
 
@@ -621,9 +604,7 @@ class TestComplexScenarios:
         mock_response = [{"id": str(cid)} for cid in chunk_ids]
         mock_supabase_client.tables["chunks"].set_response(mock_response)
 
-        chunks = [
-            {"content": f"Chunk {i}", "token_count": 100 + i * 10} for i in range(10)
-        ]
+        chunks = [{"content": f"Chunk {i}", "token_count": 100 + i * 10} for i in range(10)]
 
         result = await supabase_store.store_chunks(doc_id, chunks)
 

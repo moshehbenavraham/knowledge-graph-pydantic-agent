@@ -1,6 +1,6 @@
 # Guides
 
-Task-oriented documentation to help you accomplish specific goals with Base Agent.
+Task-oriented documentation to help you accomplish specific goals with Luminari Agent.
 
 ## Available Guides
 

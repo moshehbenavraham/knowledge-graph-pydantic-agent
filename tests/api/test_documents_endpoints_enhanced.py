@@ -4,7 +4,6 @@ Enhanced tests for document management endpoints.
 Target coverage: 20% → 75%+
 """
 
-import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest

@@ -157,13 +157,22 @@ def test_list_users_multiple(user_manager):
     """Test listing multiple users."""
     # Create multiple users
     user_manager.create_user(
-        username="user1", email="user1@example.com", name="User One", password="Pass1!"  # nosec B106
+        username="user1",
+        email="user1@example.com",
+        name="User One",
+        password="Pass1!",  # nosec B106
     )
     user_manager.create_user(
-        username="user2", email="user2@example.com", name="User Two", password="Pass2!"  # nosec B106
+        username="user2",
+        email="user2@example.com",
+        name="User Two",
+        password="Pass2!",  # nosec B106
     )
     user_manager.create_user(
-        username="user3", email="user3@example.com", name="User Three", password="Pass3!"  # nosec B106
+        username="user3",
+        email="user3@example.com",
+        name="User Three",
+        password="Pass3!",  # nosec B106
     )
 
     # List users

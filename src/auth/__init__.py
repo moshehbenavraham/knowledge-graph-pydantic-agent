@@ -1,4 +1,4 @@
-"""Authentication module for Base Agent.
+"""Authentication module for Luminari Agent.
 
 This module provides user authentication, session management, and user account
 management functionality.

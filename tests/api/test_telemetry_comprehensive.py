@@ -4,14 +4,12 @@ Comprehensive tests for OpenTelemetry instrumentation and Prometheus metrics.
 Target coverage: 0% → 75%+
 """
 
-import time
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi import FastAPI, Request, Response
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.trace import TracerProvider
-from prometheus_client import REGISTRY
 
 from src.api.telemetry import (
     OpenTelemetryConfig,
@@ -201,9 +199,7 @@ class TestSetupTelemetry:
 
         setup_telemetry(app)
 
-        mock_config_class.assert_called_once_with(
-            otlp_endpoint=None, enable_console_export=False
-        )
+        mock_config_class.assert_called_once_with(otlp_endpoint=None, enable_console_export=False)
         mock_config.setup_tracing.assert_called_once()
         mock_config.setup_metrics.assert_called_once()
         mock_config.instrument_fastapi.assert_called_once_with(app)
@@ -244,9 +240,7 @@ class TestRecordingFunctions:
         """Test recording successful LLM request."""
         with patch("src.api.telemetry.llm_requests_total") as mock_total:
             with patch("src.api.telemetry.llm_request_duration_seconds") as mock_duration:
-                record_llm_request(
-                    provider="openai", model="gpt-4", duration=1.5, success=True
-                )
+                record_llm_request(provider="openai", model="gpt-4", duration=1.5, success=True)
 
                 mock_total.labels.assert_called_with(provider="openai", model="gpt-4")
                 mock_duration.labels.assert_called_with(provider="openai", model="gpt-4")

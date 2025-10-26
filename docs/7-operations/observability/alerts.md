@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the alerting strategy, alert definitions, severity levels, and response procedures for the Base Agent / Agentic RAG platform.
+This document describes the alerting strategy, alert definitions, severity levels, and response procedures for the Luminari Agent / Agentic RAG platform.
 
 ## Alert Severity Levels
 
@@ -236,7 +236,7 @@ graph TD
 - For operator: Manages alerting rules
 
 ### Grafana
-- Dashboard: "Base Agent - Alerts"
+- Dashboard: "Luminari Agent - Alerts"
 - Alert visualization
 - Annotation of deployment events
 

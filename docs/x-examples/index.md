@@ -1,6 +1,6 @@
 # Example Documents
 
-Sample documents for testing and demonstrating Base Agent's RAG capabilities.
+Sample documents for testing and demonstrating Luminari Agent's RAG capabilities.
 
 ## About These Examples
 

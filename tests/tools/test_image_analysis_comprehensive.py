@@ -6,7 +6,6 @@ Target: 85%+ coverage of image_analysis.py
 """
 
 import base64
-from io import BytesIO
 from unittest.mock import AsyncMock, Mock, patch
 from uuid import uuid4
 
@@ -123,9 +122,9 @@ class TestImageAnalysisTool:
         """Test OCR-specific analysis."""
         from src.tools.image_analysis import image_analysis_tool
 
-        mock_vision_client.chat.completions.create.return_value.choices[
-            0
-        ].message.content = "Text found: Hello World"
+        mock_vision_client.chat.completions.create.return_value.choices[0].message.content = (
+            "Text found: Hello World"
+        )
 
         with patch("src.tools.image_analysis.get_vision_client", return_value=mock_vision_client):
             result = await image_analysis_tool(
@@ -141,9 +140,9 @@ class TestImageAnalysisTool:
         """Test object detection analysis."""
         from src.tools.image_analysis import image_analysis_tool
 
-        mock_vision_client.chat.completions.create.return_value.choices[
-            0
-        ].message.content = "Objects detected: person, car, tree"
+        mock_vision_client.chat.completions.create.return_value.choices[0].message.content = (
+            "Objects detected: person, car, tree"
+        )
 
         with patch("src.tools.image_analysis.get_vision_client", return_value=mock_vision_client):
             result = await image_analysis_tool(
@@ -159,9 +158,9 @@ class TestImageAnalysisTool:
         """Test scene description analysis."""
         from src.tools.image_analysis import image_analysis_tool
 
-        mock_vision_client.chat.completions.create.return_value.choices[
-            0
-        ].message.content = "A sunny park with people playing frisbee"
+        mock_vision_client.chat.completions.create.return_value.choices[0].message.content = (
+            "A sunny park with people playing frisbee"
+        )
 
         with patch("src.tools.image_analysis.get_vision_client", return_value=mock_vision_client):
             result = await image_analysis_tool(
@@ -215,9 +214,9 @@ class TestImageAnalysisTool:
         from src.tools.image_analysis import image_analysis_tool
 
         # Return invalid base64
-        mock_supabase_client.table().select().eq().execute.return_value.data[0]["content"] = (
-            "invalid_base64"
-        )
+        mock_supabase_client.table().select().eq().execute.return_value.data[0][
+            "content"
+        ] = "invalid_base64"
 
         with patch("src.tools.image_analysis.get_vision_client", return_value=mock_vision_client):
             result = await image_analysis_tool(
@@ -385,9 +384,9 @@ class TestVisionModelIntegration:
             "colors": ["red", "blue"],
         }
 
-        mock_vision_client.chat.completions.create.return_value.choices[
-            0
-        ].message.content = str(complex_response)
+        mock_vision_client.chat.completions.create.return_value.choices[0].message.content = str(
+            complex_response
+        )
 
         with patch("src.tools.image_analysis.get_vision_client", return_value=mock_vision_client):
             from src.tools.image_analysis import image_analysis_tool

@@ -4,8 +4,9 @@ Comprehensive tests for health check endpoints.
 Tests component health, readiness probes, and system status.
 """
 
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi.testclient import TestClient
 
 from src.api.main import app
@@ -20,9 +21,11 @@ def client():
 @pytest.fixture
 def mock_health_checks():
     """Mock health check functions."""
-    with patch("src.api.health_endpoints.check_database_health") as mock_db, patch(
-        "src.api.health_endpoints.check_cache_health"
-    ) as mock_cache, patch("src.api.health_endpoints.check_storage_health") as mock_storage:
+    with (
+        patch("src.api.health_endpoints.check_database_health") as mock_db,
+        patch("src.api.health_endpoints.check_cache_health") as mock_cache,
+        patch("src.api.health_endpoints.check_storage_health") as mock_storage,
+    ):
 
         mock_db.return_value = {"status": "healthy", "latency_ms": 5.2}
         mock_cache.return_value = {"status": "healthy", "hit_rate": 0.85}
@@ -108,7 +111,10 @@ class TestHealthDegradation:
 
     def test_health_with_database_down(self, client, mock_health_checks):
         """Test health when database is down."""
-        mock_health_checks["db"].return_value = {"status": "unhealthy", "error": "Connection failed"}
+        mock_health_checks["db"].return_value = {
+            "status": "unhealthy",
+            "error": "Connection failed",
+        }
 
         response = client.get("/health")
 

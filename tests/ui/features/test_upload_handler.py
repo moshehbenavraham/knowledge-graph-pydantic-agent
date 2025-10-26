@@ -2,7 +2,7 @@
 
 import base64
 import io
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pandas as pd
 import pytest
@@ -46,7 +46,9 @@ def mock_uploaded_file():
         file.name = name
         file.type = file_type
         file.size = size
-        file.read = Mock(return_value=content.encode("utf-8") if isinstance(content, str) else content)
+        file.read = Mock(
+            return_value=content.encode("utf-8") if isinstance(content, str) else content
+        )
         return file
 
     return _create_file

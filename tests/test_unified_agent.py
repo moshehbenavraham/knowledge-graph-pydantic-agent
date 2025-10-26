@@ -25,12 +25,10 @@ with patch.dict(
         "supabase.client": MagicMock(),
     },
 ):
-    from httpx import AsyncClient
-    from openai import AsyncOpenAI
 
     # Import the unified agent
+
     from src.agent import UnifiedAgentDeps, run_unified_agent, super_agent
-    from supabase.client import Client
 
 
 @pytest.fixture

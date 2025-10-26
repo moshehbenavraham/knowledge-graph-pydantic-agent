@@ -46,7 +46,7 @@
 - ✅ Success criteria avoid implementation details (no mention of AST, regex, specific tools)
 - ✅ Six acceptance scenarios per user story provide clear expected behavior
 - ✅ Six edge cases identified covering failure scenarios and scale concerns
-- ✅ Scope bounded by six constitutional principles and Base Agent repository structure
+- ✅ Scope bounded by six constitutional principles and Luminari Agent repository structure
 - ✅ Assumptions section documents seven dependencies (git, pytest-cov, pre-commit, etc.)
 
 ### Feature Readiness Review

@@ -1,6 +1,6 @@
 # Agentic RAG: Complete Guide
 
-**Complete documentation for the Base Agent Agentic RAG system** - from concepts to deployment to roadmap.
+**Complete documentation for the Luminari Agent Agentic RAG system** - from concepts to deployment to roadmap.
 
 ---
 

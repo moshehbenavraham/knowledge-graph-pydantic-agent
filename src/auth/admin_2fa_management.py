@@ -28,11 +28,11 @@ async def is_admin(username: str) -> bool:
     try:
         from src.auth.db import get_user_by_username
 
-        user = await get_user_by_username(username)
+        user = get_user_by_username(username)
         if not user:
             return False
 
-        roles = await get_user_roles(user["id"])
+        roles = get_user_roles(user["id"])
         return any(role.get("name") == "admin" for role in roles)
 
     except Exception as e:
@@ -118,18 +118,21 @@ def render_2fa_management_ui() -> None:
                 )
 
                 # Get user's 2FA setup status
-                from src.auth.totp_2fa import get_totp_manager
+                from src.auth.totp_2fa import get_backup_code_manager, get_totp_manager
 
                 totp_manager = get_totp_manager()
+                backup_code_manager = get_backup_code_manager()
                 try:
-                    status = asyncio.run(totp_manager.get_2fa_status(user["id"]))
-                    is_2fa_enabled = status.get("is_enabled", False)
-                    has_backup_codes = status.get("backup_codes_count", 0) > 0
+                    is_2fa_enabled = asyncio.run(totp_manager.is_2fa_enabled(user["id"]))
+                    backup_codes_count = (
+                        asyncio.run(backup_code_manager.get_unused_count(user["id"]))
+                        if is_2fa_enabled
+                        else 0
+                    )
 
                     if is_2fa_enabled:
                         st.success(
-                            f"✅ User has configured 2FA "
-                            f"({status.get('backup_codes_count', 0)} backup codes remaining)"
+                            f"✅ User has configured 2FA ({backup_codes_count} backup codes remaining)"
                         )
                     else:
                         st.warning("⚠️ User has NOT configured 2FA yet")
@@ -268,12 +271,14 @@ def render_user_2fa_settings(username: str) -> None:
         requires_2fa = user.get("requires_2fa", False)
 
         # Get 2FA status
-        from src.auth.totp_2fa import get_totp_manager
+        from src.auth.totp_2fa import get_backup_code_manager, get_totp_manager
 
         totp_manager = get_totp_manager()
-        status = asyncio.run(totp_manager.get_2fa_status(user_id))
-        is_2fa_enabled = status.get("is_enabled", False)
-        backup_codes_count = status.get("backup_codes_count", 0)
+        backup_code_manager = get_backup_code_manager()
+        is_2fa_enabled = asyncio.run(totp_manager.is_2fa_enabled(user_id))
+        backup_codes_count = (
+            asyncio.run(backup_code_manager.get_unused_count(user_id)) if is_2fa_enabled else 0
+        )
 
         # Display current status
         if requires_2fa:

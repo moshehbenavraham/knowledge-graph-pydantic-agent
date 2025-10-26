@@ -2,7 +2,7 @@
 
 ## Overview
 
-This comprehensive checklist ensures all systems, processes, and documentation are ready for production deployment of the Base Agent / Agentic RAG platform.
+This comprehensive checklist ensures all systems, processes, and documentation are ready for production deployment of the Luminari Agent / Agentic RAG platform.
 
 ---
 

@@ -47,7 +47,9 @@ class TestListDocumentsEndpoint:
 
     def test_list_documents_success(self, test_client, mock_document_dependencies):
         """Test successful document listing."""
-        with patch("src.api.endpoints.documents.list_documents_tool", new_callable=AsyncMock) as mock_list:
+        with patch(
+            "src.api.endpoints.documents.list_documents_tool", new_callable=AsyncMock
+        ) as mock_list:
             mock_list.return_value = [
                 {"id": str(uuid4()), "file_path": "doc1.pdf", "type": "pdf"},
                 {"id": str(uuid4()), "file_path": "doc2.txt", "type": "text"},
@@ -59,7 +61,9 @@ class TestListDocumentsEndpoint:
 
     def test_list_documents_empty(self, test_client, mock_document_dependencies):
         """Test listing when no documents exist."""
-        with patch("src.api.endpoints.documents.list_documents_tool", new_callable=AsyncMock) as mock_list:
+        with patch(
+            "src.api.endpoints.documents.list_documents_tool", new_callable=AsyncMock
+        ) as mock_list:
             mock_list.return_value = []
 
             response = test_client.get("/documents")
@@ -68,7 +72,9 @@ class TestListDocumentsEndpoint:
 
     def test_list_documents_with_pagination(self, test_client, mock_document_dependencies):
         """Test document listing with pagination."""
-        with patch("src.api.endpoints.documents.list_documents_tool", new_callable=AsyncMock) as mock_list:
+        with patch(
+            "src.api.endpoints.documents.list_documents_tool", new_callable=AsyncMock
+        ) as mock_list:
             mock_list.return_value = [{"id": str(uuid4())} for _ in range(10)]
 
             response = test_client.get("/documents?limit=10&offset=0")
@@ -77,7 +83,9 @@ class TestListDocumentsEndpoint:
 
     def test_list_documents_filter_by_type(self, test_client, mock_document_dependencies):
         """Test filtering documents by type."""
-        with patch("src.api.endpoints.documents.list_documents_tool", new_callable=AsyncMock) as mock_list:
+        with patch(
+            "src.api.endpoints.documents.list_documents_tool", new_callable=AsyncMock
+        ) as mock_list:
             mock_list.return_value = [{"id": str(uuid4()), "type": "pdf"}]
 
             response = test_client.get("/documents?type=pdf")
@@ -86,7 +94,9 @@ class TestListDocumentsEndpoint:
 
     def test_list_documents_error_handling(self, test_client, mock_document_dependencies):
         """Test error handling in document listing."""
-        with patch("src.api.endpoints.documents.list_documents_tool", new_callable=AsyncMock) as mock_list:
+        with patch(
+            "src.api.endpoints.documents.list_documents_tool", new_callable=AsyncMock
+        ) as mock_list:
             mock_list.side_effect = Exception("Database error")
 
             response = test_client.get("/documents")
@@ -100,7 +110,9 @@ class TestGetDocumentEndpoint:
     def test_get_document_success(self, test_client, mock_document_dependencies):
         """Test successful document retrieval."""
         doc_id = str(uuid4())
-        with patch("src.api.endpoints.documents.get_document_content_tool", new_callable=AsyncMock) as mock_get:
+        with patch(
+            "src.api.endpoints.documents.get_document_content_tool", new_callable=AsyncMock
+        ) as mock_get:
             mock_get.return_value = {
                 "id": doc_id,
                 "file_path": "test.pdf",
@@ -115,7 +127,9 @@ class TestGetDocumentEndpoint:
     def test_get_document_not_found(self, test_client, mock_document_dependencies):
         """Test getting non-existent document."""
         doc_id = str(uuid4())
-        with patch("src.api.endpoints.documents.get_document_content_tool", new_callable=AsyncMock) as mock_get:
+        with patch(
+            "src.api.endpoints.documents.get_document_content_tool", new_callable=AsyncMock
+        ) as mock_get:
             mock_get.return_value = None
 
             response = test_client.get(f"/documents/{doc_id}")
@@ -125,7 +139,9 @@ class TestGetDocumentEndpoint:
     def test_get_document_with_chunks(self, test_client, mock_document_dependencies):
         """Test getting document with chunks."""
         doc_id = str(uuid4())
-        with patch("src.api.endpoints.documents.get_document_content_tool", new_callable=AsyncMock) as mock_get:
+        with patch(
+            "src.api.endpoints.documents.get_document_content_tool", new_callable=AsyncMock
+        ) as mock_get:
             mock_get.return_value = {
                 "id": doc_id,
                 "chunks": [
@@ -151,7 +167,9 @@ class TestUploadDocumentEndpoint:
 
     def test_upload_document_pdf(self, test_client, mock_document_dependencies):
         """Test uploading PDF document."""
-        with patch("src.api.endpoints.documents.process_document", new_callable=AsyncMock) as mock_process:
+        with patch(
+            "src.api.endpoints.documents.process_document", new_callable=AsyncMock
+        ) as mock_process:
             mock_process.return_value = {"document_id": str(uuid4()), "chunks_created": 10}
 
             # Create fake PDF file
@@ -167,7 +185,9 @@ class TestUploadDocumentEndpoint:
 
     def test_upload_document_text(self, test_client, mock_document_dependencies):
         """Test uploading text document."""
-        with patch("src.api.endpoints.documents.process_document", new_callable=AsyncMock) as mock_process:
+        with patch(
+            "src.api.endpoints.documents.process_document", new_callable=AsyncMock
+        ) as mock_process:
             mock_process.return_value = {"document_id": str(uuid4()), "chunks_created": 5}
 
             file_data = BytesIO(b"Plain text content")
@@ -180,7 +200,9 @@ class TestUploadDocumentEndpoint:
 
     def test_upload_document_large_file(self, test_client, mock_document_dependencies):
         """Test uploading large document."""
-        with patch("src.api.endpoints.documents.process_document", new_callable=AsyncMock) as mock_process:
+        with patch(
+            "src.api.endpoints.documents.process_document", new_callable=AsyncMock
+        ) as mock_process:
             mock_process.return_value = {"document_id": str(uuid4())}
 
             # 5MB file
@@ -218,7 +240,9 @@ class TestDeleteDocumentEndpoint:
     def test_delete_document_success(self, test_client, mock_document_dependencies):
         """Test successful document deletion."""
         doc_id = str(uuid4())
-        with patch("src.api.endpoints.documents.delete_document", new_callable=AsyncMock) as mock_delete:
+        with patch(
+            "src.api.endpoints.documents.delete_document", new_callable=AsyncMock
+        ) as mock_delete:
             mock_delete.return_value = {"success": True, "deleted_chunks": 10}
 
             response = test_client.delete(f"/documents/{doc_id}")
@@ -228,7 +252,9 @@ class TestDeleteDocumentEndpoint:
     def test_delete_document_not_found(self, test_client, mock_document_dependencies):
         """Test deleting non-existent document."""
         doc_id = str(uuid4())
-        with patch("src.api.endpoints.documents.delete_document", new_callable=AsyncMock) as mock_delete:
+        with patch(
+            "src.api.endpoints.documents.delete_document", new_callable=AsyncMock
+        ) as mock_delete:
             mock_delete.return_value = None
 
             response = test_client.delete(f"/documents/{doc_id}")
@@ -238,7 +264,9 @@ class TestDeleteDocumentEndpoint:
     def test_delete_document_cascade(self, test_client, mock_document_dependencies):
         """Test document deletion cascades to chunks."""
         doc_id = str(uuid4())
-        with patch("src.api.endpoints.documents.delete_document", new_callable=AsyncMock) as mock_delete:
+        with patch(
+            "src.api.endpoints.documents.delete_document", new_callable=AsyncMock
+        ) as mock_delete:
             mock_delete.return_value = {
                 "success": True,
                 "deleted_chunks": 25,
@@ -256,7 +284,9 @@ class TestDocumentMetadataEndpoint:
     def test_get_document_metadata(self, test_client, mock_document_dependencies):
         """Test getting document metadata."""
         doc_id = str(uuid4())
-        with patch("src.api.endpoints.documents.get_document_metadata", new_callable=AsyncMock) as mock_get:
+        with patch(
+            "src.api.endpoints.documents.get_document_metadata", new_callable=AsyncMock
+        ) as mock_get:
             mock_get.return_value = {
                 "file_type": "pdf",
                 "pages": 10,
@@ -271,7 +301,9 @@ class TestDocumentMetadataEndpoint:
     def test_update_document_metadata(self, test_client, mock_document_dependencies):
         """Test updating document metadata."""
         doc_id = str(uuid4())
-        with patch("src.api.endpoints.documents.update_document_metadata", new_callable=AsyncMock) as mock_update:
+        with patch(
+            "src.api.endpoints.documents.update_document_metadata", new_callable=AsyncMock
+        ) as mock_update:
             mock_update.return_value = {"success": True}
 
             response = test_client.patch(
@@ -287,7 +319,9 @@ class TestDocumentSearch:
 
     def test_search_documents_by_content(self, test_client, mock_document_dependencies):
         """Test searching documents by content."""
-        with patch("src.api.endpoints.documents.search_documents", new_callable=AsyncMock) as mock_search:
+        with patch(
+            "src.api.endpoints.documents.search_documents", new_callable=AsyncMock
+        ) as mock_search:
             mock_search.return_value = [
                 {"id": str(uuid4()), "file_path": "match1.pdf", "score": 0.95},
                 {"id": str(uuid4()), "file_path": "match2.pdf", "score": 0.85},
@@ -299,7 +333,9 @@ class TestDocumentSearch:
 
     def test_search_documents_by_tags(self, test_client, mock_document_dependencies):
         """Test searching documents by tags."""
-        with patch("src.api.endpoints.documents.search_documents", new_callable=AsyncMock) as mock_search:
+        with patch(
+            "src.api.endpoints.documents.search_documents", new_callable=AsyncMock
+        ) as mock_search:
             mock_search.return_value = [{"id": str(uuid4()), "tags": ["AI", "ML"]}]
 
             response = test_client.get("/documents/search?tags=AI,ML")
@@ -319,7 +355,9 @@ class TestDocumentAnalytics:
 
     def test_document_stats(self, test_client, mock_document_dependencies):
         """Test getting document statistics."""
-        with patch("src.api.endpoints.documents.get_document_stats", new_callable=AsyncMock) as mock_stats:
+        with patch(
+            "src.api.endpoints.documents.get_document_stats", new_callable=AsyncMock
+        ) as mock_stats:
             mock_stats.return_value = {
                 "total_documents": 100,
                 "total_chunks": 5000,
@@ -332,7 +370,9 @@ class TestDocumentAnalytics:
 
     def test_document_storage_usage(self, test_client, mock_document_dependencies):
         """Test getting storage usage statistics."""
-        with patch("src.api.endpoints.documents.get_storage_usage", new_callable=AsyncMock) as mock_usage:
+        with patch(
+            "src.api.endpoints.documents.get_storage_usage", new_callable=AsyncMock
+        ) as mock_usage:
             mock_usage.return_value = {
                 "total_size_bytes": 1073741824,  # 1GB
                 "by_type": {"pdf": 536870912, "txt": 104857600},
@@ -348,7 +388,9 @@ class TestBatchOperations:
 
     def test_batch_upload(self, test_client, mock_document_dependencies):
         """Test batch document upload."""
-        with patch("src.api.endpoints.documents.process_documents_batch", new_callable=AsyncMock) as mock_batch:
+        with patch(
+            "src.api.endpoints.documents.process_documents_batch", new_callable=AsyncMock
+        ) as mock_batch:
             mock_batch.return_value = {
                 "processed": 3,
                 "failed": 0,
@@ -367,7 +409,9 @@ class TestBatchOperations:
 
     def test_batch_delete(self, test_client, mock_document_dependencies):
         """Test batch document deletion."""
-        with patch("src.api.endpoints.documents.delete_documents_batch", new_callable=AsyncMock) as mock_batch:
+        with patch(
+            "src.api.endpoints.documents.delete_documents_batch", new_callable=AsyncMock
+        ) as mock_batch:
             mock_batch.return_value = {"deleted": 3, "failed": 0}
 
             doc_ids = [str(uuid4()) for _ in range(3)]

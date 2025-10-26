@@ -1,5 +1,5 @@
 groups:
-  - name: base_agent_alerts
+  - name: luminari_agent_alerts
     interval: 30s
     rules:
       # ========================================
@@ -7,7 +7,7 @@ groups:
       # ========================================
 
       - alert: ServiceDown
-        expr: up{job=~"base-agent.*"} == 0
+        expr: up{job=~"luminari-agent.*"} == 0
         for: 1m
         labels:
           severity: critical

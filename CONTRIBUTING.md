@@ -1,6 +1,6 @@
-# Contributing to Base Agent
+# Contributing to Luminari Agent
 
-Thank you for your interest in contributing to Base Agent! This guide will help you get started with contributing to our production-ready AI assistant with Agentic RAG capabilities.
+Thank you for your interest in contributing to Luminari Agent! This guide will help you get started with contributing to our production-ready AI assistant with Agentic RAG capabilities.
 
 ## 🤝 Code of Conduct
 
@@ -379,4 +379,4 @@ If you need help:
 
 ---
 
-Thank you for contributing to Base Agent! Your efforts help make this project better for everyone. 🚀
+Thank you for contributing to Luminari Agent! Your efforts help make this project better for everyone. 🚀

@@ -12,9 +12,7 @@ Covers:
 """
 
 import subprocess
-import sys
-from pathlib import Path
-from unittest.mock import ANY, MagicMock, Mock, PropertyMock, mock_open, patch
+from unittest.mock import Mock, patch
 
 import pytest
 from click.testing import CliRunner
@@ -61,6 +59,7 @@ class TestGetStagedFiles:
         mock_result.stdout = "deleted_file.py\nexisting_file.py\n"
 
         with patch("subprocess.run", return_value=mock_result):
+
             def mock_exists(self):
                 return "existing" in str(self)
 
@@ -256,9 +255,9 @@ class TestCheckDependencies:
 
     def test_check_dependencies_gitpython_missing(self):
         """Test check_dependencies when GitPython missing."""
-        from src.constitution_validator.cli import DependencyCheckError, check_dependencies
-
         import importlib
+
+        from src.constitution_validator.cli import DependencyCheckError, check_dependencies
 
         original_import = importlib.import_module
 
@@ -464,7 +463,10 @@ class TestValidateCommand:
         from src.constitution_validator.cli import cli
 
         with patch("src.constitution_validator.cli.check_dependencies"):
-            with patch("src.constitution_validator.cli._discover_files", side_effect=Exception("Test error")):
+            with patch(
+                "src.constitution_validator.cli._discover_files",
+                side_effect=Exception("Test error"),
+            ):
                 result = runner.invoke(cli, ["validate"])
 
         assert result.exit_code == 1
@@ -533,35 +535,52 @@ class TestValidateCommandComplexScenarios:
                                     principle_id="II",
                                     name="Centralized Configuration",
                                     description="Test",
-                                    rules=[]
+                                    rules=[],
                                 )
                             ]
                             mock_loader.return_value.load = Mock(return_value=mock_const)
 
                             # Mock rules to return violations
-                            with patch("src.constitution_validator.cli.CentralizedConfigRule") as mock_rule_class:
+                            with patch(
+                                "src.constitution_validator.cli.CentralizedConfigRule"
+                            ) as mock_rule_class:
                                 from src.constitution_validator.models import Violation
 
                                 mock_rule = Mock()
-                                mock_rule.execute = Mock(return_value=[
-                                    Violation(
-                                        principle_id="II",
-                                        rule_id="CONST-II-001",
-                                        severity="error",
-                                        message="Use centralized config",
-                                        location="bad.py:2:1",
-                                        remediation="Fix it",
-                                        suppressed=False
-                                    )
-                                ])
+                                mock_rule.execute = Mock(
+                                    return_value=[
+                                        Violation(
+                                            principle_id="II",
+                                            rule_id="CONST-II-001",
+                                            severity="error",
+                                            message="Use centralized config",
+                                            location="bad.py:2:1",
+                                            remediation="Fix it",
+                                            suppressed=False,
+                                        )
+                                    ]
+                                )
                                 mock_rule_class.return_value = mock_rule
 
                                 with patch("src.constitution_validator.cli.UnifiedAgentRule"):
                                     with patch("src.constitution_validator.cli.DualDatabaseRule"):
-                                        with patch("src.constitution_validator.cli.ObservabilityRule"):
-                                            with patch("src.constitution_validator.cli.TestCoverageRule"):
-                                                with patch("src.constitution_validator.cli.GitAttributionRule"):
-                                                    result = runner.invoke(cli, ["validate", "--skip-git", "--skip-coverage"])
+                                        with patch(
+                                            "src.constitution_validator.cli.ObservabilityRule"
+                                        ):
+                                            with patch(
+                                                "src.constitution_validator.cli.TestCoverageRule"
+                                            ):
+                                                with patch(
+                                                    "src.constitution_validator.cli.GitAttributionRule"
+                                                ):
+                                                    result = runner.invoke(
+                                                        cli,
+                                                        [
+                                                            "validate",
+                                                            "--skip-git",
+                                                            "--skip-coverage",
+                                                        ],
+                                                    )
 
         # Should fail due to violations
         assert result.exit_code == 1
@@ -586,7 +605,9 @@ class TestValidateCommandComplexScenarios:
                             mock_const.principles = []
                             mock_loader.return_value.load = Mock(return_value=mock_const)
 
-                            result = runner.invoke(cli, ["validate", "--skip-git", "--skip-coverage"])
+                            result = runner.invoke(
+                                cli, ["validate", "--skip-git", "--skip-coverage"]
+                            )
 
         # Should continue despite parse failure
         assert result.exit_code in [0, 1]
@@ -604,9 +625,13 @@ class TestValidateCommandComplexScenarios:
                         mock_const.principles = []
                         mock_loader.return_value.load = Mock(return_value=mock_const)
 
-                        with patch("src.constitution_validator.cli.TestCoverageRule") as mock_rule_class:
+                        with patch(
+                            "src.constitution_validator.cli.TestCoverageRule"
+                        ) as mock_rule_class:
                             mock_rule = Mock()
-                            mock_rule.execute_coverage_check = Mock(side_effect=Exception("Coverage error"))
+                            mock_rule.execute_coverage_check = Mock(
+                                side_effect=Exception("Coverage error")
+                            )
                             mock_rule_class.return_value = mock_rule
 
                             result = runner.invoke(cli, ["validate", "--skip-git"])
@@ -627,7 +652,9 @@ class TestValidateCommandComplexScenarios:
                         mock_const.principles = []
                         mock_loader.return_value.load = Mock(return_value=mock_const)
 
-                        with patch("src.constitution_validator.cli.GitAttributionRule") as mock_rule_class:
+                        with patch(
+                            "src.constitution_validator.cli.GitAttributionRule"
+                        ) as mock_rule_class:
                             mock_rule = Mock()
                             mock_rule.execute_git_check = Mock(side_effect=Exception("Git error"))
                             mock_rule_class.return_value = mock_rule

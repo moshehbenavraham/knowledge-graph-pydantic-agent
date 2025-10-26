@@ -7,7 +7,7 @@ This file provides guidance to Agentic Coding Agents (such as Claude Code) when 
 
 ## Project Overview
 
-**Base Agent** is a unified AI assistant with Agentic RAG (Retrieval Augmented Generation) capabilities, combining vector search (PostgreSQL/Supabase + pgvector), knowledge graph (Neo4j + Graphiti), and intelligent routing. Built with Pydantic AI, it provides comprehensive tooling for document retrieval, web search, image analysis, SQL queries, and code execution.
+**Luminari Agent** is a unified AI assistant with Agentic RAG (Retrieval Augmented Generation) capabilities, combining vector search (PostgreSQL/Supabase + pgvector), knowledge graph (Neo4j + Graphiti), and intelligent routing. Built with Pydantic AI, it provides comprehensive tooling for document retrieval, web search, image analysis, SQL queries, and code execution.
 
 **Phase 3 Completion Status (2025-10-08):**
 - ✅ All critical ingestion pipeline issues resolved

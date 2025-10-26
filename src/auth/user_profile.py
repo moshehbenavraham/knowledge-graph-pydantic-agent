@@ -35,7 +35,7 @@ async def get_user_info(username: str) -> dict | None:
         User record or None
     """
     try:
-        user = await get_user_by_username(username)
+        user = get_user_by_username(username)
         return user
     except Exception as e:
         logger.error("Failed to get user info", username=username, error=str(e))
@@ -59,12 +59,12 @@ async def change_user_password(
         from src.auth.db import verify_user_password
 
         # Verify current password
-        user = await verify_user_password(username, current_password)
+        user = verify_user_password(username, current_password)
         if not user:
             return (False, "Current password is incorrect.")
 
         # Update password
-        await update_user_password(user["id"], new_password)
+        update_user_password(user["id"], new_password)
 
         logger.info("Password changed successfully", username=username)
         return (True, "Password changed successfully!")

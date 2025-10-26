@@ -49,7 +49,9 @@ class TestExtractAndStoreKnowledge:
         mock_store.add_episodes.return_value = ["episode-1", "episode-2"]
         mock_store.update_entity_importance.return_value = None
 
-        with patch.object(client, "extract_entities", return_value=[{"name": "Test", "type": "company"}]):
+        with patch.object(
+            client, "extract_entities", return_value=[{"name": "Test", "type": "company"}]
+        ):
             with patch.object(client, "extract_relationships", return_value=[{"type": "RELATED"}]):
                 with patch.object(client, "extract_facts", return_value=["Fact 1", "Fact 2"]):
                     result = await client.extract_and_store_knowledge(
@@ -125,7 +127,11 @@ class TestEntityExtraction:
         mock_llm.extract.side_effect = Exception("LLM error")
         client = GraphitiClient(neo4j_store=mock_store, llm_client=mock_llm)
 
-        with patch.object(client, "_extract_entities_simple", return_value=[{"name": "Fallback", "type": "company"}]):
+        with patch.object(
+            client,
+            "_extract_entities_simple",
+            return_value=[{"name": "Fallback", "type": "company"}],
+        ):
             entities = await client.extract_entities("test")
 
         assert len(entities) == 1
@@ -507,9 +513,7 @@ class TestConnections:
             [{"id": "e1", "name": "Entity1"}],
             [{"id": "e2", "name": "Entity2"}],
         ]
-        mock_store.find_paths.return_value = [
-            {"path": ["e1", "rel1", "e2"], "length": 1}
-        ]
+        mock_store.find_paths.return_value = [{"path": ["e1", "rel1", "e2"], "length": 1}]
         client = GraphitiClient(neo4j_store=mock_store)
 
         paths = await client.find_connections("Entity1", "Entity2")

@@ -1,6 +1,6 @@
 # Configuration Guide
 
-Configure Base Agent using the centralized Pydantic settings system with type safety and runtime validation.
+Configure Luminari Agent using the centralized Pydantic settings system with type safety and runtime validation.
 
 ## Configuration Architecture
 
@@ -322,4 +322,4 @@ print(client.complete('Hello'))
 
 ---
 
-**Configuration Complete!** Your Base Agent is now configured for your environment.
+**Configuration Complete!** Your Luminari Agent is now configured for your environment.

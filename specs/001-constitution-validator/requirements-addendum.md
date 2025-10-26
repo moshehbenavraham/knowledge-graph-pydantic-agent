@@ -583,11 +583,11 @@ if (major, minor) < (2, 25):
 
 **Behavior**:
 1. Check for `src/` directory existence
-2. If missing: Log warning: `Warning: src/ directory not found. Is this a Base Agent repository?`
+2. If missing: Log warning: `Warning: src/ directory not found. Is this a Luminari Agent repository?`
 3. Continue validation on files found in current directory
 4. If zero Python files found: Exit with error: `Fatal: No Python files found to validate`
 
-**No Strict Requirement**: Validator should work on any Python codebase, not just Base Agent structure.
+**No Strict Requirement**: Validator should work on any Python codebase, not just Luminari Agent structure.
 
 ---
 
@@ -622,16 +622,16 @@ dependencies = [
 
 ---
 
-### CHK112: Dependency Conflicts with Base Agent
+### CHK112: Dependency Conflicts with Luminari Agent
 
-**Requirement**: Ensure validator dependencies don't conflict with Base Agent's existing dependencies:
+**Requirement**: Ensure validator dependencies don't conflict with Luminari Agent's existing dependencies:
 
 **Strategy**:
 - Review `pyproject.toml` for version overlaps
 - Use compatible version ranges, not exact pins
-- Test validator installation in Base Agent virtualenv
+- Test validator installation in Luminari Agent virtualenv
 
-**Known Dependencies** (Base Agent):
+**Known Dependencies** (Luminari Agent):
 - `pydantic>=2.0` (required by validator models)
 - `pytest>=7.0` (required by pytest-cov)
 - `click>=8.0` (validator CLI)
@@ -644,7 +644,7 @@ dependencies = [
 **Validation**:
 ```bash
 # Test for conflicts
-pip install -e .[dev]  # Base Agent dependencies
+pip install -e .[dev]  # Luminari Agent dependencies
 pip install GitPython pathspec click  # Validator dependencies
 # Should complete without conflicts
 ```

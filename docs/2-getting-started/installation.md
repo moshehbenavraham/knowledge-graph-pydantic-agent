@@ -1,6 +1,6 @@
 # Complete Installation Guide
 
-Detailed setup instructions for Base Agent with all features enabled.
+Detailed setup instructions for Luminari Agent with all features enabled.
 
 ## System Requirements
 
@@ -273,7 +273,7 @@ make docker-run
 ```
 
 **What's included:**
-- Base Agent application container
+- Luminari Agent application container
 - PostgreSQL database
 - Redis cache
 - Neo4j knowledge graph
@@ -329,4 +329,4 @@ pip install -e .[dev,rag] --force-reinstall
 
 **Installation Complete!** 🎉
 
-You now have a fully functional Base Agent with all features enabled.
+You now have a fully functional Luminari Agent with all features enabled.

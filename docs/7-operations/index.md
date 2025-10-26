@@ -1,6 +1,6 @@
 # Operations
 
-Running, monitoring, and maintaining Base Agent in production.
+Running, monitoring, and maintaining Luminari Agent in production.
 
 ## Operations Documentation
 

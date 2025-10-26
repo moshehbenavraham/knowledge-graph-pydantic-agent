@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to the Base Agent project are documented in this file.
+All notable changes to the Luminari Agent project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -21,7 +21,7 @@ This release implements a comprehensive two-layer authentication system for the 
 
 **Defense-in-Depth Security Model**:
 ```
-Internet → ngrok (Layer 1: Basic Auth) → Streamlit (Layer 2: User Auth) → Base Agent App
+Internet → ngrok (Layer 1: Basic Auth) → Streamlit (Layer 2: User Auth) → Luminari Agent App
 ```
 
 **Layer 1**: Network-level HTTP Basic Authentication (ngrok)
@@ -61,7 +61,7 @@ Internet → ngrok (Layer 1: Basic Auth) → Streamlit (Layer 2: User Auth) → 
 
 **`streamlit_auth.py`** (211 lines):
 - `require_authentication()` - Main authentication gate (called at app startup)
-- `render_login_page()` - Beautiful gradient login UI with Base Agent branding
+- `render_login_page()` - Beautiful gradient login UI with Luminari Agent branding
 - `render_logout_button()` - Sidebar logout functionality
 - `load_auth_config()` - Configuration file loader with validation
 - `get_authenticator()` - Authenticator factory with proper initialization
@@ -88,7 +88,7 @@ Internet → ngrok (Layer 1: Basic Auth) → Streamlit (Layer 2: User Auth) → 
 - Automatic rerun on successful authentication
 
 **Login Page Features**:
-- Gradient background (purple/blue) matching Base Agent branding
+- Gradient background (purple/blue) matching Luminari Agent branding
 - Clean, modern UI with centered form
 - Clear error messages for invalid credentials
 - User-friendly prompts and instructions
@@ -185,7 +185,7 @@ pip install -e .[auth]  # Install authentication dependencies
 **Layer 2 (Streamlit)**:
 - Username: `admin`
 - Password: `Admin2025!Secure`
-- Email: `admin@baseagent.local`
+- Email: `max@aiwithapex.com`
 - Name: `Administrator`
 - Location: `config/auth_config.yaml` (bcrypt hashed)
 

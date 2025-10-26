@@ -1,6 +1,6 @@
 # Testing Guide
 
-This document provides comprehensive guidance for testing the Base Agent platform, including Phase 3 Agent Intelligence Layer components, setup, execution, and best practices.
+This document provides comprehensive guidance for testing the Luminari Agent platform, including Phase 3 Agent Intelligence Layer components, setup, execution, and best practices.
 
 ## Table of Contents
 
@@ -17,7 +17,7 @@ This document provides comprehensive guidance for testing the Base Agent platfor
 
 ## Overview
 
-The Base Agent platform uses a comprehensive testing strategy that includes:
+The Luminari Agent platform uses a comprehensive testing strategy that includes:
 
 - **Unit Tests**: Testing individual components in isolation
 - **Integration Tests**: Testing component interactions
@@ -891,7 +891,7 @@ repos:
 #!/bin/bash
 set -e
 
-echo "Running Base Agent Test Suite..."
+echo "Running Luminari Agent Test Suite..."
 
 # Activate virtual environment
 source venv/bin/activate

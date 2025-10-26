@@ -1,4 +1,4 @@
-# Base Agent - Technical Product Requirements Document
+# Luminari Agent - Technical Product Requirements Document
 
 **Document Version:** 2.0
 **Last Updated:** December 2024
@@ -30,7 +30,7 @@
 
 ### Technical Description
 
-The Base Agent is a production-ready AI assistant platform featuring the **Unified Super Agent** - a single, powerful implementation that combines ALL capabilities. Built with Pydantic AI, it provides intelligent automation through comprehensive tooling including smart search, web intelligence, data analysis, and code execution.
+The Luminari Agent is a production-ready AI assistant platform featuring the **Unified Super Agent** - a single, powerful implementation that combines ALL capabilities. Built with Pydantic AI, it provides intelligent automation through comprehensive tooling including smart search, web intelligence, data analysis, and code execution.
 
 ### Key Technical Capabilities (Unified Agent)
 
@@ -1577,4 +1577,4 @@ Closes #123
 
 ---
 
-This technical PRD provides comprehensive specifications for implementing the Base Agent system. The document focuses on technical architecture, implementation details, and engineering requirements while maintaining clarity for both development teams and technical stakeholders.
+This technical PRD provides comprehensive specifications for implementing the Luminari Agent system. The document focuses on technical architecture, implementation details, and engineering requirements while maintaining clarity for both development teams and technical stakeholders.

@@ -1,6 +1,6 @@
-# Base Agent - Overview
+# Luminari Agent - Overview
 
-## What is Base Agent?
+## What is Luminari Agent?
 
 Enterprise-grade unified AI platform built on [Pydantic AI](https://ai.pydantic.dev/). Consolidates multiple AI capabilities into a single intelligent agent with intelligent routing, parallel execution, and enterprise-grade resilience.
 

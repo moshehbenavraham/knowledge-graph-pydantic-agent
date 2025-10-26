@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document provides security hardening guidelines for the Base Agent / Agentic RAG platform deployment on Docker hosts.
+This document provides security hardening guidelines for the Luminari Agent / Agentic RAG platform deployment on Docker hosts.
 
 ## Container Security
 

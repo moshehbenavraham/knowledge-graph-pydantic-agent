@@ -67,8 +67,7 @@ with patch.dict(os.environ, TEST_ENV_VARS):
     from pydantic_ai.messages import ModelRequest, ModelResponse
 
     from agent.unified_agent import super_agent as agent
-    from ui.streamlit_app import display_message_part, initialize_session_state
-    from ui.features.base_handler import SimpleHandler
+    from ui.streamlit_app import display_message_part
 
 
 class TestCompleteUserWorkflows:

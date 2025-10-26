@@ -13,21 +13,15 @@ Covers:
 - main() app initialization and routing
 """
 
-import asyncio
 import json
 import tempfile
-from datetime import datetime
-from pathlib import Path
 from unittest import mock
-from unittest.mock import ANY, AsyncMock, MagicMock, Mock, PropertyMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
-import pandas as pd
 import pytest
-from httpx import AsyncClient
 from pydantic_ai.messages import (
     ModelRequest,
     ModelResponse,
-    SystemPromptPart,
     TextPart,
     ToolCallPart,
     ToolReturnPart,
@@ -303,11 +297,7 @@ class TestDisplayMessagePart:
         mock_config.features = {"tools_visibility": True}
         mock_streamlit.session_state.config = mock_config
 
-        part = Mock(
-            part_kind="tool-call",
-            tool_name="test_tool",
-            args={"param": "value"}
-        )
+        part = Mock(part_kind="tool-call", tool_name="test_tool", args={"param": "value"})
         display_message_part(part)
 
         mock_streamlit.expander.assert_called()
@@ -320,11 +310,7 @@ class TestDisplayMessagePart:
         mock_config.features = {"tools_visibility": True}
         mock_streamlit.session_state.config = mock_config
 
-        part = Mock(
-            part_kind="tool-call",
-            tool_name="test_tool",
-            args='{"param": "value"}'
-        )
+        part = Mock(part_kind="tool-call", tool_name="test_tool", args='{"param": "value"}')
         display_message_part(part)
 
         mock_streamlit.expander.assert_called()
@@ -337,11 +323,7 @@ class TestDisplayMessagePart:
         mock_config.features = {"tools_visibility": True}
         mock_streamlit.session_state.config = mock_config
 
-        part = Mock(
-            part_kind="tool-call",
-            tool_name="test_tool",
-            args=""
-        )
+        part = Mock(part_kind="tool-call", tool_name="test_tool", args="")
         display_message_part(part)
 
     def test_tool_call_with_invalid_json(self, mock_streamlit):
@@ -352,11 +334,7 @@ class TestDisplayMessagePart:
         mock_config.features = {"tools_visibility": True}
         mock_streamlit.session_state.config = mock_config
 
-        part = Mock(
-            part_kind="tool-call",
-            tool_name="test_tool",
-            args="not valid json"
-        )
+        part = Mock(part_kind="tool-call", tool_name="test_tool", args="not valid json")
         display_message_part(part)
 
         # Should fall back to code display
@@ -370,11 +348,7 @@ class TestDisplayMessagePart:
         mock_config.features = {"tools_visibility": True}
         mock_streamlit.session_state.config = mock_config
 
-        part = Mock(
-            part_kind="tool-return",
-            tool_name="test_tool",
-            content="result data"
-        )
+        part = Mock(part_kind="tool-return", tool_name="test_tool", content="result data")
         display_message_part(part)
 
         mock_streamlit.expander.assert_called()
@@ -388,11 +362,7 @@ class TestDisplayMessagePart:
         mock_streamlit.session_state.config = mock_config
 
         long_content = "x" * 3000
-        part = Mock(
-            part_kind="tool-return",
-            tool_name="test_tool",
-            content=long_content
-        )
+        part = Mock(part_kind="tool-return", tool_name="test_tool", content=long_content)
         display_message_part(part)
 
         # Should show truncation message
@@ -553,16 +523,8 @@ class TestExportConversation:
 
         # Create messages with tool calls (should be filtered)
         user_part = UserPromptPart(content="Search for X")
-        tool_call_part = ToolCallPart(
-            tool_name="search",
-            args={"query": "X"},
-            tool_call_id="123"
-        )
-        tool_return_part = ToolReturnPart(
-            tool_name="search",
-            content="Results",
-            tool_call_id="123"
-        )
+        tool_call_part = ToolCallPart(tool_name="search", args={"query": "X"}, tool_call_id="123")
+        tool_return_part = ToolReturnPart(tool_name="search", content="Results", tool_call_id="123")
         text_part = TextPart(content="Here are the results")
 
         msg = ModelResponse(parts=[user_part, tool_call_part, tool_return_part, text_part])
@@ -590,10 +552,9 @@ class TestHandleUserInput:
         from src.ui.streamlit_app import handle_user_input
 
         mock_handler = AsyncMock()
-        mock_handler.run_agent = AsyncMock(return_value={
-            "response": "Test response",
-            "new_messages": []
-        })
+        mock_handler.run_agent = AsyncMock(
+            return_value={"response": "Test response", "new_messages": []}
+        )
 
         mock_config = Mock()
         mock_config.mode = Mock(value="simple")
@@ -646,16 +607,8 @@ class TestHandleUserInput:
 
         async def mock_stream():
             yield {"type": "start", "content": "Searching"}
-            yield {
-                "type": "tool-call",
-                "tool_name": "search",
-                "args": {"query": "test"}
-            }
-            yield {
-                "type": "tool-return",
-                "tool_name": "search",
-                "content": "Results"
-            }
+            yield {"type": "tool-call", "tool_name": "search", "args": {"query": "test"}}
+            yield {"type": "tool-return", "tool_name": "search", "content": "Results"}
             yield {"type": "delta", "content": "..."}
             yield {"type": "complete", "new_messages": []}
 
@@ -681,9 +634,7 @@ class TestHandleUserInput:
         from src.ui.streamlit_app import handle_user_input
 
         tool_return_part = ToolReturnPart(
-            tool_name="search",
-            content="Final results",
-            tool_call_id="123"
+            tool_name="search", content="Final results", tool_call_id="123"
         )
         msg = ModelResponse(parts=[tool_return_part])
 
@@ -753,20 +704,24 @@ class TestRenderDashboard:
         from src.ui.streamlit_app import _render_dashboard_content
 
         mock_handler = AsyncMock()
-        mock_handler.get_search_metrics = AsyncMock(return_value={
-            "total_searches": 100,
-            "avg_latency_ms": 150.5,
-            "most_used_strategy": "HYBRID",
-            "boost_rate": 0.25,
-            "strategy_distribution": {"HYBRID": 50, "VECTOR_HEAVY": 30, "GRAPH_HEAVY": 20}
-        })
+        mock_handler.get_search_metrics = AsyncMock(
+            return_value={
+                "total_searches": 100,
+                "avg_latency_ms": 150.5,
+                "most_used_strategy": "HYBRID",
+                "boost_rate": 0.25,
+                "strategy_distribution": {"HYBRID": 50, "VECTOR_HEAVY": 30, "GRAPH_HEAVY": 20},
+            }
+        )
         mock_handler.get_time_series_data = AsyncMock(return_value=[])
         mock_handler.get_intent_distribution = AsyncMock(return_value={})
         mock_handler.get_graph_data = AsyncMock(return_value={"entities": [], "relationships": []})
         mock_handler.get_top_entities = AsyncMock(return_value=[])
         mock_handler.get_performance_metrics = AsyncMock(return_value={})
         mock_handler.get_tool_usage_metrics = AsyncMock(return_value={"total_calls": 0})
-        mock_handler.get_agent_interaction_metrics = AsyncMock(return_value={"total_interactions": 0})
+        mock_handler.get_agent_interaction_metrics = AsyncMock(
+            return_value={"total_interactions": 0}
+        )
         mock_handler.refresh_materialized_views = AsyncMock(return_value=True)
         mock_handler.clear_cache = Mock()
 
@@ -788,7 +743,9 @@ class TestRenderDashboard:
         mock_handler.get_top_entities = AsyncMock(return_value=[])
         mock_handler.get_performance_metrics = AsyncMock(return_value={})
         mock_handler.get_tool_usage_metrics = AsyncMock(return_value={"total_calls": 0})
-        mock_handler.get_agent_interaction_metrics = AsyncMock(return_value={"total_interactions": 0})
+        mock_handler.get_agent_interaction_metrics = AsyncMock(
+            return_value={"total_interactions": 0}
+        )
         mock_handler.clear_cache = Mock()
 
         # Simulate refresh button click
@@ -808,19 +765,21 @@ class TestRenderDashboard:
         mock_handler.get_search_metrics = AsyncMock(return_value={})
         mock_handler.get_time_series_data = AsyncMock(return_value=[])
         mock_handler.get_intent_distribution = AsyncMock(return_value={})
-        mock_handler.get_graph_data = AsyncMock(return_value={
-            "entities": [
-                {"id": "1", "name": "Entity1", "type": "person"},
-                {"id": "2", "name": "Entity2", "type": "company"}
-            ],
-            "relationships": [
-                {"source": "1", "target": "2", "type": "works_at"}
-            ]
-        })
+        mock_handler.get_graph_data = AsyncMock(
+            return_value={
+                "entities": [
+                    {"id": "1", "name": "Entity1", "type": "person"},
+                    {"id": "2", "name": "Entity2", "type": "company"},
+                ],
+                "relationships": [{"source": "1", "target": "2", "type": "works_at"}],
+            }
+        )
         mock_handler.get_top_entities = AsyncMock(return_value=[])
         mock_handler.get_performance_metrics = AsyncMock(return_value={})
         mock_handler.get_tool_usage_metrics = AsyncMock(return_value={"total_calls": 0})
-        mock_handler.get_agent_interaction_metrics = AsyncMock(return_value={"total_interactions": 0})
+        mock_handler.get_agent_interaction_metrics = AsyncMock(
+            return_value={"total_interactions": 0}
+        )
 
         mock_streamlit.slider = Mock(return_value=100)
         mock_streamlit.selectbox = Mock(return_value="force_directed")
@@ -850,15 +809,25 @@ class TestRenderDashboard:
         mock_handler.get_time_series_data = AsyncMock(return_value=[])
         mock_handler.get_intent_distribution = AsyncMock(return_value={})
         mock_handler.get_graph_data = AsyncMock(return_value={"entities": [], "relationships": []})
-        mock_handler.get_top_entities = AsyncMock(return_value=[
-            {"id": "1", "name": "Entity1", "type": "person", "relationship_count": 5, "chunk_count": 10}
-        ])
-        mock_handler.get_entity_timeline = AsyncMock(return_value=[
-            {"description": "Event 1", "valid_from": "2024-01-01"}
-        ])
+        mock_handler.get_top_entities = AsyncMock(
+            return_value=[
+                {
+                    "id": "1",
+                    "name": "Entity1",
+                    "type": "person",
+                    "relationship_count": 5,
+                    "chunk_count": 10,
+                }
+            ]
+        )
+        mock_handler.get_entity_timeline = AsyncMock(
+            return_value=[{"description": "Event 1", "valid_from": "2024-01-01"}]
+        )
         mock_handler.get_performance_metrics = AsyncMock(return_value={})
         mock_handler.get_tool_usage_metrics = AsyncMock(return_value={"total_calls": 0})
-        mock_handler.get_agent_interaction_metrics = AsyncMock(return_value={"total_interactions": 0})
+        mock_handler.get_agent_interaction_metrics = AsyncMock(
+            return_value={"total_interactions": 0}
+        )
 
         # Simulate entity selection
         mock_streamlit.selectbox = Mock(side_effect=["force_directed", "Entity1"])
@@ -951,10 +920,9 @@ class TestMain:
         mock_config.features = {"streaming": False}
 
         mock_handler = AsyncMock()
-        mock_handler.run_agent = AsyncMock(return_value={
-            "response": "Response",
-            "new_messages": []
-        })
+        mock_handler.run_agent = AsyncMock(
+            return_value={"response": "Response", "new_messages": []}
+        )
 
         mock_streamlit.session_state = {
             "config": mock_config,

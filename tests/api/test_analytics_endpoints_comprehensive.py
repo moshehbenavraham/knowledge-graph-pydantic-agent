@@ -5,11 +5,10 @@ Tests all analytics endpoints including search metrics, intent distribution,
 performance metrics, time-series data, tool usage, agent interactions, and health checks.
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi import HTTPException
-from fastapi.testclient import TestClient
 
 from src.api.endpoints.analytics import (
     analytics_health,
@@ -20,7 +19,6 @@ from src.api.endpoints.analytics import (
     get_time_series_data,
     get_tool_usage_metrics,
 )
-
 
 # ============================================================================
 # Fixtures
@@ -167,9 +165,7 @@ async def test_get_search_metrics_30d_window(
 
 @pytest.mark.asyncio
 @patch("src.api.endpoints.analytics.DashboardHandler")
-async def test_get_search_metrics_partial_error(
-    mock_handler_class, mock_connection_manager
-):
+async def test_get_search_metrics_partial_error(mock_handler_class, mock_connection_manager):
     """Test search metrics with partial error in response."""
     handler = AsyncMock()
     handler.get_search_metrics = AsyncMock(
@@ -185,9 +181,7 @@ async def test_get_search_metrics_partial_error(
 
 @pytest.mark.asyncio
 @patch("src.api.endpoints.analytics.DashboardHandler")
-async def test_get_search_metrics_handler_exception(
-    mock_handler_class, mock_connection_manager
-):
+async def test_get_search_metrics_handler_exception(mock_handler_class, mock_connection_manager):
     """Test search metrics when handler raises exception."""
     handler = AsyncMock()
     handler.get_search_metrics.side_effect = Exception("Database connection lost")
@@ -225,9 +219,7 @@ async def test_get_intent_distribution_success(
 
 @pytest.mark.asyncio
 @patch("src.api.endpoints.analytics.DashboardHandler")
-async def test_get_intent_distribution_empty_result(
-    mock_handler_class, mock_connection_manager
-):
+async def test_get_intent_distribution_empty_result(mock_handler_class, mock_connection_manager):
     """Test intent distribution with no data."""
     handler = AsyncMock()
     handler.get_intent_distribution = AsyncMock(return_value={})
@@ -281,9 +273,7 @@ async def test_get_performance_metrics_success(
 
 @pytest.mark.asyncio
 @patch("src.api.endpoints.analytics.DashboardHandler")
-async def test_get_performance_metrics_partial_error(
-    mock_handler_class, mock_connection_manager
-):
+async def test_get_performance_metrics_partial_error(mock_handler_class, mock_connection_manager):
     """Test performance metrics with partial error in response."""
     handler = AsyncMock()
     handler.get_performance_metrics = AsyncMock(
@@ -351,9 +341,7 @@ async def test_get_time_series_data_latency(
     """Test time-series data for latency metric."""
     mock_handler_class.return_value = mock_dashboard_handler
 
-    await get_time_series_data(
-        window="24h", metric="latency", conn_manager=mock_connection_manager
-    )
+    await get_time_series_data(window="24h", metric="latency", conn_manager=mock_connection_manager)
 
     mock_dashboard_handler.get_time_series_data.assert_called_once_with(
         window="24h", metric="latency"
@@ -396,9 +384,7 @@ async def test_get_time_series_data_graph_boosts(
 
 @pytest.mark.asyncio
 @patch("src.api.endpoints.analytics.DashboardHandler")
-async def test_get_time_series_data_empty_result(
-    mock_handler_class, mock_connection_manager
-):
+async def test_get_time_series_data_empty_result(mock_handler_class, mock_connection_manager):
     """Test time-series data with no data points."""
     handler = AsyncMock()
     handler.get_time_series_data = AsyncMock(return_value=[])
@@ -413,9 +399,7 @@ async def test_get_time_series_data_empty_result(
 
 @pytest.mark.asyncio
 @patch("src.api.endpoints.analytics.DashboardHandler")
-async def test_get_time_series_data_handler_exception(
-    mock_handler_class, mock_connection_manager
-):
+async def test_get_time_series_data_handler_exception(mock_handler_class, mock_connection_manager):
     """Test time-series data when handler raises exception."""
     handler = AsyncMock()
     handler.get_time_series_data.side_effect = Exception("Data retrieval failed")
@@ -456,9 +440,7 @@ async def test_get_tool_usage_metrics_success(
 
 @pytest.mark.asyncio
 @patch("src.api.endpoints.analytics.DashboardHandler")
-async def test_get_tool_usage_metrics_partial_error(
-    mock_handler_class, mock_connection_manager
-):
+async def test_get_tool_usage_metrics_partial_error(mock_handler_class, mock_connection_manager):
     """Test tool usage metrics with partial error in response."""
     handler = AsyncMock()
     handler.get_tool_usage_metrics = AsyncMock(
@@ -505,9 +487,7 @@ async def test_get_agent_interaction_metrics_success(
     """Test successful agent interaction metrics retrieval."""
     mock_handler_class.return_value = mock_dashboard_handler
 
-    result = await get_agent_interaction_metrics(
-        window="7d", conn_manager=mock_connection_manager
-    )
+    result = await get_agent_interaction_metrics(window="7d", conn_manager=mock_connection_manager)
 
     assert result["total_interactions"] == 800
     assert result["avg_response_time_ms"] == 1500.0
@@ -532,9 +512,7 @@ async def test_get_agent_interaction_metrics_partial_error(
     )
     mock_handler_class.return_value = handler
 
-    result = await get_agent_interaction_metrics(
-        window="7d", conn_manager=mock_connection_manager
-    )
+    result = await get_agent_interaction_metrics(window="7d", conn_manager=mock_connection_manager)
 
     assert "error" in result
     assert result["total_interactions"] == 500
@@ -551,9 +529,7 @@ async def test_get_agent_interaction_metrics_handler_exception(
     mock_handler_class.return_value = handler
 
     with pytest.raises(HTTPException) as exc_info:
-        await get_agent_interaction_metrics(
-            window="7d", conn_manager=mock_connection_manager
-        )
+        await get_agent_interaction_metrics(window="7d", conn_manager=mock_connection_manager)
 
     assert exc_info.value.status_code == 500
     assert "Failed to retrieve agent interaction metrics" in exc_info.value.detail
@@ -708,9 +684,7 @@ async def test_all_time_series_metrics(
 @pytest.mark.asyncio
 @patch("src.api.endpoints.analytics.DashboardHandler")
 @patch("src.api.endpoints.analytics.logger")
-async def test_logging_on_partial_error(
-    mock_logger, mock_handler_class, mock_connection_manager
-):
+async def test_logging_on_partial_error(mock_logger, mock_handler_class, mock_connection_manager):
     """Test that partial errors are logged appropriately."""
     handler = AsyncMock()
     handler.get_search_metrics = AsyncMock(
@@ -783,9 +757,7 @@ async def test_analytics_health_proper_table_check(mock_connection_manager):
 
 @pytest.mark.asyncio
 @patch("src.api.endpoints.analytics.DashboardHandler")
-async def test_very_large_result_sets(
-    mock_handler_class, mock_connection_manager
-):
+async def test_very_large_result_sets(mock_handler_class, mock_connection_manager):
     """Test handling of very large metric result sets."""
     handler = AsyncMock()
 
@@ -803,9 +775,7 @@ async def test_very_large_result_sets(
 
 @pytest.mark.asyncio
 @patch("src.api.endpoints.analytics.DashboardHandler")
-async def test_empty_metrics_responses(
-    mock_handler_class, mock_connection_manager
-):
+async def test_empty_metrics_responses(mock_handler_class, mock_connection_manager):
     """Test handling of empty/zero metric responses."""
     handler = AsyncMock()
     handler.get_search_metrics = AsyncMock(

@@ -44,7 +44,7 @@ def render_password_reset_page():
         </style>
         <div class="reset-container">
             <div class="reset-title">🔑 Reset Password</div>
-            <div class="reset-subtitle">Base Agent Password Reset</div>
+            <div class="reset-subtitle">Luminari Agent Password Reset</div>
         </div>
         """,
         unsafe_allow_html=True,

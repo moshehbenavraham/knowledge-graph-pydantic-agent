@@ -2,7 +2,7 @@
 
 ## Overview
 
-This runbook covers horizontal and vertical scaling procedures for the Base Agent / Agentic RAG platform.
+This runbook covers horizontal and vertical scaling procedures for the Luminari Agent / Agentic RAG platform.
 
 ## Scaling Triggers
 
@@ -371,7 +371,7 @@ curl http://localhost:8058/metrics | grep 'status="5'
 
 ### Grafana Dashboards
 
-- **Dashboard**: "Base Agent - Scaling View"
+- **Dashboard**: "Luminari Agent - Scaling View"
 - **Panels**:
   - Container replica count
   - CPU/Memory per replica

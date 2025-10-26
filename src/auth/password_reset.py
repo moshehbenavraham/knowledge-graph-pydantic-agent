@@ -25,7 +25,7 @@ SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USER = os.getenv("SMTP_USER", "")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
-SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", "noreply@baseagent.local")
+SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", "max@aiwithapex.com")
 
 
 async def send_reset_email_smtp(email: str, reset_token: str, reset_url: str) -> bool:
@@ -46,7 +46,7 @@ async def send_reset_email_smtp(email: str, reset_token: str, reset_url: str) ->
     try:
         # Create message
         msg = MIMEMultipart("alternative")
-        msg["Subject"] = "Password Reset Request - Base Agent"
+        msg["Subject"] = "Password Reset Request - Luminari Agent"
         msg["From"] = SMTP_FROM_EMAIL
         msg["To"] = email
 
@@ -59,10 +59,10 @@ async def send_reset_email_smtp(email: str, reset_token: str, reset_url: str) ->
           <head></head>
           <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
             <div style="max-width: 600px; margin: 0 auto; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px;">
-              <h1 style="color: white; text-align: center;">🤖 Base Agent</h1>
+              <h1 style="color: white; text-align: center;">🤖 Luminari Agent</h1>
               <div style="background: white; padding: 30px; border-radius: 10px; margin-top: 20px;">
                 <h2 style="color: #333;">Password Reset Request</h2>
-                <p>We received a request to reset your password for your Base Agent account. Click the button below to create a new password:</p>
+                <p>We received a request to reset your password for your Luminari Agent account. Click the button below to create a new password:</p>
 
                 <div style="text-align: center; margin: 30px 0;">
                   <a href="{reset_link}" style="background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">Reset Password</a>
@@ -92,7 +92,7 @@ async def send_reset_email_smtp(email: str, reset_token: str, reset_url: str) ->
                 </p>
 
                 <p style="color: #999; font-size: 11px; text-align: center; margin-top: 15px;">
-                  This is an automated message from Base Agent. Please do not reply to this email.
+                  This is an automated message from Luminari Agent. Please do not reply to this email.
                 </p>
               </div>
             </div>
@@ -160,9 +160,9 @@ async def request_password_reset(
     """
     try:
         # Find user by username or email
-        user = await get_user_by_username(username_or_email)
+        user = get_user_by_username(username_or_email)
         if not user:
-            user = await get_user_by_email(username_or_email)
+            user = get_user_by_email(username_or_email)
 
         if not user:
             # For security, don't reveal if user exists

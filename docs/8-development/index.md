@@ -1,6 +1,6 @@
 # Development
 
-Documentation for contributors and developers working on Base Agent.
+Documentation for contributors and developers working on Luminari Agent.
 
 ## Development Documentation
 

@@ -6,9 +6,8 @@ document retrieval, and result formatting.
 """
 
 import asyncio
-from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import pytest
 
@@ -25,7 +24,6 @@ from src.tools.rag import (
     retrieve_relevant_documents_tool,
     smart_search_tool,
 )
-
 
 # ============================================================================
 # Fixtures
@@ -321,9 +319,7 @@ async def test_retrieve_documents_error_handling(mock_get_hs):
 @pytest.mark.asyncio
 @patch("src.tools.rag.get_hybrid_search")
 @patch("src.tools.rag.get_intent_analyzer")
-async def test_smart_search_with_intent_analysis(
-    mock_get_ia, mock_get_hs, mock_search_result
-):
+async def test_smart_search_with_intent_analysis(mock_get_ia, mock_get_hs, mock_search_result):
     """Test smart search with intent analysis enabled."""
     # Mock intent analyzer
     mock_ia = MagicMock()
@@ -559,9 +555,7 @@ async def test_graph_query_no_entity_name(mock_get_hs, mock_get_config, mock_sea
 
     assert result["entity"] is None
     # Should search with empty string
-    mock_hs.search.assert_called_once_with(
-        query="", limit=10, strategy=SearchStrategy.GRAPH_ONLY
-    )
+    mock_hs.search.assert_called_once_with(query="", limit=10, strategy=SearchStrategy.GRAPH_ONLY)
 
 
 @pytest.mark.asyncio
@@ -980,7 +974,9 @@ async def test_smart_search_unicode_query(mock_get_hs, mock_search_result):
 async def test_list_documents_concurrent_calls(mock_supabase):
     """Test concurrent document listing calls."""
     mock_result = MagicMock()
-    mock_result.data = [{"id": str(uuid4()), "title": "Doc", "source": "src", "created_at": "2025-01-01"}]
+    mock_result.data = [
+        {"id": str(uuid4()), "title": "Doc", "source": "src", "created_at": "2025-01-01"}
+    ]
 
     mock_chain = MagicMock()
     mock_chain.select.return_value.execute.return_value = mock_result
@@ -1001,6 +997,7 @@ async def test_list_documents_concurrent_calls(mock_supabase):
 @patch("src.tools.rag.get_hybrid_search")
 async def test_large_result_set_handling(mock_get_hs):
     """Test handling of very large result sets."""
+
     # Create 1000 chunks
     class MockChunk:
         def __init__(self, i):

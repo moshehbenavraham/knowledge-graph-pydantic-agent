@@ -223,14 +223,14 @@
 
 - [X] CHK106 - Is the assumption "git is available" validated by startup dependency check? [Dependency, Spec §FR-021, Assumption]
 - [X] CHK107 - Is the assumption "pytest-cov is configured" explicitly verified or documented as prerequisite? [Dependency, Spec §Assumptions]
-- [X] CHK108 - Is the assumption "repository follows Base Agent conventions" validated or documented? [Assumption, Spec §Assumptions]
+- [X] CHK108 - Is the assumption "repository follows Luminari Agent conventions" validated or documented? [Assumption, Spec §Assumptions]
 - [X] CHK109 - Are requirements defined for detecting missing src/, tests/, docs/ directory structure? [Dependency, requirements-addendum.md §5.2]
 
 ### External Dependency Requirements
 
 - [X] CHK110 - Are version pinning requirements specified for Click/GitPython/pathspec? [Dependency, Gap]
 - [X] CHK111 - Is the behavior defined when dependencies have security vulnerabilities? [Dependency, requirements-addendum.md §5.3]
-- [X] CHK112 - Are requirements specified for dependency conflicts with existing Base Agent dependencies? [Dependency, requirements-addendum.md §5.4]
+- [X] CHK112 - Are requirements specified for dependency conflicts with existing Luminari Agent dependencies? [Dependency, requirements-addendum.md §5.4]
 
 ### Assumption Documentation
 

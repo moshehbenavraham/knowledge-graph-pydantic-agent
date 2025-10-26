@@ -4,12 +4,9 @@ Comprehensive tests for health check and monitoring utilities.
 Tests system health monitoring across all components.
 """
 
-import asyncio
-import time
 from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
-import httpx
 import pytest
 
 from src.utils.health import (
@@ -277,9 +274,7 @@ class TestEmbeddingHealthCheck:
     @pytest.mark.asyncio
     @patch("src.utils.health.get_settings")
     @patch("src.utils.health.get_embedding_client")
-    async def test_check_embedding_health_empty_response(
-        self, mock_get_client, mock_get_settings
-    ):
+    async def test_check_embedding_health_empty_response(self, mock_get_client, mock_get_settings):
         """Test embedding health check with empty response."""
         mock_settings = MagicMock()
         mock_settings.embedding_model_choice = "text-embedding-ada-002"
@@ -444,9 +439,7 @@ class TestWebSearchHealthCheck:
     @pytest.mark.asyncio
     @patch("src.utils.health.get_settings")
     @patch("src.utils.health.httpx.AsyncClient")
-    async def test_check_web_search_health_searxng_success(
-        self, mock_client_class, mock_settings
-    ):
+    async def test_check_web_search_health_searxng_success(self, mock_client_class, mock_settings):
         """Test successful web search health check with SearXNG."""
         mock_settings_obj = MagicMock()
         mock_settings_obj.brave_api_key = None
@@ -520,9 +513,7 @@ class TestRunAllChecks:
             )
         )
         mock_llm_check = AsyncMock(
-            return_value=ComponentHealth(
-                name="llm", status="healthy", last_check=datetime.utcnow()
-            )
+            return_value=ComponentHealth(name="llm", status="healthy", last_check=datetime.utcnow())
         )
         mock_embedding_check = AsyncMock(
             return_value=ComponentHealth(
@@ -564,9 +555,7 @@ class TestRunAllChecks:
         # Mock some checks to raise exceptions
         checker.check_database_health = AsyncMock(side_effect=Exception("DB error"))
         checker.check_llm_health = AsyncMock(
-            return_value=ComponentHealth(
-                name="llm", status="healthy", last_check=datetime.utcnow()
-            )
+            return_value=ComponentHealth(name="llm", status="healthy", last_check=datetime.utcnow())
         )
         checker.check_embedding_health = AsyncMock(side_effect=Exception("Embedding error"))
         checker.check_memory_health = AsyncMock(

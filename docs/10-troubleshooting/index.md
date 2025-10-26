@@ -1,6 +1,6 @@
 # Troubleshooting Guide
 
-This guide helps you diagnose and resolve common issues with the Base Agent system, including Phase 3 Agent Intelligence Layer components.
+This guide helps you diagnose and resolve common issues with the Luminari Agent system, including Phase 3 Agent Intelligence Layer components.
 
 ## Table of Contents
 

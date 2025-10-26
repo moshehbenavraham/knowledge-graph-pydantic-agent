@@ -19,7 +19,7 @@
 
 ### User Story 1 - Basic Constitution Compliance Check (Priority: P1)
 
-As a developer working on Base Agent, I need to validate my code changes against the six constitutional principles before committing, so I can ensure my work adheres to project governance standards and catch violations early.
+As a developer working on Luminari Agent, I need to validate my code changes against the six constitutional principles before committing, so I can ensure my work adheres to project governance standards and catch violations early.
 
 **Why this priority**: This is the core value proposition. Developers need immediate feedback on compliance violations to prevent constitutional drift. Without this, the constitution becomes documentation that's ignored rather than enforced.
 
@@ -118,7 +118,7 @@ As a developer, I want the constitution validator to run automatically before ea
 
 ### Technical Constraints
 
-- **Language**: Python 3.11+ (matching Base Agent project requirements)
+- **Language**: Python 3.11+ (matching Luminari Agent project requirements)
 - **CLI Framework**: Click for command-line interface
 - **Code Analysis**: AST-based parsing for Python code validation
 - **Git Integration**: GitPython for commit message validation
@@ -137,12 +137,12 @@ As a developer, I want the constitution validator to run automatically before ea
 - **SC-005**: Developer satisfaction: 80% of developers report the validator helps them understand and follow constitutional principles
 - **SC-006**: Constitutional drift reduction: Number of violations in merged code decreases by 90% within 30 days of validator deployment
 - **SC-007**: Validation overhead: Pre-commit validation adds less than 5 seconds to normal commit workflow
-- **SC-008**: Accuracy: False positive rate below 5% based on manual review of flagged violations (measured via validation against real Base Agent codebase with manual classification of 100+ flagged items)
+- **SC-008**: Accuracy: False positive rate below 5% based on manual review of flagged violations (measured via validation against real Luminari Agent codebase with manual classification of 100+ flagged items)
 
 ### Assumptions
 
 - Developers have read access to constitution file (.specify/memory/constitution.md)
-- The repository structure follows Base Agent conventions (src/, tests/, docs/)
+- The repository structure follows Luminari Agent conventions (src/, tests/, docs/)
 - Git is available for commit message validation
 - Test coverage tooling (pytest-cov) is already configured in the project
 - Developers understand basic command-line interface usage

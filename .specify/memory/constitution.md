@@ -1,4 +1,4 @@
-# Base Agent Constitution
+# Luminari Agent Constitution
 
 <!--
 =============================================================================

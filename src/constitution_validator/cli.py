@@ -58,7 +58,9 @@ def _check_bypass() -> bool:
     Returns:
         True if bypass is requested, False otherwise
     """
-    bypass_value = os.environ.get("SKIP_CONSTITUTION_CHECK", "").lower()  # noqa: CONST-II-001 - Meta-validation bypass check
+    bypass_value = os.environ.get(
+        "SKIP_CONSTITUTION_CHECK", ""
+    ).lower()  # noqa: CONST-II-001 - Meta-validation bypass check
     return bypass_value in ("1", "true", "yes", "on")
 
 

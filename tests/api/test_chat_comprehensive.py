@@ -49,7 +49,9 @@ class TestChatEndpoint:
 
     def test_chat_endpoint_success(self, test_client, mock_dependencies):
         """Test successful chat request."""
-        with patch("src.api.endpoints.chat.run_unified_agent", new_callable=AsyncMock) as mock_agent:
+        with patch(
+            "src.api.endpoints.chat.run_unified_agent", new_callable=AsyncMock
+        ) as mock_agent:
             mock_agent.return_value = {
                 "status": "success",
                 "response": "Test response",
@@ -65,7 +67,9 @@ class TestChatEndpoint:
 
     def test_chat_endpoint_with_sources(self, test_client, mock_dependencies):
         """Test chat request with source retrieval."""
-        with patch("src.api.endpoints.chat.run_unified_agent", new_callable=AsyncMock) as mock_agent:
+        with patch(
+            "src.api.endpoints.chat.run_unified_agent", new_callable=AsyncMock
+        ) as mock_agent:
             mock_agent.return_value = {
                 "status": "success",
                 "response": "Response with sources",
@@ -74,7 +78,11 @@ class TestChatEndpoint:
 
             response = test_client.post(
                 "/chat",
-                json={"message": "Find information", "session_id": "test-123", "include_sources": True},
+                json={
+                    "message": "Find information",
+                    "session_id": "test-123",
+                    "include_sources": True,
+                },
             )
 
             assert response.status_code in [200, 503]
@@ -95,7 +103,9 @@ class TestChatEndpoint:
 
     def test_chat_endpoint_with_user_id(self, test_client, mock_dependencies):
         """Test chat request with user_id."""
-        with patch("src.api.endpoints.chat.run_unified_agent", new_callable=AsyncMock) as mock_agent:
+        with patch(
+            "src.api.endpoints.chat.run_unified_agent", new_callable=AsyncMock
+        ) as mock_agent:
             mock_agent.return_value = {"status": "success", "response": "Test"}
 
             response = test_client.post(
@@ -107,12 +117,12 @@ class TestChatEndpoint:
 
     def test_chat_endpoint_agent_error(self, test_client, mock_dependencies):
         """Test chat when agent raises error."""
-        with patch("src.api.endpoints.chat.run_unified_agent", new_callable=AsyncMock) as mock_agent:
+        with patch(
+            "src.api.endpoints.chat.run_unified_agent", new_callable=AsyncMock
+        ) as mock_agent:
             mock_agent.side_effect = Exception("Agent error")
 
-            response = test_client.post(
-                "/chat", json={"message": "Hello", "session_id": "test"}
-            )
+            response = test_client.post("/chat", json={"message": "Hello", "session_id": "test"})
 
             # Should handle error gracefully
             assert response.status_code in [500, 503]
@@ -124,7 +134,9 @@ class TestStreamingChatEndpoint:
     @pytest.mark.asyncio
     async def test_streaming_chat_basic(self, test_client, mock_dependencies):
         """Test basic streaming chat."""
-        with patch("src.api.endpoints.chat.stream_unified_agent", new_callable=AsyncMock) as mock_stream:
+        with patch(
+            "src.api.endpoints.chat.stream_unified_agent", new_callable=AsyncMock
+        ) as mock_stream:
             # Mock async generator
             async def mock_stream_gen():
                 yield {"type": "text_delta", "content": "Hello"}
@@ -152,7 +164,9 @@ class TestSessionHistoryEndpoint:
 
     def test_get_session_history_success(self, test_client, mock_dependencies):
         """Test retrieving session history."""
-        with patch("src.api.endpoints.chat.get_session_messages", new_callable=AsyncMock) as mock_get:
+        with patch(
+            "src.api.endpoints.chat.get_session_messages", new_callable=AsyncMock
+        ) as mock_get:
             mock_get.return_value = [
                 {"role": "user", "content": "Hello"},
                 {"role": "assistant", "content": "Hi there"},
@@ -164,7 +178,9 @@ class TestSessionHistoryEndpoint:
 
     def test_get_session_history_not_found(self, test_client, mock_dependencies):
         """Test session history for non-existent session."""
-        with patch("src.api.endpoints.chat.get_session_messages", new_callable=AsyncMock) as mock_get:
+        with patch(
+            "src.api.endpoints.chat.get_session_messages", new_callable=AsyncMock
+        ) as mock_get:
             mock_get.return_value = []
 
             response = test_client.get("/chat/session/nonexistent")
@@ -173,7 +189,9 @@ class TestSessionHistoryEndpoint:
 
     def test_get_session_history_with_limit(self, test_client, mock_dependencies):
         """Test session history with message limit."""
-        with patch("src.api.endpoints.chat.get_session_messages", new_callable=AsyncMock) as mock_get:
+        with patch(
+            "src.api.endpoints.chat.get_session_messages", new_callable=AsyncMock
+        ) as mock_get:
             mock_get.return_value = [{"role": "user", "content": "Test"}]
 
             response = test_client.get("/chat/session/test-123?limit=10")
@@ -220,9 +238,7 @@ class TestFeedbackEndpoint:
 
     def test_feedback_validation(self, test_client):
         """Test feedback input validation."""
-        response = test_client.post(
-            "/chat/feedback", json={"session_id": "invalid", "rating": 10}
-        )
+        response = test_client.post("/chat/feedback", json={"session_id": "invalid", "rating": 10})
 
         # Should validate rating range
         assert response.status_code == 422
@@ -239,9 +255,7 @@ class TestChatCache:
         ):
             mock_cache.return_value = {"response": "Cached response"}
 
-            response = test_client.post(
-                "/chat", json={"message": "Hello", "session_id": "test"}
-            )
+            response = test_client.post("/chat", json={"message": "Hello", "session_id": "test"})
 
             assert response.status_code in [200, 503]
 
@@ -267,7 +281,9 @@ class TestConcurrentRequests:
     @pytest.mark.asyncio
     async def test_multiple_sessions_concurrent(self, test_client, mock_dependencies):
         """Test handling multiple sessions concurrently."""
-        with patch("src.api.endpoints.chat.run_unified_agent", new_callable=AsyncMock) as mock_agent:
+        with patch(
+            "src.api.endpoints.chat.run_unified_agent", new_callable=AsyncMock
+        ) as mock_agent:
             mock_agent.return_value = {"status": "success", "response": "Test"}
 
             # Simulate concurrent requests
@@ -283,18 +299,16 @@ class TestConcurrentRequests:
 
     def test_same_session_sequential(self, test_client, mock_dependencies):
         """Test sequential requests in same session."""
-        with patch("src.api.endpoints.chat.run_unified_agent", new_callable=AsyncMock) as mock_agent:
+        with patch(
+            "src.api.endpoints.chat.run_unified_agent", new_callable=AsyncMock
+        ) as mock_agent:
             mock_agent.return_value = {"status": "success", "response": "Test"}
 
             # First message
-            response1 = test_client.post(
-                "/chat", json={"message": "First", "session_id": "test"}
-            )
+            response1 = test_client.post("/chat", json={"message": "First", "session_id": "test"})
 
             # Second message in same session
-            response2 = test_client.post(
-                "/chat", json={"message": "Second", "session_id": "test"}
-            )
+            response2 = test_client.post("/chat", json={"message": "Second", "session_id": "test"})
 
             assert response1.status_code in [200, 503]
             assert response2.status_code in [200, 503]
@@ -314,12 +328,12 @@ class TestErrorHandling:
 
     def test_llm_timeout_error(self, test_client, mock_dependencies):
         """Test handling of LLM timeout errors."""
-        with patch("src.api.endpoints.chat.run_unified_agent", new_callable=AsyncMock) as mock_agent:
+        with patch(
+            "src.api.endpoints.chat.run_unified_agent", new_callable=AsyncMock
+        ) as mock_agent:
             mock_agent.side_effect = TimeoutError("LLM timeout")
 
-            response = test_client.post(
-                "/chat", json={"message": "Test", "session_id": "test"}
-            )
+            response = test_client.post("/chat", json={"message": "Test", "session_id": "test"})
 
             assert response.status_code in [500, 503, 504]
 

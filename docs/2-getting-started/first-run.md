@@ -1,6 +1,6 @@
 # Your First Agent Interaction
 
-This guide walks you through your first interaction with the Base Agent after installation.
+This guide walks you through your first interaction with the Luminari Agent after installation.
 
 ## Starting the Application
 
@@ -209,4 +209,4 @@ If you encounter issues:
 
 ---
 
-**🎉 Welcome to Base Agent!** You're now ready to explore all the capabilities.
+**🎉 Welcome to Luminari Agent!** You're now ready to explore all the capabilities.

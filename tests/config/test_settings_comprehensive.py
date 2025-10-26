@@ -5,12 +5,13 @@ Tests centralized configuration, environment variable loading, and validation.
 """
 
 import os
+
 import pytest
-from unittest.mock import patch
-from src.config.settings import Settings, get_settings
+
 from src.config.agent import agent_config
 from src.config.api import api_config
 from src.config.clients import clients_config
+from src.config.settings import Settings, get_settings
 
 
 @pytest.fixture
@@ -57,7 +58,11 @@ class TestSettingsInitialization:
 
         settings = Settings()
 
-        assert settings.llm_provider == "openai" or settings.llm_provider in ["openai", "anthropic", "ollama"]
+        assert settings.llm_provider == "openai" or settings.llm_provider in [
+            "openai",
+            "anthropic",
+            "ollama",
+        ]
 
     def test_settings_defaults(self, clean_env):
         """Test settings use defaults when env vars not set."""
@@ -220,7 +225,11 @@ class TestClientsConfig:
 
     def test_clients_config_database(self):
         """Test clients config exposes database settings."""
-        assert hasattr(clients_config, "supabase_url") or hasattr(clients_config, "database_url") or True
+        assert (
+            hasattr(clients_config, "supabase_url")
+            or hasattr(clients_config, "database_url")
+            or True
+        )
 
     def test_clients_config_cache(self):
         """Test clients config exposes cache settings."""

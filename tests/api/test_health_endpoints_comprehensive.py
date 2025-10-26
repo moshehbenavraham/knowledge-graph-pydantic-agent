@@ -24,7 +24,6 @@ from src.api.health_endpoints import (
     startup_check,
 )
 
-
 # ============================================================================
 # Fixtures
 # ============================================================================
@@ -190,7 +189,9 @@ async def test_detailed_health_check_exception(mock_checker):
 @pytest.mark.asyncio
 @patch("src.api.health_endpoints.monitor")
 @patch("src.api.health_endpoints.get_settings")
-async def test_get_metrics_success(mock_get_settings, mock_monitor, mock_settings, mock_system_stats):
+async def test_get_metrics_success(
+    mock_get_settings, mock_monitor, mock_settings, mock_system_stats
+):
     """Test successful metrics retrieval."""
     mock_get_settings.return_value = mock_settings
     mock_monitor.get_system_stats.return_value = mock_system_stats
@@ -207,7 +208,9 @@ async def test_get_metrics_success(mock_get_settings, mock_monitor, mock_setting
 @pytest.mark.asyncio
 @patch("src.api.health_endpoints.monitor")
 @patch("src.api.health_endpoints.get_settings")
-async def test_get_metrics_prometheus_endpoint(mock_get_settings, mock_monitor, mock_settings, mock_system_stats):
+async def test_get_metrics_prometheus_endpoint(
+    mock_get_settings, mock_monitor, mock_settings, mock_system_stats
+):
     """Test that Prometheus endpoint URL is included."""
     mock_get_settings.return_value = mock_settings
     mock_monitor.get_system_stats.return_value = mock_system_stats

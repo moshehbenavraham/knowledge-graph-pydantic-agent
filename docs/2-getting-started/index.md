@@ -1,6 +1,6 @@
 # Getting Started
 
-Welcome to Base Agent! This section provides everything you need to get up and running quickly.
+Welcome to Luminari Agent! This section provides everything you need to get up and running quickly.
 
 ## Quick Start Paths
 

@@ -6,19 +6,23 @@ password reset, OAuth accounts, and role-based permissions.
 """
 
 import secrets
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
+import structlog
+
 from src.auth.hash_password import hash_password, verify_password
 from src.clients.database import get_supabase_client
+
+logger = structlog.get_logger(__name__)
 
 # =====================================================
 # USER MANAGEMENT
 # =====================================================
 
 
-async def create_user(
+def create_user(
     username: str,
     email: str,
     full_name: str,
@@ -71,7 +75,7 @@ async def create_user(
     return user
 
 
-async def get_user_by_username(username: str) -> dict[str, Any] | None:
+def get_user_by_username(username: str) -> dict[str, Any] | None:
     """
     Get user by username.
 
@@ -81,26 +85,48 @@ async def get_user_by_username(username: str) -> dict[str, Any] | None:
     Returns:
         User record (without password_hash) or None if not found
     """
+    logger.debug("get_user_by_username called", username=username)
+
     client = get_supabase_client()
 
-    response = (
-        client.table("auth_users")
-        .select("*")
-        .eq("username", username)
-        .is_("deleted_at", "null")
-        .limit(1)
-        .execute()
-    )
+    try:
+        response = (
+            client.table("auth_users")
+            .select("*")
+            .eq("username", username)
+            .is_("deleted_at", "null")
+            .limit(1)
+            .execute()
+        )
 
-    if not response.data:
-        return None
+        if not response.data:
+            logger.info("User not found in database", username=username)
+            return None
 
-    user = response.data[0]
-    user.pop("password_hash", None)
-    return user
+        user = response.data[0]
+        logger.info(
+            "User found in database",
+            username=username,
+            user_id=user.get("id"),
+            is_active=user.get("is_active"),
+            auth_method=user.get("auth_method"),
+            has_password_hash=bool(user.get("password_hash")),
+        )
+
+        user.pop("password_hash", None)
+        return user
+
+    except Exception as e:
+        logger.error(
+            "Database error in get_user_by_username",
+            username=username,
+            error=str(e),
+            error_type=type(e).__name__,
+        )
+        raise
 
 
-async def get_user_by_email(email: str) -> dict[str, Any] | None:
+def get_user_by_email(email: str) -> dict[str, Any] | None:
     """
     Get user by email.
 
@@ -129,7 +155,7 @@ async def get_user_by_email(email: str) -> dict[str, Any] | None:
     return user
 
 
-async def get_user_by_id(user_id: UUID | str) -> dict[str, Any] | None:
+def get_user_by_id(user_id: UUID | str) -> dict[str, Any] | None:
     """
     Get user by ID.
 
@@ -158,7 +184,7 @@ async def get_user_by_id(user_id: UUID | str) -> dict[str, Any] | None:
     return user
 
 
-async def verify_user_password(username: str, password: str) -> dict[str, Any] | None:
+def verify_user_password(username: str, password: str) -> dict[str, Any] | None:
     """
     Verify user credentials and return user if valid.
 
@@ -169,39 +195,84 @@ async def verify_user_password(username: str, password: str) -> dict[str, Any] |
     Returns:
         User record (without password_hash) if credentials valid, None otherwise
     """
+    logger.info("=" * 80)
+    logger.info("VERIFYING USER PASSWORD", username=username)
+
     client = get_supabase_client()
 
-    # Get user with password_hash
-    response = (
-        client.table("auth_users")
-        .select("*")
-        .eq("username", username)
-        .is_("deleted_at", "null")
-        .limit(1)
-        .execute()
-    )
+    try:
+        # Get user with password_hash
+        logger.debug("Querying database for user", username=username)
+        response = (
+            client.table("auth_users")
+            .select("*")
+            .eq("username", username)
+            .is_("deleted_at", "null")
+            .limit(1)
+            .execute()
+        )
 
-    if not response.data:
-        return None
+        if not response.data:
+            logger.warning("Password verification failed - user not found", username=username)
+            return None
 
-    user = response.data[0]
-    password_hash = user.get("password_hash")
+        user = response.data[0]
+        logger.debug(
+            "User record retrieved from database",
+            username=username,
+            user_id=user.get("id"),
+            is_active=user.get("is_active"),
+            auth_method=user.get("auth_method"),
+        )
 
-    if not password_hash:
-        return None  # OAuth-only user, no password
+        password_hash = user.get("password_hash")
 
-    # Verify password
-    if not verify_password(password, password_hash):
-        return None
+        if not password_hash:
+            logger.warning(
+                "Password verification failed - no password hash (OAuth-only user)",
+                username=username,
+                auth_method=user.get("auth_method"),
+            )
+            return None  # OAuth-only user, no password
 
-    # Update last login
-    await update_last_login(user["id"])
+        logger.debug(
+            "Password hash retrieved, verifying...",
+            username=username,
+            hash_length=len(password_hash),
+            password_length=len(password),
+        )
 
-    user.pop("password_hash", None)
-    return user
+        # Verify password
+        password_valid = verify_password(password, password_hash)
+        logger.info(
+            "Password verification completed",
+            username=username,
+            password_valid=password_valid,
+        )
+
+        if not password_valid:
+            logger.warning("Password verification failed - incorrect password", username=username)
+            return None
+
+        # Update last login
+        logger.debug("Updating last login timestamp", username=username)
+        update_last_login(user["id"])
+
+        user.pop("password_hash", None)
+        logger.info("Password verification successful", username=username, user_id=user.get("id"))
+        return user
+
+    except Exception as e:
+        logger.error(
+            "Exception during password verification",
+            username=username,
+            error=str(e),
+            error_type=type(e).__name__,
+        )
+        raise
 
 
-async def update_user(
+def update_user(
     user_id: UUID | str,
     username: str | None = None,
     email: str | None = None,
@@ -253,7 +324,7 @@ async def update_user(
     return user
 
 
-async def update_user_password(user_id: UUID | str, new_password: str) -> bool:
+def update_user_password(user_id: UUID | str, new_password: str) -> bool:
     """
     Update user password.
 
@@ -284,7 +355,7 @@ async def update_user_password(user_id: UUID | str, new_password: str) -> bool:
     return True
 
 
-async def delete_user(user_id: UUID | str, soft_delete: bool = True) -> bool:
+def delete_user(user_id: UUID | str, soft_delete: bool = True) -> bool:
     """
     Delete user (soft or hard delete).
 
@@ -303,7 +374,7 @@ async def delete_user(user_id: UUID | str, soft_delete: bool = True) -> bool:
     if soft_delete:
         response = (
             client.table("auth_users")
-            .update({"deleted_at": datetime.utcnow().isoformat()})
+            .update({"deleted_at": datetime.now(UTC).isoformat()})
             .eq("id", str(user_id))
             .execute()
         )
@@ -313,7 +384,7 @@ async def delete_user(user_id: UUID | str, soft_delete: bool = True) -> bool:
     return bool(response.data)
 
 
-async def list_users(
+def list_users(
     limit: int = 100, offset: int = 0, include_deleted: bool = False
 ) -> list[dict[str, Any]]:
     """
@@ -327,23 +398,52 @@ async def list_users(
     Returns:
         List of user records (without password_hash)
     """
+    logger.debug(
+        "list_users called",
+        limit=limit,
+        offset=offset,
+        include_deleted=include_deleted,
+    )
+
     client = get_supabase_client()
 
-    query = client.table("auth_users").select("*")
+    try:
+        query = client.table("auth_users").select("*")
 
-    if not include_deleted:
-        query = query.is_("deleted_at", "null")
+        if not include_deleted:
+            query = query.is_("deleted_at", "null")
 
-    response = query.order("created_at", desc=True).range(offset, offset + limit - 1).execute()
+        response = query.order("created_at", desc=True).range(offset, offset + limit - 1).execute()
 
-    users = response.data or []
-    for user in users:
-        user.pop("password_hash", None)
+        users = response.data or []
+        logger.info(
+            "Users retrieved from database",
+            total_users=len(users),
+            include_deleted=include_deleted,
+        )
 
-    return users
+        for user in users:
+            user.pop("password_hash", None)
+
+        if users:
+            logger.debug(
+                "Sample user data",
+                first_username=users[0].get("username"),
+                first_user_active=users[0].get("is_active"),
+            )
+
+        return users
+
+    except Exception as e:
+        logger.error(
+            "Database error in list_users",
+            error=str(e),
+            error_type=type(e).__name__,
+        )
+        raise
 
 
-async def update_last_login(user_id: UUID | str, ip_address: str | None = None) -> bool:
+def update_last_login(user_id: UUID | str, ip_address: str | None = None) -> bool:
     """
     Update user's last login timestamp and IP.
 
@@ -356,7 +456,7 @@ async def update_last_login(user_id: UUID | str, ip_address: str | None = None) 
     """
     client = get_supabase_client()
 
-    update_data = {"last_login_at": datetime.utcnow().isoformat()}
+    update_data = {"last_login_at": datetime.now(UTC).isoformat()}
     if ip_address:
         update_data["last_login_ip"] = ip_address
 
@@ -365,7 +465,7 @@ async def update_last_login(user_id: UUID | str, ip_address: str | None = None) 
     return bool(response.data)
 
 
-async def increment_failed_login(username: str) -> int:
+def increment_failed_login(username: str) -> int:
     """
     Increment failed login attempts and lock account if needed.
 
@@ -400,7 +500,7 @@ async def increment_failed_login(username: str) -> int:
 
     # Lock account after 5 failed attempts for 15 minutes
     if new_count >= 5:
-        lockout_until = datetime.utcnow() + timedelta(minutes=15)
+        lockout_until = datetime.now(UTC) + timedelta(minutes=15)
         update_data["locked_until"] = lockout_until.isoformat()
 
     client.table("auth_users").update(update_data).eq("id", user["id"]).execute()
@@ -408,7 +508,7 @@ async def increment_failed_login(username: str) -> int:
     return new_count
 
 
-async def reset_failed_login(user_id: UUID | str) -> bool:
+def reset_failed_login(user_id: UUID | str) -> bool:
     """
     Reset failed login attempts to 0.
 
@@ -435,7 +535,7 @@ async def reset_failed_login(user_id: UUID | str) -> bool:
 # =====================================================
 
 
-async def create_session(
+def create_session(
     user_id: UUID | str,
     expires_in_days: int = 30,
     device_info: str | None = None,
@@ -472,7 +572,7 @@ async def create_session(
         "user_agent": user_agent,
         "ip_address": ip_address,
         "session_type": session_type,
-        "expires_at": (datetime.utcnow() + timedelta(days=expires_in_days)).isoformat(),
+        "expires_at": (datetime.now(UTC) + timedelta(days=expires_in_days)).isoformat(),
     }
 
     response = client.table("auth_sessions").insert(session_data).execute()
@@ -483,7 +583,7 @@ async def create_session(
     return response.data[0]
 
 
-async def get_session(session_token: str) -> dict[str, Any] | None:
+def get_session(session_token: str) -> dict[str, Any] | None:
     """
     Get active session by token.
 
@@ -495,7 +595,7 @@ async def get_session(session_token: str) -> dict[str, Any] | None:
     """
     client = get_supabase_client()
 
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(UTC).isoformat()
 
     response = (
         client.table("auth_sessions")
@@ -510,7 +610,7 @@ async def get_session(session_token: str) -> dict[str, Any] | None:
     return response.data[0] if response.data else None
 
 
-async def update_session_activity(session_token: str) -> bool:
+def update_session_activity(session_token: str) -> bool:
     """
     Update session's last activity timestamp.
 
@@ -524,7 +624,7 @@ async def update_session_activity(session_token: str) -> bool:
 
     response = (
         client.table("auth_sessions")
-        .update({"last_activity_at": datetime.utcnow().isoformat()})
+        .update({"last_activity_at": datetime.now(UTC).isoformat()})
         .eq("session_token", session_token)
         .execute()
     )
@@ -532,7 +632,7 @@ async def update_session_activity(session_token: str) -> bool:
     return bool(response.data)
 
 
-async def revoke_session(session_token: str) -> bool:
+def revoke_session(session_token: str) -> bool:
     """
     Revoke a session (logout).
 
@@ -546,7 +646,7 @@ async def revoke_session(session_token: str) -> bool:
 
     response = (
         client.table("auth_sessions")
-        .update({"revoked_at": datetime.utcnow().isoformat()})
+        .update({"revoked_at": datetime.now(UTC).isoformat()})
         .eq("session_token", session_token)
         .execute()
     )
@@ -554,7 +654,7 @@ async def revoke_session(session_token: str) -> bool:
     return bool(response.data)
 
 
-async def revoke_all_user_sessions(user_id: UUID | str) -> int:
+def revoke_all_user_sessions(user_id: UUID | str) -> int:
     """
     Revoke all sessions for a user.
 
@@ -568,7 +668,7 @@ async def revoke_all_user_sessions(user_id: UUID | str) -> int:
 
     response = (
         client.table("auth_sessions")
-        .update({"revoked_at": datetime.utcnow().isoformat()})
+        .update({"revoked_at": datetime.now(UTC).isoformat()})
         .eq("user_id", str(user_id))
         .is_("revoked_at", "null")
         .execute()
@@ -577,7 +677,7 @@ async def revoke_all_user_sessions(user_id: UUID | str) -> int:
     return len(response.data) if response.data else 0
 
 
-async def get_user_sessions(user_id: UUID | str, active_only: bool = True) -> list[dict[str, Any]]:
+def get_user_sessions(user_id: UUID | str, active_only: bool = True) -> list[dict[str, Any]]:
     """
     Get all sessions for a user.
 
@@ -593,7 +693,7 @@ async def get_user_sessions(user_id: UUID | str, active_only: bool = True) -> li
     query = client.table("auth_sessions").select("*").eq("user_id", str(user_id))
 
     if active_only:
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(UTC).isoformat()
         query = query.is_("revoked_at", "null").gt("expires_at", now)
 
     response = query.order("created_at", desc=True).execute()
@@ -601,7 +701,7 @@ async def get_user_sessions(user_id: UUID | str, active_only: bool = True) -> li
     return response.data or []
 
 
-async def cleanup_expired_sessions() -> int:
+def cleanup_expired_sessions() -> int:
     """
     Clean up expired sessions (calls database function).
 
@@ -621,7 +721,7 @@ async def cleanup_expired_sessions() -> int:
 # =====================================================
 
 
-async def create_reset_token(
+def create_reset_token(
     user_id: UUID | str, expires_in_hours: int = 1, created_ip: str | None = None
 ) -> str:
     """
@@ -648,7 +748,7 @@ async def create_reset_token(
         "user_id": str(user_id),
         "token": token,
         "token_hash": token_hash,
-        "expires_at": (datetime.utcnow() + timedelta(hours=expires_in_hours)).isoformat(),
+        "expires_at": (datetime.now(UTC) + timedelta(hours=expires_in_hours)).isoformat(),
         "created_ip": created_ip,
     }
 
@@ -660,7 +760,7 @@ async def create_reset_token(
     return token
 
 
-async def verify_reset_token(token: str) -> dict[str, Any] | None:
+def verify_reset_token(token: str) -> dict[str, Any] | None:
     """
     Verify a password reset token is valid.
 
@@ -672,7 +772,7 @@ async def verify_reset_token(token: str) -> dict[str, Any] | None:
     """
     client = get_supabase_client()
 
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(UTC).isoformat()
 
     # Get all unused, non-expired tokens
     response = (
@@ -695,7 +795,7 @@ async def verify_reset_token(token: str) -> dict[str, Any] | None:
     return token_record
 
 
-async def use_reset_token(token: str, new_password: str, used_ip: str | None = None) -> bool:
+def use_reset_token(token: str, new_password: str, used_ip: str | None = None) -> bool:
     """
     Use a reset token to change password.
 
@@ -711,25 +811,25 @@ async def use_reset_token(token: str, new_password: str, used_ip: str | None = N
         Exception: If token invalid or database error
     """
     # Verify token
-    token_record = await verify_reset_token(token)
+    token_record = verify_reset_token(token)
     if not token_record:
         raise Exception("Invalid or expired reset token")
 
     user_id = token_record["user_id"]
 
     # Update password
-    await update_user_password(user_id, new_password)
+    update_user_password(user_id, new_password)
 
     # Mark token as used
     client = get_supabase_client()
     client.table("auth_password_reset_tokens").update(
-        {"used_at": datetime.utcnow().isoformat(), "used_ip": used_ip}
+        {"used_at": datetime.now(UTC).isoformat(), "used_ip": used_ip}
     ).eq("id", token_record["id"]).execute()
 
     return True
 
 
-async def cleanup_reset_tokens() -> int:
+def cleanup_reset_tokens() -> int:
     """
     Clean up expired/used reset tokens (calls database function).
 
@@ -749,7 +849,7 @@ async def cleanup_reset_tokens() -> int:
 # =====================================================
 
 
-async def link_oauth_account(
+def link_oauth_account(
     user_id: UUID | str,
     provider: str,
     provider_user_id: str,
@@ -796,7 +896,7 @@ async def link_oauth_account(
     return response.data[0]
 
 
-async def get_oauth_account(provider: str, provider_user_id: str) -> dict[str, Any] | None:
+def get_oauth_account(provider: str, provider_user_id: str) -> dict[str, Any] | None:
     """
     Get OAuth account by provider and provider user ID.
 
@@ -822,7 +922,7 @@ async def get_oauth_account(provider: str, provider_user_id: str) -> dict[str, A
     return response.data[0] if response.data else None
 
 
-async def get_user_oauth_accounts(user_id: UUID | str) -> list[dict[str, Any]]:
+def get_user_oauth_accounts(user_id: UUID | str) -> list[dict[str, Any]]:
     """
     Get all OAuth accounts for a user.
 
@@ -845,7 +945,7 @@ async def get_user_oauth_accounts(user_id: UUID | str) -> list[dict[str, Any]]:
     return response.data or []
 
 
-async def update_oauth_tokens(
+def update_oauth_tokens(
     oauth_account_id: UUID | str,
     access_token: str,
     refresh_token: str | None = None,
@@ -870,7 +970,7 @@ async def update_oauth_tokens(
 
     update_data: dict[str, Any] = {
         "access_token": access_token,
-        "last_used_at": datetime.utcnow().isoformat(),
+        "last_used_at": datetime.now(UTC).isoformat(),
     }
     if refresh_token:
         update_data["refresh_token"] = refresh_token
@@ -890,7 +990,7 @@ async def update_oauth_tokens(
     return response.data[0]
 
 
-async def unlink_oauth_account(oauth_account_id: UUID | str) -> bool:
+def unlink_oauth_account(oauth_account_id: UUID | str) -> bool:
     """
     Unlink an OAuth account.
 
@@ -917,7 +1017,7 @@ async def unlink_oauth_account(oauth_account_id: UUID | str) -> bool:
 # =====================================================
 
 
-async def assign_role(
+def assign_role(
     user_id: UUID | str, role_name: str, assigned_by: UUID | str | None = None
 ) -> dict[str, Any]:
     """
@@ -965,7 +1065,7 @@ async def assign_role(
     return response.data[0]
 
 
-async def revoke_role(user_id: UUID | str, role_name: str) -> bool:
+def revoke_role(user_id: UUID | str, role_name: str) -> bool:
     """
     Revoke a role from a user.
 
@@ -1002,7 +1102,7 @@ async def revoke_role(user_id: UUID | str, role_name: str) -> bool:
     return bool(response.data)
 
 
-async def get_user_roles(user_id: UUID | str) -> list[dict[str, Any]]:
+def get_user_roles(user_id: UUID | str) -> list[dict[str, Any]]:
     """
     Get all roles assigned to a user (with permissions).
 
@@ -1024,7 +1124,7 @@ async def get_user_roles(user_id: UUID | str) -> list[dict[str, Any]]:
     return user_data.get("roles", [])
 
 
-async def check_permission(user_id: UUID | str, permission: str) -> bool:
+def check_permission(user_id: UUID | str, permission: str) -> bool:
     """
     Check if user has a specific permission.
 
@@ -1035,7 +1135,7 @@ async def check_permission(user_id: UUID | str, permission: str) -> bool:
     Returns:
         True if user has permission
     """
-    roles = await get_user_roles(user_id)
+    roles = get_user_roles(user_id)
 
     for role in roles:
         permissions = role.get("permissions", [])
@@ -1051,7 +1151,7 @@ async def check_permission(user_id: UUID | str, permission: str) -> bool:
 # =====================================================
 
 
-async def set_2fa_requirement(username: str, required: bool) -> bool:
+def set_2fa_requirement(username: str, required: bool) -> bool:
     """
     Set whether a user is required to use 2FA.
 
@@ -1081,7 +1181,7 @@ async def set_2fa_requirement(username: str, required: bool) -> bool:
     return True
 
 
-async def get_2fa_requirement(username: str) -> bool:
+def get_2fa_requirement(username: str) -> bool:
     """
     Check if a user is required to use 2FA.
 
@@ -1094,7 +1194,7 @@ async def get_2fa_requirement(username: str) -> bool:
     Raises:
         Exception: If user not found or database error
     """
-    user = await get_user_by_username(username)
+    user = get_user_by_username(username)
     if not user:
         raise Exception(f"User '{username}' not found")
 

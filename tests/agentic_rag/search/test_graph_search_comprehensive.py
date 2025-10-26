@@ -15,19 +15,18 @@ Covers:
 - Data model conversions (to_dict)
 """
 
-import pytest
 from datetime import datetime
 from unittest.mock import AsyncMock, Mock, patch
-from uuid import uuid4
+
+import pytest
 
 from src.agentic_rag.search.graph_search import (
+    GraphEntity,
+    GraphFact,
+    GraphRelationship,
     GraphSearch,
     GraphSearchResult,
-    GraphFact,
-    GraphEntity,
-    GraphRelationship,
 )
-
 
 # ===== Fixtures =====
 
@@ -125,7 +124,9 @@ class TestGraphSearchInit:
 
     def test_init_requires_connection_manager(self):
         """Test that initialization requires connection manager."""
-        with pytest.raises(ValueError, match="GraphSearch requires an initialized ConnectionManager"):
+        with pytest.raises(
+            ValueError, match="GraphSearch requires an initialized ConnectionManager"
+        ):
             GraphSearch(None)
 
     def test_init_with_connection_manager(self, mock_connection_manager, mock_config):
@@ -155,12 +156,16 @@ class TestMainSearch:
         self, graph_search, sample_facts, sample_entities, sample_relationships
     ):
         """Test that search combines facts, entities, and relationships."""
-        with patch.object(
-            graph_search, "_search_facts", new=AsyncMock(return_value=sample_facts)
-        ), patch.object(
-            graph_search, "_search_entities", new=AsyncMock(return_value=sample_entities)
-        ), patch.object(
-            graph_search, "_search_relationships", new=AsyncMock(return_value=sample_relationships)
+        with (
+            patch.object(graph_search, "_search_facts", new=AsyncMock(return_value=sample_facts)),
+            patch.object(
+                graph_search, "_search_entities", new=AsyncMock(return_value=sample_entities)
+            ),
+            patch.object(
+                graph_search,
+                "_search_relationships",
+                new=AsyncMock(return_value=sample_relationships),
+            ),
         ):
             result = await graph_search.search("OpenAI GPT-4", limit=20)
 
@@ -171,12 +176,10 @@ class TestMainSearch:
 
     async def test_search_updates_stats(self, graph_search, sample_facts):
         """Test that search updates statistics."""
-        with patch.object(
-            graph_search, "_search_facts", new=AsyncMock(return_value=sample_facts)
-        ), patch.object(
-            graph_search, "_search_entities", new=AsyncMock(return_value=[])
-        ), patch.object(
-            graph_search, "_search_relationships", new=AsyncMock(return_value=[])
+        with (
+            patch.object(graph_search, "_search_facts", new=AsyncMock(return_value=sample_facts)),
+            patch.object(graph_search, "_search_entities", new=AsyncMock(return_value=[])),
+            patch.object(graph_search, "_search_relationships", new=AsyncMock(return_value=[])),
         ):
             await graph_search.search("test query", limit=20)
 
@@ -187,12 +190,14 @@ class TestMainSearch:
     async def test_search_handles_exceptions(self, graph_search):
         """Test that search handles component failures gracefully."""
         # One component fails, others succeed
-        with patch.object(
-            graph_search, "_search_facts", new=AsyncMock(side_effect=Exception("Fact search failed"))
-        ), patch.object(
-            graph_search, "_search_entities", new=AsyncMock(return_value=[])
-        ), patch.object(
-            graph_search, "_search_relationships", new=AsyncMock(return_value=[])
+        with (
+            patch.object(
+                graph_search,
+                "_search_facts",
+                new=AsyncMock(side_effect=Exception("Fact search failed")),
+            ),
+            patch.object(graph_search, "_search_entities", new=AsyncMock(return_value=[])),
+            patch.object(graph_search, "_search_relationships", new=AsyncMock(return_value=[])),
         ):
             result = await graph_search.search("test query", limit=20)
 
@@ -204,12 +209,16 @@ class TestMainSearch:
         self, graph_search, sample_facts, sample_entities, sample_relationships
     ):
         """Test that search extracts chunk references."""
-        with patch.object(
-            graph_search, "_search_facts", new=AsyncMock(return_value=sample_facts)
-        ), patch.object(
-            graph_search, "_search_entities", new=AsyncMock(return_value=sample_entities)
-        ), patch.object(
-            graph_search, "_search_relationships", new=AsyncMock(return_value=sample_relationships)
+        with (
+            patch.object(graph_search, "_search_facts", new=AsyncMock(return_value=sample_facts)),
+            patch.object(
+                graph_search, "_search_entities", new=AsyncMock(return_value=sample_entities)
+            ),
+            patch.object(
+                graph_search,
+                "_search_relationships",
+                new=AsyncMock(return_value=sample_relationships),
+            ),
         ):
             result = await graph_search.search("test query", limit=20)
 
@@ -283,9 +292,7 @@ class TestSearchFacts:
 
     async def test_search_facts_handles_errors(self, graph_search):
         """Test fact search handles errors gracefully."""
-        graph_search.graphiti_client.search = AsyncMock(
-            side_effect=Exception("Graphiti error")
-        )
+        graph_search.graphiti_client.search = AsyncMock(side_effect=Exception("Graphiti error"))
 
         facts = await graph_search._search_facts("test", limit=10)
 
@@ -353,9 +360,7 @@ class TestSearchEntities:
 
     async def test_search_entities_handles_errors(self, graph_search):
         """Test entity search handles errors gracefully."""
-        graph_search.neo4j_store.execute_query = AsyncMock(
-            side_effect=Exception("Neo4j error")
-        )
+        graph_search.neo4j_store.execute_query = AsyncMock(side_effect=Exception("Neo4j error"))
 
         entities = await graph_search._search_entities("test", limit=10)
 
@@ -386,9 +391,7 @@ class TestSearchRelationships:
 
     async def test_search_relationships_returns_empty_if_no_entities(self, graph_search):
         """Test relationship search returns empty if no entities found."""
-        with patch.object(
-            graph_search, "_search_entities", new=AsyncMock(return_value=[])
-        ):
+        with patch.object(graph_search, "_search_entities", new=AsyncMock(return_value=[])):
             relationships = await graph_search._search_relationships("unknown", limit=10)
 
             assert relationships == []
@@ -504,9 +507,7 @@ class TestEntityTimeline:
 
     async def test_find_entity_timeline_handles_errors(self, graph_search):
         """Test timeline handles errors gracefully."""
-        graph_search.neo4j_store.execute_query = AsyncMock(
-            side_effect=Exception("Neo4j error")
-        )
+        graph_search.neo4j_store.execute_query = AsyncMock(side_effect=Exception("Neo4j error"))
 
         facts = await graph_search.find_entity_timeline("OpenAI", limit=20)
 
@@ -560,9 +561,7 @@ class TestEntityRelationships:
 
     async def test_find_entity_relationships_handles_errors(self, graph_search):
         """Test relationship traversal handles errors gracefully."""
-        graph_search.neo4j_store.execute_query = AsyncMock(
-            side_effect=Exception("Neo4j error")
-        )
+        graph_search.neo4j_store.execute_query = AsyncMock(side_effect=Exception("Neo4j error"))
 
         result = await graph_search.find_entity_relationships("OpenAI", depth=2)
 
@@ -632,12 +631,10 @@ class TestStatistics:
     @pytest.mark.asyncio
     async def test_get_stats_with_searches(self, graph_search, sample_facts):
         """Test stats after performing searches."""
-        with patch.object(
-            graph_search, "_search_facts", new=AsyncMock(return_value=sample_facts)
-        ), patch.object(
-            graph_search, "_search_entities", new=AsyncMock(return_value=[])
-        ), patch.object(
-            graph_search, "_search_relationships", new=AsyncMock(return_value=[])
+        with (
+            patch.object(graph_search, "_search_facts", new=AsyncMock(return_value=sample_facts)),
+            patch.object(graph_search, "_search_entities", new=AsyncMock(return_value=[])),
+            patch.object(graph_search, "_search_relationships", new=AsyncMock(return_value=[])),
         ):
             await graph_search.search("query 1", limit=20)
             await graph_search.search("query 2", limit=20)
@@ -652,12 +649,12 @@ class TestStatistics:
     @pytest.mark.asyncio
     async def test_stats_calculates_averages(self, graph_search, sample_facts, sample_entities):
         """Test that stats calculate proper averages."""
-        with patch.object(
-            graph_search, "_search_facts", new=AsyncMock(return_value=sample_facts)
-        ), patch.object(
-            graph_search, "_search_entities", new=AsyncMock(return_value=sample_entities)
-        ), patch.object(
-            graph_search, "_search_relationships", new=AsyncMock(return_value=[])
+        with (
+            patch.object(graph_search, "_search_facts", new=AsyncMock(return_value=sample_facts)),
+            patch.object(
+                graph_search, "_search_entities", new=AsyncMock(return_value=sample_entities)
+            ),
+            patch.object(graph_search, "_search_relationships", new=AsyncMock(return_value=[])),
         ):
             await graph_search.search("test", limit=20)
 

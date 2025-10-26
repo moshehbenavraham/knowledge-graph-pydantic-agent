@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document outlines the supply chain security measures for the Base Agent / Agentic RAG platform, including image provenance, SBOM generation, vulnerability scanning, and signing procedures.
+This document outlines the supply chain security measures for the Luminari Agent / Agentic RAG platform, including image provenance, SBOM generation, vulnerability scanning, and signing procedures.
 
 ## Container Image Supply Chain
 

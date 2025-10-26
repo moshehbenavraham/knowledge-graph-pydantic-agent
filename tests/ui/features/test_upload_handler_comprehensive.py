@@ -7,7 +7,7 @@ success/failure scenarios, database operations, and error handling.
 
 import base64
 import io
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
@@ -17,7 +17,6 @@ from src.ui.features.upload_handler import (
     process_image_upload,
     process_tabular_upload,
 )
-
 
 # ============================================================================
 # Fixtures
@@ -54,7 +53,9 @@ def mock_text_file():
     file.name = "test_document.txt"
     file.type = "text/plain"
     file.size = 1024
-    file.read.return_value = b"This is test content for a document upload.\n\nIt has multiple lines."
+    file.read.return_value = (
+        b"This is test content for a document upload.\n\nIt has multiple lines."
+    )
     return file
 
 
@@ -65,7 +66,9 @@ def mock_markdown_file():
     file.name = "test_doc.md"
     file.type = "text/markdown"
     file.size = 2048
-    file.read.return_value = b"# Test Document\n\nThis is a markdown file.\n\n## Section 1\n\nContent here."
+    file.read.return_value = (
+        b"# Test Document\n\nThis is a markdown file.\n\n## Section 1\n\nContent here."
+    )
     return file
 
 
@@ -134,9 +137,7 @@ async def test_process_document_upload_success(
     # Mock embeddings
     mock_embeddings.return_value = [[0.1] * 1536, [0.2] * 1536]
 
-    result = await process_document_upload(
-        mock_text_file, mock_supabase, mock_embedding_client
-    )
+    result = await process_document_upload(mock_text_file, mock_supabase, mock_embedding_client)
 
     assert result["success"] is True
     assert "test_document.txt" in result["message"]
@@ -163,9 +164,7 @@ async def test_process_document_upload_markdown(
     mock_chunk.return_value = [{"content": "Markdown content"}]
     mock_embeddings.return_value = [[0.1] * 1536]
 
-    result = await process_document_upload(
-        mock_markdown_file, mock_supabase, mock_embedding_client
-    )
+    result = await process_document_upload(mock_markdown_file, mock_supabase, mock_embedding_client)
 
     assert result["success"] is True
     assert "test_doc.md" in result["message"]
@@ -269,9 +268,7 @@ async def test_process_document_upload_chunking_failure(
     """Test handling of chunking failures."""
     mock_chunk.side_effect = Exception("Chunking failed")
 
-    result = await process_document_upload(
-        mock_text_file, mock_supabase, mock_embedding_client
-    )
+    result = await process_document_upload(mock_text_file, mock_supabase, mock_embedding_client)
 
     assert result["success"] is False
     assert "Upload failed" in result["message"]
@@ -287,9 +284,7 @@ async def test_process_document_upload_embedding_failure(
     mock_chunk.return_value = [{"content": "Test"}]
     mock_embeddings.side_effect = Exception("Embedding API failed")
 
-    result = await process_document_upload(
-        mock_text_file, mock_supabase, mock_embedding_client
-    )
+    result = await process_document_upload(mock_text_file, mock_supabase, mock_embedding_client)
 
     assert result["success"] is False
     assert "Upload failed" in result["message"]
@@ -308,9 +303,7 @@ async def test_process_document_upload_db_failure(
     # Make database insert fail
     mock_supabase.table.return_value.insert.side_effect = Exception("DB connection lost")
 
-    result = await process_document_upload(
-        mock_text_file, mock_supabase, mock_embedding_client
-    )
+    result = await process_document_upload(mock_text_file, mock_supabase, mock_embedding_client)
 
     assert result["success"] is False
     assert "Upload failed" in result["message"]
@@ -434,7 +427,7 @@ async def test_process_image_upload_read_failure(mock_supabase):
     bad_image.name = "bad.png"
     bad_image.type = "image/png"
     bad_image.size = 100
-    bad_image.read.side_effect = IOError("Cannot read file")
+    bad_image.read.side_effect = OSError("Cannot read file")
 
     result = await process_image_upload(bad_image, mock_supabase)
 
@@ -662,9 +655,7 @@ async def test_process_tabular_upload_rows_insert_failure(mock_csv_file, mock_su
 async def test_process_tabular_upload_missing_dataset_id(mock_csv_file, mock_supabase):
     """Test handling when dataset_id is not returned."""
     # Mock response with no data
-    mock_supabase.table.return_value.insert.return_value.execute.return_value = MagicMock(
-        data=[]
-    )
+    mock_supabase.table.return_value.insert.return_value.execute.return_value = MagicMock(data=[])
 
     result = await process_tabular_upload(mock_csv_file, mock_supabase)
 
@@ -716,9 +707,7 @@ async def test_document_upload_with_special_characters_in_name(
     mock_chunk.return_value = [{"content": "Test"}]
     mock_embeddings.return_value = [[0.1] * 1536]
 
-    result = await process_document_upload(
-        special_file, mock_supabase, mock_embedding_client
-    )
+    result = await process_document_upload(special_file, mock_supabase, mock_embedding_client)
 
     assert result["success"] is True
     assert "test document (2025) #1.txt" in result["message"]

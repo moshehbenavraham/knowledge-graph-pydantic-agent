@@ -1,6 +1,6 @@
 # Agent Testing Guide
 
-**System:** Base Agent with Agentic RAG (Lightweight deployment)
+**System:** Luminari Agent with Agentic RAG (Lightweight deployment)
 **URL:** http://localhost:8501
 **Mode:** Simple UI (basic chat, no streaming)
 **Documents:** 63 AI/Big Tech articles (810 chunks)
