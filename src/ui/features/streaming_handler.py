@@ -1,5 +1,7 @@
 from collections.abc import AsyncIterator
+from datetime import datetime
 from typing import Any
+from uuid import UUID, uuid4
 
 import structlog
 from httpx import AsyncClient
@@ -13,6 +15,11 @@ from pydantic_ai.messages import (
 )
 
 from src.agent import super_agent
+from src.agentic_rag.analytics import (
+    AgentInteractionEvent,
+    ToolUsageEvent,
+    get_analytics_logger,
+)
 
 from .base_handler import BaseHandler
 
@@ -44,6 +51,15 @@ class StreamingHandler(BaseHandler):
             "tool_return": 0,
             "nodes_processed": 0,
         }
+
+        # Analytics tracking
+        interaction_start_time = datetime.now()
+        session_id = kwargs.get("session_id", uuid4())
+        user_id = kwargs.get("user_id", None)
+        tools_called = []
+        tool_timings = {}  # Track tool execution times
+        rag_used = False
+        response_text = ""
 
         try:
             logger.debug("Getting agent dependencies...")
@@ -88,9 +104,22 @@ class StreamingHandler(BaseHandler):
 
                                     elif event.part.part_kind == "tool-call":
                                         event_counts["tool_call"] += 1
+                                        tool_name = event.part.tool_name
+
+                                        # Track tool timing
+                                        tool_timings[tool_name] = {
+                                            "start": datetime.now(),
+                                            "args": event.part.args,
+                                        }
+                                        tools_called.append(tool_name)
+
+                                        # Check if RAG tool is being used
+                                        if tool_name in ["smart_search", "retrieve_documents", "comprehensive_search"]:
+                                            rag_used = True
+
                                         logger.info(
                                             "Tool call event",
-                                            tool_name=event.part.tool_name,
+                                            tool_name=tool_name,
                                             args_keys=(
                                                 list(event.part.args.keys())
                                                 if isinstance(event.part.args, dict)
@@ -99,13 +128,40 @@ class StreamingHandler(BaseHandler):
                                         )
                                         yield {
                                             "type": "tool-call",
-                                            "tool_name": event.part.tool_name,
+                                            "tool_name": tool_name,
                                             "args": event.part.args,
                                         }
 
                                     elif event.part.part_kind == "tool-return":
                                         event_counts["tool_return"] += 1
+                                        tool_name = event.part.tool_name
                                         content_str = str(event.part.content)
+
+                                        # Calculate execution time and log tool usage
+                                        if tool_name in tool_timings:
+                                            end_time = datetime.now()
+                                            start_time = tool_timings[tool_name]["start"]
+                                            execution_ms = (end_time - start_time).total_seconds() * 1000
+
+                                            # Log tool usage to analytics
+                                            try:
+                                                analytics_logger = get_analytics_logger()
+                                                tool_event = ToolUsageEvent(
+                                                    session_id=session_id if isinstance(session_id, UUID) else None,
+                                                    tool_name=tool_name,
+                                                    execution_time_ms=execution_ms,
+                                                    success=True,
+                                                    input_params=tool_timings[tool_name].get("args"),
+                                                    result_summary={"content_length": len(content_str)},
+                                                    triggered_by="agent_decision",
+                                                    user_id=user_id,
+                                                    source="ui",
+                                                )
+                                                await analytics_logger.log_tool_usage(tool_event)
+                                                logger.debug(f"Logged tool usage for {tool_name}")
+                                            except Exception as log_err:
+                                                logger.warning(f"Failed to log tool usage: {log_err}")
+
                                         content_preview = (
                                             content_str[:100] + "..."
                                             if len(content_str) > 100
@@ -113,13 +169,13 @@ class StreamingHandler(BaseHandler):
                                         )
                                         logger.info(
                                             "Tool return event",
-                                            tool_name=event.part.tool_name,
+                                            tool_name=tool_name,
                                             content_length=len(content_str),
                                             content_preview=content_preview,
                                         )
                                         yield {
                                             "type": "tool-return",
-                                            "tool_name": event.part.tool_name,
+                                            "tool_name": tool_name,
                                             "content": event.part.content,
                                         }
 
@@ -127,6 +183,7 @@ class StreamingHandler(BaseHandler):
                                     event.delta, TextPartDelta
                                 ):
                                     event_counts["text_delta"] += 1
+                                    response_text += event.delta.content_delta
                                     if event_counts["text_delta"] % 10 == 0:
                                         logger.debug(
                                             "Text delta streaming",
@@ -135,6 +192,34 @@ class StreamingHandler(BaseHandler):
                                     yield {"type": "delta", "content": event.delta.content_delta}
 
             new_messages_count = len(run.result.new_messages())
+
+            # Log agent interaction to analytics
+            interaction_end_time = datetime.now()
+            response_time_ms = (interaction_end_time - interaction_start_time).total_seconds() * 1000
+
+            try:
+                analytics_logger = get_analytics_logger()
+                from src.config import get_settings
+                settings = get_settings()
+
+                interaction_event = AgentInteractionEvent(
+                    session_id=session_id if isinstance(session_id, UUID) else uuid4(),
+                    interaction_type="query",
+                    user_message=user_input,
+                    agent_response=response_text[:500],  # Truncate for storage
+                    response_time_ms=response_time_ms,
+                    model_used=settings.llm_model or "unknown",
+                    tools_called=tools_called,
+                    rag_used=rag_used,
+                    user_id=user_id,
+                    source="ui",
+                    metadata={"event_counts": event_counts},
+                )
+                await analytics_logger.log_interaction(interaction_event)
+                logger.info("Logged agent interaction to analytics")
+            except Exception as log_err:
+                logger.warning(f"Failed to log agent interaction: {log_err}")
+
             logger.info(
                 "Stream COMPLETE - sending completion event",
                 new_messages_count=new_messages_count,

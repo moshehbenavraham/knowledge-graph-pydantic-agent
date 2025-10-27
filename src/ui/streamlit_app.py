@@ -27,6 +27,8 @@ warnings.filterwarnings(
     message=".*verify.*parameter is deprecated.*",
 )
 
+from src.agentic_rag.analytics import initialize_analytics_logger
+from src.agentic_rag.storage.connection_manager import ConnectionManager
 from src.auth.streamlit_auth import (
     USE_DATABASE_AUTH,
     render_logout_button,
@@ -304,7 +306,22 @@ def initialize_session_state():
             st.session_state.handler.initialize()
             logger.info("Handler initialization complete")
 
-            # Step 6: Finalize
+            # Step 6: Initialize analytics logger
+            if "analytics_logger" not in st.session_state:
+                progress_bar.progress(80, text="📊 Initializing analytics...")
+                try:
+                    logger.info("Initializing analytics logger...")
+                    conn_mgr = ConnectionManager()
+                    analytics_logger = asyncio.run(initialize_analytics_logger(conn_mgr))
+                    st.session_state.analytics_logger = analytics_logger
+                    st.session_state.connection_manager = conn_mgr
+                    logger.info("Analytics logger initialized successfully")
+                except Exception as e:
+                    logger.exception("Failed to initialize analytics logger", error=str(e))
+                    st.session_state.analytics_logger = None
+                time.sleep(0.3)
+
+            # Step 7: Finalize
             progress_bar.progress(90, text="✨ Finalizing setup...")
             time.sleep(0.3)
 
@@ -674,6 +691,7 @@ async def _render_dashboard_content(handler: DashboardHandler):
 
     # Section A: Search Analytics
     st.header("🔍 Search Analytics")
+    st.caption("📅 Showing metrics for the last 7 days")
 
     try:
         metrics = await handler.get_search_metrics()
@@ -1062,7 +1080,9 @@ async def _render_dashboard_content(handler: DashboardHandler):
                 )
         else:
             st.info(
-                "No tool usage data available yet. Tools will be tracked automatically as they're used."
+                "📊 No tool usage data available for the last 7 days. "
+                "Tools are tracked automatically when used. "
+                "If you've been using tools, try clicking '📊 Sync Views' button above to refresh the data."
             )
 
     except Exception as e:
@@ -1109,7 +1129,9 @@ async def _render_dashboard_content(handler: DashboardHandler):
                 st.plotly_chart(fig, use_container_width=True)
         else:
             st.info(
-                "No agent interaction data available yet. Interactions will be tracked automatically."
+                "📊 No agent interaction data available for the last 7 days. "
+                "Interactions are tracked automatically during conversations. "
+                "If you've been using the chat, try clicking '📊 Sync Views' button above to refresh the data."
             )
 
     except Exception as e:

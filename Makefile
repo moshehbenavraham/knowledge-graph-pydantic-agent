@@ -85,7 +85,7 @@ ngrok-ui:  ## Start Streamlit only (for manual ngrok)
 	  PYTHONPATH=$(PWD):$$PYTHONPATH UI_MODE=advanced \
 	  streamlit run src/ui/streamlit_app.py --server.port=8501"
 
-deploy-ngrok:  ## Start Streamlit + ngrok tunnel automatically (logs to logs/ngrok_auth_logs/, auto-cleanup >3 days)
+deploy-ngrok:  ## Start Streamlit + ngrok tunnel + HTTP log monitor (logs to logs/ngrok_auth_logs/)
 	@mkdir -p logs/ngrok_auth_logs
 	@echo "Cleaning up logs older than 3 days..."
 	@find logs/ngrok_auth_logs -name "*.log" -type f -mtime +3 -delete 2>/dev/null || true
@@ -95,13 +95,19 @@ deploy-ngrok:  ## Start Streamlit + ngrok tunnel automatically (logs to logs/ngr
 	  streamlit run src/ui/streamlit_app.py --server.port=8501 2>&1 | tee logs/ngrok_auth_logs/streamlit_$$(date +%Y%m%d_%H%M%S).log" & \
 	sleep 5 && \
 	echo "Starting ngrok tunnel to aiwithapex.ngrok.io..." && \
-	ngrok start base-agent-ui 2>&1 | tee logs/ngrok_auth_logs/ngrok_$$(date +%Y%m%d_%H%M%S).log
+	ngrok start base-agent-ui 2>&1 | tee logs/ngrok_auth_logs/ngrok_$$(date +%Y%m%d_%H%M%S).log & \
+	sleep 3 && \
+	echo "Starting ngrok HTTP log monitor..." && \
+	bash -c "source .venv/bin/activate && python3 scripts/monitor_ngrok_logs.py"
 
 ngrok-status:  ## Check ngrok tunnel status
 	@curl -s http://localhost:4040/api/tunnels | python -m json.tool
 
-ngrok-logs:  ## View ngrok access logs
+ngrok-logs:  ## View ngrok access logs (via API)
 	@curl -s http://localhost:4040/api/requests/http | python -m json.tool
+
+ngrok-monitor:  ## Start ngrok HTTP log monitor (writes to logs/ngrok_auth_logs/)
+	@bash -c "source .venv/bin/activate && python3 scripts/monitor_ngrok_logs.py"
 
 # Docker
 docker-build:
