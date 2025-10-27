@@ -603,8 +603,8 @@ async def get_connection_manager() -> ConnectionManager:
             )
 
             if loop_changed:
-                logger.warning(
-                    f"Event loop changed (Streamlit rerun detected)! "
+                logger.info(
+                    f"Event loop changed (Streamlit rerun detected) - this is normal behavior. "
                     f"Old: {_connection_manager_loop_id}, New: {current_loop_id}"
                 )
                 logger.info("Closing old connection manager and creating new one...")

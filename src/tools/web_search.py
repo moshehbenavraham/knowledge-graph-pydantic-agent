@@ -233,7 +233,23 @@ async def web_search_tool(
         if search_provider:
             if search_provider.lower() == "jina" and jina_api_key:
                 logger.debug("Using Jina.ai search (explicit)", query=query)
-                result = await jina_web_search(query, http_client, jina_api_key)
+                try:
+                    result = await jina_web_search(query, http_client, jina_api_key)
+                except Exception as jina_error:
+                    logger.warning(
+                        "Jina.ai search failed, trying fallback providers",
+                        query=query,
+                        error=str(jina_error),
+                    )
+                    # Fallback to other available providers
+                    if brave_api_key:
+                        logger.debug("Falling back to Brave search", query=query)
+                        result = await brave_web_search(query, http_client, brave_api_key)
+                    elif searxng_base_url:
+                        logger.debug("Falling back to SearXNG search", query=query)
+                        result = await searxng_web_search(query, http_client, searxng_base_url)
+                    else:
+                        raise jina_error
             elif search_provider.lower() == "brave" and brave_api_key:
                 logger.debug("Using Brave search (explicit)", query=query)
                 result = await brave_web_search(query, http_client, brave_api_key)
@@ -245,7 +261,23 @@ async def web_search_tool(
         # Auto-selection based on available credentials (priority: Jina > Brave > SearXNG)
         elif jina_api_key:
             logger.debug("Using Jina.ai search (auto)", query=query)
-            result = await jina_web_search(query, http_client, jina_api_key)
+            try:
+                result = await jina_web_search(query, http_client, jina_api_key)
+            except Exception as jina_error:
+                logger.warning(
+                    "Jina.ai search failed, trying fallback providers",
+                    query=query,
+                    error=str(jina_error),
+                )
+                # Fallback to other available providers
+                if brave_api_key:
+                    logger.debug("Falling back to Brave search", query=query)
+                    result = await brave_web_search(query, http_client, brave_api_key)
+                elif searxng_base_url:
+                    logger.debug("Falling back to SearXNG search", query=query)
+                    result = await searxng_web_search(query, http_client, searxng_base_url)
+                else:
+                    raise jina_error
         elif brave_api_key:
             logger.debug("Using Brave search (auto)", query=query)
             result = await brave_web_search(query, http_client, brave_api_key)

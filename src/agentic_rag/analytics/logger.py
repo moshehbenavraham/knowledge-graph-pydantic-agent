@@ -196,10 +196,20 @@ class AnalyticsLogger:
             return
 
         self._running = False
+
+        # Cancel and wait for the main flush task
         if self._flush_task:
             self._flush_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await self._flush_task
+
+        # Cancel and wait for all background tasks
+        if self._background_tasks:
+            for task in self._background_tasks:
+                task.cancel()
+            # Wait for all background tasks to complete or be cancelled
+            await asyncio.gather(*self._background_tasks, return_exceptions=True)
+            self._background_tasks.clear()
 
         # Final flush
         await self._flush_all()
