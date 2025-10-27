@@ -4,8 +4,6 @@ Password reset flow implementation.
 Provides secure password reset functionality with email-based token verification.
 """
 
-import os
-
 import structlog
 
 from src.auth.db import (
@@ -15,17 +13,9 @@ from src.auth.db import (
     use_reset_token,
     verify_reset_token,
 )
+from src.config import get_settings
 
 logger = structlog.get_logger(__name__)
-
-# Email configuration
-EMAIL_ENABLED = os.getenv("EMAIL_ENABLED", "false").lower() == "true"
-EMAIL_PROVIDER = os.getenv("EMAIL_PROVIDER", "smtp")  # smtp, sendgrid, mailgun, supabase
-SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
-SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
-SMTP_USER = os.getenv("SMTP_USER", "")
-SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
-SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", "max@aiwithapex.com")
 
 
 async def send_reset_email_smtp(email: str, reset_token: str, reset_url: str) -> bool:
@@ -43,11 +33,13 @@ async def send_reset_email_smtp(email: str, reset_token: str, reset_url: str) ->
     from email.mime.multipart import MIMEMultipart
     from email.mime.text import MIMEText
 
+    settings = get_settings()
+
     try:
         # Create message
         msg = MIMEMultipart("alternative")
         msg["Subject"] = "Password Reset Request - Luminari Agent"
-        msg["From"] = SMTP_FROM_EMAIL
+        msg["From"] = settings.smtp_from_email
         msg["To"] = email
 
         # Create reset link
@@ -104,10 +96,10 @@ async def send_reset_email_smtp(email: str, reset_token: str, reset_url: str) ->
         msg.attach(MIMEText(html, "html"))
 
         # Send email
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+        with smtplib.SMTP(settings.smtp_host, settings.smtp_port) as server:
             server.starttls()
-            if SMTP_USER and SMTP_PASSWORD:
-                server.login(SMTP_USER, SMTP_PASSWORD)
+            if settings.smtp_user and settings.smtp_password:
+                server.login(settings.smtp_user, settings.smtp_password)
             server.send_message(msg)
 
         logger.info("Password reset email sent", email=email)
@@ -129,7 +121,9 @@ async def send_reset_email(email: str, reset_token: str, reset_url: str) -> bool
     Returns:
         True if email sent successfully
     """
-    if not EMAIL_ENABLED:
+    settings = get_settings()
+
+    if not settings.email_enabled:
         logger.warning(
             "Email disabled, password reset token generated but not sent",
             email=email,
@@ -139,9 +133,9 @@ async def send_reset_email(email: str, reset_token: str, reset_url: str) -> bool
         logger.debug("Reset token (dev only)", token=reset_token, reset_url=reset_url)
         return False
 
-    if EMAIL_PROVIDER == "smtp":
+    if settings.email_provider == "smtp":
         return await send_reset_email_smtp(email, reset_token, reset_url)
-    logger.error("Unsupported email provider", provider=EMAIL_PROVIDER)
+    logger.error("Unsupported email provider", provider=settings.email_provider)
     return False
 
 

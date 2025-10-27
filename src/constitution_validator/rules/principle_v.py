@@ -86,6 +86,42 @@ class ObservabilityRule(BaseValidationRule):
         if self.find_decorator(node, "property"):
             return True
 
+        # Skip Pydantic validators and model methods
+        pydantic_patterns = [
+            "validator",
+            "field_validator",
+            "model_validator",
+            "root_validator",
+        ]
+        for pattern in pydantic_patterns:
+            if self.find_decorator(node, pattern):
+                return True
+
+        # Skip common utility/accessor patterns
+        utility_patterns = [
+            "to_dict",  # Serialization
+            "from_dict",  # Deserialization
+            "get_stats",  # Stats accessors
+            "get_config",  # Config accessors
+            "dict",  # Dict conversion (Pydantic)
+            "generate_key",  # Key generation utilities
+        ]
+        if node.name in utility_patterns:
+            return True
+
+        # Skip validation methods (not decorators)
+        if node.name.startswith("validate"):
+            return True
+
+        # Skip simple get/set accessors (cache, config)
+        if node.name in ["get", "set"] and node.body:
+            # Only skip if very short (likely cache accessor)
+            first_line = node.body[0].lineno
+            last_line = node.body[-1].end_lineno or node.body[-1].lineno
+            line_count = last_line - first_line + 1
+            if line_count < 8:  # Simple accessors are typically < 8 lines
+                return True
+
         # Skip trivial functions (< 5 lines of code)
         # Calculate actual line span of function body
         if node.body:

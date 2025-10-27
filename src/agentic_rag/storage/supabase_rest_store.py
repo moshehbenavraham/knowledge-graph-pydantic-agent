@@ -31,8 +31,10 @@ class SupabaseRestStore:
             supabase_url: Supabase project URL
             supabase_key: Supabase service role key
         """
-        self.client: Client = create_client(
-            supabase_url, supabase_key
+        self.client: Client = (
+            create_client(  # noqa: CONST-III-001 - Storage layer using centralized config
+                supabase_url, supabase_key
+            )
         )  # noqa: CONST-III-001 - Storage layer implementation
         logger.info(f"Initialized SupabaseRestStore for {supabase_url}")
 

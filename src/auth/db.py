@@ -49,6 +49,7 @@ def create_user(
     Raises:
         Exception: If username/email already exists or database error
     """
+    logger.info("Creating user", username=username, email=email, auth_method=auth_method)
     client = get_supabase_client()
 
     # Hash password if provided
@@ -72,6 +73,7 @@ def create_user(
     # Remove password_hash from response
     user = response.data[0]
     user.pop("password_hash", None)
+    logger.info("User created successfully", username=username, user_id=user.get("id"))
     return user
 
 

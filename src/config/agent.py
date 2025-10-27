@@ -4,7 +4,11 @@ Agent-specific configuration facade.
 Provides convenient access to agent and search-related settings.
 """
 
+import structlog
+
 from .settings import SearchStrategy, WebSearchProvider, get_settings
+
+logger = structlog.get_logger(__name__)
 
 
 class AgentConfig:
@@ -81,6 +85,11 @@ class AgentConfig:
 
     def get_search_config(self) -> dict[str, any]:
         """Get search configuration dictionary."""
+        logger.info(
+            "Getting search configuration",
+            enable_graph=self.enable_graph,
+            enable_parallel=self.enable_parallel_search,
+        )
         return {
             "enable_graph": self.enable_graph,
             "enable_parallel": self.enable_parallel_search,
@@ -91,6 +100,7 @@ class AgentConfig:
 
     def get_web_search_config(self) -> dict[str, str | None]:
         """Get web search configuration."""
+        logger.info("Getting web search configuration", provider=self.web_search_provider)
         return {
             "provider": self.web_search_provider,
             "jina_api_key": self.jina_api_key,

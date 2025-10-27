@@ -21,6 +21,7 @@ from src.auth.db import (
     update_user_password,
 )
 from src.auth.password_strength import is_password_strong, render_password_strength_meter
+from src.config import get_settings
 
 logger = structlog.get_logger(__name__)
 
@@ -116,11 +117,10 @@ def render_user_profile(username: str):
                     use_container_width=True,
                 ):
                     try:
-                        import os
-
                         from src.auth.email_verification import request_email_verification
 
-                        verification_url = os.getenv("VERIFICATION_URL", "http://localhost:8501")
+                        settings = get_settings()
+                        verification_url = settings.verification_url
                         success, message = asyncio.run(
                             request_email_verification(user["id"], verification_url)
                         )

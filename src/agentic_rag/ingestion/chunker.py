@@ -9,12 +9,14 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
+import structlog
 from pydantic_ai import Agent
 
 from src.agentic_rag.config import get_config
 from src.config import ChunkingStrategy
 
 logger = logging.getLogger(__name__)
+structlog_logger = structlog.get_logger(__name__)
 
 
 @dataclass
@@ -399,6 +401,12 @@ class SimpleChunker:
         Returns:
             List of document chunks
         """
+        structlog_logger.info(
+            "Chunking document",
+            content_length=len(content),
+            chunk_size=self.config["chunk_size"],
+            chunk_overlap=self.config["chunk_overlap"],
+        )
         if not content.strip():
             return []
 
@@ -470,6 +478,9 @@ class SimpleChunker:
         for chunk in chunks:
             chunk.metadata["total_chunks"] = len(chunks)
 
+        structlog_logger.info(
+            "Document chunking complete", num_chunks=len(chunks), total_chars=len(content)
+        )
         return chunks
 
     def _split_paragraph(self, paragraph: str) -> list[str]:

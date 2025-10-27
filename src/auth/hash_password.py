@@ -4,6 +4,9 @@ This module provides utilities for generating bcrypt password hashes.
 """
 
 import bcrypt
+import structlog
+
+logger = structlog.get_logger(__name__)
 
 
 def hash_password(password: str, rounds: int = 12) -> str:
@@ -45,7 +48,9 @@ def verify_password(password: str, hashed: str) -> bool:
     """
     password_bytes = password.encode("utf-8")
     hashed_bytes = hashed.encode("utf-8")
-    return bcrypt.checkpw(password_bytes, hashed_bytes)
+    result = bcrypt.checkpw(password_bytes, hashed_bytes)
+    logger.info("Password verification", success=result)
+    return result
 
 
 if __name__ == "__main__":

@@ -6,42 +6,49 @@ Allows users to view, link, and unlink OAuth providers (Google, GitHub, Microsof
 """
 
 import asyncio
-import os
 
 import streamlit as st
 import structlog
 
 from src.auth.db import get_user_by_username, get_user_oauth_accounts, unlink_oauth_account
+from src.config import get_settings
 
 logger = structlog.get_logger(__name__)
 
+
+def _get_oauth_providers() -> dict:
+    """Get OAuth providers configuration from settings."""
+    settings = get_settings()
+    return {
+        "google": {
+            "name": "Google",
+            "icon": "🔵",
+            "color": "#4285F4",
+            "enabled": bool(settings.google_client_id and settings.google_client_secret),
+        },
+        "github": {
+            "name": "GitHub",
+            "icon": "⚫",
+            "color": "#24292e",
+            "enabled": bool(settings.github_client_id and settings.github_client_secret),
+        },
+        "microsoft": {
+            "name": "Microsoft",
+            "icon": "🟦",
+            "color": "#0078D4",
+            "enabled": bool(settings.microsoft_client_id and settings.microsoft_client_secret),
+        },
+        "apple": {
+            "name": "Apple",
+            "icon": "",
+            "color": "#000000",
+            "enabled": bool(settings.apple_client_id and settings.apple_client_secret),
+        },
+    }
+
+
 # OAuth providers configuration
-OAUTH_PROVIDERS = {
-    "google": {
-        "name": "Google",
-        "icon": "🔵",
-        "color": "#4285F4",
-        "enabled": bool(os.getenv("GOOGLE_CLIENT_ID") and os.getenv("GOOGLE_CLIENT_SECRET")),
-    },
-    "github": {
-        "name": "GitHub",
-        "icon": "⚫",
-        "color": "#24292e",
-        "enabled": bool(os.getenv("GITHUB_CLIENT_ID") and os.getenv("GITHUB_CLIENT_SECRET")),
-    },
-    "microsoft": {
-        "name": "Microsoft",
-        "icon": "🟦",
-        "color": "#0078D4",
-        "enabled": bool(os.getenv("MICROSOFT_CLIENT_ID") and os.getenv("MICROSOFT_CLIENT_SECRET")),
-    },
-    "apple": {
-        "name": "Apple",
-        "icon": "",
-        "color": "#000000",
-        "enabled": bool(os.getenv("APPLE_CLIENT_ID") and os.getenv("APPLE_CLIENT_SECRET")),
-    },
-}
+OAUTH_PROVIDERS = _get_oauth_providers()
 
 
 def get_provider_display_name(provider: str) -> str:
@@ -92,8 +99,8 @@ def render_oauth_account_management() -> None:
     st.write("Link or unlink OAuth providers to your account for easy sign-in.")
 
     # Check if OAuth is enabled
-    oauth_enabled = os.getenv("OAUTH_ENABLED", "false").lower() == "true"
-    if not oauth_enabled:
+    settings = get_settings()
+    if not settings.oauth_enabled:
         st.info("OAuth authentication is not enabled on this server.")
         return
 

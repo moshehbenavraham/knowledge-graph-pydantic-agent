@@ -47,7 +47,7 @@ def sample_user():
     return {
         "id": str(uuid4()),
         "username": "testuser",
-        "email": "test@example.com",
+        "email": "max@apexwebservices.com",
         "full_name": "Test User",
         "is_active": True,
         "created_at": "2025-01-01T00:00:00",
@@ -95,7 +95,7 @@ async def test_get_user_info_success(sample_user):
 
         assert result is not None
         assert result["username"] == "testuser"
-        assert result["email"] == "test@example.com"
+        assert result["email"] == "max@apexwebservices.com"
 
 
 @pytest.mark.asyncio
@@ -246,7 +246,7 @@ def test_render_user_profile_simple():
         # Should not crash
         try:
             user_profile.render_user_profile_simple(
-                username="testuser", full_name="Test User", email="test@example.com"
+                username="testuser", full_name="Test User", email="max@apexwebservices.com"
             )
         except Exception as e:
             # If exception is Streamlit-related, it's expected
@@ -417,7 +417,7 @@ async def test_get_user_info_with_missing_fields():
     minimal_user = {
         "id": str(uuid4()),
         "username": "testuser",
-        "email": "test@example.com",
+        "email": "max@apexwebservices.com",
         "full_name": "Test User",
         # Missing: created_at, last_login_at
     }

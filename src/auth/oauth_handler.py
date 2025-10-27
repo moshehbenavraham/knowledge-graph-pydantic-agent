@@ -8,7 +8,6 @@ Provides OAuth 2.0 authentication flow integration with support for:
 - Secure token storage in database
 """
 
-import os
 import secrets
 from datetime import datetime, timedelta
 from typing import Any
@@ -27,6 +26,7 @@ from src.auth.db import (
     link_oauth_account,
     update_oauth_tokens,
 )
+from src.config import get_settings
 
 logger = structlog.get_logger(__name__)
 
@@ -53,9 +53,6 @@ APPLE_USERINFO_URL = (
 )
 APPLE_SCOPES = ["name", "email"]
 
-# Token encryption key (should be set in environment)
-OAUTH_ENCRYPTION_KEY = os.getenv("OAUTH_ENCRYPTION_KEY")
-
 
 def get_encryption_cipher() -> Fernet:
     """Get Fernet cipher for token encryption.
@@ -66,12 +63,13 @@ def get_encryption_cipher() -> Fernet:
     Raises:
         ValueError: If OAUTH_ENCRYPTION_KEY not set in environment
     """
-    if not OAUTH_ENCRYPTION_KEY:
+    settings = get_settings()
+    if not settings.oauth_encryption_key:
         raise ValueError(
             "OAUTH_ENCRYPTION_KEY not set. Generate with: "
             "python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'"
         )
-    return Fernet(OAUTH_ENCRYPTION_KEY.encode())
+    return Fernet(settings.oauth_encryption_key.encode())
 
 
 def encrypt_token(token: str) -> str:
@@ -117,19 +115,30 @@ class OAuthHandler:
         if self.provider not in ["google", "github", "microsoft", "apple"]:
             raise ValueError(f"Unsupported OAuth provider: {provider}")
 
-        # Get credentials from environment
-        client_id_key = f"{self.provider.upper()}_CLIENT_ID"
-        client_secret_key = f"{self.provider.upper()}_CLIENT_SECRET"
-        redirect_uri_key = f"{self.provider.upper()}_REDIRECT_URI"
+        # Get credentials from centralized settings
+        settings = get_settings()
 
-        self.client_id = os.getenv(client_id_key)
-        self.client_secret = os.getenv(client_secret_key)
-        self.redirect_uri = os.getenv(redirect_uri_key)
+        if self.provider == "google":
+            self.client_id = settings.google_client_id
+            self.client_secret = settings.google_client_secret
+            self.redirect_uri = settings.google_redirect_uri
+        elif self.provider == "github":
+            self.client_id = settings.github_client_id
+            self.client_secret = settings.github_client_secret
+            self.redirect_uri = settings.github_redirect_uri
+        elif self.provider == "microsoft":
+            self.client_id = settings.microsoft_client_id
+            self.client_secret = settings.microsoft_client_secret
+            self.redirect_uri = settings.microsoft_redirect_uri
+        elif self.provider == "apple":
+            self.client_id = settings.apple_client_id
+            self.client_secret = settings.apple_client_secret
+            self.redirect_uri = settings.apple_redirect_uri
 
         if not self.client_id or not self.client_secret:
             raise ValueError(
-                f"OAuth credentials not configured. Set {client_id_key} and "
-                f"{client_secret_key} in environment."
+                f"OAuth credentials not configured for {self.provider}. "
+                f"Set {self.provider.upper()}_CLIENT_ID and {self.provider.upper()}_CLIENT_SECRET in .env"
             )
 
         if not self.redirect_uri:
@@ -300,7 +309,9 @@ class OAuthHandler:
         """
         headers = {"Authorization": f"Bearer {access_token}"}
 
-        async with httpx.AsyncClient() as client:
+        async with (
+            httpx.AsyncClient() as client
+        ):  # noqa: CONST-III-001 - HTTP client for external API
             try:
                 response = await client.get(self.userinfo_url, headers=headers)
                 response.raise_for_status()

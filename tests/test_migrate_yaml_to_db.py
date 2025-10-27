@@ -36,7 +36,7 @@ def temp_yaml_config():
                         "password": "$2b$12$hashedpassword1",
                     },
                     "testuser": {
-                        "email": "test@example.com",
+                        "email": "max@apexwebservices.com",
                         "name": "Test User",
                         "password": "$2b$12$hashedpassword2",
                     },
@@ -603,7 +603,7 @@ async def test_migrate_users_username_defaults_to_key():
             "credentials": {
                 "usernames": {
                     "testuser": {
-                        "email": "test@example.com",
+                        "email": "max@apexwebservices.com",
                         # Missing name
                         "password": "$2b$12$hashedpassword",
                     }

@@ -4,7 +4,11 @@ API-specific configuration facade.
 Provides convenient access to API-related settings.
 """
 
+import structlog
+
 from .settings import get_settings
+
+logger = structlog.get_logger(__name__)
 
 
 class APIConfig:
@@ -71,6 +75,7 @@ class APIConfig:
 
     def get_uvicorn_config(self) -> dict:
         """Get Uvicorn server configuration."""
+        logger.info("Getting Uvicorn configuration", host=self.host, port=self.port)
         return {
             "host": self.host,
             "port": self.port,
@@ -81,6 +86,7 @@ class APIConfig:
 
     def get_cors_config(self) -> dict:
         """Get CORS middleware configuration."""
+        logger.info("Getting CORS configuration", origins_count=len(self.cors_origins))
         return {
             "allow_origins": self.cors_origins,
             "allow_credentials": True,

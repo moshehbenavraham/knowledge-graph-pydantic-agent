@@ -6,7 +6,6 @@ Includes OAuth 2.0 support for Google and GitHub.
 """
 
 import asyncio
-import os
 from pathlib import Path
 
 import streamlit as st
@@ -16,26 +15,37 @@ import yaml
 from dotenv import load_dotenv
 
 from src.auth.security import get_rate_limiter, log_auth_event
+from src.config import get_settings
 
 # Load .env file BEFORE reading environment variables
 load_dotenv()
 
 logger = structlog.get_logger(__name__)
 
-# Authentication backend configuration
-# Set USE_DATABASE_AUTH=true in .env to use database instead of YAML
-USE_DATABASE_AUTH = os.getenv("USE_DATABASE_AUTH", "false").lower() == "true"
+# Export setting as constant for backward compatibility
+USE_DATABASE_AUTH = get_settings().use_database_auth
 
-logger.info(
-    "Environment variable loaded",
-    use_database_auth_raw=os.getenv("USE_DATABASE_AUTH"),
-    use_database_auth_parsed=USE_DATABASE_AUTH,
-)
 
-# OAuth configuration
-OAUTH_ENABLED = os.getenv("OAUTH_ENABLED", "false").lower() == "true"
-GOOGLE_OAUTH_ENABLED = os.getenv("GOOGLE_CLIENT_ID") and os.getenv("GOOGLE_CLIENT_SECRET")
-GITHUB_OAUTH_ENABLED = os.getenv("GITHUB_CLIENT_ID") and os.getenv("GITHUB_CLIENT_SECRET")
+def get_use_database_auth() -> bool:
+    """Get USE_DATABASE_AUTH setting."""
+    return get_settings().use_database_auth
+
+
+def get_oauth_enabled() -> bool:
+    """Get OAUTH_ENABLED setting."""
+    return get_settings().oauth_enabled
+
+
+def get_google_oauth_enabled() -> bool:
+    """Check if Google OAuth is enabled."""
+    settings = get_settings()
+    return bool(settings.google_client_id and settings.google_client_secret)
+
+
+def get_github_oauth_enabled() -> bool:
+    """Check if GitHub OAuth is enabled."""
+    settings = get_settings()
+    return bool(settings.github_client_id and settings.github_client_secret)
 
 
 async def load_credentials_from_database() -> dict:
@@ -134,11 +144,14 @@ def load_auth_config(config_path: str = "config/auth_config.yaml") -> dict:
         FileNotFoundError: If config file doesn't exist (YAML mode)
         Exception: If database query fails (database mode)
     """
+    settings = get_settings()
+    use_database_auth = settings.use_database_auth
+
     logger.info("=" * 80)
     logger.info(
         "LOADING AUTHENTICATION CONFIGURATION",
         config_path=config_path,
-        use_database_auth=USE_DATABASE_AUTH,
+        use_database_auth=use_database_auth,
     )
 
     config_file = Path(config_path)
@@ -147,14 +160,12 @@ def load_auth_config(config_path: str = "config/auth_config.yaml") -> dict:
     if not config_file.exists():
         logger.warning("Auth config file does not exist", config_path=config_path)
         # If database mode, we still need a minimal config
-        if USE_DATABASE_AUTH:
+        if use_database_auth:
             logger.info("Using default configuration for database mode")
             config = {
                 "cookie": {
                     "name": "luminari_agent_auth_cookie",
-                    "key": os.getenv(
-                        "AUTH_COOKIE_KEY", "luminari_agent_secret_key_2025"
-                    ),  # Use env var in production
+                    "key": settings.auth_cookie_key or "luminari_agent_secret_key_2025",
                     "expiry_days": 30,
                 },
                 "preauthorized": {"emails": []},
@@ -178,7 +189,7 @@ def load_auth_config(config_path: str = "config/auth_config.yaml") -> dict:
         logger.debug("YAML config loaded", has_credentials=bool(config.get("credentials")))
 
     # Load credentials based on backend
-    if USE_DATABASE_AUTH:
+    if use_database_auth:
         logger.info("Using database authentication backend - loading credentials from database")
         # Load credentials from database
         try:
@@ -477,11 +488,11 @@ def render_login_page() -> tuple[str | None, str | None, bool | None]:
 
     # OAuth login buttons (only in database mode with OAuth enabled)
     # Render on all page loads to make them visible
-    if USE_DATABASE_AUTH and OAUTH_ENABLED:
+    if get_use_database_auth() and get_oauth_enabled():
         render_oauth_buttons()
 
     # Password reset option (only in database mode)
-    if USE_DATABASE_AUTH:
+    if get_use_database_auth():
         st.markdown("---")
         with st.expander("🔑 Forgot your password?"):
             st.markdown("Enter your username or email to receive a password reset link.")
@@ -500,9 +511,8 @@ def render_login_page() -> tuple[str | None, str | None, bool | None]:
                     from src.auth.password_reset import request_password_reset
 
                     # Reset URL (use current app URL or configured URL)
-                    reset_url = os.getenv(
-                        "PASSWORD_RESET_URL", "http://localhost:8501/reset-password"
-                    )
+                    settings = get_settings()
+                    reset_url = settings.password_reset_url
 
                     try:
                         success, message = asyncio.run(
@@ -577,7 +587,7 @@ async def create_db_session(username: str, remember_me: bool = False) -> str | N
     Returns:
         Session token or None if failed
     """
-    if not USE_DATABASE_AUTH:
+    if not get_use_database_auth():
         return None  # Only create DB sessions in database mode
 
     try:
@@ -623,7 +633,7 @@ async def revoke_db_session(session_token: str | None) -> bool:
     Returns:
         True if successful
     """
-    if not USE_DATABASE_AUTH or not session_token:
+    if not get_use_database_auth() or not session_token:
         return False
 
     try:
@@ -729,7 +739,7 @@ def initiate_oauth_login(provider: str) -> None:
 
 def render_oauth_buttons() -> None:
     """Render OAuth login buttons for enabled providers."""
-    if not OAUTH_ENABLED or not USE_DATABASE_AUTH:
+    if not get_oauth_enabled() or not get_use_database_auth():
         return  # OAuth only supported in database mode
 
     try:
@@ -739,12 +749,12 @@ def render_oauth_buttons() -> None:
         col1, col2 = st.columns(2)
 
         with col1:
-            if GOOGLE_OAUTH_ENABLED:
+            if get_google_oauth_enabled():
                 if st.button("🔵 Google", use_container_width=True, key="google_oauth"):
                     initiate_oauth_login("google")
 
         with col2:
-            if GITHUB_OAUTH_ENABLED:
+            if get_github_oauth_enabled():
                 if st.button("⚫ GitHub", use_container_width=True, key="github_oauth"):
                     initiate_oauth_login("github")
     except Exception as e:
@@ -758,7 +768,7 @@ def check_oauth_callback() -> tuple[str | None, str | None]:
     Returns:
         Tuple of (username, name) if OAuth callback successful, else (None, None)
     """
-    if not OAUTH_ENABLED or not USE_DATABASE_AUTH:
+    if not get_oauth_enabled() or not get_use_database_auth():
         return None, None
 
     # Check for OAuth callback parameters
@@ -859,7 +869,7 @@ def require_authentication() -> tuple[str, stauth.Authenticate]:
             st.session_state.username = oauth_username
 
             # Enforce 2FA if required (database mode only)
-            if USE_DATABASE_AUTH:
+            if get_use_database_auth():
                 from src.auth.enforce_2fa import enforce_2fa_if_required
 
                 # Check and enforce 2FA if required
@@ -870,7 +880,7 @@ def require_authentication() -> tuple[str, stauth.Authenticate]:
                     st.stop()
 
             # Create database session
-            if USE_DATABASE_AUTH:
+            if get_use_database_auth():
                 try:
                     session_token = asyncio.run(create_db_session(oauth_username))
                     st.session_state.db_session_token = session_token
@@ -899,7 +909,7 @@ def require_authentication() -> tuple[str, stauth.Authenticate]:
             rate_limiter.record_successful_login(username)
 
             # Enforce 2FA if required (database mode only)
-            if USE_DATABASE_AUTH:
+            if get_use_database_auth():
                 from src.auth.enforce_2fa import enforce_2fa_if_required
 
                 # Check and enforce 2FA if required
@@ -910,7 +920,7 @@ def require_authentication() -> tuple[str, stauth.Authenticate]:
                     st.stop()
 
             # Create database session (if database mode)
-            if USE_DATABASE_AUTH:
+            if get_use_database_auth():
                 try:
                     # Get remember_me preference from session state
                     remember_me = st.session_state.get("remember_me", False)

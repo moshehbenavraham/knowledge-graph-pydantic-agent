@@ -19,7 +19,7 @@ def temp_auth_config():
             "credentials": {
                 "usernames": {
                     "testuser": {
-                        "email": "test@example.com",
+                        "email": "max@apexwebservices.com",
                         "name": "Test User",
                         # Password: TestPassword123! (bcrypt hashed)
                         "password": "$2b$12$VQvZ9b8aQaYG5J.ZvVq4ZeYxHGYKJ3a7Uu6JT5qJVQvZ9b8aQaYG5.",

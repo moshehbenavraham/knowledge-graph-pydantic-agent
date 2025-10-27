@@ -1,14 +1,23 @@
 import os
 
+import structlog
 from mem0 import AsyncMemory, Memory
 
 from src.config import clients
+
+logger = structlog.get_logger(__name__)
 
 
 def get_mem0_config():
     # Get configuration from centralized settings
     # Note: Don't call get_settings() here as it may re-cache old values
     # The clients.clients_config already has the current settings
+
+    logger.info(
+        "Configuring Mem0",
+        llm_provider=clients.clients_config.llm_provider.value,
+        embedding_provider=clients.clients_config.embedding_provider.value,
+    )
 
     # Initialize config dictionary
     config = {}

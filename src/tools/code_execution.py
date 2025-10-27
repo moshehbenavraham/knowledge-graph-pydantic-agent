@@ -1,7 +1,13 @@
 import contextlib
 
+import structlog
+
+logger = structlog.get_logger(__name__)
+
 
 def execute_safe_code_tool(code: str) -> str:
+    logger.info("Executing safe code", code_length=len(code))
+
     # Set up allowed modules
     allowed_modules = {
         # Core utilities

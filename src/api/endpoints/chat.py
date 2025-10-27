@@ -200,8 +200,10 @@ async def chat_websocket(
 
     try:
         # Accept connection
-        connection_id = await websocket_manager.connect(
-            websocket
+        connection_id = (
+            await websocket_manager.connect(  # noqa: CONST-III-001 - WebSocket connection method
+                websocket
+            )
         )  # noqa: CONST-III-001 - WebSocket connection, not client instantiation
 
         logger.info("websocket_chat_started", connection_id=connection_id)

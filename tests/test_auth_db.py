@@ -59,7 +59,7 @@ def sample_user_data():
     return {
         "id": str(uuid4()),
         "username": "testuser",
-        "email": "test@example.com",
+        "email": "max@apexwebservices.com",
         "full_name": "Test User",
         "password_hash": "$2b$12$abcdefghijklmnopqrstuvwxyz1234567890",
         "auth_method": "password",
@@ -124,13 +124,13 @@ async def test_create_user_success(mock_supabase_client, sample_user_data):
 
         result = await db.create_user(
             username="testuser",
-            email="test@example.com",
+            email="max@apexwebservices.com",
             full_name="Test User",
             password="TestPassword123!",
         )
 
         assert result["username"] == "testuser"
-        assert result["email"] == "test@example.com"
+        assert result["email"] == "max@apexwebservices.com"
         assert "password_hash" not in result  # Should be removed
 
 
@@ -172,7 +172,7 @@ async def test_create_user_failure(mock_supabase_client):
         with pytest.raises(Exception, match="Failed to create user"):
             await db.create_user(
                 username="testuser",
-                email="test@example.com",
+                email="max@apexwebservices.com",
                 full_name="Test User",
                 password="TestPassword123!",
             )
@@ -220,10 +220,10 @@ async def test_get_user_by_email_found(mock_supabase_client, sample_user_data):
             mock_response
         )
 
-        result = await db.get_user_by_email("test@example.com")
+        result = await db.get_user_by_email("max@apexwebservices.com")
 
         assert result is not None
-        assert result["email"] == "test@example.com"
+        assert result["email"] == "max@apexwebservices.com"
 
 
 @pytest.mark.asyncio

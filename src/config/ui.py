@@ -6,7 +6,11 @@ Provides convenient access to UI-related settings.
 
 from dataclasses import dataclass
 
+import structlog
+
 from .settings import UIMode, get_settings
+
+logger = structlog.get_logger(__name__)
 
 
 @dataclass
@@ -81,6 +85,7 @@ class UIConfig:
 
     def get_page_config(self) -> dict:
         """Get Streamlit page configuration."""
+        logger.info("Getting page configuration", mode=self.mode.value)
         return {
             "page_title": f"Luminari AI Agent - {self.mode.value.title()} Mode",
             "page_icon": "🤖",
@@ -90,6 +95,7 @@ class UIConfig:
 
     def get_mode_description(self) -> str:
         """Get description of current mode."""
+        logger.info("Getting mode description", mode=self.mode.value)
         descriptions = {
             UIMode.SIMPLE: "Fast, lightweight interface with no persistence",
             UIMode.STANDARD: "Full-featured interface with conversation history",

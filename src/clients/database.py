@@ -1,6 +1,10 @@
+import structlog
+
 from src.config.clients import clients_config
 from supabase import create_client  # type: ignore
 from supabase.client import Client, ClientOptions
+
+logger = structlog.get_logger(__name__)
 
 
 def get_supabase_client() -> Client:
@@ -10,6 +14,8 @@ def get_supabase_client() -> Client:
     This avoids deprecation warnings about timeout/verify parameters
     by configuring them in the httpx client instead.
     """
+    logger.info("Creating Supabase client", url=clients_config.supabase_url)
+
     # Supabase client setup
     supabase_url = clients_config.supabase_url
     supabase_key = clients_config.supabase_service_key
@@ -20,7 +26,7 @@ def get_supabase_client() -> Client:
         storage_client_timeout=60,
     )
 
-    supabase = create_client(
+    supabase = create_client(  # noqa: CONST-III-001 - Centralized client factory
         supabase_url, supabase_key, options=options
     )  # noqa: CONST-III-001 - This IS the centralized client factory
 

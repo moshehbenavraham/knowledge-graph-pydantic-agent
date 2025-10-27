@@ -47,7 +47,7 @@ def test_create_user_success(user_manager):
     """Test successful user creation."""
     user_manager.create_user(
         username="testuser",
-        email="test@example.com",
+        email="max@apexwebservices.com",
         name="Test User",
         password="TestPassword123!",  # nosec B106 - test password
     )
@@ -56,7 +56,7 @@ def test_create_user_success(user_manager):
     user = user_manager.get_user("testuser")
     assert user is not None
     assert user["username"] == "testuser"
-    assert user["email"] == "test@example.com"
+    assert user["email"] == "max@apexwebservices.com"
     assert user["name"] == "Test User"
 
 
@@ -64,7 +64,7 @@ def test_create_user_duplicate_username(user_manager):
     """Test creating user with duplicate username fails."""
     user_manager.create_user(
         username="testuser",
-        email="test@example.com",
+        email="max@apexwebservices.com",
         name="Test User",
         password="Password123!",
     )
@@ -83,7 +83,7 @@ def test_create_user_password_is_hashed(user_manager, temp_config_file):
     password = "PlainTextPassword123!"  # nosec B105 - test password
     user_manager.create_user(
         username="testuser",
-        email="test@example.com",
+        email="max@apexwebservices.com",
         name="Test User",
         password=password,  # nosec B106 - test password
     )
@@ -102,7 +102,7 @@ def test_update_password_success(user_manager):
     # Create user
     user_manager.create_user(
         username="testuser",
-        email="test@example.com",
+        email="max@apexwebservices.com",
         name="Test User",
         password="OldPassword123!",  # nosec B106 - test password
     )
@@ -126,7 +126,7 @@ def test_delete_user_success(user_manager):
     # Create user
     user_manager.create_user(
         username="testuser",
-        email="test@example.com",
+        email="max@apexwebservices.com",
         name="Test User",
         password="Password123!",  # nosec B106 - test password
     )
@@ -189,7 +189,7 @@ def test_get_user_exists(user_manager):
     """Test getting existing user."""
     user_manager.create_user(
         username="testuser",
-        email="test@example.com",
+        email="max@apexwebservices.com",
         name="Test User",
         password="Password123!",  # nosec B106 - test password
     )
@@ -197,7 +197,7 @@ def test_get_user_exists(user_manager):
     user = user_manager.get_user("testuser")
     assert user is not None
     assert user["username"] == "testuser"
-    assert user["email"] == "test@example.com"
+    assert user["email"] == "max@apexwebservices.com"
     assert user["name"] == "Test User"
     assert "password" not in user  # Password should not be returned
 
@@ -213,7 +213,7 @@ def test_create_user_with_custom_rounds(user_manager, temp_config_file):
     rounds = 10
     user_manager.create_user(
         username="testuser",
-        email="test@example.com",
+        email="max@apexwebservices.com",
         name="Test User",
         password="Password123!",  # nosec B106 - test password
         rounds=rounds,

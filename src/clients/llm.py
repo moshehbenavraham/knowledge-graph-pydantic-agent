@@ -1,4 +1,8 @@
+import structlog
+
 from src.config.clients import clients_config
+
+logger = structlog.get_logger(__name__)
 
 try:
     from openai import AsyncOpenAI
@@ -23,9 +27,16 @@ except ImportError:
 
 def get_llm_client():
     """Get the LLM client for agent interactions."""
+    logger.info(
+        "Creating LLM client",
+        provider=clients_config.llm_provider.value,
+        model=clients_config.llm_model,
+    )
+
     if clients_config.llm_provider.value == "anthropic":
         # For Anthropic, we don't use AsyncOpenAI client
         # The pydantic-ai AnthropicModel handles this internally
+        logger.info("Using Anthropic provider, no client needed")
         return None
 
     llm_client = AsyncOpenAI(
@@ -50,6 +61,8 @@ def get_model():
     provider = clients_config.llm_provider.value
     llm = clients_config.llm_model
     api_key = clients_config.llm_api_key
+
+    logger.info("Getting configured model", provider=provider, model=llm)
 
     if provider == "anthropic":
         if not AnthropicModel:

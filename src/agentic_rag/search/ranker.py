@@ -10,7 +10,10 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
+import structlog
+
 logger = logging.getLogger(__name__)
+structlog_logger = structlog.get_logger(__name__)
 
 
 @dataclass
@@ -109,6 +112,12 @@ class ResultRanker:
         Returns:
             Ranked results
         """
+        structlog_logger.info(
+            "Ranking search results",
+            limit=limit,
+            has_query_entities=bool(query_entities),
+            has_temporal_context=bool(temporal_context),
+        )
         self._stats["rankings_performed"] += 1
 
         # Extract components
@@ -129,6 +138,12 @@ class ResultRanker:
             relationships, key=lambda r: getattr(r, "confidence", 0.5), reverse=True
         )[:limit]
 
+        structlog_logger.info(
+            "Ranking complete",
+            chunks_ranked=len(ranked_chunks),
+            facts_ranked=len(ranked_facts),
+            relationships_ranked=len(ranked_relationships),
+        )
         return RankedResults(
             chunks=ranked_chunks,
             facts=ranked_facts,
@@ -160,6 +175,12 @@ class ResultRanker:
         Returns:
             Ranked list of chunks
         """
+        structlog_logger.info(
+            "Ranking chunks",
+            num_chunks=len(chunks),
+            limit=limit,
+            has_query_entities=bool(query_entities),
+        )
         if not chunks:
             return []
 
@@ -204,6 +225,7 @@ class ResultRanker:
                 chunk.metadata["rank"] = i + 1
                 chunk.metadata["ranking_score"] = diverse_chunks[i]["final_score"]
 
+        structlog_logger.info("Chunk ranking complete", chunks_returned=len(ranked))
         return ranked
 
     def _similarity_score(self, chunk) -> float:

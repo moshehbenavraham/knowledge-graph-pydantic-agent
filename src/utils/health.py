@@ -269,7 +269,7 @@ class HealthChecker:
             if brave_api_key:
                 # Test Brave API
                 async with (
-                    httpx.AsyncClient() as client
+                    httpx.AsyncClient()  # noqa: CONST-III-001 - Health check ephemeral client as client
                 ):  # noqa: CONST-III-001 - Health check uses ephemeral client
                     response = await client.get(
                         "https://api.search.brave.com/res/v1/web/search",
@@ -299,7 +299,7 @@ class HealthChecker:
             elif searxng_url:
                 # Test SearXNG
                 async with (
-                    httpx.AsyncClient() as client
+                    httpx.AsyncClient()  # noqa: CONST-III-001 - Health check ephemeral client as client
                 ):  # noqa: CONST-III-001 - Health check uses ephemeral client
                     response = await client.get(
                         f"{searxng_url}/search",

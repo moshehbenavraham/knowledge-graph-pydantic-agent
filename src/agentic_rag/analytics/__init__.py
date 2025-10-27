@@ -5,6 +5,8 @@ Provides centralized analytics logging with async batching.
 This is NOT optional - it's foundational system infrastructure.
 """
 
+import structlog
+
 from .logger import (
     AgentInteractionEvent,
     AnalyticsLogger,
@@ -13,6 +15,8 @@ from .logger import (
     SystemMetricsEvent,
     ToolUsageEvent,
 )
+
+logger = structlog.get_logger(__name__)
 
 # Global singleton instance
 _analytics_logger: AnalyticsLogger | None = None
@@ -30,6 +34,7 @@ def get_analytics_logger() -> AnalyticsLogger:
     Raises:
         RuntimeError: If analytics logger not initialized
     """
+    logger.info("Getting analytics logger", initialized=_analytics_logger is not None)
     if _analytics_logger is None:
         raise RuntimeError(
             "Analytics logger not initialized. "

@@ -8,6 +8,7 @@ import logging
 import time
 from collections.abc import Callable
 
+import structlog
 from fastapi import FastAPI, Request, Response
 from opentelemetry import metrics, trace
 from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
@@ -23,6 +24,7 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from prometheus_client import Counter, Gauge, Histogram
 
 logger = logging.getLogger(__name__)
+struct_logger = structlog.get_logger(__name__)
 
 # ===== Prometheus Metrics =====
 
@@ -225,6 +227,9 @@ def record_llm_request(
     provider: str, model: str, duration: float, success: bool, error_type: str = ""
 ):
     """Record LLM request metrics."""
+    struct_logger.info(
+        "Recording LLM request", provider=provider, model=model, duration=duration, success=success
+    )
     llm_requests_total.labels(provider=provider, model=model).inc()
     llm_request_duration_seconds.labels(provider=provider, model=model).observe(duration)
     if not success:
@@ -241,6 +246,9 @@ def record_vector_search(search_type: str, duration: float):
 
 def record_graph_search(query_type: str, duration: float, success: bool, error_type: str = ""):
     """Record graph search metrics."""
+    struct_logger.info(
+        "Recording graph search", query_type=query_type, duration=duration, success=success
+    )
     graph_search_total.labels(query_type=query_type).inc()
     graph_search_duration_seconds.labels(query_type=query_type).observe(duration)
     if not success:
@@ -249,6 +257,7 @@ def record_graph_search(query_type: str, duration: float, success: bool, error_t
 
 def record_cache_access(hit: bool):
     """Record cache access metrics."""
+    struct_logger.info("Recording cache access", hit=hit)
     if hit:
         cache_hits_total.inc()
     else:

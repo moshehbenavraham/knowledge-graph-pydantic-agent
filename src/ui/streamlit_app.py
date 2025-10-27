@@ -1221,7 +1221,7 @@ async def handle_user_input(user_input: str):
 
             with st.spinner("Thinking..."):
                 async with (
-                    AsyncClient() as http_client
+                    AsyncClient()  # noqa: CONST-III-001 - UI context manager for request lifecycle as http_client
                 ):  # noqa: CONST-III-001 - UI context manager for request lifecycle
                     logger.debug("HTTP client created, calling handler.run_agent()...")
 
@@ -1268,7 +1268,7 @@ async def handle_user_input(user_input: str):
             }
 
             async with (
-                AsyncClient() as http_client
+                AsyncClient()  # noqa: CONST-III-001 - UI context manager for request lifecycle as http_client
             ):  # noqa: CONST-III-001 - UI context manager for request lifecycle
                 logger.debug("HTTP client created, starting agent stream...")
 

@@ -3,7 +3,6 @@
 Provides secure email verification functionality for new user registrations.
 """
 
-import os
 import secrets
 from datetime import datetime, timedelta
 
@@ -12,17 +11,9 @@ import structlog
 from src.auth.db import get_user_by_id
 from src.auth.hash_password import hash_password, verify_password
 from src.clients.database import get_supabase_client
+from src.config import get_settings
 
 logger = structlog.get_logger(__name__)
-
-# Email configuration (reuse from password_reset)
-EMAIL_ENABLED = os.getenv("EMAIL_ENABLED", "false").lower() == "true"
-EMAIL_PROVIDER = os.getenv("EMAIL_PROVIDER", "smtp")
-SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
-SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
-SMTP_USER = os.getenv("SMTP_USER", "")
-SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
-SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", "max@aiwithapex.com")
 
 
 async def create_verification_token(
@@ -179,11 +170,13 @@ async def send_verification_email_smtp(
     from email.mime.multipart import MIMEMultipart
     from email.mime.text import MIMEText
 
+    settings = get_settings()
+
     try:
         # Create message
         msg = MIMEMultipart("alternative")
         msg["Subject"] = "Verify Your Email - Luminari Agent"
-        msg["From"] = SMTP_FROM_EMAIL
+        msg["From"] = settings.smtp_from_email
         msg["To"] = email
 
         # Create verification link with action parameter to distinguish from password reset
@@ -231,10 +224,10 @@ async def send_verification_email_smtp(
         msg.attach(MIMEText(html, "html"))
 
         # Send email
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+        with smtplib.SMTP(settings.smtp_host, settings.smtp_port) as server:
             server.starttls()
-            if SMTP_USER and SMTP_PASSWORD:
-                server.login(SMTP_USER, SMTP_PASSWORD)
+            if settings.smtp_user and settings.smtp_password:
+                server.login(settings.smtp_user, settings.smtp_password)
             server.send_message(msg)
 
         logger.info("Email verification email sent", email=email)
@@ -259,7 +252,9 @@ async def send_verification_email(
     Returns:
         True if email sent successfully
     """
-    if not EMAIL_ENABLED:
+    settings = get_settings()
+
+    if not settings.email_enabled:
         logger.warning(
             "Email disabled, verification token generated but not sent",
             email=email,
@@ -271,12 +266,12 @@ async def send_verification_email(
         )
         return False
 
-    if EMAIL_PROVIDER == "smtp":
+    if settings.email_provider == "smtp":
         return await send_verification_email_smtp(
             email, verification_token, verification_url, user_name
         )
 
-    logger.error("Unsupported email provider", provider=EMAIL_PROVIDER)
+    logger.error("Unsupported email provider", provider=settings.email_provider)
     return False
 
 

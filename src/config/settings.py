@@ -9,8 +9,11 @@ from enum import Enum
 from functools import lru_cache
 from typing import Any
 
+import structlog
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+logger = structlog.get_logger(__name__)
 
 
 class Environment(str, Enum):
@@ -455,6 +458,122 @@ class Settings(BaseSettings):
         description="Jaeger agent port",
     )
 
+    # Authentication Configuration
+    use_database_auth: bool = Field(
+        default=False,
+        description="Use database authentication instead of YAML",
+    )
+    auth_cookie_key: str | None = Field(
+        default=None,
+        description="Authentication cookie encryption key",
+    )
+
+    # Email Configuration
+    email_enabled: bool = Field(
+        default=False,
+        description="Enable email functionality",
+    )
+    email_provider: str = Field(
+        default="smtp",
+        description="Email provider (smtp, sendgrid, mailgun, supabase)",
+    )
+    password_reset_url: str = Field(
+        default="http://localhost:8501",
+        description="Base URL for password reset page",
+    )
+    verification_url: str = Field(
+        default="http://localhost:8501",
+        description="Base URL for email verification page",
+    )
+    smtp_host: str = Field(
+        default="smtp.gmail.com",
+        description="SMTP server host",
+    )
+    smtp_port: int = Field(
+        default=587,
+        ge=1,
+        le=65535,
+        description="SMTP server port",
+    )
+    smtp_user: str = Field(
+        default="",
+        description="SMTP username",
+    )
+    smtp_password: str = Field(
+        default="",
+        description="SMTP password",
+    )
+    smtp_from_email: str = Field(
+        default="max@aiwithapex.com",
+        description="SMTP from email address",
+    )
+
+    # OAuth Configuration
+    oauth_enabled: bool = Field(
+        default=False,
+        description="Enable OAuth authentication",
+    )
+    oauth_encryption_key: str | None = Field(
+        default=None,
+        description="OAuth token encryption key (Fernet key)",
+    )
+
+    # Google OAuth
+    google_client_id: str | None = Field(
+        default=None,
+        description="Google OAuth client ID",
+    )
+    google_client_secret: str | None = Field(
+        default=None,
+        description="Google OAuth client secret",
+    )
+    google_redirect_uri: str | None = Field(
+        default=None,
+        description="Google OAuth redirect URI",
+    )
+
+    # GitHub OAuth
+    github_client_id: str | None = Field(
+        default=None,
+        description="GitHub OAuth client ID",
+    )
+    github_client_secret: str | None = Field(
+        default=None,
+        description="GitHub OAuth client secret",
+    )
+    github_redirect_uri: str | None = Field(
+        default=None,
+        description="GitHub OAuth redirect URI",
+    )
+
+    # Microsoft OAuth
+    microsoft_client_id: str | None = Field(
+        default=None,
+        description="Microsoft OAuth client ID",
+    )
+    microsoft_client_secret: str | None = Field(
+        default=None,
+        description="Microsoft OAuth client secret",
+    )
+    microsoft_redirect_uri: str | None = Field(
+        default=None,
+        description="Microsoft OAuth redirect URI",
+    )
+
+    # Apple OAuth
+    apple_client_id: str | None = Field(
+        default=None,
+        description="Apple OAuth client ID",
+    )
+    apple_client_secret: str | None = Field(
+        default=None,
+        description="Apple OAuth client secret",
+    )
+    apple_redirect_uri: str | None = Field(
+        default=None,
+        description="Apple OAuth redirect URI",
+    )
+
     @field_validator("llm_choice")
     @classmethod
     def sync_llm_choice(cls, v: str | None) -> str | None:
@@ -554,6 +673,13 @@ class Settings(BaseSettings):
                 "llm_api_key",
                 "jina_api_key",
                 "brave_api_key",
+                "auth_cookie_key",
+                "smtp_password",
+                "oauth_encryption_key",
+                "google_client_secret",
+                "github_client_secret",
+                "microsoft_client_secret",
+                "apple_client_secret",
             ]
             for key in sensitive_keys:
                 if data.get(key):
@@ -598,6 +724,7 @@ def get_settings() -> Settings:
     Returns:
         Settings instance
     """
+    logger.info("Getting settings (cached)")
     return Settings()
 
 
@@ -608,5 +735,6 @@ def reload_settings() -> Settings:
     Returns:
         Fresh Settings instance
     """
+    logger.info("Reloading settings from environment")
     get_settings.cache_clear()
     return get_settings()

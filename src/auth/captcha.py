@@ -139,7 +139,9 @@ class CaptchaManager:
                     data["remoteip"] = ip_address
 
             # Send verification request
-            async with httpx.AsyncClient(timeout=self.VERIFY_TIMEOUT) as client:
+            async with httpx.AsyncClient(
+                timeout=self.VERIFY_TIMEOUT
+            ) as client:  # noqa: CONST-III-001 - HTTP client for external API
                 response = await client.post(verify_url, data=data)
 
             response_time_ms = int((datetime.utcnow() - start_time).total_seconds() * 1000)

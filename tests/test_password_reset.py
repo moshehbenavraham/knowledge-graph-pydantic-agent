@@ -27,7 +27,7 @@ def sample_user():
     return {
         "id": str(uuid4()),
         "username": "testuser",
-        "email": "test@example.com",
+        "email": "max@apexwebservices.com",
         "full_name": "Test User",
         "is_active": True,
     }
@@ -150,7 +150,9 @@ async def test_send_reset_email_disabled():
     """Test email sending when disabled."""
     with patch.dict("os.environ", {"EMAIL_ENABLED": "false"}):
         result = await password_reset.send_reset_email(
-            email="test@example.com", reset_token="token123", reset_url="http://localhost:8501"
+            email="max@apexwebservices.com",
+            reset_token="token123",
+            reset_url="http://localhost:8501",
         )
 
         assert result is False
@@ -172,7 +174,7 @@ async def test_send_reset_email_smtp_provider(mock_smtp_server):
                 },
             ):
                 result = await password_reset.send_reset_email(
-                    email="test@example.com",
+                    email="max@apexwebservices.com",
                     reset_token="token123",
                     reset_url="http://localhost:8501",
                 )
@@ -185,7 +187,9 @@ async def test_send_reset_email_unsupported_provider():
     """Test email sending with unsupported provider."""
     with patch.dict("os.environ", {"EMAIL_ENABLED": "true", "EMAIL_PROVIDER": "unsupported"}):
         result = await password_reset.send_reset_email(
-            email="test@example.com", reset_token="token123", reset_url="http://localhost:8501"
+            email="max@apexwebservices.com",
+            reset_token="token123",
+            reset_url="http://localhost:8501",
         )
 
         assert result is False
@@ -220,7 +224,7 @@ async def test_request_password_reset_by_email(sample_user, mock_smtp_server):
             with patch("src.auth.password_reset.create_reset_token", return_value="token123"):
                 with patch.dict("os.environ", {"EMAIL_ENABLED": "true", "EMAIL_PROVIDER": "smtp"}):
                     success, message = await password_reset.request_password_reset(
-                        username_or_email="test@example.com",
+                        username_or_email="max@apexwebservices.com",
                         reset_url="http://localhost:8501",
                     )
 

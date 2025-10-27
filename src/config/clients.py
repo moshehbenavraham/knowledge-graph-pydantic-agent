@@ -4,7 +4,11 @@ Clients configuration facade.
 Provides convenient access to database and API client settings.
 """
 
+import structlog
+
 from .settings import EmbeddingProvider, LLMProvider, get_settings
+
+logger = structlog.get_logger(__name__)
 
 
 class ClientsConfig:
@@ -109,6 +113,9 @@ class ClientsConfig:
 
     def get_llm_config(self) -> dict[str, any]:
         """Get LLM client configuration."""
+        logger.info(
+            "Getting LLM configuration", provider=self.llm_provider.value, model=self.llm_model
+        )
         return {
             "provider": self.llm_provider,
             "base_url": self.llm_base_url,
@@ -120,6 +127,11 @@ class ClientsConfig:
 
     def get_embedding_config(self) -> dict[str, any]:
         """Get embedding client configuration."""
+        logger.info(
+            "Getting embedding configuration",
+            provider=self.embedding_provider.value,
+            model=self.embedding_model,
+        )
         return {
             "provider": self.embedding_provider,
             "base_url": self.embedding_base_url,
@@ -131,6 +143,7 @@ class ClientsConfig:
 
     def get_postgres_config(self) -> dict[str, any]:
         """Get PostgreSQL configuration."""
+        logger.info("Getting PostgreSQL configuration", has_database_url=bool(self.database_url))
         return {
             "database_url": self.database_url,
             "supabase_url": self.supabase_url,
@@ -142,6 +155,7 @@ class ClientsConfig:
 
     def get_neo4j_config(self) -> dict[str, any]:
         """Get Neo4j configuration."""
+        logger.info("Getting Neo4j configuration", database=self.neo4j_database)
         return {
             "uri": self.neo4j_uri,
             "user": self.neo4j_user,
@@ -154,6 +168,7 @@ class ClientsConfig:
 
     def get_redis_config(self) -> dict[str, any]:
         """Get Redis configuration."""
+        logger.info("Getting Redis configuration", enabled=self.enable_redis_cache)
         return {
             "url": self.redis_url,
             "enabled": self.enable_redis_cache,

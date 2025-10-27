@@ -30,7 +30,7 @@ def sample_user():
     return {
         "id": str(uuid4()),
         "username": "testuser",
-        "email": "test@example.com",
+        "email": "max@apexwebservices.com",
         "full_name": "Test User",
         "auth_method": "password",
         "is_active": True,
@@ -74,7 +74,7 @@ async def test_cmd_create_success(sample_user):
         with patch("src.auth.db_cli.assign_role", return_value=True):
             result = await db_cli.cmd_create(
                 username="testuser",
-                email="test@example.com",
+                email="max@apexwebservices.com",
                 full_name="Test User",
                 password="Password123!",
                 role="user",
@@ -146,7 +146,7 @@ async def test_cmd_create_error():
     with patch("src.auth.db_cli.create_user", side_effect=Exception("Database error")):
         result = await db_cli.cmd_create(
             username="testuser",
-            email="test@example.com",
+            email="max@apexwebservices.com",
             full_name="Test User",
             password="Pass123!",
         )
@@ -564,7 +564,7 @@ async def test_complete_user_lifecycle(sample_user, sample_roles, sample_session
         with patch("src.auth.db_cli.assign_role", return_value=True):
             result = await db_cli.cmd_create(
                 username="testuser",
-                email="test@example.com",
+                email="max@apexwebservices.com",
                 full_name="Test User",
                 password="Pass123!",
                 role="user",
@@ -609,7 +609,7 @@ async def test_password_management_flow(sample_user):
         with patch("src.auth.db_cli.assign_role", return_value=True):
             result = await db_cli.cmd_create(
                 username="testuser",
-                email="test@example.com",
+                email="max@apexwebservices.com",
                 full_name="Test User",
                 password="OldPass123!",
             )

@@ -25,8 +25,10 @@ from src.config import get_settings
 
 # Initialize Supabase client using centralized configuration
 settings = get_settings()
-supabase: Client = create_client(
-    settings.supabase_url, settings.supabase_service_key
+supabase: Client = (
+    create_client(  # noqa: CONST-III-001 - RAG pipeline client using centralized config
+        settings.supabase_url, settings.supabase_service_key
+    )
 )  # noqa: CONST-III-001 - RAG pipeline module-level client using centralized config
 
 

@@ -53,8 +53,15 @@ third_party/
 *_pb2.py
 *_pb2_grpc.py
 
-# Migrations (Alembic versions)
+# Migrations (Alembic - requires standalone configuration)
 alembic/versions/*.py
+migrations/
+
+# Examples (demonstration code, not production)
+examples/
+
+# Utility scripts (often require direct instantiation for one-off tasks, not production code)
+scripts/
 
 # Documentation builds
 docs/_build/
