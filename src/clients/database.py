@@ -1,8 +1,8 @@
 import structlog
-from supabase.client import Client, ClientOptions
 
 from src.config.clients import clients_config
 from supabase import create_client  # type: ignore
+from supabase.client import Client, ClientOptions
 
 logger = structlog.get_logger(__name__)
 

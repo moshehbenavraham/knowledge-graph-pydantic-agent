@@ -10,7 +10,6 @@ import pytest
 from httpx import AsyncClient
 from openai import AsyncOpenAI
 from pydantic_ai import RunContext
-from supabase.client import Client
 
 from src.agent.unified_agent import (
     UnifiedAgentDeps,
@@ -20,6 +19,7 @@ from src.agent.unified_agent import (
     smart_search,
     super_agent,
 )
+from supabase.client import Client
 
 
 class TestUnifiedAgentDeps:
