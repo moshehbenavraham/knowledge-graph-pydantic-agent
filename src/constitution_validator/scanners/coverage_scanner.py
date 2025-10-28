@@ -5,7 +5,7 @@ Integrates with pytest-cov to measure test coverage.
 """
 
 import re
-import subprocess
+import subprocess  # nosec B404 - subprocess needed for pytest coverage execution
 from pathlib import Path
 
 import structlog
@@ -35,20 +35,22 @@ class CoverageScanner:
         """
         try:
             # Run pytest with coverage
-            result = subprocess.run(
-                [
-                    "pytest",
-                    "--cov=src",
-                    "--cov-report=term-missing",
-                    "--quiet",
-                    "--no-header",
-                    "--continue-on-collection-errors",  # Don't stop on collection errors
-                ],
-                check=False,
-                cwd=project_root,
-                capture_output=True,
-                text=True,
-                timeout=300,  # 5 minute timeout
+            result = (
+                subprocess.run(  # nosec B603, B607 - pytest is a trusted tool with fixed arguments
+                    [
+                        "pytest",
+                        "--cov=src",
+                        "--cov-report=term-missing",
+                        "--quiet",
+                        "--no-header",
+                        "--continue-on-collection-errors",  # Don't stop on collection errors
+                    ],
+                    check=False,
+                    cwd=project_root,
+                    capture_output=True,
+                    text=True,
+                    timeout=300,  # 5 minute timeout
+                )
             )
 
             # Parse coverage from output
@@ -112,7 +114,7 @@ class CoverageScanner:
             True if pytest-cov is available
         """
         try:
-            result = subprocess.run(
+            result = subprocess.run(  # nosec B603, B607 - pytest version check with fixed arguments
                 ["pytest", "--version"],
                 check=False,
                 capture_output=True,

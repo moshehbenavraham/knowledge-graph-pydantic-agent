@@ -17,7 +17,7 @@ Covers:
 
 import json
 from datetime import timedelta
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 from uuid import uuid4
 
 import pytest
@@ -34,7 +34,9 @@ from src.agentic_rag.search.vector_search import (
 @pytest.fixture
 def mock_connection_manager():
     """Mock connection manager."""
-    cm = Mock()
+    cm = MagicMock()
+    # Set up get_pg_connection to return an async context manager
+    cm.get_pg_connection.return_value = AsyncMock()
     return cm
 
 

@@ -24,6 +24,22 @@ from src.ui.features.dashboard_utils import (
 def mock_connection_manager():
     """Mock connection manager."""
     cm = Mock()
+    # Set up async context managers for connections
+    pg_ctx = AsyncMock()
+    pg_ctx.__aenter__ = AsyncMock()
+    pg_ctx.__aexit__ = AsyncMock(return_value=False)
+    cm.get_pg_connection = Mock(return_value=pg_ctx)
+
+    neo4j_ctx = AsyncMock()
+    neo4j_ctx.__aenter__ = AsyncMock()
+    neo4j_ctx.__aexit__ = AsyncMock(return_value=False)
+    cm.get_neo4j_connection = Mock(return_value=neo4j_ctx)
+
+    neo4j_session_ctx = AsyncMock()
+    neo4j_session_ctx.__aenter__ = AsyncMock()
+    neo4j_session_ctx.__aexit__ = AsyncMock(return_value=False)
+    cm.get_neo4j_session = Mock(return_value=neo4j_session_ctx)
+
     return cm
 
 
@@ -95,18 +111,26 @@ class TestSearchMetrics:
         mock_summary = {
             "total_searches": 100,
             "avg_latency_ms": 150.5,
-            "total_graph_boosts": 30,
-            "total_entity_boosts": 25,
+            "avg_vector_latency_ms": 50.0,
+            "avg_graph_latency_ms": 100.0,
+            "graph_boosts": 30,
+            "entity_boosts": 25,
+            "cache_hits": 20,
+            "avg_entities_found": 5,
+            "avg_relationships_found": 3,
         }
+
+        mock_strategies = [
+            {"strategy_used": "HYBRID", "search_count": 60},
+            {"strategy_used": "VECTOR_HEAVY", "search_count": 40},
+        ]
 
         mock_conn = AsyncMock()
         mock_conn.fetchrow = AsyncMock(return_value=mock_summary)
+        mock_conn.fetch = AsyncMock(return_value=mock_strategies)
 
         dashboard_handler.connection_manager.get_pg_connection.return_value.__aenter__.return_value = (
             mock_conn
-        )
-        dashboard_handler.connection_manager.get_pg_connection.return_value.__aexit__.return_value = AsyncMock(
-            return_value=False
         )
 
         metrics = await dashboard_handler.get_search_metrics(window="7d")
@@ -116,15 +140,25 @@ class TestSearchMetrics:
 
     async def test_get_search_metrics_caching(self, dashboard_handler):
         """Test that metrics are cached."""
-        mock_summary = {"total_searches": 100}
+        mock_summary = {
+            "total_searches": 100,
+            "avg_latency_ms": 150.5,
+            "avg_vector_latency_ms": 50.0,
+            "avg_graph_latency_ms": 100.0,
+            "graph_boosts": 30,
+            "entity_boosts": 25,
+            "cache_hits": 20,
+            "avg_entities_found": 5,
+            "avg_relationships_found": 3,
+        }
+        mock_strategies = [{"strategy_used": "HYBRID", "search_count": 100}]
+
         mock_conn = AsyncMock()
         mock_conn.fetchrow = AsyncMock(return_value=mock_summary)
+        mock_conn.fetch = AsyncMock(return_value=mock_strategies)
 
         dashboard_handler.connection_manager.get_pg_connection.return_value.__aenter__.return_value = (
             mock_conn
-        )
-        dashboard_handler.connection_manager.get_pg_connection.return_value.__aexit__.return_value = AsyncMock(
-            return_value=False
         )
 
         # First call
@@ -144,9 +178,6 @@ class TestSearchMetrics:
 
         dashboard_handler.connection_manager.get_pg_connection.return_value.__aenter__.return_value = (
             mock_conn
-        )
-        dashboard_handler.connection_manager.get_pg_connection.return_value.__aexit__.return_value = AsyncMock(
-            return_value=False
         )
 
         await dashboard_handler.get_search_metrics(window="24h")
@@ -297,9 +328,6 @@ class TestGraphData:
         dashboard_handler.connection_manager.get_neo4j_session.return_value.__aenter__.return_value = (
             mock_neo4j_session
         )
-        dashboard_handler.connection_manager.get_neo4j_session.return_value.__aexit__.return_value = AsyncMock(
-            return_value=False
-        )
 
         graph_data = await dashboard_handler.get_graph_data(limit=50)
 
@@ -313,9 +341,6 @@ class TestGraphData:
 
         dashboard_handler.connection_manager.get_neo4j_session.return_value.__aenter__.return_value = (
             mock_neo4j_session
-        )
-        dashboard_handler.connection_manager.get_neo4j_session.return_value.__aexit__.return_value = AsyncMock(
-            return_value=False
         )
 
         graph_data = await dashboard_handler.get_graph_data()
@@ -350,9 +375,6 @@ class TestTopEntities:
         dashboard_handler.connection_manager.get_neo4j_session.return_value.__aenter__.return_value = (
             mock_neo4j_session
         )
-        dashboard_handler.connection_manager.get_neo4j_session.return_value.__aexit__.return_value = AsyncMock(
-            return_value=False
-        )
 
         entities = await dashboard_handler.get_top_entities(limit=20)
 
@@ -366,9 +388,6 @@ class TestTopEntities:
 
         dashboard_handler.connection_manager.get_neo4j_session.return_value.__aenter__.return_value = (
             mock_neo4j_session
-        )
-        dashboard_handler.connection_manager.get_neo4j_session.return_value.__aexit__.return_value = AsyncMock(
-            return_value=False
         )
 
         entities = await dashboard_handler.get_top_entities()
@@ -399,9 +418,6 @@ class TestEntityTimeline:
         dashboard_handler.connection_manager.get_neo4j_session.return_value.__aenter__.return_value = (
             mock_neo4j_session
         )
-        dashboard_handler.connection_manager.get_neo4j_session.return_value.__aexit__.return_value = AsyncMock(
-            return_value=False
-        )
 
         timeline = await dashboard_handler.get_entity_timeline("entity-123")
 
@@ -415,9 +431,6 @@ class TestEntityTimeline:
 
         dashboard_handler.connection_manager.get_neo4j_session.return_value.__aenter__.return_value = (
             mock_neo4j_session
-        )
-        dashboard_handler.connection_manager.get_neo4j_session.return_value.__aexit__.return_value = AsyncMock(
-            return_value=False
         )
 
         timeline = await dashboard_handler.get_entity_timeline("entity-456")
@@ -457,9 +470,6 @@ class TestPerformanceMetrics:
         dashboard_handler.connection_manager.get_pg_connection.return_value.__aenter__.return_value = (
             mock_conn
         )
-        dashboard_handler.connection_manager.get_pg_connection.return_value.__aexit__.return_value = AsyncMock(
-            return_value=False
-        )
 
         metrics = await dashboard_handler.get_performance_metrics(window="7d")
 
@@ -473,9 +483,6 @@ class TestPerformanceMetrics:
 
         dashboard_handler.connection_manager.get_pg_connection.return_value.__aenter__.return_value = (
             mock_conn
-        )
-        dashboard_handler.connection_manager.get_pg_connection.return_value.__aexit__.return_value = AsyncMock(
-            return_value=False
         )
 
         metrics = await dashboard_handler.get_performance_metrics()
@@ -511,9 +518,6 @@ class TestIntentDistribution:
         dashboard_handler.connection_manager.get_pg_connection.return_value.__aenter__.return_value = (
             mock_conn
         )
-        dashboard_handler.connection_manager.get_pg_connection.return_value.__aexit__.return_value = AsyncMock(
-            return_value=False
-        )
 
         distribution = await dashboard_handler.get_intent_distribution(window="7d")
 
@@ -527,9 +531,6 @@ class TestIntentDistribution:
 
         dashboard_handler.connection_manager.get_pg_connection.return_value.__aenter__.return_value = (
             mock_conn
-        )
-        dashboard_handler.connection_manager.get_pg_connection.return_value.__aexit__.return_value = AsyncMock(
-            return_value=False
         )
 
         distribution = await dashboard_handler.get_intent_distribution(window="24h")
@@ -559,9 +560,6 @@ class TestTimeSeriesData:
         dashboard_handler.connection_manager.get_pg_connection.return_value.__aenter__.return_value = (
             mock_conn
         )
-        dashboard_handler.connection_manager.get_pg_connection.return_value.__aexit__.return_value = AsyncMock(
-            return_value=False
-        )
 
         data = await dashboard_handler.get_time_series_data(window="7d", metric="searches")
 
@@ -575,9 +573,6 @@ class TestTimeSeriesData:
 
         dashboard_handler.connection_manager.get_pg_connection.return_value.__aenter__.return_value = (
             mock_conn
-        )
-        dashboard_handler.connection_manager.get_pg_connection.return_value.__aexit__.return_value = AsyncMock(
-            return_value=False
         )
 
         data = await dashboard_handler.get_time_series_data(window="30d", metric="latency")
@@ -610,9 +605,6 @@ class TestToolUsageMetrics:
         dashboard_handler.connection_manager.get_pg_connection.return_value.__aenter__.return_value = (
             mock_conn
         )
-        dashboard_handler.connection_manager.get_pg_connection.return_value.__aexit__.return_value = AsyncMock(
-            return_value=False
-        )
 
         metrics = await dashboard_handler.get_tool_usage_metrics(window="7d")
 
@@ -626,9 +618,6 @@ class TestToolUsageMetrics:
 
         dashboard_handler.connection_manager.get_pg_connection.return_value.__aenter__.return_value = (
             mock_conn
-        )
-        dashboard_handler.connection_manager.get_pg_connection.return_value.__aexit__.return_value = AsyncMock(
-            return_value=False
         )
 
         metrics = await dashboard_handler.get_tool_usage_metrics()
@@ -659,9 +648,6 @@ class TestAgentInteractionMetrics:
         dashboard_handler.connection_manager.get_pg_connection.return_value.__aenter__.return_value = (
             mock_conn
         )
-        dashboard_handler.connection_manager.get_pg_connection.return_value.__aexit__.return_value = AsyncMock(
-            return_value=False
-        )
 
         metrics = await dashboard_handler.get_agent_interaction_metrics(window="7d")
 
@@ -675,9 +661,6 @@ class TestAgentInteractionMetrics:
 
         dashboard_handler.connection_manager.get_pg_connection.return_value.__aenter__.return_value = (
             mock_conn
-        )
-        dashboard_handler.connection_manager.get_pg_connection.return_value.__aexit__.return_value = AsyncMock(
-            return_value=False
         )
 
         metrics = await dashboard_handler.get_agent_interaction_metrics()
@@ -698,9 +681,6 @@ class TestMaterializedViewsRefresh:
         dashboard_handler.connection_manager.get_pg_connection.return_value.__aenter__.return_value = (
             mock_conn
         )
-        dashboard_handler.connection_manager.get_pg_connection.return_value.__aexit__.return_value = AsyncMock(
-            return_value=False
-        )
 
         result = await dashboard_handler.refresh_materialized_views()
 
@@ -713,9 +693,6 @@ class TestMaterializedViewsRefresh:
 
         dashboard_handler.connection_manager.get_pg_connection.return_value.__aenter__.return_value = (
             mock_conn
-        )
-        dashboard_handler.connection_manager.get_pg_connection.return_value.__aexit__.return_value = AsyncMock(
-            return_value=False
         )
 
         result = await dashboard_handler.refresh_materialized_views()

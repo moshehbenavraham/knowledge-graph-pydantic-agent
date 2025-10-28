@@ -23,13 +23,22 @@ from src.agentic_rag.search.graph_search import GraphEntity, GraphFact
 from src.agentic_rag.search.vector_search import SearchCache
 
 
+@pytest.fixture
+def mock_connection_manager():
+    """Mock ConnectionManager for HybridSearch tests."""
+    from unittest.mock import Mock
+
+    mock_manager = Mock()
+    return mock_manager
+
+
 class TestStrategySelection:
     """Test strategy selection logic based on various inputs."""
 
     @pytest.mark.asyncio
-    async def test_vector_heavy_intent_selects_vector_only(self):
+    async def test_vector_heavy_intent_selects_vector_only(self, mock_connection_manager):
         """Vector-heavy intent should select VECTOR_ONLY strategy."""
-        search = HybridSearch()
+        search = HybridSearch(mock_connection_manager)
 
         mock_intent = Mock(
             primary_intent=SearchIntent.VECTOR_HEAVY,
@@ -42,9 +51,9 @@ class TestStrategySelection:
         assert strategy == SearchStrategy.VECTOR_ONLY
 
     @pytest.mark.asyncio
-    async def test_graph_heavy_intent_with_graph_enabled(self):
+    async def test_graph_heavy_intent_with_graph_enabled(self, mock_connection_manager):
         """Graph-heavy intent with graph enabled should select GRAPH_ONLY."""
-        search = HybridSearch()
+        search = HybridSearch(mock_connection_manager)
 
         mock_intent = Mock(
             primary_intent=SearchIntent.GRAPH_HEAVY,
@@ -58,9 +67,9 @@ class TestStrategySelection:
             assert strategy == SearchStrategy.GRAPH_ONLY
 
     @pytest.mark.asyncio
-    async def test_graph_heavy_intent_without_graph_enabled(self):
+    async def test_graph_heavy_intent_without_graph_enabled(self, mock_connection_manager):
         """Graph-heavy intent without graph should fallback to VECTOR_ONLY."""
-        search = HybridSearch()
+        search = HybridSearch(mock_connection_manager)
 
         mock_intent = Mock(
             primary_intent=SearchIntent.GRAPH_HEAVY,
@@ -74,9 +83,9 @@ class TestStrategySelection:
             assert strategy == SearchStrategy.VECTOR_ONLY
 
     @pytest.mark.asyncio
-    async def test_temporal_intent_selects_hybrid(self):
+    async def test_temporal_intent_selects_hybrid(self, mock_connection_manager):
         """Temporal intent should select HYBRID strategy when graph enabled."""
-        search = HybridSearch()
+        search = HybridSearch(mock_connection_manager)
 
         mock_intent = Mock(
             primary_intent=SearchIntent.TEMPORAL,
@@ -90,9 +99,9 @@ class TestStrategySelection:
             assert strategy == SearchStrategy.HYBRID
 
     @pytest.mark.asyncio
-    async def test_entity_focused_intent_selects_hybrid(self):
+    async def test_entity_focused_intent_selects_hybrid(self, mock_connection_manager):
         """Entity-focused intent should select HYBRID strategy."""
-        search = HybridSearch()
+        search = HybridSearch(mock_connection_manager)
 
         mock_intent = Mock(
             primary_intent=SearchIntent.ENTITY_FOCUSED,
@@ -106,9 +115,9 @@ class TestStrategySelection:
             assert strategy == SearchStrategy.HYBRID
 
     @pytest.mark.asyncio
-    async def test_default_intent_with_graph_selects_adaptive(self):
+    async def test_default_intent_with_graph_selects_adaptive(self, mock_connection_manager):
         """Default intent with graph enabled should select ADAPTIVE."""
-        search = HybridSearch()
+        search = HybridSearch(mock_connection_manager)
 
         mock_intent = Mock(
             primary_intent=SearchIntent.HYBRID,
@@ -126,9 +135,9 @@ class TestResultMerging:
     """Test result merging algorithms."""
 
     @pytest.mark.asyncio
-    async def test_merge_with_empty_vector_results(self):
+    async def test_merge_with_empty_vector_results(self, mock_connection_manager):
         """Test merging when vector search returns empty results."""
-        search = HybridSearch()
+        search = HybridSearch(mock_connection_manager)
 
         graph_results = GraphSearchResult(
             facts=[GraphFact("Test fact", None, 0.8, "chunk-1")],
@@ -139,9 +148,9 @@ class TestResultMerging:
         assert len(boosted) == 0
 
     @pytest.mark.asyncio
-    async def test_merge_with_empty_graph_results(self):
+    async def test_merge_with_empty_graph_results(self, mock_connection_manager):
         """Test merging when graph search returns empty results."""
-        search = HybridSearch()
+        search = HybridSearch(mock_connection_manager)
 
         chunks = [
             ChunkResult(
@@ -161,9 +170,9 @@ class TestResultMerging:
         assert boosted[0].similarity == 0.8  # No boosting applied
 
     @pytest.mark.asyncio
-    async def test_merge_with_overlapping_chunk_refs(self):
+    async def test_merge_with_overlapping_chunk_refs(self, mock_connection_manager):
         """Test merging when chunk IDs overlap between vector and graph results."""
-        search = HybridSearch()
+        search = HybridSearch(mock_connection_manager)
 
         chunk_id = uuid4()
         chunks = [
@@ -190,9 +199,9 @@ class TestResultMerging:
         assert search._stats["graph_boosts"] > 0
 
     @pytest.mark.asyncio
-    async def test_merge_preserves_top_results_order(self):
+    async def test_merge_preserves_top_results_order(self, mock_connection_manager):
         """Test that merging preserves correct result ordering."""
-        search = HybridSearch()
+        search = HybridSearch(mock_connection_manager)
 
         chunks = [
             ChunkResult(
@@ -218,9 +227,9 @@ class TestBoostingMechanisms:
     """Test various boosting mechanisms."""
 
     @pytest.mark.asyncio
-    async def test_chunk_ref_boosting(self):
+    async def test_chunk_ref_boosting(self, mock_connection_manager):
         """Test boosting based on chunk reference in graph results."""
-        search = HybridSearch()
+        search = HybridSearch(mock_connection_manager)
 
         chunk_id = uuid4()
         chunks = [
@@ -244,9 +253,9 @@ class TestBoostingMechanisms:
         assert search._stats["graph_boosts"] == initial_boost_count + 1
 
     @pytest.mark.asyncio
-    async def test_entity_overlap_boosting(self):
+    async def test_entity_overlap_boosting(self, mock_connection_manager):
         """Test boosting based on entity overlap."""
-        search = HybridSearch()
+        search = HybridSearch(mock_connection_manager)
 
         chunks = [
             ChunkResult(
@@ -275,9 +284,9 @@ class TestBoostingMechanisms:
         assert search._stats["entity_boosts"] == initial_boost_count + 1
 
     @pytest.mark.asyncio
-    async def test_combined_boosting(self):
+    async def test_combined_boosting(self, mock_connection_manager):
         """Test combined boosting from multiple sources."""
-        search = HybridSearch()
+        search = HybridSearch(mock_connection_manager)
 
         chunk_id = uuid4()
         chunks = [
@@ -304,9 +313,9 @@ class TestBoostingMechanisms:
         assert abs(boosted[0].similarity - expected) < 0.01
 
     @pytest.mark.asyncio
-    async def test_temporal_intent_boosting(self):
+    async def test_temporal_intent_boosting(self, mock_connection_manager):
         """Test boosting based on temporal intent."""
-        search = HybridSearch()
+        search = HybridSearch(mock_connection_manager)
 
         chunks = [
             ChunkResult(
@@ -334,9 +343,9 @@ class TestBoostingMechanisms:
         assert boosted[0].similarity > 0.7
 
     @pytest.mark.asyncio
-    async def test_entity_focused_intent_boosting(self):
+    async def test_entity_focused_intent_boosting(self, mock_connection_manager):
         """Test boosting based on entity-focused intent."""
-        search = HybridSearch()
+        search = HybridSearch(mock_connection_manager)
 
         chunks = [
             ChunkResult(
@@ -365,9 +374,9 @@ class TestBoostingMechanisms:
         assert abs(boosted[0].similarity - expected) < 0.01
 
     @pytest.mark.asyncio
-    async def test_boost_capping_at_1_0(self):
+    async def test_boost_capping_at_1_0(self, mock_connection_manager):
         """Test that boosting does not exceed similarity of 1.0."""
-        search = HybridSearch()
+        search = HybridSearch(mock_connection_manager)
 
         chunk_id = uuid4()
         chunks = [
@@ -397,9 +406,9 @@ class TestParallelExecution:
     """Test parallel execution of searches."""
 
     @pytest.mark.asyncio
-    async def test_parallel_search_both_complete(self):
+    async def test_parallel_search_both_complete(self, mock_connection_manager):
         """Test parallel execution when both searches complete successfully."""
-        search = HybridSearch()
+        search = HybridSearch(mock_connection_manager)
 
         with patch.object(search.config.performance, "enable_parallel_search", True):
             with patch.object(search.vector_search, "search") as mock_vector:
@@ -432,9 +441,9 @@ class TestParallelExecution:
                     assert len(result.chunks) > 0
 
     @pytest.mark.asyncio
-    async def test_sequential_execution_when_parallel_disabled(self):
+    async def test_sequential_execution_when_parallel_disabled(self, mock_connection_manager):
         """Test sequential execution when parallel search is disabled."""
-        search = HybridSearch()
+        search = HybridSearch(mock_connection_manager)
 
         with patch.object(search.config.performance, "enable_parallel_search", False):
             with patch.object(search.vector_search, "search") as mock_vector:
@@ -462,9 +471,9 @@ class TestErrorHandling:
     """Test error handling and fallback mechanisms."""
 
     @pytest.mark.asyncio
-    async def test_vector_search_failure_fallback(self):
+    async def test_vector_search_failure_fallback(self, mock_connection_manager):
         """Test fallback when vector search fails."""
-        search = HybridSearch()
+        search = HybridSearch(mock_connection_manager)
 
         with patch.object(search.vector_search, "search") as mock_vector:
             mock_vector.side_effect = Exception("Vector search failed")
@@ -484,9 +493,9 @@ class TestErrorHandling:
                     await search._hybrid_search("test query", 10, mock_intent)
 
     @pytest.mark.asyncio
-    async def test_graph_search_failure_fallback(self):
+    async def test_graph_search_failure_fallback(self, mock_connection_manager):
         """Test fallback when graph search fails."""
-        search = HybridSearch()
+        search = HybridSearch(mock_connection_manager)
 
         with patch.object(search.vector_search, "search") as mock_vector:
             mock_vector.return_value = [
@@ -515,9 +524,9 @@ class TestErrorHandling:
                     await search._hybrid_search("test query", 10, mock_intent)
 
     @pytest.mark.asyncio
-    async def test_invalid_chunk_id_in_graph_results(self):
+    async def test_invalid_chunk_id_in_graph_results(self, mock_connection_manager):
         """Test handling of invalid chunk IDs from graph results."""
-        search = HybridSearch()
+        search = HybridSearch(mock_connection_manager)
 
         mock_intent = Mock(
             primary_intent=SearchIntent.GRAPH_HEAVY,
@@ -539,9 +548,9 @@ class TestErrorHandling:
                 assert len(result.chunks) == 0
 
     @pytest.mark.asyncio
-    async def test_empty_query_handling(self):
+    async def test_empty_query_handling(self, mock_connection_manager):
         """Test handling of empty query strings."""
-        search = HybridSearch()
+        search = HybridSearch(mock_connection_manager)
 
         with patch.object(search.vector_search, "search") as mock_vector:
             mock_vector.return_value = []
@@ -632,7 +641,7 @@ class TestCacheIntegration:
         assert cache.get(key) is None
 
     @pytest.mark.skip(reason="SearchCache does not support max_size parameter")
-    def test_cache_size_limit(self):
+    def test_cache_size_limit(self, mock_connection_manager):
         """Test cache respects maximum size."""
         cache = SearchCache(max_size=2)
 
@@ -658,9 +667,9 @@ class TestIntentBasedRouting:
     """Test intent-based routing logic."""
 
     @pytest.mark.asyncio
-    async def test_routing_with_forced_strategy(self):
+    async def test_routing_with_forced_strategy(self, mock_connection_manager):
         """Test that forced strategy overrides intent analysis."""
-        search = HybridSearch()
+        search = HybridSearch(mock_connection_manager)
 
         with patch.object(search.intent_analyzer, "analyze") as mock_analyze:
             with patch.object(search, "_vector_only_search") as mock_vector:
@@ -674,9 +683,9 @@ class TestIntentBasedRouting:
                 mock_vector.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_adaptive_search_with_high_similarity_results(self):
+    async def test_adaptive_search_with_high_similarity_results(self, mock_connection_manager):
         """Test adaptive search with high similarity results stays vector-only."""
-        search = HybridSearch()
+        search = HybridSearch(mock_connection_manager)
 
         with patch.object(search.vector_search, "search") as mock_vector:
             # High similarity results
@@ -705,9 +714,11 @@ class TestIntentBasedRouting:
             assert result.metadata["search_type"] == "adaptive_vector"
 
     @pytest.mark.asyncio
-    async def test_adaptive_search_with_low_similarity_triggers_graph(self):
+    async def test_adaptive_search_with_low_similarity_triggers_graph(
+        self, mock_connection_manager
+    ):
         """Test adaptive search with low similarity results triggers graph search."""
-        search = HybridSearch()
+        search = HybridSearch(mock_connection_manager)
 
         with patch.object(search.config.performance, "enable_graph", True):
             with patch.object(search.vector_search, "search") as mock_vector:
@@ -739,9 +750,9 @@ class TestIntentBasedRouting:
                     mock_hybrid.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_adaptive_search_with_multiple_entities(self):
+    async def test_adaptive_search_with_multiple_entities(self, mock_connection_manager):
         """Test adaptive search with multiple entities triggers graph search."""
-        search = HybridSearch()
+        search = HybridSearch(mock_connection_manager)
 
         with patch.object(search.config.performance, "enable_graph", True):
             with patch.object(search.vector_search, "search") as mock_vector:
@@ -776,9 +787,9 @@ class TestPerformanceEdgeCases:
     """Test performance and edge cases."""
 
     @pytest.mark.asyncio
-    async def test_large_result_set_handling(self):
+    async def test_large_result_set_handling(self, mock_connection_manager):
         """Test handling of large result sets."""
-        search = HybridSearch()
+        search = HybridSearch(mock_connection_manager)
 
         # Create 1000 chunks
         large_chunks = [
@@ -802,9 +813,9 @@ class TestPerformanceEdgeCases:
         assert all(isinstance(c, ChunkResult) for c in boosted)
 
     @pytest.mark.asyncio
-    async def test_search_with_zero_limit(self):
+    async def test_search_with_zero_limit(self, mock_connection_manager):
         """Test search with limit of 0."""
-        search = HybridSearch()
+        search = HybridSearch(mock_connection_manager)
 
         with patch.object(search.vector_search, "search") as mock_vector:
             mock_vector.return_value = []
@@ -816,9 +827,9 @@ class TestPerformanceEdgeCases:
             mock_vector.assert_called()
 
     @pytest.mark.asyncio
-    async def test_search_similar_with_nonexistent_chunk(self):
+    async def test_search_similar_with_nonexistent_chunk(self, mock_connection_manager):
         """Test similarity search with nonexistent chunk ID."""
-        search = HybridSearch()
+        search = HybridSearch(mock_connection_manager)
 
         with patch.object(search.vector_search, "search_similar_chunks") as mock_similar:
             mock_similar.return_value = []
@@ -829,9 +840,9 @@ class TestPerformanceEdgeCases:
             assert len(result.chunks) == 0
 
     @pytest.mark.asyncio
-    async def test_statistics_tracking(self):
+    async def test_statistics_tracking(self, mock_connection_manager):
         """Test that search statistics are tracked correctly."""
-        search = HybridSearch()
+        search = HybridSearch(mock_connection_manager)
 
         initial_searches = search._stats["searches"]
 
@@ -844,9 +855,9 @@ class TestPerformanceEdgeCases:
         assert search._stats["total_latency"] > 0
 
     @pytest.mark.asyncio
-    async def test_get_stats_with_no_searches(self):
+    async def test_get_stats_with_no_searches(self, mock_connection_manager):
         """Test getting statistics when no searches performed."""
-        search = HybridSearch()
+        search = HybridSearch(mock_connection_manager)
 
         stats = search.get_stats()
 
@@ -856,9 +867,9 @@ class TestPerformanceEdgeCases:
         assert "intent_stats" in stats
 
     @pytest.mark.asyncio
-    async def test_get_stats_with_multiple_searches(self):
+    async def test_get_stats_with_multiple_searches(self, mock_connection_manager):
         """Test statistics after multiple searches."""
-        search = HybridSearch()
+        search = HybridSearch(mock_connection_manager)
 
         with patch.object(search.vector_search, "search") as mock_vector:
             mock_vector.return_value = []
@@ -875,7 +886,7 @@ class TestPerformanceEdgeCases:
         assert stats["total_latency"] > 0
 
     @pytest.mark.asyncio
-    async def test_result_to_dict_serialization(self):
+    async def test_result_to_dict_serialization(self, mock_connection_manager):
         """Test HybridSearchResult serialization to dictionary."""
         result = HybridSearchResult(
             chunks=[
@@ -907,9 +918,9 @@ class TestPerformanceEdgeCases:
         assert result_dict["metadata"]["test"] == "data"
 
     @pytest.mark.asyncio
-    async def test_hybrid_search_result_limits(self):
+    async def test_hybrid_search_result_limits(self, mock_connection_manager):
         """Test that hybrid search respects result limits."""
-        search = HybridSearch()
+        search = HybridSearch(mock_connection_manager)
 
         with patch.object(search.vector_search, "search") as mock_vector:
             # Return more results than requested

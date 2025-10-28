@@ -258,7 +258,7 @@ class TestGetDocument:
         assert response.metadata.id == "doc-123"
         assert response.chunks is not None
         assert len(response.chunks) == 2
-        assert response.chunks[0]["content"] == "Chunk 1 content"
+        assert response.chunks[0] == "Chunk 1 content"  # Chunks are now list[str] per model spec
 
     @pytest.mark.asyncio
     async def test_get_document_not_found(self):

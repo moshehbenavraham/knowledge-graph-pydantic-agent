@@ -1,406 +1,423 @@
 """
 Comprehensive tests for image analysis tool.
 
-Tests image loading, vision model integration, OCR, object detection, and error handling.
-Target: 85%+ coverage of image_analysis.py
+Tests:
+- Document retrieval by source and ID
+- Base64 image decoding
+- Vision LLM integration (OpenAI and Anthropic)
+- Model mapping for Anthropic
+- Error handling
+- Metadata extraction
 """
 
 import base64
 from unittest.mock import AsyncMock, Mock, patch
-from uuid import uuid4
 
 import pytest
 
+from src.tools.image_analysis import image_analysis_tool
+
 
 @pytest.fixture
-def mock_supabase_client():
-    """Mock Supabase client for document retrieval."""
+def mock_supabase():
+    """Create mock Supabase client."""
     client = Mock()
-
-    # Mock table operations
-    mock_table = Mock()
-    client.table.return_value = mock_table
-
-    # Mock select operation
-    mock_select = Mock()
-    mock_table.select.return_value = mock_select
-
-    # Mock eq operation
-    mock_eq = Mock()
-    mock_select.eq.return_value = mock_eq
-
-    # Mock execute
-    mock_execute = Mock()
-    mock_eq.execute.return_value = mock_execute
-
-    # Default: return document with base64 image
-    mock_execute.data = [
-        {
-            "id": str(uuid4()),
-            "file_path": "test_image.png",
-            "content": "base64encodedimagedata",
-            "metadata": {"mime_type": "image/png"},
-        }
-    ]
-
     return client
 
 
 @pytest.fixture
-def mock_vision_client():
-    """Mock vision model client."""
-    client = Mock()
-    client.chat = Mock()
-    client.chat.completions = Mock()
-    client.chat.completions.create = AsyncMock()
-
-    # Default response
-    mock_response = Mock()
-    mock_response.choices = [Mock()]
-    mock_response.choices[0].message = Mock()
-    mock_response.choices[0].message.content = "This image shows a cat sitting on a mat."
-
-    client.chat.completions.create.return_value = mock_response
-
-    return client
+def mock_settings():
+    """Create mock settings."""
+    settings = Mock()
+    settings.llm_provider = "openai"
+    settings.vision_llm_choice = "gpt-4-vision-preview"
+    settings.llm_api_key = "test-api-key"
+    settings.llm_base_url = "https://api.openai.com/v1"
+    return settings
 
 
-class TestImageAnalysisTool:
-    """Test image_analysis_tool function."""
+@pytest.fixture
+def sample_image_base64():
+    """Create sample base64 encoded image."""
+    # Small 1x1 pixel PNG
+    png_bytes = base64.b64encode(
+        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+    )
+    return png_bytes.decode("utf-8")
 
-    @pytest.mark.asyncio
-    async def test_analyze_image_success(self, mock_supabase_client, mock_vision_client):
-        """Test successful image analysis."""
-        from src.tools.image_analysis import image_analysis_tool
 
-        with patch("src.tools.image_analysis.get_vision_client", return_value=mock_vision_client):
-            result = await image_analysis_tool(
-                supabase_client=mock_supabase_client,
-                document_id="test-123",
-                analysis_query="What's in this image?",
-            )
+@pytest.mark.asyncio
+class TestDocumentRetrieval:
+    """Test document retrieval from Supabase."""
 
-            assert isinstance(result, str)
-            assert "cat" in result or "This image" in result
-            mock_vision_client.chat.completions.create.assert_called_once()
+    async def test_retrieve_by_source(self, mock_supabase, mock_settings, sample_image_base64):
+        """Test retrieving document by source field."""
+        # Mock Supabase query response
+        mock_result = Mock()
+        mock_result.data = [
+            {
+                "metadata": {"file_contents": sample_image_base64, "mime_type": "image/png"},
+                "source": "test-image.png",
+            }
+        ]
 
-    @pytest.mark.asyncio
-    async def test_analyze_image_by_file_path(self, mock_supabase_client, mock_vision_client):
-        """Test image analysis using file_path."""
-        from src.tools.image_analysis import image_analysis_tool
-
-        with patch("src.tools.image_analysis.get_vision_client", return_value=mock_vision_client):
-            result = await image_analysis_tool(
-                supabase_client=mock_supabase_client,
-                document_id="images/test.png",
-                analysis_query="Describe this image",
-            )
-
-            assert isinstance(result, str)
-            # Should query by file_path
-            mock_supabase_client.table.assert_called()
-
-    @pytest.mark.asyncio
-    async def test_analyze_image_not_found(self, mock_supabase_client, mock_vision_client):
-        """Test analysis when image not found."""
-        from src.tools.image_analysis import image_analysis_tool
-
-        # Return empty result
-        mock_supabase_client.table().select().eq().execute.return_value.data = []
-
-        with patch("src.tools.image_analysis.get_vision_client", return_value=mock_vision_client):
-            result = await image_analysis_tool(
-                supabase_client=mock_supabase_client,
-                document_id="nonexistent",
-                analysis_query="Test",
-            )
-
-            assert "not found" in result.lower() or "error" in result.lower()
-
-    @pytest.mark.asyncio
-    async def test_analyze_image_ocr_query(self, mock_supabase_client, mock_vision_client):
-        """Test OCR-specific analysis."""
-        from src.tools.image_analysis import image_analysis_tool
-
-        mock_vision_client.chat.completions.create.return_value.choices[0].message.content = (
-            "Text found: Hello World"
+        mock_supabase.from_.return_value.select.return_value.eq.return_value.limit.return_value.execute.return_value = (
+            mock_result
         )
 
-        with patch("src.tools.image_analysis.get_vision_client", return_value=mock_vision_client):
-            result = await image_analysis_tool(
-                supabase_client=mock_supabase_client,
-                document_id="test-123",
-                analysis_query="Extract all text from this image",
-            )
-
-            assert "Text found" in result or "Hello World" in result
-
-    @pytest.mark.asyncio
-    async def test_analyze_image_object_detection(self, mock_supabase_client, mock_vision_client):
-        """Test object detection analysis."""
-        from src.tools.image_analysis import image_analysis_tool
-
-        mock_vision_client.chat.completions.create.return_value.choices[0].message.content = (
-            "Objects detected: person, car, tree"
-        )
-
-        with patch("src.tools.image_analysis.get_vision_client", return_value=mock_vision_client):
-            result = await image_analysis_tool(
-                supabase_client=mock_supabase_client,
-                document_id="test-123",
-                analysis_query="What objects are in this image?",
-            )
-
-            assert "Objects detected" in result or "person" in result
-
-    @pytest.mark.asyncio
-    async def test_analyze_image_scene_description(self, mock_supabase_client, mock_vision_client):
-        """Test scene description analysis."""
-        from src.tools.image_analysis import image_analysis_tool
-
-        mock_vision_client.chat.completions.create.return_value.choices[0].message.content = (
-            "A sunny park with people playing frisbee"
-        )
-
-        with patch("src.tools.image_analysis.get_vision_client", return_value=mock_vision_client):
-            result = await image_analysis_tool(
-                supabase_client=mock_supabase_client,
-                document_id="test-123",
-                analysis_query="Describe the scene",
-            )
-
-            assert "park" in result or "frisbee" in result
-
-    @pytest.mark.asyncio
-    async def test_analyze_image_with_metadata(self, mock_supabase_client, mock_vision_client):
-        """Test analysis with image metadata."""
-        from src.tools.image_analysis import image_analysis_tool
-
-        # Add metadata to document
-        mock_supabase_client.table().select().eq().execute.return_value.data[0]["metadata"] = {
-            "mime_type": "image/jpeg",
-            "width": 1920,
-            "height": 1080,
-        }
-
-        with patch("src.tools.image_analysis.get_vision_client", return_value=mock_vision_client):
-            result = await image_analysis_tool(
-                supabase_client=mock_supabase_client,
-                document_id="test-123",
-                analysis_query="Test",
-            )
-
-            assert isinstance(result, str)
-
-    @pytest.mark.asyncio
-    async def test_analyze_image_vision_model_error(self, mock_supabase_client, mock_vision_client):
-        """Test handling of vision model errors."""
-        from src.tools.image_analysis import image_analysis_tool
-
-        mock_vision_client.chat.completions.create.side_effect = Exception("Vision model error")
-
-        with patch("src.tools.image_analysis.get_vision_client", return_value=mock_vision_client):
-            result = await image_analysis_tool(
-                supabase_client=mock_supabase_client,
-                document_id="test-123",
-                analysis_query="Test",
-            )
-
-            assert "error" in result.lower()
-
-    @pytest.mark.asyncio
-    async def test_analyze_image_invalid_base64(self, mock_supabase_client, mock_vision_client):
-        """Test handling of invalid base64 image data."""
-        from src.tools.image_analysis import image_analysis_tool
-
-        # Return invalid base64
-        mock_supabase_client.table().select().eq().execute.return_value.data[0][
-            "content"
-        ] = "invalid_base64"
-
-        with patch("src.tools.image_analysis.get_vision_client", return_value=mock_vision_client):
-            result = await image_analysis_tool(
-                supabase_client=mock_supabase_client,
-                document_id="test-123",
-                analysis_query="Test",
-            )
-
-            # Should handle gracefully
-            assert isinstance(result, str)
-
-    @pytest.mark.asyncio
-    async def test_analyze_multiple_images_sequential(
-        self, mock_supabase_client, mock_vision_client
-    ):
-        """Test analyzing multiple images sequentially."""
-        from src.tools.image_analysis import image_analysis_tool
-
-        with patch("src.tools.image_analysis.get_vision_client", return_value=mock_vision_client):
-            results = []
-            for i in range(3):
-                result = await image_analysis_tool(
-                    supabase_client=mock_supabase_client,
-                    document_id=f"image-{i}",
-                    analysis_query="Describe",
-                )
-                results.append(result)
-
-            assert len(results) == 3
-            assert all(isinstance(r, str) for r in results)
-
-    @pytest.mark.asyncio
-    async def test_analyze_image_different_mime_types(
-        self, mock_supabase_client, mock_vision_client
-    ):
-        """Test analysis with different image mime types."""
-        from src.tools.image_analysis import image_analysis_tool
-
-        mime_types = ["image/png", "image/jpeg", "image/webp", "image/gif"]
-
-        with patch("src.tools.image_analysis.get_vision_client", return_value=mock_vision_client):
-            for mime_type in mime_types:
-                mock_supabase_client.table().select().eq().execute.return_value.data[0][
-                    "metadata"
-                ] = {"mime_type": mime_type}
+        # Mock vision agent
+        with patch("src.tools.image_analysis.get_settings", return_value=mock_settings):
+            with patch("src.tools.image_analysis.Agent") as mock_agent_class:
+                mock_agent = AsyncMock()
+                mock_agent_class.return_value = mock_agent
+                mock_agent.run = AsyncMock(return_value=Mock(output="Analysis result"))
 
                 result = await image_analysis_tool(
-                    supabase_client=mock_supabase_client,
-                    document_id="test-123",
-                    analysis_query="Test",
+                    mock_supabase, "test-image.png", "What is in this image?"
                 )
 
-                assert isinstance(result, str)
+                assert "Analysis result" in result
+                # Verify it tried source field first
+                mock_supabase.from_.assert_called_with("documents")
 
-    @pytest.mark.asyncio
-    async def test_analyze_image_long_query(self, mock_supabase_client, mock_vision_client):
-        """Test analysis with long detailed query."""
-        from src.tools.image_analysis import image_analysis_tool
+    async def test_retrieve_by_id_fallback(self, mock_supabase, mock_settings, sample_image_base64):
+        """Test retrieving document by ID when source fails."""
+        # First query (by source) returns empty
+        mock_empty_result = Mock()
+        mock_empty_result.data = []
 
-        long_query = (
-            "Please provide a detailed analysis of this image including: "
-            "1. Overall scene description "
-            "2. All visible objects "
-            "3. Any text present "
-            "4. Color palette "
-            "5. Composition and framing"
+        # Second query (by ID) returns data
+        mock_success_result = Mock()
+        mock_success_result.data = [
+            {
+                "metadata": {"file_contents": sample_image_base64, "mime_type": "image/png"},
+                "source": "test-image.png",
+            }
+        ]
+
+        # Set up mock to return different results
+        mock_query = (
+            mock_supabase.from_.return_value.select.return_value.eq.return_value.limit.return_value
+        )
+        mock_query.execute.side_effect = [mock_empty_result, mock_success_result]
+
+        with patch("src.tools.image_analysis.get_settings", return_value=mock_settings):
+            with patch("src.tools.image_analysis.Agent") as mock_agent_class:
+                mock_agent = AsyncMock()
+                mock_agent_class.return_value = mock_agent
+                mock_agent.run = AsyncMock(return_value=Mock(output="Analysis result"))
+
+                result = await image_analysis_tool(mock_supabase, "doc-id-123", "Analyze this")
+
+                assert "Analysis result" in result
+
+    async def test_document_not_found(self, mock_supabase, mock_settings):
+        """Test handling when document is not found."""
+        mock_result = Mock()
+        mock_result.data = []
+
+        mock_supabase.from_.return_value.select.return_value.eq.return_value.limit.return_value.execute.return_value = (
+            mock_result
         )
 
-        with patch("src.tools.image_analysis.get_vision_client", return_value=mock_vision_client):
-            result = await image_analysis_tool(
-                supabase_client=mock_supabase_client,
-                document_id="test-123",
-                analysis_query=long_query,
-            )
+        with patch("src.tools.image_analysis.get_settings", return_value=mock_settings):
+            result = await image_analysis_tool(mock_supabase, "nonexistent-doc", "Analyze this")
 
-            assert isinstance(result, str)
-            # Vision model should have been called with the full query
-            call_args = mock_vision_client.chat.completions.create.call_args
-            assert long_query in str(call_args)
+            assert "No content found for document" in result
+            assert "nonexistent-doc" in result
 
-    @pytest.mark.asyncio
-    async def test_analyze_image_database_connection_error(
-        self, mock_supabase_client, mock_vision_client
+    async def test_no_file_contents_in_metadata(self, mock_supabase, mock_settings):
+        """Test handling when metadata has no file contents."""
+        mock_result = Mock()
+        mock_result.data = [
+            {"metadata": {}, "source": "test-image.png"}  # No file_contents or image_data
+        ]
+
+        mock_supabase.from_.return_value.select.return_value.eq.return_value.limit.return_value.execute.return_value = (
+            mock_result
+        )
+
+        with patch("src.tools.image_analysis.get_settings", return_value=mock_settings):
+            result = await image_analysis_tool(mock_supabase, "test-image.png", "Analyze this")
+
+            assert "No file contents found for document" in result
+
+
+@pytest.mark.asyncio
+class TestMetadataExtraction:
+    """Test metadata extraction and format handling."""
+
+    async def test_extract_file_contents_field(
+        self, mock_supabase, mock_settings, sample_image_base64
     ):
-        """Test handling of database connection errors."""
-        from src.tools.image_analysis import image_analysis_tool
+        """Test extracting file_contents field."""
+        mock_result = Mock()
+        mock_result.data = [
+            {
+                "metadata": {"file_contents": sample_image_base64, "mime_type": "image/jpeg"},
+                "source": "test.jpg",
+            }
+        ]
 
-        mock_supabase_client.table.side_effect = Exception("Database connection failed")
-
-        with patch("src.tools.image_analysis.get_vision_client", return_value=mock_vision_client):
-            result = await image_analysis_tool(
-                supabase_client=mock_supabase_client,
-                document_id="test-123",
-                analysis_query="Test",
-            )
-
-            assert "error" in result.lower() or "failed" in result.lower()
-
-
-class TestImageEncoding:
-    """Test image encoding utilities."""
-
-    def test_base64_encoding(self):
-        """Test base64 encoding of image data."""
-        test_data = b"fake image data"
-        encoded = base64.b64encode(test_data).decode("utf-8")
-
-        # Should be base64 encoded
-        assert isinstance(encoded, str)
-        # Should be decodable
-        decoded = base64.b64decode(encoded)
-        assert decoded == test_data
-
-    def test_large_image_encoding(self):
-        """Test encoding of large image."""
-        # Simulate 5MB image
-        large_data = b"x" * (5 * 1024 * 1024)
-        encoded = base64.b64encode(large_data).decode("utf-8")
-
-        assert isinstance(encoded, str)
-        assert len(encoded) > 0
-
-
-class TestVisionModelIntegration:
-    """Test vision model client integration."""
-
-    @pytest.mark.asyncio
-    async def test_vision_client_initialization(self):
-        """Test vision client initialization."""
-        with patch("src.tools.image_analysis.get_vision_client") as mock_get_client:
-            mock_client = Mock()
-            mock_get_client.return_value = mock_client
-
-            from src.tools.image_analysis import get_vision_client
-
-            client = get_vision_client()
-            assert client is not None
-
-    @pytest.mark.asyncio
-    async def test_vision_model_api_call(self, mock_vision_client):
-        """Test vision model API call format."""
-        with patch("src.tools.image_analysis.get_vision_client", return_value=mock_vision_client):
-            from src.tools.image_analysis import image_analysis_tool
-
-            mock_supabase = Mock()
-            mock_supabase.table().select().eq().execute.return_value.data = [
-                {"id": "test", "file_path": "test.png", "content": "testdata", "metadata": {}}
-            ]
-
-            await image_analysis_tool(
-                supabase_client=mock_supabase,
-                document_id="test",
-                analysis_query="What is this?",
-            )
-
-            # Check API call was made
-            mock_vision_client.chat.completions.create.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_vision_model_response_parsing(self, mock_vision_client):
-        """Test parsing of vision model response."""
-        complex_response = {
-            "objects": ["cat", "mat"],
-            "text": "Welcome",
-            "colors": ["red", "blue"],
-        }
-
-        mock_vision_client.chat.completions.create.return_value.choices[0].message.content = str(
-            complex_response
+        mock_supabase.from_.return_value.select.return_value.eq.return_value.limit.return_value.execute.return_value = (
+            mock_result
         )
 
-        with patch("src.tools.image_analysis.get_vision_client", return_value=mock_vision_client):
-            from src.tools.image_analysis import image_analysis_tool
+        with patch("src.tools.image_analysis.get_settings", return_value=mock_settings):
+            with patch("src.tools.image_analysis.Agent") as mock_agent_class:
+                mock_agent = AsyncMock()
+                mock_agent_class.return_value = mock_agent
+                mock_agent.run = AsyncMock(return_value=Mock(output="JPEG image"))
 
-            mock_supabase = Mock()
-            mock_supabase.table().select().eq().execute.return_value.data = [
-                {"id": "test", "file_path": "test.png", "content": "data", "metadata": {}}
-            ]
+                result = await image_analysis_tool(mock_supabase, "test.jpg", "Analyze")
 
-            result = await image_analysis_tool(
-                supabase_client=mock_supabase,
-                document_id="test",
-                analysis_query="Analyze",
-            )
+                # Verify it used file_contents
+                assert "JPEG image" in result
 
-            assert isinstance(result, str)
-            assert "cat" in result or "objects" in result
+    async def test_extract_image_data_field_fallback(
+        self, mock_supabase, mock_settings, sample_image_base64
+    ):
+        """Test extracting image_data field as fallback."""
+        mock_result = Mock()
+        mock_result.data = [
+            {
+                "metadata": {
+                    "image_data": sample_image_base64,  # Use image_data instead
+                    "mime_type": "image/png",
+                },
+                "source": "test.png",
+            }
+        ]
+
+        mock_supabase.from_.return_value.select.return_value.eq.return_value.limit.return_value.execute.return_value = (
+            mock_result
+        )
+
+        with patch("src.tools.image_analysis.get_settings", return_value=mock_settings):
+            with patch("src.tools.image_analysis.Agent") as mock_agent_class:
+                mock_agent = AsyncMock()
+                mock_agent_class.return_value = mock_agent
+                mock_agent.run = AsyncMock(return_value=Mock(output="PNG image"))
+
+                result = await image_analysis_tool(mock_supabase, "test.png", "Analyze")
+
+                assert "PNG image" in result
+
+    async def test_mime_type_extraction(self, mock_supabase, mock_settings, sample_image_base64):
+        """Test mime_type extraction."""
+        mock_result = Mock()
+        mock_result.data = [
+            {
+                "metadata": {"file_contents": sample_image_base64, "mime_type": "image/webp"},
+                "source": "test.webp",
+            }
+        ]
+
+        mock_supabase.from_.return_value.select.return_value.eq.return_value.limit.return_value.execute.return_value = (
+            mock_result
+        )
+
+        with patch("src.tools.image_analysis.get_settings", return_value=mock_settings):
+            with patch("src.tools.image_analysis.Agent") as mock_agent_class:
+                mock_agent = AsyncMock()
+                mock_agent_class.return_value = mock_agent
+                mock_agent.run = AsyncMock(return_value=Mock(output="WebP"))
+
+                await image_analysis_tool(mock_supabase, "test.webp", "Analyze")
+
+                # Verify agent was called with correct mime_type
+                assert mock_agent.run.called
+
+    async def test_file_type_fallback_for_mime_type(
+        self, mock_supabase, mock_settings, sample_image_base64
+    ):
+        """Test using file_type as fallback for mime_type."""
+        mock_result = Mock()
+        mock_result.data = [
+            {
+                "metadata": {
+                    "file_contents": sample_image_base64,
+                    "file_type": "image/gif",  # Using file_type instead
+                },
+                "source": "test.gif",
+            }
+        ]
+
+        mock_supabase.from_.return_value.select.return_value.eq.return_value.limit.return_value.execute.return_value = (
+            mock_result
+        )
+
+        with patch("src.tools.image_analysis.get_settings", return_value=mock_settings):
+            with patch("src.tools.image_analysis.Agent") as mock_agent_class:
+                mock_agent = AsyncMock()
+                mock_agent_class.return_value = mock_agent
+                mock_agent.run = AsyncMock(return_value=Mock(output="GIF"))
+
+                result = await image_analysis_tool(mock_supabase, "test.gif", "Analyze")
+
+                assert "GIF" in result
+
+
+@pytest.mark.asyncio
+class TestVisionLLMIntegration:
+    """Test vision LLM integration."""
+
+    async def test_openai_model_creation(self, mock_supabase, mock_settings, sample_image_base64):
+        """Test OpenAI model creation."""
+        mock_result = Mock()
+        mock_result.data = [
+            {
+                "metadata": {"file_contents": sample_image_base64, "mime_type": "image/png"},
+                "source": "test.png",
+            }
+        ]
+
+        mock_supabase.from_.return_value.select.return_value.eq.return_value.limit.return_value.execute.return_value = (
+            mock_result
+        )
+
+        with patch("src.tools.image_analysis.get_settings", return_value=mock_settings):
+            with patch("src.tools.image_analysis.OpenAIChatModel") as mock_model_class:
+                with patch("src.tools.image_analysis.Agent") as mock_agent_class:
+                    mock_agent = AsyncMock()
+                    mock_agent_class.return_value = mock_agent
+                    mock_agent.run = AsyncMock(return_value=Mock(output="Result"))
+
+                    await image_analysis_tool(mock_supabase, "test.png", "Analyze")
+
+                    # Verify OpenAI model was created
+                    assert mock_model_class.called
+
+    async def test_anthropic_model_creation(self, mock_supabase, sample_image_base64):
+        """Test Anthropic model creation."""
+        anthropic_settings = Mock()
+        anthropic_settings.llm_provider = "anthropic"
+        anthropic_settings.vision_llm_choice = "claude-3-opus"
+        anthropic_settings.llm_api_key = "test-key"
+
+        mock_result = Mock()
+        mock_result.data = [
+            {
+                "metadata": {"file_contents": sample_image_base64, "mime_type": "image/png"},
+                "source": "test.png",
+            }
+        ]
+
+        mock_supabase.from_.return_value.select.return_value.eq.return_value.limit.return_value.execute.return_value = (
+            mock_result
+        )
+
+        with patch("src.tools.image_analysis.get_settings", return_value=anthropic_settings):
+            with patch("src.tools.image_analysis.AnthropicModel") as mock_model_class:
+                with patch("src.tools.image_analysis.Agent") as mock_agent_class:
+                    mock_agent = AsyncMock()
+                    mock_agent_class.return_value = mock_agent
+                    mock_agent.run = AsyncMock(return_value=Mock(output="Result"))
+
+                    await image_analysis_tool(mock_supabase, "test.png", "Analyze")
+
+                    # Verify Anthropic model was created with mapped name
+                    mock_model_class.assert_called_once()
+                    call_args = mock_model_class.call_args
+                    assert "claude-3-opus-20240229" in str(call_args)
+
+    async def test_anthropic_model_mapping(self, mock_supabase, sample_image_base64):
+        """Test Anthropic model name mapping."""
+        test_cases = [
+            ("claude-3-sonnet", "claude-3-5-sonnet-20241022"),
+            ("claude-3.5-sonnet", "claude-3-5-sonnet-20241022"),
+            ("claude-3-haiku", "claude-3-haiku-20240307"),
+            ("claude-4-sonnet", "claude-4-sonnet"),
+        ]
+
+        mock_result = Mock()
+        mock_result.data = [
+            {
+                "metadata": {"file_contents": sample_image_base64, "mime_type": "image/png"},
+                "source": "test.png",
+            }
+        ]
+
+        mock_supabase.from_.return_value.select.return_value.eq.return_value.limit.return_value.execute.return_value = (
+            mock_result
+        )
+
+        for input_model, expected_model in test_cases:
+            anthropic_settings = Mock()
+            anthropic_settings.llm_provider = "anthropic"
+            anthropic_settings.vision_llm_choice = input_model
+            anthropic_settings.llm_api_key = "test-key"
+
+            with patch("src.tools.image_analysis.get_settings", return_value=anthropic_settings):
+                with patch("src.tools.image_analysis.AnthropicModel") as mock_model_class:
+                    with patch("src.tools.image_analysis.Agent") as mock_agent_class:
+                        mock_agent = AsyncMock()
+                        mock_agent_class.return_value = mock_agent
+                        mock_agent.run = AsyncMock(return_value=Mock(output="Result"))
+
+                        await image_analysis_tool(mock_supabase, "test.png", "Analyze")
+
+                        # Verify correct model name was used
+                        call_args = mock_model_class.call_args
+                        assert expected_model in str(call_args[0])
+
+
+@pytest.mark.asyncio
+class TestErrorHandling:
+    """Test error handling."""
+
+    async def test_exception_during_analysis(
+        self, mock_supabase, mock_settings, sample_image_base64
+    ):
+        """Test handling exception during analysis."""
+        mock_result = Mock()
+        mock_result.data = [
+            {
+                "metadata": {"file_contents": sample_image_base64, "mime_type": "image/png"},
+                "source": "test.png",
+            }
+        ]
+
+        mock_supabase.from_.return_value.select.return_value.eq.return_value.limit.return_value.execute.return_value = (
+            mock_result
+        )
+
+        with patch("src.tools.image_analysis.get_settings", return_value=mock_settings):
+            with patch("src.tools.image_analysis.Agent") as mock_agent_class:
+                mock_agent = AsyncMock()
+                mock_agent_class.return_value = mock_agent
+                mock_agent.run = AsyncMock(side_effect=Exception("LLM API error"))
+
+                result = await image_analysis_tool(mock_supabase, "test.png", "Analyze")
+
+                assert "Error analyzing image" in result
+                assert "LLM API error" in result
+
+    async def test_invalid_base64(self, mock_supabase, mock_settings):
+        """Test handling invalid base64 data."""
+        mock_result = Mock()
+        mock_result.data = [
+            {
+                "metadata": {"file_contents": "invalid-base64!!!", "mime_type": "image/png"},
+                "source": "test.png",
+            }
+        ]
+
+        mock_supabase.from_.return_value.select.return_value.eq.return_value.limit.return_value.execute.return_value = (
+            mock_result
+        )
+
+        with patch("src.tools.image_analysis.get_settings", return_value=mock_settings):
+            result = await image_analysis_tool(mock_supabase, "test.png", "Analyze")
+
+            assert "Error analyzing image" in result
+
+    async def test_supabase_query_exception(self, mock_supabase, mock_settings):
+        """Test handling Supabase query exception."""
+        mock_supabase.from_.side_effect = Exception("Database connection error")
+
+        with patch("src.tools.image_analysis.get_settings", return_value=mock_settings):
+            result = await image_analysis_tool(mock_supabase, "test.png", "Analyze")
+
+            assert "Error analyzing image" in result
+            assert "Database connection error" in result

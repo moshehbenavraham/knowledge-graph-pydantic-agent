@@ -244,7 +244,21 @@ async def web_search_tool(
                     # Fallback to other available providers
                     if brave_api_key:
                         logger.debug("Falling back to Brave search", query=query)
-                        result = await brave_web_search(query, http_client, brave_api_key)
+                        try:
+                            result = await brave_web_search(query, http_client, brave_api_key)
+                        except Exception as brave_error:
+                            logger.warning(
+                                "Brave search failed, trying SearXNG fallback",
+                                query=query,
+                                error=str(brave_error),
+                            )
+                            if searxng_base_url:
+                                logger.debug("Falling back to SearXNG search", query=query)
+                                result = await searxng_web_search(
+                                    query, http_client, searxng_base_url
+                                )
+                            else:
+                                raise brave_error
                     elif searxng_base_url:
                         logger.debug("Falling back to SearXNG search", query=query)
                         result = await searxng_web_search(query, http_client, searxng_base_url)
@@ -272,7 +286,19 @@ async def web_search_tool(
                 # Fallback to other available providers
                 if brave_api_key:
                     logger.debug("Falling back to Brave search", query=query)
-                    result = await brave_web_search(query, http_client, brave_api_key)
+                    try:
+                        result = await brave_web_search(query, http_client, brave_api_key)
+                    except Exception as brave_error:
+                        logger.warning(
+                            "Brave search failed, trying SearXNG fallback",
+                            query=query,
+                            error=str(brave_error),
+                        )
+                        if searxng_base_url:
+                            logger.debug("Falling back to SearXNG search", query=query)
+                            result = await searxng_web_search(query, http_client, searxng_base_url)
+                        else:
+                            raise brave_error
                 elif searxng_base_url:
                     logger.debug("Falling back to SearXNG search", query=query)
                     result = await searxng_web_search(query, http_client, searxng_base_url)

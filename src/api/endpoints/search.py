@@ -11,7 +11,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from prometheus_client import Counter, Histogram
 
 from src.agentic_rag.search.hybrid_search import HybridSearch
-from src.agentic_rag.search.intent_analyzer import IntentAnalyzer, SearchIntent
+from src.agentic_rag.search.intent_analyzer import (
+    IntentAnalysisResult,
+    IntentAnalyzer,
+    SearchIntent,
+)
 from src.agentic_rag.search.vector_search import VectorSearch
 from src.api.dependencies import (
     get_cache_manager,
@@ -56,15 +60,15 @@ async def search(
     """
     start_time = time.perf_counter()
 
-    # Check cache
-    cache_key = f"search:{request.search_type}:{request.query}:{request.limit}"
-    cached_result = cache.get(cache_key)
-    if cached_result:
-        logger.info("search_cache_hit", query=request.query)
-        search_requests_total.labels(search_type=request.search_type, status="cache_hit").inc()
-        return SearchResponse(**cached_result)
-
     try:
+        # Check cache
+        cache_key = f"search:{request.search_type}:{request.query}:{request.limit}"
+        cached_result = cache.get(cache_key)
+        if cached_result:
+            logger.info("search_cache_hit", query=request.query)
+            search_requests_total.labels(search_type=request.search_type, status="cache_hit").inc()
+            return SearchResponse(**cached_result)
+
         logger.info(
             "search_started",
             query=request.query,
@@ -114,6 +118,9 @@ async def search(
 
         return response
 
+    except HTTPException:
+        # Re-raise HTTPExceptions as-is (preserves status codes like 400, 404, etc.)
+        raise
     except Exception as e:
         logger.error("search_failed", query=request.query, error=str(e))
         search_requests_total.labels(search_type=request.search_type, status="error").inc()
@@ -312,9 +319,9 @@ async def _execute_adaptive_search(
     vector_search: VectorSearch,
     hybrid_search: HybridSearch,
     request: SearchRequest,
-    intent: SearchIntent,
+    intent: IntentAnalysisResult,
 ) -> dict:
     """Execute adaptive search based on intent analysis."""
-    if intent in [SearchIntent.VECTOR_HEAVY, SearchIntent.SEMANTIC]:
+    if intent.primary_intent == SearchIntent.VECTOR_HEAVY:
         return await _execute_vector_search(vector_search, request)
     return await _execute_hybrid_search(hybrid_search, request)

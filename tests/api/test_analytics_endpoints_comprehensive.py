@@ -5,6 +5,7 @@ Tests all analytics endpoints including search metrics, intent distribution,
 performance metrics, time-series data, tool usage, agent interactions, and health checks.
 """
 
+from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -548,11 +549,11 @@ async def test_analytics_health_healthy(mock_connection_manager):
     conn.fetchval = AsyncMock()
     conn.fetchval.side_effect = [1, True]  # First for SELECT 1, second for table check
 
-    pg_context = AsyncMock()
-    pg_context.__aenter__ = AsyncMock(return_value=conn)
-    pg_context.__aexit__ = AsyncMock(return_value=None)
+    @asynccontextmanager
+    async def get_pg_connection():
+        yield conn
 
-    mock_connection_manager.get_pg_connection.return_value = pg_context
+    mock_connection_manager.get_pg_connection = get_pg_connection
 
     result = await analytics_health(conn_manager=mock_connection_manager)
 
@@ -569,11 +570,11 @@ async def test_analytics_health_degraded_missing_tables(mock_connection_manager)
     conn.fetchval = AsyncMock()
     conn.fetchval.side_effect = [1, False]  # DB connected but tables missing
 
-    pg_context = AsyncMock()
-    pg_context.__aenter__ = AsyncMock(return_value=conn)
-    pg_context.__aexit__ = AsyncMock(return_value=None)
+    @asynccontextmanager
+    async def get_pg_connection():
+        yield conn
 
-    mock_connection_manager.get_pg_connection.return_value = pg_context
+    mock_connection_manager.get_pg_connection = get_pg_connection
 
     result = await analytics_health(conn_manager=mock_connection_manager)
 
@@ -590,11 +591,11 @@ async def test_analytics_health_degraded_db_issue(mock_connection_manager):
     conn.fetchval = AsyncMock()
     conn.fetchval.side_effect = [0, False]  # SELECT 1 returns wrong value
 
-    pg_context = AsyncMock()
-    pg_context.__aenter__ = AsyncMock(return_value=conn)
-    pg_context.__aexit__ = AsyncMock(return_value=None)
+    @asynccontextmanager
+    async def get_pg_connection():
+        yield conn
 
-    mock_connection_manager.get_pg_connection.return_value = pg_context
+    mock_connection_manager.get_pg_connection = get_pg_connection
 
     result = await analytics_health(conn_manager=mock_connection_manager)
 
@@ -735,11 +736,11 @@ async def test_analytics_health_proper_table_check(mock_connection_manager):
     conn.fetchval = AsyncMock()
     conn.fetchval.side_effect = [1, True]
 
-    pg_context = AsyncMock()
-    pg_context.__aenter__ = AsyncMock(return_value=conn)
-    pg_context.__aexit__ = AsyncMock(return_value=None)
+    @asynccontextmanager
+    async def get_pg_connection():
+        yield conn
 
-    mock_connection_manager.get_pg_connection.return_value = pg_context
+    mock_connection_manager.get_pg_connection = get_pg_connection
 
     await analytics_health(conn_manager=mock_connection_manager)
 

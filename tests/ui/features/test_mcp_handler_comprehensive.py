@@ -82,7 +82,6 @@ def sample_message_history():
 # ===== Initialization Tests =====
 
 
-@pytest.mark.asyncio
 class TestMCPHandlerInit:
     """Test MCPHandler initialization."""
 
@@ -91,7 +90,8 @@ class TestMCPHandlerInit:
         handler = MCPHandler(mock_config)
 
         assert handler.enable_mcp is True
-        assert hasattr(handler, "enable_memory")  # Inherited from MemoryHandler
+        assert hasattr(handler, "memory_client")  # Inherited from MemoryHandler
+        assert hasattr(handler, "user_id")  # Inherited from MemoryHandler
 
     def test_init_with_mcp_disabled(self, mock_config_mcp_disabled):
         """Test initialization with MCP disabled."""
@@ -113,7 +113,13 @@ class TestMCPHandlerInit:
 
         # Should have MemoryHandler attributes
         assert hasattr(handler, "run_agent")
-        assert hasattr(handler, "enable_memory")
+        assert hasattr(handler, "memory_client")
+        assert hasattr(handler, "user_id")
+
+        # Check inheritance chain
+        from src.ui.features.memory_handler import MemoryHandler
+
+        assert isinstance(handler, MemoryHandler)
 
 
 # ===== MCP Enabled Tests =====
@@ -406,6 +412,9 @@ class TestMCPHandlerErrors:
         mock_super_agent.__aexit__ = AsyncMock(return_value=None)
 
         async def mock_parent_run_agent(*args, **kwargs):
+            # Make this an async generator that raises an error
+            if False:
+                yield
             raise ConnectionError("Network failure")
 
         with patch.object(

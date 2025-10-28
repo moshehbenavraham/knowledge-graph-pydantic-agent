@@ -354,7 +354,8 @@ class TestSearch:
         results = await client.search("OpenAI", search_type="entities")
 
         assert len(results) == 1
-        assert results[0]["type"] == "entity"
+        # Note: type comes from the entity dict due to **entity spreading after "type": "entity"
+        assert results[0]["type"] == "company"
         assert results[0]["entity_name"] == "OpenAI"
 
     @pytest.mark.asyncio

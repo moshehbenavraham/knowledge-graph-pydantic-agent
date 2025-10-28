@@ -15,8 +15,9 @@ try:
     import httpx
 except ImportError:
     print("httpx not found, trying urllib...")
-    import urllib.request
     import urllib.error
+    import urllib.request
+
     httpx = None
 
 
@@ -89,7 +90,11 @@ def monitor_ngrok_logs(log_file: Path, interval_seconds: int = 5):
             except Exception as e:
                 # Handle connection errors (works for both httpx and urllib)
                 error_type = type(e).__name__
-                if "URLError" in error_type or "RequestError" in error_type or "ConnectError" in error_type:
+                if (
+                    "URLError" in error_type
+                    or "RequestError" in error_type
+                    or "ConnectError" in error_type
+                ):
                     error_msg = f"[{datetime.now().isoformat()}] Waiting for ngrok to start (connection refused)"
                     print(error_msg)
                     f.write(error_msg + "\n")

@@ -477,7 +477,7 @@ def create_pyvis_graph(
         """
         )
     else:  # circular or default
-        net.toggle_physics(enabled=True)
+        net.toggle_physics(True)
 
     # Add nodes with proper styling and track added node IDs
     added_node_ids = set()

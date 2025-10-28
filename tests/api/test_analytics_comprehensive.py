@@ -22,7 +22,7 @@ def client():
 @pytest.fixture
 def mock_postgres_store():
     """Mock PostgreSQL store for analytics queries."""
-    with patch("src.api.endpoints.analytics.get_postgres_store") as mock:
+    with patch("src.api.dependencies.get_connection_manager") as mock:
         store = AsyncMock()
         yield store
 

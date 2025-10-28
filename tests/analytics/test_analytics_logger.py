@@ -29,26 +29,27 @@ from src.agentic_rag.analytics import (
 def mock_connection_manager():
     """Create mock connection manager."""
     manager = MagicMock()
-    manager.get_pg_connection = AsyncMock()
 
     # Create mock connection
     mock_conn = MagicMock()
     mock_conn.executemany = AsyncMock()
 
-    # Make get_pg_connection return async context manager
-    manager.get_pg_connection.return_value.__aenter__ = AsyncMock(return_value=mock_conn)
-    manager.get_pg_connection.return_value.__aexit__ = AsyncMock(return_value=None)
+    # Make get_pg_connection return a proper async context manager
+    async_context = AsyncMock()
+    async_context.__aenter__ = AsyncMock(return_value=mock_conn)
+    async_context.__aexit__ = AsyncMock(return_value=None)
+
+    manager.get_pg_connection = MagicMock(return_value=async_context)
 
     return manager
 
 
 @pytest.fixture
-async def analytics_logger(mock_connection_manager):
+def analytics_logger(mock_connection_manager):
     """Create analytics logger instance for testing."""
     logger = AnalyticsLogger(mock_connection_manager, batch_size=10, batch_interval_seconds=0.1)
-    await logger.start()
-    yield logger
-    await logger.stop()
+    # Don't auto-start here - let tests control lifecycle
+    return logger
 
 
 class TestSearchAnalyticsEvent:
@@ -283,6 +284,8 @@ class TestAnalyticsLogger:
     @pytest.mark.asyncio
     async def test_logger_start_stop(self, analytics_logger):
         """Test logger starts and stops correctly."""
+        await analytics_logger.start()
+
         assert analytics_logger._running is True
         assert analytics_logger._flush_task is not None
 
@@ -317,38 +320,46 @@ class TestAnalyticsLogger:
     @pytest.mark.asyncio
     async def test_batch_flush_on_size(self, analytics_logger):
         """Test automatic flush when batch size reached."""
-        # Add more events than batch size
-        for i in range(15):
-            event = SearchAnalyticsEvent(
-                query_text=f"query {i}",
-                detected_intent="HYBRID",
-                strategy_used="HYBRID",
-                total_latency_ms=100.0,
-            )
-            await analytics_logger.log_search(event)
+        await analytics_logger.start()
+        try:
+            # Add more events than batch size
+            for i in range(15):
+                event = SearchAnalyticsEvent(
+                    query_text=f"query {i}",
+                    detected_intent="HYBRID",
+                    strategy_used="HYBRID",
+                    total_latency_ms=100.0,
+                )
+                await analytics_logger.log_search(event)
 
-        # Wait for flush
-        await asyncio.sleep(0.2)
+            # Wait for flush
+            await asyncio.sleep(0.2)
 
-        # Queue should be smaller than what we added (some flushed)
-        assert len(analytics_logger._search_queue) < 15
+            # Queue should be smaller than what we added (some flushed)
+            assert len(analytics_logger._search_queue) < 15
+        finally:
+            await analytics_logger.stop()
 
     @pytest.mark.asyncio
     async def test_periodic_flush(self, analytics_logger):
         """Test periodic flush based on interval."""
-        event = SearchAnalyticsEvent(
-            query_text="test",
-            detected_intent="VECTOR_HEAVY",
-            strategy_used="VECTOR_HEAVY",
-            total_latency_ms=100.0,
-        )
-        await analytics_logger.log_search(event)
+        await analytics_logger.start()
+        try:
+            event = SearchAnalyticsEvent(
+                query_text="test",
+                detected_intent="VECTOR_HEAVY",
+                strategy_used="VECTOR_HEAVY",
+                total_latency_ms=100.0,
+            )
+            await analytics_logger.log_search(event)
 
-        # Wait for flush interval (0.1s + buffer)
-        await asyncio.sleep(0.3)
+            # Wait for flush interval (0.1s + buffer)
+            await asyncio.sleep(0.3)
 
-        # Queue should be empty after flush
-        assert len(analytics_logger._search_queue) == 0
+            # Queue should be empty after flush
+            assert len(analytics_logger._search_queue) == 0
+        finally:
+            await analytics_logger.stop()
 
     @pytest.mark.asyncio
     async def test_get_stats(self, analytics_logger):

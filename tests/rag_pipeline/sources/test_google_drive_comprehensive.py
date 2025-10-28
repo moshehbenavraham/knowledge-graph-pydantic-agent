@@ -21,7 +21,22 @@ from pathlib import Path
 from unittest.mock import Mock, mock_open, patch
 
 import pytest
-from google.auth.exceptions import RefreshError
+
+# Try importing Google Drive dependencies - skip tests if not available
+try:
+    from google.auth.exceptions import RefreshError
+
+    from src.rag_pipeline.sources.google_drive import GoogleDriveWatcher
+
+    GOOGLE_DRIVE_AVAILABLE = True
+except ImportError:
+    GOOGLE_DRIVE_AVAILABLE = False
+    RefreshError = None
+    GoogleDriveWatcher = None
+
+pytestmark = pytest.mark.skipif(
+    not GOOGLE_DRIVE_AVAILABLE, reason="google-auth-oauthlib not installed (optional dependency)"
+)
 
 
 @pytest.fixture

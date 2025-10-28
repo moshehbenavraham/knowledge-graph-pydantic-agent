@@ -4,37 +4,44 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from httpx import AsyncClient
+from pydantic_ai.messages import PartDeltaEvent, PartStartEvent, TextPartDelta
 
 from src.ui.features.streaming_handler import StreamingHandler
 
 
-# Mock event classes for streaming
-class MockPartStartEvent:
-    """Mock PartStartEvent."""
+# Helper functions to create real Pydantic AI event instances
+def create_part_start_event(part_kind, content=None, tool_name=None, args=None):
+    """Create a PartStartEvent with mocked part."""
+    part = Mock()
+    part.part_kind = part_kind
+    if content is not None:
+        part.content = content
+    if tool_name is not None:
+        part.tool_name = tool_name
+    if args is not None:
+        part.args = args
+    elif part_kind == "tool-call":
+        part.args = {}
 
-    def __init__(self, part_kind, content=None, tool_name=None, args=None):
-        self.part = Mock()
-        self.part.part_kind = part_kind
-        if content is not None:
-            self.part.content = content
-        if tool_name is not None:
-            self.part.tool_name = tool_name
-            self.part.args = args or {}
+    # Create real PartStartEvent instance
+    event = Mock(spec=PartStartEvent)
+    event.part = part
+    # Make isinstance work by setting the class
+    event.__class__ = PartStartEvent
+    return event
 
 
-class MockPartDeltaEvent:
-    """Mock PartDeltaEvent."""
+def create_part_delta_event(content_delta):
+    """Create a PartDeltaEvent with TextPartDelta."""
+    # Create real TextPartDelta
+    delta = TextPartDelta(content_delta=content_delta)
 
-    def __init__(self, content_delta):
-        self.delta = Mock()
-        self.delta.content_delta = content_delta
-
-
-class MockTextPartDelta:
-    """Mock TextPartDelta."""
-
-    def __init__(self, content_delta):
-        self.content_delta = content_delta
+    # Create real PartDeltaEvent instance
+    event = Mock(spec=PartDeltaEvent)
+    event.delta = delta
+    # Make isinstance work by setting the class
+    event.__class__ = PartDeltaEvent
+    return event
 
 
 @pytest.fixture
@@ -74,19 +81,23 @@ async def test_streaming_handler_basic_text_stream(
     async def mock_stream_generator():
         """Mock stream of events."""
         # Text start
-        yield MockPartStartEvent("text", content="Hello")
+        yield create_part_start_event("text", content="Hello")
         # Text deltas
-        yield MockPartDeltaEvent(" world")
-        yield MockPartDeltaEvent("!")
+        yield create_part_delta_event(" world")
+        yield create_part_delta_event("!")
 
     # Mock the agent iteration
-    with patch("src.ui.features.streaming_handler.super_agent") as mock_agent:
+    with (
+        patch("src.ui.features.streaming_handler.super_agent") as mock_agent,
+        patch("src.ui.features.streaming_handler.Agent") as MockAgent,
+    ):
         mock_run = AsyncMock()
         mock_node = Mock()
         mock_node_stream = AsyncMock()
+        mock_ctx = Mock()
 
         # Setup mock returns
-        mock_agent.is_model_request_node.return_value = True
+        MockAgent.is_model_request_node.return_value = True
         mock_node_stream.__aenter__.return_value = mock_stream_generator()
         mock_node.stream.return_value = mock_node_stream
 
@@ -94,6 +105,7 @@ async def test_streaming_handler_basic_text_stream(
         mock_result = Mock()
         mock_result.new_messages.return_value = []
         mock_run.result = mock_result
+        mock_run.ctx = mock_ctx
 
         # Mock run context
         mock_run.__aenter__.return_value = mock_run
@@ -102,7 +114,7 @@ async def test_streaming_handler_basic_text_stream(
         async def mock_node_iter():
             yield mock_node
 
-        mock_run.__aiter__.return_value = mock_node_iter()
+        mock_run.__aiter__ = lambda self: mock_node_iter()
         mock_agent.iter.return_value = mock_run
 
         # Execute
@@ -128,28 +140,32 @@ async def test_streaming_handler_tool_call_event(
 
     async def mock_stream_generator():
         """Mock stream with tool call."""
-        yield MockPartStartEvent("tool-call", tool_name="search_web", args={"query": "test"})
-        yield MockPartStartEvent("tool-return", tool_name="search_web")
+        yield create_part_start_event("tool-call", tool_name="search_web", args={"query": "test"})
+        yield create_part_start_event("tool-return", tool_name="search_web")
 
-    with patch("src.ui.features.streaming_handler.super_agent") as mock_agent:
+    with (
+        patch("src.ui.features.streaming_handler.super_agent") as mock_agent,
+        patch("src.ui.features.streaming_handler.Agent") as MockAgent,
+    ):
         mock_run = AsyncMock()
         mock_node = Mock()
         mock_node_stream = AsyncMock()
 
-        mock_agent.is_model_request_node.return_value = True
+        MockAgent.is_model_request_node.return_value = True
         mock_node_stream.__aenter__.return_value = mock_stream_generator()
         mock_node.stream.return_value = mock_node_stream
 
         mock_result = Mock()
         mock_result.new_messages.return_value = []
         mock_run.result = mock_result
+        mock_run.ctx = Mock()
         mock_run.__aenter__.return_value = mock_run
         mock_run.__aexit__.return_value = None
 
         async def mock_node_iter():
             yield mock_node
 
-        mock_run.__aiter__.return_value = mock_node_iter()
+        mock_run.__aiter__ = lambda self: mock_node_iter()
         mock_agent.iter.return_value = mock_run
 
         # Execute
@@ -178,17 +194,20 @@ async def test_streaming_handler_multiple_nodes(
     """Test streaming with multiple nodes."""
 
     async def mock_stream_generator_1():
-        yield MockPartStartEvent("text", content="First")
+        yield create_part_start_event("text", content="First")
 
     async def mock_stream_generator_2():
-        yield MockPartStartEvent("text", content="Second")
+        yield create_part_start_event("text", content="Second")
 
-    with patch("src.ui.features.streaming_handler.super_agent") as mock_agent:
+    with (
+        patch("src.ui.features.streaming_handler.super_agent") as mock_agent,
+        patch("src.ui.features.streaming_handler.Agent") as MockAgent,
+    ):
         mock_run = AsyncMock()
         mock_node_1 = Mock()
         mock_node_2 = Mock()
 
-        mock_agent.is_model_request_node.return_value = True
+        MockAgent.is_model_request_node.return_value = True
 
         # Setup first node
         mock_node_stream_1 = AsyncMock()
@@ -203,6 +222,7 @@ async def test_streaming_handler_multiple_nodes(
         mock_result = Mock()
         mock_result.new_messages.return_value = []
         mock_run.result = mock_result
+        mock_run.ctx = Mock()
         mock_run.__aenter__.return_value = mock_run
         mock_run.__aexit__.return_value = None
 
@@ -210,7 +230,7 @@ async def test_streaming_handler_multiple_nodes(
             yield mock_node_1
             yield mock_node_2
 
-        mock_run.__aiter__.return_value = mock_node_iter()
+        mock_run.__aiter__ = lambda self: mock_node_iter()
         mock_agent.iter.return_value = mock_run
 
         # Execute
@@ -233,29 +253,33 @@ async def test_streaming_handler_text_delta_batching(
 
     async def mock_stream_generator():
         """Mock stream with many deltas."""
-        yield MockPartStartEvent("text", content="Start")
+        yield create_part_start_event("text", content="Start")
         for i in range(20):
-            yield MockPartDeltaEvent(f" delta{i}")
+            yield create_part_delta_event(f" delta{i}")
 
-    with patch("src.ui.features.streaming_handler.super_agent") as mock_agent:
+    with (
+        patch("src.ui.features.streaming_handler.super_agent") as mock_agent,
+        patch("src.ui.features.streaming_handler.Agent") as MockAgent,
+    ):
         mock_run = AsyncMock()
         mock_node = Mock()
         mock_node_stream = AsyncMock()
 
-        mock_agent.is_model_request_node.return_value = True
+        MockAgent.is_model_request_node.return_value = True
         mock_node_stream.__aenter__.return_value = mock_stream_generator()
         mock_node.stream.return_value = mock_node_stream
 
         mock_result = Mock()
         mock_result.new_messages.return_value = []
         mock_run.result = mock_result
+        mock_run.ctx = Mock()
         mock_run.__aenter__.return_value = mock_run
         mock_run.__aexit__.return_value = None
 
         async def mock_node_iter():
             yield mock_node
 
-        mock_run.__aiter__.return_value = mock_node_iter()
+        mock_run.__aiter__ = lambda self: mock_node_iter()
         mock_agent.iter.return_value = mock_run
 
         # Execute
@@ -277,14 +301,17 @@ async def test_streaming_handler_completion_event(
     """Test that completion event includes new_messages."""
 
     async def mock_stream_generator():
-        yield MockPartStartEvent("text", content="Done")
+        yield create_part_start_event("text", content="Done")
 
-    with patch("src.ui.features.streaming_handler.super_agent") as mock_agent:
+    with (
+        patch("src.ui.features.streaming_handler.super_agent") as mock_agent,
+        patch("src.ui.features.streaming_handler.Agent") as MockAgent,
+    ):
         mock_run = AsyncMock()
         mock_node = Mock()
         mock_node_stream = AsyncMock()
 
-        mock_agent.is_model_request_node.return_value = True
+        MockAgent.is_model_request_node.return_value = True
         mock_node_stream.__aenter__.return_value = mock_stream_generator()
         mock_node.stream.return_value = mock_node_stream
 
@@ -293,13 +320,14 @@ async def test_streaming_handler_completion_event(
         mock_result = Mock()
         mock_result.new_messages.return_value = mock_messages
         mock_run.result = mock_result
+        mock_run.ctx = Mock()
         mock_run.__aenter__.return_value = mock_run
         mock_run.__aexit__.return_value = None
 
         async def mock_node_iter():
             yield mock_node
 
-        mock_run.__aiter__.return_value = mock_node_iter()
+        mock_run.__aiter__ = lambda self: mock_node_iter()
         mock_agent.iter.return_value = mock_run
 
         # Execute
@@ -322,23 +350,27 @@ async def test_streaming_handler_non_model_request_node(
 ):
     """Test handling of non-model request nodes."""
 
-    with patch("src.ui.features.streaming_handler.super_agent") as mock_agent:
+    with (
+        patch("src.ui.features.streaming_handler.super_agent") as mock_agent,
+        patch("src.ui.features.streaming_handler.Agent") as MockAgent,
+    ):
         mock_run = AsyncMock()
         mock_node = Mock()
 
         # This node is NOT a model request
-        mock_agent.is_model_request_node.return_value = False
+        MockAgent.is_model_request_node.return_value = False
 
         mock_result = Mock()
         mock_result.new_messages.return_value = []
         mock_run.result = mock_result
+        mock_run.ctx = Mock()
         mock_run.__aenter__.return_value = mock_run
         mock_run.__aexit__.return_value = None
 
         async def mock_node_iter():
             yield mock_node
 
-        mock_run.__aiter__.return_value = mock_node_iter()
+        mock_run.__aiter__ = lambda self: mock_node_iter()
         mock_agent.iter.return_value = mock_run
 
         # Execute
@@ -377,27 +409,31 @@ async def test_streaming_handler_empty_input(
     """Test streaming with empty input."""
 
     async def mock_stream_generator():
-        yield MockPartStartEvent("text", content="")
+        yield create_part_start_event("text", content="")
 
-    with patch("src.ui.features.streaming_handler.super_agent") as mock_agent:
+    with (
+        patch("src.ui.features.streaming_handler.super_agent") as mock_agent,
+        patch("src.ui.features.streaming_handler.Agent") as MockAgent,
+    ):
         mock_run = AsyncMock()
         mock_node = Mock()
         mock_node_stream = AsyncMock()
 
-        mock_agent.is_model_request_node.return_value = True
+        MockAgent.is_model_request_node.return_value = True
         mock_node_stream.__aenter__.return_value = mock_stream_generator()
         mock_node.stream.return_value = mock_node_stream
 
         mock_result = Mock()
         mock_result.new_messages.return_value = []
         mock_run.result = mock_result
+        mock_run.ctx = Mock()
         mock_run.__aenter__.return_value = mock_run
         mock_run.__aexit__.return_value = None
 
         async def mock_node_iter():
             yield mock_node
 
-        mock_run.__aiter__.return_value = mock_node_iter()
+        mock_run.__aiter__ = lambda self: mock_node_iter()
         mock_agent.iter.return_value = mock_run
 
         # Execute
@@ -422,27 +458,31 @@ async def test_streaming_handler_tool_call_with_complex_args(
     }
 
     async def mock_stream_generator():
-        yield MockPartStartEvent("tool-call", tool_name="complex_search", args=complex_args)
+        yield create_part_start_event("tool-call", tool_name="complex_search", args=complex_args)
 
-    with patch("src.ui.features.streaming_handler.super_agent") as mock_agent:
+    with (
+        patch("src.ui.features.streaming_handler.super_agent") as mock_agent,
+        patch("src.ui.features.streaming_handler.Agent") as MockAgent,
+    ):
         mock_run = AsyncMock()
         mock_node = Mock()
         mock_node_stream = AsyncMock()
 
-        mock_agent.is_model_request_node.return_value = True
+        MockAgent.is_model_request_node.return_value = True
         mock_node_stream.__aenter__.return_value = mock_stream_generator()
         mock_node.stream.return_value = mock_node_stream
 
         mock_result = Mock()
         mock_result.new_messages.return_value = []
         mock_run.result = mock_result
+        mock_run.ctx = Mock()
         mock_run.__aenter__.return_value = mock_run
         mock_run.__aexit__.return_value = None
 
         async def mock_node_iter():
             yield mock_node
 
-        mock_run.__aiter__.return_value = mock_node_iter()
+        mock_run.__aiter__ = lambda self: mock_node_iter()
         mock_agent.iter.return_value = mock_run
 
         # Execute
@@ -466,30 +506,34 @@ async def test_streaming_handler_long_content(
     long_content = "This is a very long response. " * 100
 
     async def mock_stream_generator():
-        yield MockPartStartEvent("text", content="Start: ")
+        yield create_part_start_event("text", content="Start: ")
         # Simulate streaming in chunks
         for i in range(0, len(long_content), 50):
-            yield MockPartDeltaEvent(long_content[i : i + 50])
+            yield create_part_delta_event(long_content[i : i + 50])
 
-    with patch("src.ui.features.streaming_handler.super_agent") as mock_agent:
+    with (
+        patch("src.ui.features.streaming_handler.super_agent") as mock_agent,
+        patch("src.ui.features.streaming_handler.Agent") as MockAgent,
+    ):
         mock_run = AsyncMock()
         mock_node = Mock()
         mock_node_stream = AsyncMock()
 
-        mock_agent.is_model_request_node.return_value = True
+        MockAgent.is_model_request_node.return_value = True
         mock_node_stream.__aenter__.return_value = mock_stream_generator()
         mock_node.stream.return_value = mock_node_stream
 
         mock_result = Mock()
         mock_result.new_messages.return_value = []
         mock_run.result = mock_result
+        mock_run.ctx = Mock()
         mock_run.__aenter__.return_value = mock_run
         mock_run.__aexit__.return_value = None
 
         async def mock_node_iter():
             yield mock_node
 
-        mock_run.__aiter__.return_value = mock_node_iter()
+        mock_run.__aiter__ = lambda self: mock_node_iter()
         mock_agent.iter.return_value = mock_run
 
         # Execute
@@ -513,27 +557,31 @@ async def test_streaming_handler_message_history_passed(streaming_handler, mock_
     ]
 
     async def mock_stream_generator():
-        yield MockPartStartEvent("text", content="Response")
+        yield create_part_start_event("text", content="Response")
 
-    with patch("src.ui.features.streaming_handler.super_agent") as mock_agent:
+    with (
+        patch("src.ui.features.streaming_handler.super_agent") as mock_agent,
+        patch("src.ui.features.streaming_handler.Agent") as MockAgent,
+    ):
         mock_run = AsyncMock()
         mock_node = Mock()
         mock_node_stream = AsyncMock()
 
-        mock_agent.is_model_request_node.return_value = True
+        MockAgent.is_model_request_node.return_value = True
         mock_node_stream.__aenter__.return_value = mock_stream_generator()
         mock_node.stream.return_value = mock_node_stream
 
         mock_result = Mock()
         mock_result.new_messages.return_value = []
         mock_run.result = mock_result
+        mock_run.ctx = Mock()
         mock_run.__aenter__.return_value = mock_run
         mock_run.__aexit__.return_value = None
 
         async def mock_node_iter():
             yield mock_node
 
-        mock_run.__aiter__.return_value = mock_node_iter()
+        mock_run.__aiter__ = lambda self: mock_node_iter()
         mock_agent.iter.return_value = mock_run
 
         # Execute
@@ -557,30 +605,32 @@ async def test_streaming_handler_kwargs_passed_to_deps(
     """Test that kwargs are passed to get_agent_deps."""
 
     async def mock_stream_generator():
-        yield MockPartStartEvent("text", content="Response")
+        yield create_part_start_event("text", content="Response")
 
     with (
         patch("src.ui.features.streaming_handler.super_agent") as mock_agent,
+        patch("src.ui.features.streaming_handler.Agent") as MockAgent,
         patch.object(streaming_handler, "get_agent_deps") as mock_get_deps,
     ):
         mock_run = AsyncMock()
         mock_node = Mock()
         mock_node_stream = AsyncMock()
 
-        mock_agent.is_model_request_node.return_value = True
+        MockAgent.is_model_request_node.return_value = True
         mock_node_stream.__aenter__.return_value = mock_stream_generator()
         mock_node.stream.return_value = mock_node_stream
 
         mock_result = Mock()
         mock_result.new_messages.return_value = []
         mock_run.result = mock_result
+        mock_run.ctx = Mock()
         mock_run.__aenter__.return_value = mock_run
         mock_run.__aexit__.return_value = None
 
         async def mock_node_iter():
             yield mock_node
 
-        mock_run.__aiter__.return_value = mock_node_iter()
+        mock_run.__aiter__ = lambda self: mock_node_iter()
         mock_agent.iter.return_value = mock_run
 
         # Mock get_agent_deps return
@@ -610,32 +660,32 @@ async def test_streaming_handler_tool_return_with_content(
     tool_content = {"results": ["item1", "item2", "item3"], "count": 3}
 
     async def mock_stream_generator():
-        yield MockPartStartEvent("tool-call", tool_name="search", args={"q": "test"})
-        part = Mock()
-        part.part_kind = "tool-return"
-        part.tool_name = "search"
-        part.content = tool_content
-        yield type("MockEvent", (), {"part": part})()
+        yield create_part_start_event("tool-call", tool_name="search", args={"q": "test"})
+        yield create_part_start_event("tool-return", tool_name="search", content=tool_content)
 
-    with patch("src.ui.features.streaming_handler.super_agent") as mock_agent:
+    with (
+        patch("src.ui.features.streaming_handler.super_agent") as mock_agent,
+        patch("src.ui.features.streaming_handler.Agent") as MockAgent,
+    ):
         mock_run = AsyncMock()
         mock_node = Mock()
         mock_node_stream = AsyncMock()
 
-        mock_agent.is_model_request_node.return_value = True
+        MockAgent.is_model_request_node.return_value = True
         mock_node_stream.__aenter__.return_value = mock_stream_generator()
         mock_node.stream.return_value = mock_node_stream
 
         mock_result = Mock()
         mock_result.new_messages.return_value = []
         mock_run.result = mock_result
+        mock_run.ctx = Mock()
         mock_run.__aenter__.return_value = mock_run
         mock_run.__aexit__.return_value = None
 
         async def mock_node_iter():
             yield mock_node
 
-        mock_run.__aiter__.return_value = mock_node_iter()
+        mock_run.__aiter__ = lambda self: mock_node_iter()
         mock_agent.iter.return_value = mock_run
 
         # Execute
@@ -665,9 +715,12 @@ async def test_streaming_handler_ctx_attribute_access(
     """Test that ctx attribute is accessible in nodes."""
 
     async def mock_stream_generator():
-        yield MockPartStartEvent("text", content="Test")
+        yield create_part_start_event("text", content="Test")
 
-    with patch("src.ui.features.streaming_handler.super_agent") as mock_agent:
+    with (
+        patch("src.ui.features.streaming_handler.super_agent") as mock_agent,
+        patch("src.ui.features.streaming_handler.Agent") as MockAgent,
+    ):
         mock_run = AsyncMock()
         mock_node = Mock()
         mock_node_stream = AsyncMock()
@@ -676,7 +729,7 @@ async def test_streaming_handler_ctx_attribute_access(
         mock_ctx = Mock()
         mock_run.ctx = mock_ctx
 
-        mock_agent.is_model_request_node.return_value = True
+        MockAgent.is_model_request_node.return_value = True
         mock_node_stream.__aenter__.return_value = mock_stream_generator()
         mock_node.stream.return_value = mock_node_stream
 
@@ -689,7 +742,7 @@ async def test_streaming_handler_ctx_attribute_access(
         async def mock_node_iter():
             yield mock_node
 
-        mock_run.__aiter__.return_value = mock_node_iter()
+        mock_run.__aiter__ = lambda self: mock_node_iter()
         mock_agent.iter.return_value = mock_run
 
         # Execute
@@ -710,34 +763,36 @@ async def test_streaming_handler_event_counts_tracking(
     """Test that event counts are properly tracked."""
 
     async def mock_stream_generator():
-        yield MockPartStartEvent("text", content="Hello")
+        yield create_part_start_event("text", content="Hello")
         for i in range(5):
-            yield MockPartDeltaEvent(f" delta{i}")
-        yield MockPartStartEvent("tool-call", tool_name="test", args={})
-        yield MockPartStartEvent("tool-return", tool_name="test")
+            yield create_part_delta_event(f" delta{i}")
+        yield create_part_start_event("tool-call", tool_name="test", args={})
+        yield create_part_start_event("tool-return", tool_name="test")
 
     with (
         patch("src.ui.features.streaming_handler.super_agent") as mock_agent,
+        patch("src.ui.features.streaming_handler.Agent") as MockAgent,
         patch("src.ui.features.streaming_handler.logger") as mock_logger,
     ):
         mock_run = AsyncMock()
         mock_node = Mock()
         mock_node_stream = AsyncMock()
 
-        mock_agent.is_model_request_node.return_value = True
+        MockAgent.is_model_request_node.return_value = True
         mock_node_stream.__aenter__.return_value = mock_stream_generator()
         mock_node.stream.return_value = mock_node_stream
 
         mock_result = Mock()
         mock_result.new_messages.return_value = []
         mock_run.result = mock_result
+        mock_run.ctx = Mock()
         mock_run.__aenter__.return_value = mock_run
         mock_run.__aexit__.return_value = None
 
         async def mock_node_iter():
             yield mock_node
 
-        mock_run.__aiter__.return_value = mock_node_iter()
+        mock_run.__aiter__ = lambda self: mock_node_iter()
         mock_agent.iter.return_value = mock_run
 
         # Execute
@@ -758,32 +813,34 @@ async def test_streaming_handler_text_delta_logging_frequency(
     """Test that text deltas are logged every 10 events."""
 
     async def mock_stream_generator():
-        yield MockPartStartEvent("text", content="Start")
+        yield create_part_start_event("text", content="Start")
         for i in range(25):  # More than 10
-            yield MockPartDeltaEvent(f" delta{i}")
+            yield create_part_delta_event(f" delta{i}")
 
     with (
         patch("src.ui.features.streaming_handler.super_agent") as mock_agent,
+        patch("src.ui.features.streaming_handler.Agent") as MockAgent,
         patch("src.ui.features.streaming_handler.logger") as mock_logger,
     ):
         mock_run = AsyncMock()
         mock_node = Mock()
         mock_node_stream = AsyncMock()
 
-        mock_agent.is_model_request_node.return_value = True
+        MockAgent.is_model_request_node.return_value = True
         mock_node_stream.__aenter__.return_value = mock_stream_generator()
         mock_node.stream.return_value = mock_node_stream
 
         mock_result = Mock()
         mock_result.new_messages.return_value = []
         mock_run.result = mock_result
+        mock_run.ctx = Mock()
         mock_run.__aenter__.return_value = mock_run
         mock_run.__aexit__.return_value = None
 
         async def mock_node_iter():
             yield mock_node
 
-        mock_run.__aiter__.return_value = mock_node_iter()
+        mock_run.__aiter__ = lambda self: mock_node_iter()
         mock_agent.iter.return_value = mock_run
 
         # Execute
@@ -809,30 +866,32 @@ async def test_streaming_handler_long_text_content_preview(
     very_long_content = "x" * 200
 
     async def mock_stream_generator():
-        yield MockPartStartEvent("text", content=very_long_content)
+        yield create_part_start_event("text", content=very_long_content)
 
     with (
         patch("src.ui.features.streaming_handler.super_agent") as mock_agent,
+        patch("src.ui.features.streaming_handler.Agent") as MockAgent,
         patch("src.ui.features.streaming_handler.logger") as mock_logger,
     ):
         mock_run = AsyncMock()
         mock_node = Mock()
         mock_node_stream = AsyncMock()
 
-        mock_agent.is_model_request_node.return_value = True
+        MockAgent.is_model_request_node.return_value = True
         mock_node_stream.__aenter__.return_value = mock_stream_generator()
         mock_node.stream.return_value = mock_node_stream
 
         mock_result = Mock()
         mock_result.new_messages.return_value = []
         mock_run.result = mock_result
+        mock_run.ctx = Mock()
         mock_run.__aenter__.return_value = mock_run
         mock_run.__aexit__.return_value = None
 
         async def mock_node_iter():
             yield mock_node
 
-        mock_run.__aiter__.return_value = mock_node_iter()
+        mock_run.__aiter__ = lambda self: mock_node_iter()
         mock_agent.iter.return_value = mock_run
 
         # Execute
@@ -854,30 +913,32 @@ async def test_streaming_handler_long_user_input_preview(
     very_long_input = "x" * 200
 
     async def mock_stream_generator():
-        yield MockPartStartEvent("text", content="Response")
+        yield create_part_start_event("text", content="Response")
 
     with (
         patch("src.ui.features.streaming_handler.super_agent") as mock_agent,
+        patch("src.ui.features.streaming_handler.Agent") as MockAgent,
         patch("src.ui.features.streaming_handler.logger") as mock_logger,
     ):
         mock_run = AsyncMock()
         mock_node = Mock()
         mock_node_stream = AsyncMock()
 
-        mock_agent.is_model_request_node.return_value = True
+        MockAgent.is_model_request_node.return_value = True
         mock_node_stream.__aenter__.return_value = mock_stream_generator()
         mock_node.stream.return_value = mock_node_stream
 
         mock_result = Mock()
         mock_result.new_messages.return_value = []
         mock_run.result = mock_result
+        mock_run.ctx = Mock()
         mock_run.__aenter__.return_value = mock_run
         mock_run.__aexit__.return_value = None
 
         async def mock_node_iter():
             yield mock_node
 
-        mock_run.__aiter__.return_value = mock_node_iter()
+        mock_run.__aiter__ = lambda self: mock_node_iter()
         mock_agent.iter.return_value = mock_run
 
         # Execute
@@ -898,34 +959,32 @@ async def test_streaming_handler_tool_call_non_dict_args(
     """Test tool call with non-dict args."""
 
     async def mock_stream_generator():
-        part = Mock()
-        part.part_kind = "tool-call"
-        part.tool_name = "test_tool"
-        part.args = "string_args"  # Non-dict args
-        yield type("MockEvent", (), {"part": part})()
+        yield create_part_start_event("tool-call", tool_name="test_tool", args="string_args")
 
     with (
         patch("src.ui.features.streaming_handler.super_agent") as mock_agent,
+        patch("src.ui.features.streaming_handler.Agent") as MockAgent,
         patch("src.ui.features.streaming_handler.logger") as mock_logger,
     ):
         mock_run = AsyncMock()
         mock_node = Mock()
         mock_node_stream = AsyncMock()
 
-        mock_agent.is_model_request_node.return_value = True
+        MockAgent.is_model_request_node.return_value = True
         mock_node_stream.__aenter__.return_value = mock_stream_generator()
         mock_node.stream.return_value = mock_node_stream
 
         mock_result = Mock()
         mock_result.new_messages.return_value = []
         mock_run.result = mock_result
+        mock_run.ctx = Mock()
         mock_run.__aenter__.return_value = mock_run
         mock_run.__aexit__.return_value = None
 
         async def mock_node_iter():
             yield mock_node
 
-        mock_run.__aiter__.return_value = mock_node_iter()
+        mock_run.__aiter__ = lambda self: mock_node_iter()
         mock_agent.iter.return_value = mock_run
 
         # Execute
@@ -947,34 +1006,34 @@ async def test_streaming_handler_long_tool_return_preview(
     very_long_return = "x" * 200
 
     async def mock_stream_generator():
-        part = Mock()
-        part.part_kind = "tool-return"
-        part.tool_name = "test_tool"
-        part.content = very_long_return
-        yield type("MockEvent", (), {"part": part})()
+        yield create_part_start_event(
+            "tool-return", tool_name="test_tool", content=very_long_return
+        )
 
     with (
         patch("src.ui.features.streaming_handler.super_agent") as mock_agent,
+        patch("src.ui.features.streaming_handler.Agent") as MockAgent,
         patch("src.ui.features.streaming_handler.logger") as mock_logger,
     ):
         mock_run = AsyncMock()
         mock_node = Mock()
         mock_node_stream = AsyncMock()
 
-        mock_agent.is_model_request_node.return_value = True
+        MockAgent.is_model_request_node.return_value = True
         mock_node_stream.__aenter__.return_value = mock_stream_generator()
         mock_node.stream.return_value = mock_node_stream
 
         mock_result = Mock()
         mock_result.new_messages.return_value = []
         mock_run.result = mock_result
+        mock_run.ctx = Mock()
         mock_run.__aenter__.return_value = mock_run
         mock_run.__aexit__.return_value = None
 
         async def mock_node_iter():
             yield mock_node
 
-        mock_run.__aiter__.return_value = mock_node_iter()
+        mock_run.__aiter__ = lambda self: mock_node_iter()
         mock_agent.iter.return_value = mock_run
 
         # Execute
@@ -995,32 +1054,34 @@ async def test_streaming_handler_error_with_event_tracking(
     """Test that event counts are logged even on error."""
 
     async def mock_stream_generator():
-        yield MockPartStartEvent("text", content="Start")
-        yield MockPartDeltaEvent(" delta1")
+        yield create_part_start_event("text", content="Start")
+        yield create_part_delta_event(" delta1")
         raise RuntimeError("Streaming error")
 
     with (
         patch("src.ui.features.streaming_handler.super_agent") as mock_agent,
+        patch("src.ui.features.streaming_handler.Agent") as MockAgent,
         patch("src.ui.features.streaming_handler.logger") as mock_logger,
     ):
         mock_run = AsyncMock()
         mock_node = Mock()
         mock_node_stream = AsyncMock()
 
-        mock_agent.is_model_request_node.return_value = True
+        MockAgent.is_model_request_node.return_value = True
         mock_node_stream.__aenter__.return_value = mock_stream_generator()
         mock_node.stream.return_value = mock_node_stream
 
         mock_result = Mock()
         mock_result.new_messages.return_value = []
         mock_run.result = mock_result
+        mock_run.ctx = Mock()
         mock_run.__aenter__.return_value = mock_run
         mock_run.__aexit__.return_value = None
 
         async def mock_node_iter():
             yield mock_node
 
-        mock_run.__aiter__.return_value = mock_node_iter()
+        mock_run.__aiter__ = lambda self: mock_node_iter()
         mock_agent.iter.return_value = mock_run
 
         # Execute and expect error
@@ -1043,30 +1104,32 @@ async def test_streaming_handler_get_agent_deps_call(
     """Test that get_agent_deps is called correctly."""
 
     async def mock_stream_generator():
-        yield MockPartStartEvent("text", content="Test")
+        yield create_part_start_event("text", content="Test")
 
     with (
         patch("src.ui.features.streaming_handler.super_agent") as mock_agent,
+        patch("src.ui.features.streaming_handler.Agent") as MockAgent,
         patch.object(streaming_handler, "get_agent_deps", return_value=Mock()) as mock_get_deps,
     ):
         mock_run = AsyncMock()
         mock_node = Mock()
         mock_node_stream = AsyncMock()
 
-        mock_agent.is_model_request_node.return_value = True
+        MockAgent.is_model_request_node.return_value = True
         mock_node_stream.__aenter__.return_value = mock_stream_generator()
         mock_node.stream.return_value = mock_node_stream
 
         mock_result = Mock()
         mock_result.new_messages.return_value = []
         mock_run.result = mock_result
+        mock_run.ctx = Mock()
         mock_run.__aenter__.return_value = mock_run
         mock_run.__aexit__.return_value = None
 
         async def mock_node_iter():
             yield mock_node
 
-        mock_run.__aiter__.return_value = mock_node_iter()
+        mock_run.__aiter__ = lambda self: mock_node_iter()
         mock_agent.iter.return_value = mock_run
 
         # Execute
@@ -1087,14 +1150,17 @@ async def test_streaming_handler_result_attribute_access(
     """Test that run.result is accessible after iteration."""
 
     async def mock_stream_generator():
-        yield MockPartStartEvent("text", content="Test")
+        yield create_part_start_event("text", content="Test")
 
-    with patch("src.ui.features.streaming_handler.super_agent") as mock_agent:
+    with (
+        patch("src.ui.features.streaming_handler.super_agent") as mock_agent,
+        patch("src.ui.features.streaming_handler.Agent") as MockAgent,
+    ):
         mock_run = AsyncMock()
         mock_node = Mock()
         mock_node_stream = AsyncMock()
 
-        mock_agent.is_model_request_node.return_value = True
+        MockAgent.is_model_request_node.return_value = True
         mock_node_stream.__aenter__.return_value = mock_stream_generator()
         mock_node.stream.return_value = mock_node_stream
 
@@ -1109,7 +1175,7 @@ async def test_streaming_handler_result_attribute_access(
         async def mock_node_iter():
             yield mock_node
 
-        mock_run.__aiter__.return_value = mock_node_iter()
+        mock_run.__aiter__ = lambda self: mock_node_iter()
         mock_agent.iter.return_value = mock_run
 
         # Execute

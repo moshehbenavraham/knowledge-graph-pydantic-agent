@@ -21,17 +21,11 @@ def client():
 @pytest.fixture
 def mock_health_checks():
     """Mock health check functions."""
-    with (
-        patch("src.api.health_endpoints.check_database_health") as mock_db,
-        patch("src.api.health_endpoints.check_cache_health") as mock_cache,
-        patch("src.api.health_endpoints.check_storage_health") as mock_storage,
-    ):
-
-        mock_db.return_value = {"status": "healthy", "latency_ms": 5.2}
-        mock_cache.return_value = {"status": "healthy", "hit_rate": 0.85}
-        mock_storage.return_value = {"status": "healthy", "available": True}
-
-        yield {"db": mock_db, "cache": mock_cache, "storage": mock_storage}
+    with patch("src.utils.health.health_checker.run_all_checks") as mock_health:
+        mock_health.return_value = [
+            {"status": "healthy", "component": "database", "latency_ms": 5.2}
+        ]
+        yield {"health": mock_health}
 
 
 class TestHealthEndpoints:
@@ -111,10 +105,13 @@ class TestHealthDegradation:
 
     def test_health_with_database_down(self, client, mock_health_checks):
         """Test health when database is down."""
-        mock_health_checks["db"].return_value = {
-            "status": "unhealthy",
-            "error": "Connection failed",
-        }
+        mock_health_checks["health"].return_value = [
+            {
+                "status": "unhealthy",
+                "component": "database",
+                "error": "Connection failed",
+            }
+        ]
 
         response = client.get("/health")
 
@@ -123,7 +120,9 @@ class TestHealthDegradation:
 
     def test_health_with_cache_unavailable(self, client, mock_health_checks):
         """Test health when cache is unavailable."""
-        mock_health_checks["cache"].return_value = {"status": "unavailable"}
+        mock_health_checks["health"].return_value = [
+            {"status": "unavailable", "component": "cache"}
+        ]
 
         response = client.get("/health")
 
@@ -132,8 +131,10 @@ class TestHealthDegradation:
 
     def test_health_partial_degradation(self, client, mock_health_checks):
         """Test health with partial component failures."""
-        mock_health_checks["db"].return_value = {"status": "healthy"}
-        mock_health_checks["cache"].return_value = {"status": "degraded", "hit_rate": 0.2}
+        mock_health_checks["health"].return_value = [
+            {"status": "healthy", "component": "database"},
+            {"status": "degraded", "component": "cache", "hit_rate": 0.2},
+        ]
 
         response = client.get("/health")
 
@@ -197,7 +198,7 @@ class TestHealthErrorHandling:
 
     def test_health_check_exception_handling(self, client, mock_health_checks):
         """Test health check handles exceptions gracefully."""
-        mock_health_checks["db"].side_effect = Exception("Unexpected error")
+        mock_health_checks["health"].side_effect = Exception("Unexpected error")
 
         response = client.get("/health/database")
 
@@ -210,9 +211,9 @@ class TestHealthErrorHandling:
 
         async def slow_check():
             await asyncio.sleep(10)  # Simulate timeout
-            return {"status": "timeout"}
+            return [{"status": "timeout"}]
 
-        mock_health_checks["db"].side_effect = slow_check
+        mock_health_checks["health"].side_effect = slow_check
 
         response = client.get("/health/database")
 

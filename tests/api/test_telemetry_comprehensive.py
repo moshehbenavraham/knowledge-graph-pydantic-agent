@@ -74,12 +74,13 @@ class TestOpenTelemetryConfig:
         """Test tracing setup with console export enabled."""
         config = OpenTelemetryConfig(enable_console_export=True)
 
-        with patch("src.api.telemetry.ConsoleSpanExporter") as mock_console:
+        # Patch the import that happens inside the conditional
+        with patch("opentelemetry.sdk.trace.export.ConsoleSpanExporter") as mock_console:
             provider = config.setup_tracing()
 
             assert isinstance(provider, TracerProvider)
             # Console exporter should be created when enable_console_export=True
-            # The import is inside the conditional, so we patch it dynamically
+            mock_console.assert_called_once()
 
     @patch("src.api.telemetry.metrics.set_meter_provider")
     def test_setup_metrics_no_endpoint(self, mock_set_provider):

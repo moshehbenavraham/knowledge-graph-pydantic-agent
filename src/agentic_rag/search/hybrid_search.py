@@ -240,6 +240,8 @@ class HybridSearch:
         start = datetime.now()
 
         chunks = await self.vector_search.search(query, limit)
+        if chunks is None:
+            chunks = []
 
         elapsed = (datetime.now() - start).total_seconds()
         logger.info(f"✓ VECTOR_ONLY search completed: {len(chunks)} chunks in {elapsed:.3f}s")
@@ -266,7 +268,7 @@ class HybridSearch:
 
         # Optionally fetch content for source chunks
         chunks = []
-        if graph_results.chunk_refs:
+        if graph_results and graph_results.chunk_refs:
             # Convert string refs to UUIDs
             chunk_uuids = []
             for ref in graph_results.chunk_refs[:limit]:
@@ -279,18 +281,29 @@ class HybridSearch:
                 chunks = await self.vector_search.get_chunks_by_ids(chunk_uuids)
 
         elapsed = (datetime.now() - start).total_seconds()
-        logger.info(
-            f"✓ GRAPH_ONLY search completed in {elapsed:.3f}s: "
-            f"{len(chunks)} chunks, {len(graph_results.facts)} facts, "
-            f"{len(graph_results.entities)} entities, {len(graph_results.relationships)} relationships"
-        )
 
+        if graph_results:
+            logger.info(
+                f"✓ GRAPH_ONLY search completed in {elapsed:.3f}s: "
+                f"{len(chunks)} chunks, {len(graph_results.facts)} facts, "
+                f"{len(graph_results.entities)} entities, {len(graph_results.relationships)} relationships"
+            )
+            return HybridSearchResult(
+                chunks=chunks,
+                facts=graph_results.facts,
+                entities=graph_results.entities,
+                relationships=graph_results.relationships,
+                metadata={"search_type": "graph_only", "chunk_refs": graph_results.chunk_refs},
+            )
+        logger.info(
+            f"✓ GRAPH_ONLY search completed in {elapsed:.3f}s: {len(chunks)} chunks, 0 facts"
+        )
         return HybridSearchResult(
             chunks=chunks,
-            facts=graph_results.facts,
-            entities=graph_results.entities,
-            relationships=graph_results.relationships,
-            metadata={"search_type": "graph_only", "chunk_refs": graph_results.chunk_refs},
+            facts=[],
+            entities=[],
+            relationships=[],
+            metadata={"search_type": "graph_only", "chunk_refs": []},
         )
 
     async def _hybrid_search(self, query: str, limit: int, intent_result) -> HybridSearchResult:

@@ -55,7 +55,7 @@ class StreamingHandler(BaseHandler):
         # Analytics tracking
         interaction_start_time = datetime.now()
         session_id = kwargs.get("session_id", uuid4())
-        user_id = kwargs.get("user_id", None)
+        user_id = kwargs.get("user_id")
         tools_called = []
         tool_timings = {}  # Track tool execution times
         rag_used = False
@@ -114,7 +114,11 @@ class StreamingHandler(BaseHandler):
                                         tools_called.append(tool_name)
 
                                         # Check if RAG tool is being used
-                                        if tool_name in ["smart_search", "retrieve_documents", "comprehensive_search"]:
+                                        if tool_name in [
+                                            "smart_search",
+                                            "retrieve_documents",
+                                            "comprehensive_search",
+                                        ]:
                                             rag_used = True
 
                                         logger.info(
@@ -141,18 +145,28 @@ class StreamingHandler(BaseHandler):
                                         if tool_name in tool_timings:
                                             end_time = datetime.now()
                                             start_time = tool_timings[tool_name]["start"]
-                                            execution_ms = (end_time - start_time).total_seconds() * 1000
+                                            execution_ms = (
+                                                end_time - start_time
+                                            ).total_seconds() * 1000
 
                                             # Log tool usage to analytics
                                             try:
                                                 analytics_logger = get_analytics_logger()
                                                 tool_event = ToolUsageEvent(
-                                                    session_id=session_id if isinstance(session_id, UUID) else None,
+                                                    session_id=(
+                                                        session_id
+                                                        if isinstance(session_id, UUID)
+                                                        else None
+                                                    ),
                                                     tool_name=tool_name,
                                                     execution_time_ms=execution_ms,
                                                     success=True,
-                                                    input_params=tool_timings[tool_name].get("args"),
-                                                    result_summary={"content_length": len(content_str)},
+                                                    input_params=tool_timings[tool_name].get(
+                                                        "args"
+                                                    ),
+                                                    result_summary={
+                                                        "content_length": len(content_str)
+                                                    },
                                                     triggered_by="agent_decision",
                                                     user_id=user_id,
                                                     source="ui",
@@ -160,7 +174,9 @@ class StreamingHandler(BaseHandler):
                                                 await analytics_logger.log_tool_usage(tool_event)
                                                 logger.debug(f"Logged tool usage for {tool_name}")
                                             except Exception as log_err:
-                                                logger.warning(f"Failed to log tool usage: {log_err}")
+                                                logger.warning(
+                                                    f"Failed to log tool usage: {log_err}"
+                                                )
 
                                         content_preview = (
                                             content_str[:100] + "..."
@@ -195,11 +211,14 @@ class StreamingHandler(BaseHandler):
 
             # Log agent interaction to analytics
             interaction_end_time = datetime.now()
-            response_time_ms = (interaction_end_time - interaction_start_time).total_seconds() * 1000
+            response_time_ms = (
+                interaction_end_time - interaction_start_time
+            ).total_seconds() * 1000
 
             try:
                 analytics_logger = get_analytics_logger()
                 from src.config import get_settings
+
                 settings = get_settings()
 
                 interaction_event = AgentInteractionEvent(

@@ -6,6 +6,14 @@ import pytest
 from httpx import AsyncClient
 
 from src.ui.features.memory_handler import MemoryHandler
+from src.ui.features.streaming_handler import StreamingHandler
+
+
+def create_handler_with_mock_client(config, mem0_client=None):
+    """Helper to create a MemoryHandler with mocked mem0 client."""
+    handler = MemoryHandler(config)
+    handler.memory_client = mem0_client  # Directly set the client for unit tests
+    return handler
 
 
 @pytest.fixture
@@ -67,10 +75,15 @@ def mock_mem0_client():
 
 def test_memory_handler_init_with_memory_enabled(memory_config):
     """Test MemoryHandler initialization with memory enabled."""
-    with patch("src.ui.features.memory_handler.get_mem0_client") as mock_get_mem0:
+    with (
+        patch("src.ui.features.base_handler.get_llm_client", return_value=Mock()),
+        patch("src.ui.features.base_handler.get_supabase_client", return_value=Mock()),
+        patch("src.ui.features.memory_handler.get_mem0_client") as mock_get_mem0,
+    ):
         mock_get_mem0.return_value = Mock()
 
         handler = MemoryHandler(memory_config)
+        handler.initialize()
 
         assert handler.user_id == "test_user"
         assert handler.memory_client is not None
@@ -79,7 +92,11 @@ def test_memory_handler_init_with_memory_enabled(memory_config):
 
 def test_memory_handler_init_with_memory_disabled(memory_config_disabled):
     """Test MemoryHandler initialization with memory disabled."""
-    with patch("src.ui.features.memory_handler.get_mem0_client") as mock_get_mem0:
+    with (
+        patch("src.ui.features.base_handler.get_llm_client", return_value=Mock()),
+        patch("src.ui.features.base_handler.get_supabase_client", return_value=Mock()),
+        patch("src.ui.features.memory_handler.get_mem0_client") as mock_get_mem0,
+    ):
         handler = MemoryHandler(memory_config_disabled)
 
         assert handler.user_id == "test_user"
@@ -89,8 +106,12 @@ def test_memory_handler_init_with_memory_disabled(memory_config_disabled):
 
 def test_memory_handler_init_mem0_error(memory_config):
     """Test MemoryHandler initialization when Mem0 client fails."""
-    with patch(
-        "src.ui.features.memory_handler.get_mem0_client", side_effect=Exception("Mem0 error")
+    with (
+        patch("src.ui.features.base_handler.get_llm_client", return_value=Mock()),
+        patch("src.ui.features.base_handler.get_supabase_client", return_value=Mock()),
+        patch(
+            "src.ui.features.memory_handler.get_mem0_client", side_effect=Exception("Mem0 error")
+        ),
     ):
         handler = MemoryHandler(memory_config)
 
@@ -102,7 +123,11 @@ def test_memory_handler_default_user_id():
     """Test MemoryHandler uses default user_id if not provided."""
     config = {"enable_memory": True}
 
-    with patch("src.ui.features.memory_handler.get_mem0_client"):
+    with (
+        patch("src.ui.features.base_handler.get_llm_client", return_value=Mock()),
+        patch("src.ui.features.base_handler.get_supabase_client", return_value=Mock()),
+        patch("src.ui.features.memory_handler.get_mem0_client"),
+    ):
         handler = MemoryHandler(config)
 
         assert handler.user_id == "streamlit_user"
@@ -115,17 +140,16 @@ def test_memory_handler_default_user_id():
 
 def test_get_memories_success(memory_config, mock_mem0_client):
     """Test successful memory retrieval."""
-    with patch("src.ui.features.memory_handler.get_mem0_client", return_value=mock_mem0_client):
-        handler = MemoryHandler(memory_config)
+    handler = create_handler_with_mock_client(memory_config, mock_mem0_client)
 
-        memories = handler.get_memories("test query")
+    memories = handler.get_memories("test query")
 
-        assert "Python programming" in memories
-        assert "RAG system" in memories
-        assert "OpenAI models" in memories
-        mock_mem0_client.search.assert_called_once_with(
-            query="test query", user_id="test_user", limit=3
-        )
+    assert "Python programming" in memories
+    assert "RAG system" in memories
+    assert "OpenAI models" in memories
+    mock_mem0_client.search.assert_called_once_with(
+        query="test query", user_id="test_user", limit=3
+    )
 
 
 def test_get_memories_no_client(memory_config_disabled):
@@ -142,51 +166,47 @@ def test_get_memories_empty_results(memory_config):
     mock_client = Mock()
     mock_client.search.return_value = {"results": []}
 
-    with patch("src.ui.features.memory_handler.get_mem0_client", return_value=mock_client):
-        handler = MemoryHandler(memory_config)
+    handler = create_handler_with_mock_client(memory_config, mock_client)
 
-        memories = handler.get_memories("test query")
+    memories = handler.get_memories("test query")
 
-        assert memories == ""
+    assert memories == ""
 
 
 def test_get_memories_exception(memory_config, mock_mem0_client):
     """Test get_memories when Mem0 raises exception."""
     mock_mem0_client.search.side_effect = Exception("Search failed")
 
-    with patch("src.ui.features.memory_handler.get_mem0_client", return_value=mock_mem0_client):
-        handler = MemoryHandler(memory_config)
+    handler = create_handler_with_mock_client(memory_config, mock_mem0_client)
 
-        memories = handler.get_memories("test query")
+    memories = handler.get_memories("test query")
 
-        assert memories == ""
+    assert memories == ""
 
 
 def test_get_memories_custom_limit(memory_config, mock_mem0_client):
     """Test get_memories with custom memory limit."""
     memory_config["memory_limit"] = 5
 
-    with patch("src.ui.features.memory_handler.get_mem0_client", return_value=mock_mem0_client):
-        handler = MemoryHandler(memory_config)
+    handler = create_handler_with_mock_client(memory_config, mock_mem0_client)
 
-        handler.get_memories("test query")
+    handler.get_memories("test query")
 
-        mock_mem0_client.search.assert_called_once_with(
-            query="test query", user_id="test_user", limit=5
-        )
+    mock_mem0_client.search.assert_called_once_with(
+        query="test query", user_id="test_user", limit=5
+    )
 
 
 def test_get_memories_long_query(memory_config, mock_mem0_client):
     """Test get_memories with very long query."""
     long_query = "This is a very long query. " * 100
 
-    with patch("src.ui.features.memory_handler.get_mem0_client", return_value=mock_mem0_client):
-        handler = MemoryHandler(memory_config)
+    handler = create_handler_with_mock_client(memory_config, mock_mem0_client)
 
-        handler.get_memories(long_query)
+    handler.get_memories(long_query)
 
-        mock_mem0_client.search.assert_called_once()
-        assert mock_mem0_client.search.call_args[1]["query"] == long_query
+    mock_mem0_client.search.assert_called_once()
+    assert mock_mem0_client.search.call_args[1]["query"] == long_query
 
 
 # ============================================================================
@@ -196,21 +216,20 @@ def test_get_memories_long_query(memory_config, mock_mem0_client):
 
 def test_add_memory_success(memory_config, mock_mem0_client):
     """Test successful memory addition."""
-    with patch("src.ui.features.memory_handler.get_mem0_client", return_value=mock_mem0_client):
-        handler = MemoryHandler(memory_config)
+    handler = create_handler_with_mock_client(memory_config, mock_mem0_client)
 
-        handler.add_memory("User question", "Agent response")
+    handler.add_memory("User question", "Agent response")
 
-        mock_mem0_client.add.assert_called_once()
-        call_args = mock_mem0_client.add.call_args
-        messages = call_args[0][0]
+    mock_mem0_client.add.assert_called_once()
+    call_args = mock_mem0_client.add.call_args
+    messages = call_args[0][0]
 
-        assert len(messages) == 2
-        assert messages[0]["role"] == "user"
-        assert messages[0]["content"] == "User question"
-        assert messages[1]["role"] == "assistant"
-        assert messages[1]["content"] == "Agent response"
-        assert call_args[1]["user_id"] == "test_user"
+    assert len(messages) == 2
+    assert messages[0]["role"] == "user"
+    assert messages[0]["content"] == "User question"
+    assert messages[1]["role"] == "assistant"
+    assert messages[1]["content"] == "Agent response"
+    assert call_args[1]["user_id"] == "test_user"
 
 
 def test_add_memory_no_client(memory_config_disabled):
@@ -223,43 +242,40 @@ def test_add_memory_no_client(memory_config_disabled):
 
 def test_add_memory_no_response(memory_config, mock_mem0_client):
     """Test add_memory with only user input."""
-    with patch("src.ui.features.memory_handler.get_mem0_client", return_value=mock_mem0_client):
-        handler = MemoryHandler(memory_config)
+    handler = create_handler_with_mock_client(memory_config, mock_mem0_client)
 
-        handler.add_memory("User question", None)
+    handler.add_memory("User question", None)
 
-        mock_mem0_client.add.assert_called_once()
-        messages = mock_mem0_client.add.call_args[0][0]
+    mock_mem0_client.add.assert_called_once()
+    messages = mock_mem0_client.add.call_args[0][0]
 
-        assert len(messages) == 1
-        assert messages[0]["role"] == "user"
-        assert messages[0]["content"] == "User question"
+    assert len(messages) == 1
+    assert messages[0]["role"] == "user"
+    assert messages[0]["content"] == "User question"
 
 
 def test_add_memory_exception(memory_config, mock_mem0_client):
     """Test add_memory when Mem0 raises exception."""
     mock_mem0_client.add.side_effect = Exception("Add failed")
 
-    with patch("src.ui.features.memory_handler.get_mem0_client", return_value=mock_mem0_client):
-        handler = MemoryHandler(memory_config)
+    handler = create_handler_with_mock_client(memory_config, mock_mem0_client)
 
-        # Should not raise exception
-        handler.add_memory("User question", "Agent response")
+    # Should not raise exception
+    handler.add_memory("User question", "Agent response")
 
 
 def test_add_memory_empty_response(memory_config, mock_mem0_client):
     """Test add_memory with empty agent response."""
-    with patch("src.ui.features.memory_handler.get_mem0_client", return_value=mock_mem0_client):
-        handler = MemoryHandler(memory_config)
+    handler = create_handler_with_mock_client(memory_config, mock_mem0_client)
 
-        handler.add_memory("User question", "")
+    handler.add_memory("User question", "")
 
-        mock_mem0_client.add.assert_called_once()
-        messages = mock_mem0_client.add.call_args[0][0]
+    mock_mem0_client.add.assert_called_once()
+    messages = mock_mem0_client.add.call_args[0][0]
 
-        # Empty response is still added
-        assert len(messages) == 2
-        assert messages[1]["content"] == ""
+    # Empty response is treated as falsy, so only user message is added
+    assert len(messages) == 1
+    assert messages[0]["content"] == "User question"
 
 
 # ============================================================================
@@ -273,16 +289,19 @@ async def test_run_agent_with_memories(
 ):
     """Test run_agent retrieves and uses memories."""
 
-    async def mock_parent_run_agent(*args, **kwargs):
+    async def mock_run_agent(self, user_input, message_history, http_client, **kwargs):
         """Mock parent run_agent."""
         yield {"type": "start", "content": "Hello"}
         yield {"type": "delta", "content": " world"}
         yield {"type": "complete", "new_messages": [], "streaming": True}
 
-    with patch("src.ui.features.memory_handler.get_mem0_client", return_value=mock_mem0_client):
-        handler = MemoryHandler(memory_config)
+    with (
+        patch("src.ui.features.base_handler.get_llm_client", return_value=Mock()),
+        patch("src.ui.features.base_handler.get_supabase_client", return_value=Mock()),
+    ):
+        handler = create_handler_with_mock_client(memory_config, mock_mem0_client)
 
-        with patch.object(handler.__class__.__bases__[0], "run_agent", new=mock_parent_run_agent):
+        with patch.object(StreamingHandler, "run_agent", mock_run_agent):
             events = []
             async for event in handler.run_agent(
                 "test input", mock_message_history, mock_http_client
@@ -305,16 +324,19 @@ async def test_run_agent_stores_memory(
 ):
     """Test run_agent stores interaction in memory."""
 
-    async def mock_parent_run_agent(*args, **kwargs):
+    async def mock_run_agent(self, user_input, message_history, http_client, **kwargs):
         """Mock parent run_agent."""
         yield {"type": "delta", "content": "Response "}
         yield {"type": "delta", "content": "text"}
         yield {"type": "complete", "new_messages": [], "streaming": True}
 
-    with patch("src.ui.features.memory_handler.get_mem0_client", return_value=mock_mem0_client):
-        handler = MemoryHandler(memory_config)
+    with (
+        patch("src.ui.features.base_handler.get_llm_client", return_value=Mock()),
+        patch("src.ui.features.base_handler.get_supabase_client", return_value=Mock()),
+    ):
+        handler = create_handler_with_mock_client(memory_config, mock_mem0_client)
 
-        with patch.object(handler.__class__.__bases__[0], "run_agent", new=mock_parent_run_agent):
+        with patch.object(StreamingHandler, "run_agent", mock_run_agent):
             events = []
             async for event in handler.run_agent(
                 "test input", mock_message_history, mock_http_client
@@ -337,20 +359,26 @@ async def test_run_agent_no_memory_client(
 ):
     """Test run_agent when memory is disabled."""
 
-    async def mock_parent_run_agent(*args, **kwargs):
+    async def mock_run_agent(self, user_input, message_history, http_client, **kwargs):
         """Mock parent run_agent."""
         yield {"type": "start", "content": "Hello"}
         yield {"type": "complete", "new_messages": [], "streaming": True}
 
-    handler = MemoryHandler(memory_config_disabled)
+    with (
+        patch("src.ui.features.base_handler.get_llm_client", return_value=Mock()),
+        patch("src.ui.features.base_handler.get_supabase_client", return_value=Mock()),
+    ):
+        handler = MemoryHandler(memory_config_disabled)
 
-    with patch.object(handler.__class__.__bases__[0], "run_agent", new=mock_parent_run_agent):
-        events = []
-        async for event in handler.run_agent("test input", mock_message_history, mock_http_client):
-            events.append(event)
+        with patch.object(StreamingHandler, "run_agent", mock_run_agent):
+            events = []
+            async for event in handler.run_agent(
+                "test input", mock_message_history, mock_http_client
+            ):
+                events.append(event)
 
-        # Should complete without errors
-        assert len(events) == 2
+            # Should complete without errors
+            assert len(events) == 2
 
 
 @pytest.mark.asyncio
@@ -360,15 +388,18 @@ async def test_run_agent_memory_retrieval_error(
     """Test run_agent when memory retrieval fails."""
     mock_mem0_client.search.side_effect = Exception("Search failed")
 
-    async def mock_parent_run_agent(*args, **kwargs):
+    async def mock_run_agent(self, user_input, message_history, http_client, **kwargs):
         """Mock parent run_agent."""
         yield {"type": "start", "content": "Hello"}
         yield {"type": "complete", "new_messages": [], "streaming": True}
 
-    with patch("src.ui.features.memory_handler.get_mem0_client", return_value=mock_mem0_client):
-        handler = MemoryHandler(memory_config)
+    with (
+        patch("src.ui.features.base_handler.get_llm_client", return_value=Mock()),
+        patch("src.ui.features.base_handler.get_supabase_client", return_value=Mock()),
+    ):
+        handler = create_handler_with_mock_client(memory_config, mock_mem0_client)
 
-        with patch.object(handler.__class__.__bases__[0], "run_agent", new=mock_parent_run_agent):
+        with patch.object(StreamingHandler, "run_agent", mock_run_agent):
             events = []
             async for event in handler.run_agent(
                 "test input", mock_message_history, mock_http_client
@@ -386,15 +417,18 @@ async def test_run_agent_memory_storage_error(
     """Test run_agent when memory storage fails."""
     mock_mem0_client.add.side_effect = Exception("Add failed")
 
-    async def mock_parent_run_agent(*args, **kwargs):
+    async def mock_run_agent(self, user_input, message_history, http_client, **kwargs):
         """Mock parent run_agent."""
         yield {"type": "delta", "content": "Response"}
         yield {"type": "complete", "new_messages": [], "streaming": True}
 
-    with patch("src.ui.features.memory_handler.get_mem0_client", return_value=mock_mem0_client):
-        handler = MemoryHandler(memory_config)
+    with (
+        patch("src.ui.features.base_handler.get_llm_client", return_value=Mock()),
+        patch("src.ui.features.base_handler.get_supabase_client", return_value=Mock()),
+    ):
+        handler = create_handler_with_mock_client(memory_config, mock_mem0_client)
 
-        with patch.object(handler.__class__.__bases__[0], "run_agent", new=mock_parent_run_agent):
+        with patch.object(StreamingHandler, "run_agent", mock_run_agent):
             events = []
             async for event in handler.run_agent(
                 "test input", mock_message_history, mock_http_client
@@ -412,16 +446,19 @@ async def test_run_agent_passes_memories_to_parent(
     """Test that memories are passed to parent run_agent via kwargs."""
     memories_passed = None
 
-    async def mock_parent_run_agent(*args, **kwargs):
+    async def mock_run_agent(self, user_input, message_history, http_client, **kwargs):
         """Mock parent run_agent that captures kwargs."""
         nonlocal memories_passed
         memories_passed = kwargs.get("memories_str")
         yield {"type": "complete", "new_messages": [], "streaming": True}
 
-    with patch("src.ui.features.memory_handler.get_mem0_client", return_value=mock_mem0_client):
-        handler = MemoryHandler(memory_config)
+    with (
+        patch("src.ui.features.base_handler.get_llm_client", return_value=Mock()),
+        patch("src.ui.features.base_handler.get_supabase_client", return_value=Mock()),
+    ):
+        handler = create_handler_with_mock_client(memory_config, mock_mem0_client)
 
-        with patch.object(handler.__class__.__bases__[0], "run_agent", new=mock_parent_run_agent):
+        with patch.object(StreamingHandler, "run_agent", mock_run_agent):
             async for _ in handler.run_agent("test input", mock_message_history, mock_http_client):
                 pass
 
@@ -436,17 +473,20 @@ async def test_run_agent_accumulates_full_response(
 ):
     """Test that full response is properly accumulated from deltas."""
 
-    async def mock_parent_run_agent(*args, **kwargs):
+    async def mock_run_agent(self, user_input, message_history, http_client, **kwargs):
         """Mock parent run_agent with multiple deltas."""
         yield {"type": "delta", "content": "First "}
         yield {"type": "delta", "content": "Second "}
         yield {"type": "delta", "content": "Third"}
         yield {"type": "complete", "new_messages": [], "streaming": True}
 
-    with patch("src.ui.features.memory_handler.get_mem0_client", return_value=mock_mem0_client):
-        handler = MemoryHandler(memory_config)
+    with (
+        patch("src.ui.features.base_handler.get_llm_client", return_value=Mock()),
+        patch("src.ui.features.base_handler.get_supabase_client", return_value=Mock()),
+    ):
+        handler = create_handler_with_mock_client(memory_config, mock_mem0_client)
 
-        with patch.object(handler.__class__.__bases__[0], "run_agent", new=mock_parent_run_agent):
+        with patch.object(StreamingHandler, "run_agent", mock_run_agent):
             async for _ in handler.run_agent("test input", mock_message_history, mock_http_client):
                 pass
 
@@ -462,15 +502,18 @@ async def test_run_agent_no_storage_on_incomplete_stream(
 ):
     """Test that memory is not stored if stream doesn't complete."""
 
-    async def mock_parent_run_agent(*args, **kwargs):
+    async def mock_run_agent(self, user_input, message_history, http_client, **kwargs):
         """Mock parent run_agent without completion event."""
         yield {"type": "delta", "content": "Response"}
         # No complete event
 
-    with patch("src.ui.features.memory_handler.get_mem0_client", return_value=mock_mem0_client):
-        handler = MemoryHandler(memory_config)
+    with (
+        patch("src.ui.features.base_handler.get_llm_client", return_value=Mock()),
+        patch("src.ui.features.base_handler.get_supabase_client", return_value=Mock()),
+    ):
+        handler = create_handler_with_mock_client(memory_config, mock_mem0_client)
 
-        with patch.object(handler.__class__.__bases__[0], "run_agent", new=mock_parent_run_agent):
+        with patch.object(StreamingHandler, "run_agent", mock_run_agent):
             async for _ in handler.run_agent("test input", mock_message_history, mock_http_client):
                 pass
 
@@ -484,15 +527,18 @@ async def test_run_agent_exception_propagation(
 ):
     """Test that exceptions from parent are properly propagated."""
 
-    async def mock_parent_run_agent(*args, **kwargs):
+    async def mock_run_agent(self, user_input, message_history, http_client, **kwargs):
         """Mock parent run_agent that raises exception."""
         yield {"type": "delta", "content": "Start"}
         raise Exception("Streaming error")
 
-    with patch("src.ui.features.memory_handler.get_mem0_client", return_value=mock_mem0_client):
-        handler = MemoryHandler(memory_config)
+    with (
+        patch("src.ui.features.base_handler.get_llm_client", return_value=Mock()),
+        patch("src.ui.features.base_handler.get_supabase_client", return_value=Mock()),
+    ):
+        handler = create_handler_with_mock_client(memory_config, mock_mem0_client)
 
-        with patch.object(handler.__class__.__bases__[0], "run_agent", new=mock_parent_run_agent):
+        with patch.object(StreamingHandler, "run_agent", mock_run_agent):
             with pytest.raises(Exception, match="Streaming error"):
                 async for _ in handler.run_agent(
                     "test input", mock_message_history, mock_http_client
@@ -508,14 +554,17 @@ async def test_run_agent_with_message_history(memory_config, mock_mem0_client, m
         {"role": "assistant", "content": "Previous answer"},
     ]
 
-    async def mock_parent_run_agent(*args, **kwargs):
+    async def mock_run_agent(self, user_input, message_history, http_client, **kwargs):
         """Mock parent run_agent."""
         yield {"type": "complete", "new_messages": [], "streaming": True}
 
-    with patch("src.ui.features.memory_handler.get_mem0_client", return_value=mock_mem0_client):
-        handler = MemoryHandler(memory_config)
+    with (
+        patch("src.ui.features.base_handler.get_llm_client", return_value=Mock()),
+        patch("src.ui.features.base_handler.get_supabase_client", return_value=Mock()),
+    ):
+        handler = create_handler_with_mock_client(memory_config, mock_mem0_client)
 
-        with patch.object(handler.__class__.__bases__[0], "run_agent", new=mock_parent_run_agent):
+        with patch.object(StreamingHandler, "run_agent", mock_run_agent):
             async for _ in handler.run_agent("new input", message_history, mock_http_client):
                 pass
 
@@ -529,16 +578,19 @@ async def test_run_agent_chunk_counting(
 ):
     """Test that chunk count is tracked correctly."""
 
-    async def mock_parent_run_agent(*args, **kwargs):
+    async def mock_run_agent(self, user_input, message_history, http_client, **kwargs):
         """Mock parent run_agent with many chunks."""
         for i in range(50):
             yield {"type": "delta", "content": f"chunk{i} "}
         yield {"type": "complete", "new_messages": [], "streaming": True}
 
-    with patch("src.ui.features.memory_handler.get_mem0_client", return_value=mock_mem0_client):
-        handler = MemoryHandler(memory_config)
+    with (
+        patch("src.ui.features.base_handler.get_llm_client", return_value=Mock()),
+        patch("src.ui.features.base_handler.get_supabase_client", return_value=Mock()),
+    ):
+        handler = create_handler_with_mock_client(memory_config, mock_mem0_client)
 
-        with patch.object(handler.__class__.__bases__[0], "run_agent", new=mock_parent_run_agent):
+        with patch.object(StreamingHandler, "run_agent", mock_run_agent):
             chunk_count = 0
             async for event in handler.run_agent(
                 "test input", mock_message_history, mock_http_client

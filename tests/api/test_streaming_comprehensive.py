@@ -12,7 +12,6 @@ from uuid import UUID
 import pytest
 from fastapi import WebSocket, WebSocketDisconnect
 from pydantic_ai import Agent
-from pydantic_ai.result import StreamedRunResult
 
 from src.api.streaming import SSEManager, WebSocketManager, sse_manager, websocket_manager
 
@@ -83,7 +82,7 @@ class TestSSEManager:
         manager = SSEManager(chunk_size=3)
 
         # Mock StreamedRunResult
-        mock_result = AsyncMock(spec=StreamedRunResult)
+        mock_result = AsyncMock()  # Remove spec= to allow async context manager mocking
 
         async def mock_stream_text(delta=True):
             yield "word1 "
@@ -105,7 +104,7 @@ class TestSSEManager:
     async def test_chunk_stream_empty(self):
         """Test chunking with empty stream."""
         manager = SSEManager()
-        mock_result = AsyncMock(spec=StreamedRunResult)
+        mock_result = AsyncMock()  # Remove spec= to allow async context manager mocking
 
         async def mock_stream_text(delta=True):
             return
@@ -125,7 +124,7 @@ class TestSSEManager:
         manager = SSEManager(chunk_size=5)
 
         mock_agent = MagicMock(spec=Agent)
-        mock_result = AsyncMock(spec=StreamedRunResult)
+        mock_result = AsyncMock()  # Remove spec= to allow setting __aenter__/__aexit__
 
         # Mock streaming text
         async def mock_stream_text(delta=True):
@@ -159,7 +158,7 @@ class TestSSEManager:
         manager = SSEManager()
 
         mock_agent = MagicMock(spec=Agent)
-        mock_result = AsyncMock(spec=StreamedRunResult)
+        mock_result = AsyncMock()  # Remove spec= to allow async context manager mocking
 
         async def mock_stream_text(delta=True):
             yield "Start "
@@ -185,9 +184,10 @@ class TestSSEManager:
         manager = SSEManager()
 
         mock_agent = MagicMock(spec=Agent)
-        mock_result = AsyncMock(spec=StreamedRunResult)
+        mock_result = AsyncMock()  # Remove spec= to allow async context manager mocking
 
         async def mock_stream_text(delta=True):
+            yield "Start"  # Make it an async generator
             raise ValueError("Test error")
 
         mock_result.stream_text = mock_stream_text
@@ -322,8 +322,8 @@ class TestWebSocketManager:
 
         connection_id = await manager.connect(mock_ws)
 
-        # Make send_json fail on second call (after welcome message)
-        mock_ws.send_json.side_effect = [None, RuntimeError("Send failed")]
+        # Make send_json fail on next call (welcome message already sent during connect)
+        mock_ws.send_json.side_effect = RuntimeError("Send failed")
 
         await manager.send_message(connection_id, {"type": "test"})
 
@@ -374,7 +374,7 @@ class TestWebSocketManager:
         connection_id = await manager.connect(mock_ws)
 
         mock_agent = MagicMock(spec=Agent)
-        mock_result = AsyncMock(spec=StreamedRunResult)
+        mock_result = AsyncMock()  # Remove spec= to allow async context manager mocking
 
         async def mock_stream_text(delta=True):
             yield "chunk1"
@@ -404,7 +404,7 @@ class TestWebSocketManager:
         connection_id = await manager.connect(mock_ws)
 
         mock_agent = MagicMock(spec=Agent)
-        mock_result = AsyncMock(spec=StreamedRunResult)
+        mock_result = AsyncMock()  # Remove spec= to allow async context manager mocking
 
         async def mock_stream_text(delta=True):
             yield "chunk1"
@@ -430,9 +430,10 @@ class TestWebSocketManager:
         connection_id = await manager.connect(mock_ws)
 
         mock_agent = MagicMock(spec=Agent)
-        mock_result = AsyncMock(spec=StreamedRunResult)
+        mock_result = AsyncMock()  # Remove spec= to allow async context manager mocking
 
         async def mock_stream_text(delta=True):
+            yield "Start"  # Make it an async generator
             raise ValueError("Stream error")
 
         mock_result.stream_text = mock_stream_text

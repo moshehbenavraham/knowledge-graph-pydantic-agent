@@ -10,19 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ---
 
-## [Unreleased]
 
-### Added
-
-### Changed
-- Event loop change warnings in connection_manager now log as INFO instead of WARNING (normal Streamlit behavior)
-
-### Fixed
-- Jina.ai 422 Unprocessable Entity errors now automatically fallback to Brave or SearXNG search providers
-- Asyncio task cleanup errors - analytics logger now properly cancels and waits for all background tasks before shutdown
-- Event loop warnings during Streamlit reruns - clarified as normal behavior in log messages
-
-### Security
 
 ---
 ---

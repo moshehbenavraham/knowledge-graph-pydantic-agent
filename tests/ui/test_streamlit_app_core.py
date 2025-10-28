@@ -154,7 +154,8 @@ class TestUIConfig:
         """Test SIMPLE mode feature flags."""
         from src.ui.streamlit_app import UIConfig
 
-        with patch("src.ui.streamlit_app.config.mode", UIMode.SIMPLE):
+        with patch("src.ui.streamlit_app.config") as mock_config:
+            mock_config.mode = UIMode.SIMPLE
             config = UIConfig()
             assert config.mode == UIMode.SIMPLE
             assert config.features["streaming"] is False
@@ -167,7 +168,8 @@ class TestUIConfig:
         """Test STANDARD mode feature flags."""
         from src.ui.streamlit_app import UIConfig
 
-        with patch("src.ui.streamlit_app.config.mode", UIMode.STANDARD):
+        with patch("src.ui.streamlit_app.config") as mock_config:
+            mock_config.mode = UIMode.STANDARD
             config = UIConfig()
             assert config.mode == UIMode.STANDARD
             assert config.features["streaming"] is True
@@ -180,7 +182,8 @@ class TestUIConfig:
         """Test ADVANCED mode feature flags."""
         from src.ui.streamlit_app import UIConfig
 
-        with patch("src.ui.streamlit_app.config.mode", UIMode.ADVANCED):
+        with patch("src.ui.streamlit_app.config") as mock_config:
+            mock_config.mode = UIMode.ADVANCED
             config = UIConfig()
             assert config.mode == UIMode.ADVANCED
             assert config.features["streaming"] is True
@@ -193,7 +196,8 @@ class TestUIConfig:
         """Test get_handler returns SimpleHandler for SIMPLE mode."""
         from src.ui.streamlit_app import UIConfig
 
-        with patch("src.ui.streamlit_app.config.mode", UIMode.SIMPLE):
+        with patch("src.ui.streamlit_app.config") as mock_config:
+            mock_config.mode = UIMode.SIMPLE
             with patch("src.ui.streamlit_app.SimpleHandler") as mock_handler:
                 config = UIConfig()
                 handler = config.get_handler()
@@ -207,7 +211,8 @@ class TestUIConfig:
         """Test get_handler returns StreamingHandler for STANDARD mode."""
         from src.ui.streamlit_app import UIConfig
 
-        with patch("src.ui.streamlit_app.config.mode", UIMode.STANDARD):
+        with patch("src.ui.streamlit_app.config") as mock_config:
+            mock_config.mode = UIMode.STANDARD
             with patch("src.ui.streamlit_app.StreamingHandler") as mock_handler:
                 config = UIConfig()
                 handler = config.get_handler()
@@ -221,7 +226,8 @@ class TestUIConfig:
         """Test get_handler returns MCPHandler for ADVANCED mode."""
         from src.ui.streamlit_app import UIConfig
 
-        with patch("src.ui.streamlit_app.config.mode", UIMode.ADVANCED):
+        with patch("src.ui.streamlit_app.config") as mock_config:
+            mock_config.mode = UIMode.ADVANCED
             with patch("src.ui.streamlit_app.MCPHandler") as mock_handler:
                 config = UIConfig()
                 handler = config.get_handler()
@@ -235,7 +241,8 @@ class TestUIConfig:
         """Test handler config includes user_id."""
         from src.ui.streamlit_app import UIConfig
 
-        with patch("src.ui.streamlit_app.config.mode", UIMode.SIMPLE):
+        with patch("src.ui.streamlit_app.config") as mock_config:
+            mock_config.mode = UIMode.SIMPLE
             with patch("src.ui.streamlit_app.SimpleHandler") as mock_handler:
                 config = UIConfig()
                 config.get_handler()
@@ -247,7 +254,8 @@ class TestUIConfig:
         """Test handler config includes memory_limit."""
         from src.ui.streamlit_app import UIConfig
 
-        with patch("src.ui.streamlit_app.config.mode", UIMode.ADVANCED):
+        with patch("src.ui.streamlit_app.config") as mock_config:
+            mock_config.mode = UIMode.ADVANCED
             with patch("src.ui.streamlit_app.MCPHandler") as mock_handler:
                 config = UIConfig()
                 config.get_handler()
@@ -389,7 +397,8 @@ class TestModeSwitching:
 
         # Test all modes
         for mode in [UIMode.SIMPLE, UIMode.STANDARD, UIMode.ADVANCED]:
-            with patch("src.ui.streamlit_app.config.mode", mode):
+            with patch("src.ui.streamlit_app.config") as mock_config:
+                mock_config.mode = mode
                 config1 = UIConfig()
                 config2 = UIConfig()
 
@@ -401,16 +410,19 @@ class TestModeSwitching:
         from src.ui.streamlit_app import UIConfig
 
         with patch("src.ui.streamlit_app.SimpleHandler") as mock_simple:
-            with patch("src.ui.streamlit_app.config.mode", UIMode.SIMPLE):
+            with patch("src.ui.streamlit_app.config") as mock_config:
+                mock_config.mode = UIMode.SIMPLE
                 UIConfig().get_handler()
                 assert mock_simple.called
 
         with patch("src.ui.streamlit_app.StreamingHandler") as mock_streaming:
-            with patch("src.ui.streamlit_app.config.mode", UIMode.STANDARD):
+            with patch("src.ui.streamlit_app.config") as mock_config:
+                mock_config.mode = UIMode.STANDARD
                 UIConfig().get_handler()
                 assert mock_streaming.called
 
         with patch("src.ui.streamlit_app.MCPHandler") as mock_mcp:
-            with patch("src.ui.streamlit_app.config.mode", UIMode.ADVANCED):
+            with patch("src.ui.streamlit_app.config") as mock_config:
+                mock_config.mode = UIMode.ADVANCED
                 UIConfig().get_handler()
                 assert mock_mcp.called

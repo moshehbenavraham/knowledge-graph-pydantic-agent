@@ -4,11 +4,11 @@ API request and response models for Agentic RAG API.
 Following 100-character line limit and Pydantic naming conventions.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class SearchType(str, Enum):
@@ -33,6 +33,8 @@ class MessageRole(str, Enum):
 
 class ChatMessage(BaseModel):
     """Individual chat message."""
+
+    model_config = ConfigDict(json_encoders={datetime: lambda v: v.isoformat()})
 
     role: MessageRole = Field(..., description="Message role")
     content: str = Field(..., description="Message content")
@@ -257,9 +259,11 @@ class ComponentStatus(BaseModel):
 class StatusResponse(BaseModel):
     """API status and health information."""
 
+    model_config = ConfigDict(json_encoders={datetime: lambda v: v.isoformat()})
+
     status: str = Field(..., description="Overall status")
     version: str = Field(..., description="API version")
-    timestamp: datetime = Field(default_factory=datetime.utcnow, description="Time")
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC), description="Time")
     cache: CacheStatus | None = Field(None, description="Cache status")
     components: list[ComponentStatus] = Field(
         default_factory=list, description="Component statuses"

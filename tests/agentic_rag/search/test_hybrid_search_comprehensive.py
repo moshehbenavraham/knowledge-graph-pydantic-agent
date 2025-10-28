@@ -63,6 +63,9 @@ def sample_chunks():
     return [
         ChunkResult(
             chunk_id=uuid4(),
+            document_id=uuid4(),
+            document_title="Test Doc",
+            document_source="test.md",
             content="OpenAI released GPT-4",
             similarity=0.9,
             metadata={"source": "doc1"},
@@ -70,6 +73,9 @@ def sample_chunks():
         ),
         ChunkResult(
             chunk_id=uuid4(),
+            document_id=uuid4(),
+            document_title="Test Doc",
+            document_source="test.md",
             content="GPT-4 is a large language model",
             similarity=0.8,
             metadata={"source": "doc2"},
@@ -128,8 +134,13 @@ class TestStrategySelection:
 
     def test_select_strategy_vector_heavy(self, hybrid_search):
         """Test VECTOR_HEAVY intent maps to VECTOR_ONLY strategy."""
-        intent_result = Mock()
-        intent_result.primary_intent = SearchIntent.VECTOR_HEAVY
+        intent_result = Mock(
+            primary_intent=SearchIntent.VECTOR_HEAVY,
+            confidence=0.95,
+            entities_mentioned=[],
+            relationship_indicators=[],
+            temporal_markers=[],
+        )
 
         strategy = hybrid_search._select_strategy(intent_result)
 
@@ -137,8 +148,13 @@ class TestStrategySelection:
 
     def test_select_strategy_graph_heavy_with_graph_enabled(self, hybrid_search):
         """Test GRAPH_HEAVY intent maps to GRAPH_ONLY when graph is enabled."""
-        intent_result = Mock()
-        intent_result.primary_intent = SearchIntent.GRAPH_HEAVY
+        intent_result = Mock(
+            primary_intent=SearchIntent.GRAPH_HEAVY,
+            confidence=0.95,
+            entities_mentioned=[],
+            relationship_indicators=[],
+            temporal_markers=[],
+        )
         hybrid_search.config.performance.enable_graph = True
 
         strategy = hybrid_search._select_strategy(intent_result)
@@ -147,8 +163,13 @@ class TestStrategySelection:
 
     def test_select_strategy_graph_heavy_with_graph_disabled(self, hybrid_search):
         """Test GRAPH_HEAVY falls back to VECTOR_ONLY when graph is disabled."""
-        intent_result = Mock()
-        intent_result.primary_intent = SearchIntent.GRAPH_HEAVY
+        intent_result = Mock(
+            primary_intent=SearchIntent.GRAPH_HEAVY,
+            confidence=0.95,
+            entities_mentioned=[],
+            relationship_indicators=[],
+            temporal_markers=[],
+        )
         hybrid_search.config.performance.enable_graph = False
 
         strategy = hybrid_search._select_strategy(intent_result)
@@ -157,8 +178,13 @@ class TestStrategySelection:
 
     def test_select_strategy_temporal(self, hybrid_search):
         """Test TEMPORAL intent maps to HYBRID strategy."""
-        intent_result = Mock()
-        intent_result.primary_intent = SearchIntent.TEMPORAL
+        intent_result = Mock(
+            primary_intent=SearchIntent.TEMPORAL,
+            confidence=0.95,
+            entities_mentioned=[],
+            relationship_indicators=[],
+            temporal_markers=[],
+        )
         hybrid_search.config.performance.enable_graph = True
 
         strategy = hybrid_search._select_strategy(intent_result)
@@ -167,8 +193,13 @@ class TestStrategySelection:
 
     def test_select_strategy_entity_focused(self, hybrid_search):
         """Test ENTITY_FOCUSED intent maps to HYBRID strategy."""
-        intent_result = Mock()
-        intent_result.primary_intent = SearchIntent.ENTITY_FOCUSED
+        intent_result = Mock(
+            primary_intent=SearchIntent.ENTITY_FOCUSED,
+            confidence=0.95,
+            entities_mentioned=[],
+            relationship_indicators=[],
+            temporal_markers=[],
+        )
         hybrid_search.config.performance.enable_graph = True
 
         strategy = hybrid_search._select_strategy(intent_result)
@@ -177,8 +208,13 @@ class TestStrategySelection:
 
     def test_select_strategy_default_adaptive(self, hybrid_search):
         """Test default strategy is ADAPTIVE when graph is enabled."""
-        intent_result = Mock()
-        intent_result.primary_intent = SearchIntent.HYBRID
+        intent_result = Mock(
+            primary_intent=SearchIntent.HYBRID,
+            confidence=0.95,
+            entities_mentioned=[],
+            relationship_indicators=[],
+            temporal_markers=[],
+        )
         hybrid_search.config.performance.enable_graph = True
 
         strategy = hybrid_search._select_strategy(intent_result)
@@ -275,9 +311,13 @@ class TestHybridSearch:
 
     async def test_hybrid_search_parallel(self, hybrid_search, sample_chunks, sample_graph_results):
         """Test hybrid search with parallel execution."""
-        intent_result = Mock()
-        intent_result.primary_intent = SearchIntent.HYBRID
-        intent_result.entities_mentioned = []
+        intent_result = Mock(
+            primary_intent=SearchIntent.HYBRID,
+            confidence=0.95,
+            entities_mentioned=[],
+            relationship_indicators=[],
+            temporal_markers=[],
+        )
 
         hybrid_search.config.performance.enable_parallel_search = True
         hybrid_search.vector_search.search = AsyncMock(return_value=sample_chunks)
@@ -296,9 +336,13 @@ class TestHybridSearch:
         self, hybrid_search, sample_chunks, sample_graph_results
     ):
         """Test hybrid search with sequential execution."""
-        intent_result = Mock()
-        intent_result.primary_intent = SearchIntent.HYBRID
-        intent_result.entities_mentioned = []
+        intent_result = Mock(
+            primary_intent=SearchIntent.HYBRID,
+            confidence=0.95,
+            entities_mentioned=[],
+            relationship_indicators=[],
+            temporal_markers=[],
+        )
 
         hybrid_search.config.performance.enable_parallel_search = False
         hybrid_search.vector_search.search = AsyncMock(return_value=sample_chunks)
@@ -315,9 +359,13 @@ class TestHybridSearch:
         self, hybrid_search, sample_chunks, sample_graph_results
     ):
         """Test that hybrid search applies graph context boosts."""
-        intent_result = Mock()
-        intent_result.primary_intent = SearchIntent.HYBRID
-        intent_result.entities_mentioned = []
+        intent_result = Mock(
+            primary_intent=SearchIntent.HYBRID,
+            confidence=0.95,
+            entities_mentioned=[],
+            relationship_indicators=[],
+            temporal_markers=[],
+        )
 
         hybrid_search.vector_search.search = AsyncMock(return_value=sample_chunks)
         hybrid_search.graph_search.search = AsyncMock(return_value=sample_graph_results)
@@ -345,9 +393,25 @@ class TestAdaptiveSearch:
 
         # High similarity scores
         good_chunks = [
-            ChunkResult(chunk_id=uuid4(), content="test", similarity=0.9, metadata={}, entities=[]),
             ChunkResult(
-                chunk_id=uuid4(), content="test", similarity=0.85, metadata={}, entities=[]
+                chunk_id=uuid4(),
+                document_id=uuid4(),
+                document_title="Test Doc",
+                document_source="test.md",
+                content="test",
+                similarity=0.9,
+                metadata={},
+                entities=[],
+            ),
+            ChunkResult(
+                chunk_id=uuid4(),
+                document_id=uuid4(),
+                document_title="Test Doc",
+                document_source="test.md",
+                content="test",
+                similarity=0.85,
+                metadata={},
+                entities=[],
             ),
         ]
 
@@ -368,7 +432,16 @@ class TestAdaptiveSearch:
 
         # Low similarity scores
         poor_chunks = [
-            ChunkResult(chunk_id=uuid4(), content="test", similarity=0.5, metadata={}, entities=[]),
+            ChunkResult(
+                chunk_id=uuid4(),
+                document_id=uuid4(),
+                document_title="Test Doc",
+                document_source="test.md",
+                content="test",
+                similarity=0.5,
+                metadata={},
+                entities=[],
+            ),
         ]
 
         hybrid_search.vector_search.search = AsyncMock(return_value=poor_chunks)
@@ -394,7 +467,16 @@ class TestAdaptiveSearch:
         intent_result.entities_mentioned = ["OpenAI", "GPT-4", "Microsoft"]
 
         good_chunks = [
-            ChunkResult(chunk_id=uuid4(), content="test", similarity=0.9, metadata={}, entities=[]),
+            ChunkResult(
+                chunk_id=uuid4(),
+                document_id=uuid4(),
+                document_title="Test Doc",
+                document_source="test.md",
+                content="test",
+                similarity=0.9,
+                metadata={},
+                entities=[],
+            ),
         ]
 
         hybrid_search.vector_search.search = AsyncMock(return_value=good_chunks)
@@ -447,7 +529,11 @@ class TestGraphContextBoosting:
 
         # Set matching entity names
         sample_chunks[0].entities = ["OpenAI", "GPT-4"]
-        sample_graph_results.entities = [Mock(name="OpenAI"), Mock(name="GPT-4")]
+        entity1 = Mock()
+        entity1.name = "OpenAI"
+        entity2 = Mock()
+        entity2.name = "GPT-4"
+        sample_graph_results.entities = [entity1, entity2]
         sample_graph_results.chunk_refs = []
 
         original_similarity = sample_chunks[0].similarity
@@ -464,8 +550,13 @@ class TestGraphContextBoosting:
         self, hybrid_search, sample_chunks, sample_graph_results
     ):
         """Test boosting for temporal queries."""
-        intent_result = Mock()
-        intent_result.primary_intent = SearchIntent.TEMPORAL
+        intent_result = Mock(
+            primary_intent=SearchIntent.TEMPORAL,
+            confidence=0.95,
+            entities_mentioned=[],
+            relationship_indicators=[],
+            temporal_markers=[],
+        )
         intent_result.entities_mentioned = []
 
         sample_chunks[0].metadata = {"created_at": datetime.now()}
@@ -483,8 +574,13 @@ class TestGraphContextBoosting:
         self, hybrid_search, sample_chunks, sample_graph_results
     ):
         """Test boosting for entity-focused queries."""
-        intent_result = Mock()
-        intent_result.primary_intent = SearchIntent.ENTITY_FOCUSED
+        intent_result = Mock(
+            primary_intent=SearchIntent.ENTITY_FOCUSED,
+            confidence=0.95,
+            entities_mentioned=[],
+            relationship_indicators=[],
+            temporal_markers=[],
+        )
         intent_result.entities_mentioned = ["OpenAI"]
 
         sample_chunks[0].entities = ["OpenAI"]
@@ -511,7 +607,13 @@ class TestMainSearch:
     async def test_search_with_auto_strategy(self, hybrid_search, sample_chunks):
         """Test search with automatic strategy selection."""
         hybrid_search.intent_analyzer.analyze = Mock(
-            return_value=Mock(primary_intent=SearchIntent.VECTOR_HEAVY)
+            return_value=Mock(
+                primary_intent=SearchIntent.VECTOR_HEAVY,
+                confidence=0.95,
+                entities_mentioned=[],
+                relationship_indicators=[],
+                temporal_markers=[],
+            )
         )
 
         with patch.object(
@@ -543,7 +645,13 @@ class TestMainSearch:
     async def test_search_logs_analytics(self, hybrid_search, sample_chunks):
         """Test that search logs analytics events."""
         hybrid_search.intent_analyzer.analyze = Mock(
-            return_value=Mock(primary_intent=SearchIntent.VECTOR_HEAVY)
+            return_value=Mock(
+                primary_intent=SearchIntent.VECTOR_HEAVY,
+                confidence=0.95,
+                entities_mentioned=[],
+                relationship_indicators=[],
+                temporal_markers=[],
+            )
         )
 
         with (
@@ -618,7 +726,13 @@ class TestStatistics:
     async def test_get_stats_with_searches(self, hybrid_search, sample_chunks):
         """Test stats after performing searches."""
         hybrid_search.intent_analyzer.analyze = Mock(
-            return_value=Mock(primary_intent=SearchIntent.VECTOR_HEAVY)
+            return_value=Mock(
+                primary_intent=SearchIntent.VECTOR_HEAVY,
+                confidence=0.95,
+                entities_mentioned=[],
+                relationship_indicators=[],
+                temporal_markers=[],
+            )
         )
 
         with (
@@ -660,7 +774,7 @@ class TestAnalyticsLogging:
 
     async def test_log_search_analytics_success(self, hybrid_search):
         """Test successful analytics logging."""
-        with patch("src.agentic_rag.search.hybrid_search.get_analytics_logger") as mock_get_logger:
+        with patch("src.agentic_rag.analytics.get_analytics_logger") as mock_get_logger:
             mock_logger = Mock()
             mock_logger.log_search = AsyncMock()
             mock_get_logger.return_value = mock_logger
@@ -686,7 +800,7 @@ class TestAnalyticsLogging:
     async def test_log_search_analytics_handles_errors(self, hybrid_search):
         """Test that analytics errors don't break search."""
         with patch(
-            "src.agentic_rag.search.hybrid_search.get_analytics_logger",
+            "src.agentic_rag.analytics.get_analytics_logger",
             side_effect=Exception("Analytics error"),
         ):
             result = HybridSearchResult()
@@ -723,8 +837,8 @@ class TestHybridSearchResult:
 
         result_dict = result.to_dict()
 
-        assert result_dict["search_strategy"] == "HYBRID"
-        assert result_dict["intent"] == "HYBRID"
+        assert result_dict["search_strategy"] == "hybrid"
+        assert result_dict["intent"] == "hybrid"
         assert result_dict["query_time"] == 0.5
         assert len(result_dict["chunks"]) == 2
         assert result_dict["metadata"]["test"] == "value"
@@ -763,7 +877,13 @@ class TestEdgeCases:
     async def test_search_empty_query(self, hybrid_search):
         """Test search with empty query string."""
         hybrid_search.intent_analyzer.analyze = Mock(
-            return_value=Mock(primary_intent=SearchIntent.VECTOR_HEAVY)
+            return_value=Mock(
+                primary_intent=SearchIntent.VECTOR_HEAVY,
+                confidence=0.95,
+                entities_mentioned=[],
+                relationship_indicators=[],
+                temporal_markers=[],
+            )
         )
         hybrid_search.vector_search.search = AsyncMock(return_value=[])
 
@@ -775,7 +895,13 @@ class TestEdgeCases:
         """Test search with very long query."""
         long_query = "query " * 1000  # 6000 chars
         hybrid_search.intent_analyzer.analyze = Mock(
-            return_value=Mock(primary_intent=SearchIntent.VECTOR_HEAVY)
+            return_value=Mock(
+                primary_intent=SearchIntent.VECTOR_HEAVY,
+                confidence=0.95,
+                entities_mentioned=[],
+                relationship_indicators=[],
+                temporal_markers=[],
+            )
         )
         hybrid_search.vector_search.search = AsyncMock(return_value=sample_chunks)
 
@@ -787,7 +913,13 @@ class TestEdgeCases:
     async def test_search_zero_limit(self, hybrid_search):
         """Test search with zero limit."""
         hybrid_search.intent_analyzer.analyze = Mock(
-            return_value=Mock(primary_intent=SearchIntent.VECTOR_HEAVY)
+            return_value=Mock(
+                primary_intent=SearchIntent.VECTOR_HEAVY,
+                confidence=0.95,
+                entities_mentioned=[],
+                relationship_indicators=[],
+                temporal_markers=[],
+            )
         )
         hybrid_search.vector_search.search = AsyncMock(return_value=[])
 
@@ -798,7 +930,13 @@ class TestEdgeCases:
     async def test_search_negative_limit(self, hybrid_search):
         """Test search with negative limit."""
         hybrid_search.intent_analyzer.analyze = Mock(
-            return_value=Mock(primary_intent=SearchIntent.VECTOR_HEAVY)
+            return_value=Mock(
+                primary_intent=SearchIntent.VECTOR_HEAVY,
+                confidence=0.95,
+                entities_mentioned=[],
+                relationship_indicators=[],
+                temporal_markers=[],
+            )
         )
         hybrid_search.vector_search.search = AsyncMock(return_value=[])
 
@@ -858,6 +996,9 @@ class TestEdgeCases:
         low_similarity_chunks = [
             ChunkResult(
                 chunk_id=uuid4(),
+                document_id=uuid4(),
+                document_title="Test Doc",
+                document_source="test.md",
                 content="Low match",
                 similarity=0.5,
                 metadata={},
@@ -964,6 +1105,9 @@ class TestEdgeCases:
         chunks_no_entities = [
             ChunkResult(
                 chunk_id=uuid4(),
+                document_id=uuid4(),
+                document_title="Test Doc",
+                document_source="test.md",
                 content="Test content",
                 similarity=0.9,
                 metadata={},
@@ -996,7 +1140,13 @@ class TestEdgeCases:
         initial_searches = hybrid_search._stats["searches"]
 
         hybrid_search.intent_analyzer.analyze = Mock(
-            return_value=Mock(primary_intent=SearchIntent.VECTOR_HEAVY)
+            return_value=Mock(
+                primary_intent=SearchIntent.VECTOR_HEAVY,
+                confidence=0.95,
+                entities_mentioned=[],
+                relationship_indicators=[],
+                temporal_markers=[],
+            )
         )
 
         with (
@@ -1033,8 +1183,13 @@ class TestEdgeCases:
         """Test strategy selection when graph is disabled."""
         hybrid_search.config.performance.enable_graph = False
 
-        intent_result = Mock()
-        intent_result.primary_intent = SearchIntent.GRAPH_HEAVY
+        intent_result = Mock(
+            primary_intent=SearchIntent.GRAPH_HEAVY,
+            confidence=0.95,
+            entities_mentioned=[],
+            relationship_indicators=[],
+            temporal_markers=[],
+        )
 
         strategy = hybrid_search._select_strategy(intent_result)
 
@@ -1054,8 +1209,13 @@ class TestEdgeCases:
         ]
 
         for intent, expected_strategy in intent_configs:
-            intent_result = Mock()
-            intent_result.primary_intent = intent
+            intent_result = Mock(
+                primary_intent=intent,
+                confidence=0.95,
+                entities_mentioned=[],
+                relationship_indicators=[],
+                temporal_markers=[],
+            )
 
             strategy = hybrid_search._select_strategy(intent_result)
 

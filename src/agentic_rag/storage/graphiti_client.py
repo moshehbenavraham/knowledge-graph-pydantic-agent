@@ -76,7 +76,7 @@ class GraphitiClient:
         Entity types: company, person, technology, product, location, event
 
         Format each entity as:
-        {"name": "entity_name", "type": "entity_type"}
+        {{"name": "entity_name", "type": "entity_type"}}
 
         Text:
         {text}
@@ -403,8 +403,8 @@ class GraphitiClient:
             limit=100,
         )
 
-        # Sort by timestamp
-        episodes.sort(key=lambda x: x.get("timestamp", datetime.min))
+        # Sort by timestamp (most recent first)
+        episodes.sort(key=lambda x: x.get("timestamp", datetime.min), reverse=True)
 
         return episodes
 

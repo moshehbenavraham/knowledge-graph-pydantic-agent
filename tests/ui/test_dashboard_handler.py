@@ -145,17 +145,28 @@ async def test_get_performance_metrics_includes_percentiles(mock_connection_mana
     """Test that get_performance_metrics includes percentile latency."""
     mock_conn = mock_connection_manager.get_pg_connection.return_value.__aenter__.return_value
 
-    mock_conn.fetchrow.return_value = {
-        "avg_vector_latency_ms": 80.0,
-        "avg_graph_latency_ms": 70.0,
-        "avg_ranking_latency_ms": 10.0,
-        "avg_total_latency_ms": 160.0,
-        "p50_latency_ms": 150.0,
-        "p95_latency_ms": 300.0,
-        "p99_latency_ms": 500.0,
-        "cache_hits": 40,
-        "total_searches": 100,
-    }
+    # Mock both queries: search metrics and system metrics
+    mock_conn.fetchrow.side_effect = [
+        # First call: search performance metrics
+        {
+            "avg_vector_latency_ms": 80.0,
+            "avg_graph_latency_ms": 70.0,
+            "avg_ranking_latency_ms": 10.0,
+            "avg_total_latency_ms": 160.0,
+            "p50_latency_ms": 150.0,
+            "p95_latency_ms": 300.0,
+            "p99_latency_ms": 500.0,
+            "cache_hits": 40,
+            "total_searches": 100,
+        },
+        # Second call: system metrics
+        {
+            "pg_active_connections": 5,
+            "pg_idle_connections": 2,
+            "neo4j_active_connections": 3,
+            "neo4j_idle_connections": 1,
+        },
+    ]
 
     handler = DashboardHandler(mock_connection_manager)
     metrics = await handler.get_performance_metrics()

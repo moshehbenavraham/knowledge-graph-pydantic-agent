@@ -32,22 +32,26 @@ logger = structlog.get_logger(__name__)
 
 # OAuth provider configurations
 GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
-GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
+GOOGLE_TOKEN_URL = (
+    "https://oauth2.googleapis.com/token"  # nosec B105 - Public OAuth endpoint URL, not a password
+)
 GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo"
 GOOGLE_SCOPES = ["openid", "email", "profile"]
 
 GITHUB_AUTH_URL = "https://github.com/login/oauth/authorize"
-GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token"
+GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token"  # nosec B105 - Public OAuth endpoint URL, not a password
 GITHUB_USER_URL = "https://api.github.com/user"
 GITHUB_SCOPES = ["read:user", "user:email"]
 
 MICROSOFT_AUTH_URL = "https://login.microsoftonline.com/common/oauth2/v2.0/authorize"
-MICROSOFT_TOKEN_URL = "https://login.microsoftonline.com/common/oauth2/v2.0/token"
+MICROSOFT_TOKEN_URL = "https://login.microsoftonline.com/common/oauth2/v2.0/token"  # nosec B105 - Public OAuth endpoint URL, not a password
 MICROSOFT_USERINFO_URL = "https://graph.microsoft.com/v1.0/me"
 MICROSOFT_SCOPES = ["openid", "email", "profile", "User.Read"]
 
 APPLE_AUTH_URL = "https://appleid.apple.com/auth/authorize"
-APPLE_TOKEN_URL = "https://appleid.apple.com/auth/token"
+APPLE_TOKEN_URL = (
+    "https://appleid.apple.com/auth/token"  # nosec B105 - Public OAuth endpoint URL, not a password
+)
 APPLE_USERINFO_URL = (
     "https://appleid.apple.com/auth/token"  # Apple returns user info in token response
 )
@@ -309,9 +313,7 @@ class OAuthHandler:
         """
         headers = {"Authorization": f"Bearer {access_token}"}
 
-        async with (
-            httpx.AsyncClient() as client
-        ):  # noqa: CONST-III-001 - HTTP client for external API
+        async with httpx.AsyncClient() as client:  # noqa: CONST-III-001 - HTTP client for external API  # fmt: skip
             try:
                 response = await client.get(self.userinfo_url, headers=headers)
                 response.raise_for_status()

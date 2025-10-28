@@ -5,7 +5,7 @@ Tests cache manager with Redis and in-memory fallback.
 """
 
 import asyncio
-import pickle
+import pickle  # nosec B403 - pickle needed for testing cache serialization
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -162,7 +162,9 @@ class TestRedisCacheClass:
         call_args = mock_redis_instance.setex.call_args
         assert call_args[0][0] == "test_key"
         assert call_args[0][1] == 3600  # Custom TTL
-        assert pickle.loads(call_args[0][2]) == {"data": "value"}
+        assert pickle.loads(call_args[0][2]) == {
+            "data": "value"
+        }  # nosec B301 - testing pickle serialization with known data
 
     @patch("src.utils.cache.redis.Redis")
     @patch("src.utils.cache.ConnectionPool")

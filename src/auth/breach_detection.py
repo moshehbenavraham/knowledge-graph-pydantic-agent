@@ -81,9 +81,9 @@ class BreachDetectionManager:
 
         try:
             # Query haveibeenpwned.com API
-            async with httpx.AsyncClient(
+            async with httpx.AsyncClient(  # noqa: CONST-III-001 - HTTP client for external API
                 timeout=self.TIMEOUT
-            ) as client:  # noqa: CONST-III-001 - HTTP client for external API
+            ) as client:
                 response = await client.get(
                     self.HIBP_API_URL.format(hash_prefix=hash_prefix),
                     headers={"User-Agent": "BaseAgent-PasswordBreachDetection"},

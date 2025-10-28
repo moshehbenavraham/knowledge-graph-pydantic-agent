@@ -29,11 +29,13 @@ def _get_staged_files() -> list[Path]:
         subprocess.CalledProcessError: If git command fails
     """
     try:
-        result = subprocess.run(  # nosec B607 - git is a trusted executable
-            ["git", "diff", "--cached", "--name-only", "--diff-filter=ACMR"],
-            capture_output=True,
-            text=True,
-            check=True,
+        result = (
+            subprocess.run(  # nosec B603, B607 - git is a trusted executable with fixed arguments
+                ["git", "diff", "--cached", "--name-only", "--diff-filter=ACMR"],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
         )
 
         staged_files = []
@@ -58,9 +60,9 @@ def _check_bypass() -> bool:
     Returns:
         True if bypass is requested, False otherwise
     """
-    bypass_value = os.environ.get(
+    bypass_value = os.environ.get(  # noqa: CONST-II-001 - Meta-validation bypass check
         "SKIP_CONSTITUTION_CHECK", ""
-    ).lower()  # noqa: CONST-II-001 - Meta-validation bypass check
+    ).lower()
     return bypass_value in ("1", "true", "yes", "on")
 
 

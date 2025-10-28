@@ -15,6 +15,14 @@ import pytest
 from src.agentic_rag.search.vector_search import ChunkResult, SearchCache, VectorSearch
 
 
+@pytest.fixture
+def mock_connection_manager():
+    """Mock ConnectionManager for VectorSearch tests."""
+    mock_manager = Mock()
+    # Add necessary attributes/methods that VectorSearch might need
+    return mock_manager
+
+
 class TestChunkResult:
     """Test ChunkResult dataclass."""
 
@@ -139,7 +147,7 @@ class TestSearchCache:
         key2 = SearchCache.generate_key(embedding, filters)
         assert key1 == key2
 
-    def test_generate_key_different_filters(self):
+    def test_generate_key_different_filters(self, mock_connection_manager):
         """Test different filters produce different keys."""
         embedding = [0.1] * 30
         filters1 = {"type": "test"}
@@ -149,7 +157,7 @@ class TestSearchCache:
         key2 = SearchCache.generate_key(embedding, filters2)
         assert key1 != key2
 
-    def test_generate_key_no_filters(self):
+    def test_generate_key_no_filters(self, mock_connection_manager):
         """Test key generation with no filters."""
         embedding = [0.1] * 30
         key1 = SearchCache.generate_key(embedding, None)
@@ -158,7 +166,7 @@ class TestSearchCache:
         assert isinstance(key1, str)
         assert isinstance(key2, str)
 
-    def test_generate_key_uses_md5(self):
+    def test_generate_key_uses_md5(self, mock_connection_manager):
         """Test that generate_key uses MD5 hashing."""
         embedding = [0.1] * 10
         filters = {"test": "value"}
@@ -172,7 +180,7 @@ class TestSearchCache:
 class TestVectorSearchInitialization:
     """Test VectorSearch initialization."""
 
-    def test_init_with_cache_enabled(self):
+    def test_init_with_cache_enabled(self, mock_connection_manager):
         """Test initialization with caching enabled (line 145)."""
         with patch("src.agentic_rag.search.vector_search.get_config") as mock_config:
             mock_perf = Mock()
@@ -180,29 +188,29 @@ class TestVectorSearchInitialization:
             mock_perf.embedding_cache_ttl = 3600
             mock_config.return_value.performance = mock_perf
 
-            search = VectorSearch()
+            search = VectorSearch(mock_connection_manager)
             assert search.cache is not None
             assert isinstance(search.cache, SearchCache)
 
-    def test_init_with_cache_disabled(self):
+    def test_init_with_cache_disabled(self, mock_connection_manager):
         """Test initialization with caching disabled (line 145)."""
         with patch("src.agentic_rag.search.vector_search.get_config") as mock_config:
             mock_perf = Mock()
             mock_perf.enable_caching = False
             mock_config.return_value.performance = mock_perf
 
-            search = VectorSearch()
+            search = VectorSearch(mock_connection_manager)
             assert search.cache is None
 
-    def test_init_with_custom_connection_manager(self):
+    def test_init_with_custom_connection_manager(self, mock_connection_manager):
         """Test initialization with custom connection manager."""
         mock_conn_manager = Mock()
         search = VectorSearch(connection_manager=mock_conn_manager)
         assert search.connection_manager is mock_conn_manager
 
-    def test_init_creates_default_stats(self):
+    def test_init_creates_default_stats(self, mock_connection_manager):
         """Test initialization creates stats dictionary."""
-        search = VectorSearch()
+        search = VectorSearch(mock_connection_manager)
         assert search._stats == {
             "searches": 0,
             "cache_hits": 0,
@@ -215,7 +223,7 @@ class TestVectorSearchWithCache:
     """Test VectorSearch with cache enabled."""
 
     @pytest.mark.asyncio
-    async def test_search_with_cache_hit(self):
+    async def test_search_with_cache_hit(self, mock_connection_manager):
         """Test search with cache hit (lines 178-181)."""
         with patch("src.agentic_rag.search.vector_search.get_config") as mock_config:
             mock_perf = Mock()
@@ -223,7 +231,7 @@ class TestVectorSearchWithCache:
             mock_perf.embedding_cache_ttl = 3600
             mock_config.return_value.performance = mock_perf
 
-            search = VectorSearch()
+            search = VectorSearch(mock_connection_manager)
 
             # Pre-populate cache
             cached_results = [
@@ -249,7 +257,7 @@ class TestVectorSearchWithCache:
                 assert search._stats["searches"] == 1
 
     @pytest.mark.asyncio
-    async def test_search_with_cache_miss(self):
+    async def test_search_with_cache_miss(self, mock_connection_manager):
         """Test search with cache miss (line 182)."""
         with patch("src.agentic_rag.search.vector_search.get_config") as mock_config:
             mock_perf = Mock()
@@ -257,7 +265,7 @@ class TestVectorSearchWithCache:
             mock_perf.embedding_cache_ttl = 3600
             mock_config.return_value.performance = mock_perf
 
-            search = VectorSearch()
+            search = VectorSearch(mock_connection_manager)
 
             query_embedding = [0.1] * 1536
             expected_results = [
@@ -280,7 +288,7 @@ class TestVectorSearchWithCache:
                     assert search._stats["cache_hits"] == 0
 
     @pytest.mark.asyncio
-    async def test_search_caches_results(self):
+    async def test_search_caches_results(self, mock_connection_manager):
         """Test that search caches results after retrieval."""
         with patch("src.agentic_rag.search.vector_search.get_config") as mock_config:
             mock_perf = Mock()
@@ -288,7 +296,7 @@ class TestVectorSearchWithCache:
             mock_perf.embedding_cache_ttl = 3600
             mock_config.return_value.performance = mock_perf
 
-            search = VectorSearch()
+            search = VectorSearch(mock_connection_manager)
 
             query_embedding = [0.1] * 1536
             expected_results = [
@@ -317,9 +325,9 @@ class TestVectorSearchErrors:
     """Test error handling in VectorSearch (lines 220-287)."""
 
     @pytest.mark.asyncio
-    async def test_search_vectors_with_string_embedding(self):
+    async def test_search_vectors_with_string_embedding(self, mock_connection_manager):
         """Test _search_vectors with string embedding (lines 249-251)."""
-        search = VectorSearch()
+        search = VectorSearch(mock_connection_manager)
 
         # Mock connection that returns no results
         mock_conn = AsyncMock()
@@ -345,9 +353,9 @@ class TestVectorSearchErrors:
             mock_conn.fetch.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_search_vectors_with_list_embedding(self):
+    async def test_search_vectors_with_list_embedding(self, mock_connection_manager):
         """Test _search_vectors with list embedding (lines 252-254)."""
-        search = VectorSearch()
+        search = VectorSearch(mock_connection_manager)
 
         mock_conn = AsyncMock()
         mock_conn.fetch = AsyncMock(return_value=[])
@@ -369,9 +377,9 @@ class TestVectorSearchErrors:
             assert "[0.1,0.2,0.3]" in str(call_args)
 
     @pytest.mark.asyncio
-    async def test_search_vectors_with_metadata_filters(self):
+    async def test_search_vectors_with_metadata_filters(self, mock_connection_manager):
         """Test _search_vectors with metadata filters (line 261)."""
-        search = VectorSearch()
+        search = VectorSearch(mock_connection_manager)
 
         mock_conn = AsyncMock()
         mock_conn.fetch = AsyncMock(return_value=[])
@@ -393,9 +401,9 @@ class TestVectorSearchErrors:
             assert json.dumps(filters) in str(call_args)
 
     @pytest.mark.asyncio
-    async def test_search_vectors_metadata_as_string(self):
+    async def test_search_vectors_metadata_as_string(self, mock_connection_manager):
         """Test _search_vectors with metadata as string (lines 268-272)."""
-        search = VectorSearch()
+        search = VectorSearch(mock_connection_manager)
 
         # Mock row with metadata as string
         mock_row = {
@@ -426,9 +434,9 @@ class TestVectorSearchErrors:
             assert results[0].metadata == {"key": "value"}
 
     @pytest.mark.asyncio
-    async def test_search_vectors_metadata_as_dict(self):
+    async def test_search_vectors_metadata_as_dict(self, mock_connection_manager):
         """Test _search_vectors with metadata as dict (line 271)."""
-        search = VectorSearch()
+        search = VectorSearch(mock_connection_manager)
 
         # Mock row with metadata as dict
         mock_row = {
@@ -460,9 +468,9 @@ class TestVectorSearchErrors:
             assert results[0].entities == []
 
     @pytest.mark.asyncio
-    async def test_search_vectors_multiple_results(self):
+    async def test_search_vectors_multiple_results(self, mock_connection_manager):
         """Test _search_vectors with multiple results (lines 274-285)."""
-        search = VectorSearch()
+        search = VectorSearch(mock_connection_manager)
 
         chunk_id1 = uuid4()
         chunk_id2 = uuid4()
@@ -515,9 +523,9 @@ class TestSearchSimilarChunks:
     """Test search_similar_chunks method (lines 312, 317)."""
 
     @pytest.mark.asyncio
-    async def test_search_similar_chunks_not_found(self):
+    async def test_search_similar_chunks_not_found(self, mock_connection_manager):
         """Test search_similar_chunks when chunk not found (line 312)."""
-        search = VectorSearch()
+        search = VectorSearch(mock_connection_manager)
 
         chunk_id = uuid4()
 
@@ -535,9 +543,9 @@ class TestSearchSimilarChunks:
             assert results == []
 
     @pytest.mark.asyncio
-    async def test_search_similar_chunks_no_embedding(self):
+    async def test_search_similar_chunks_no_embedding(self, mock_connection_manager):
         """Test search_similar_chunks when chunk has no embedding (line 317)."""
-        search = VectorSearch()
+        search = VectorSearch(mock_connection_manager)
 
         chunk_id = uuid4()
 
@@ -562,9 +570,9 @@ class TestSearchSimilarChunks:
             assert results == []
 
     @pytest.mark.asyncio
-    async def test_search_similar_chunks_with_1536_embedding(self):
+    async def test_search_similar_chunks_with_1536_embedding(self, mock_connection_manager):
         """Test search_similar_chunks with 1536-dim embedding."""
-        search = VectorSearch()
+        search = VectorSearch(mock_connection_manager)
 
         chunk_id = uuid4()
         embedding_1536 = [0.1] * 1536
@@ -596,9 +604,9 @@ class TestSearchSimilarChunks:
                 assert call_args[0][3] == 0.7  # Higher threshold
 
     @pytest.mark.asyncio
-    async def test_search_similar_chunks_with_768_embedding(self):
+    async def test_search_similar_chunks_with_768_embedding(self, mock_connection_manager):
         """Test search_similar_chunks with 768-dim embedding."""
-        search = VectorSearch()
+        search = VectorSearch(mock_connection_manager)
 
         chunk_id = uuid4()
         embedding_768 = [0.1] * 768
@@ -631,16 +639,16 @@ class TestGetChunksByIds:
     """Test get_chunks_by_ids method (lines 337-379)."""
 
     @pytest.mark.asyncio
-    async def test_get_chunks_by_ids_empty_list(self):
+    async def test_get_chunks_by_ids_empty_list(self, mock_connection_manager):
         """Test get_chunks_by_ids with empty list (line 337-338)."""
-        search = VectorSearch()
+        search = VectorSearch(mock_connection_manager)
         results = await search.get_chunks_by_ids([])
         assert results == []
 
     @pytest.mark.asyncio
-    async def test_get_chunks_by_ids_single_chunk(self):
+    async def test_get_chunks_by_ids_single_chunk(self, mock_connection_manager):
         """Test get_chunks_by_ids with single chunk (lines 340-379)."""
-        search = VectorSearch()
+        search = VectorSearch(mock_connection_manager)
 
         chunk_id = uuid4()
         doc_id = uuid4()
@@ -673,9 +681,9 @@ class TestGetChunksByIds:
             assert results[0].content == "Test content"
 
     @pytest.mark.asyncio
-    async def test_get_chunks_by_ids_multiple_chunks(self):
+    async def test_get_chunks_by_ids_multiple_chunks(self, mock_connection_manager):
         """Test get_chunks_by_ids with multiple chunks."""
-        search = VectorSearch()
+        search = VectorSearch(mock_connection_manager)
 
         chunk_id1 = uuid4()
         chunk_id2 = uuid4()
@@ -722,9 +730,9 @@ class TestGetChunksByIds:
             assert results[1].entities == ["Entity1", "Entity2"]
 
     @pytest.mark.asyncio
-    async def test_get_chunks_by_ids_with_string_metadata(self):
+    async def test_get_chunks_by_ids_with_string_metadata(self, mock_connection_manager):
         """Test get_chunks_by_ids with metadata as string (lines 360-364)."""
-        search = VectorSearch()
+        search = VectorSearch(mock_connection_manager)
 
         chunk_id = uuid4()
 
@@ -757,9 +765,9 @@ class TestGetChunksByIds:
 class TestGetStats:
     """Test get_stats method (lines 391-398)."""
 
-    def test_get_stats_no_searches(self):
+    def test_get_stats_no_searches(self, mock_connection_manager):
         """Test get_stats with no searches."""
-        search = VectorSearch()
+        search = VectorSearch(mock_connection_manager)
         stats = search.get_stats()
 
         assert stats["searches"] == 0
@@ -769,18 +777,18 @@ class TestGetStats:
         assert "avg_latency" not in stats
         assert "cache_hit_rate" not in stats
 
-    def test_get_stats_with_searches(self):
+    def test_get_stats_with_searches(self, mock_connection_manager):
         """Test get_stats with searches (line 391)."""
-        search = VectorSearch()
+        search = VectorSearch(mock_connection_manager)
         search._stats["searches"] = 10
         search._stats["total_latency"] = 2.5
 
         stats = search.get_stats()
         assert stats["avg_latency"] == 0.25
 
-    def test_get_stats_with_cache_activity(self):
+    def test_get_stats_with_cache_activity(self, mock_connection_manager):
         """Test get_stats with cache activity (lines 393-398)."""
-        search = VectorSearch()
+        search = VectorSearch(mock_connection_manager)
         search._stats["searches"] = 20
         search._stats["total_latency"] = 5.0
         search._stats["cache_hits"] = 15
@@ -790,9 +798,9 @@ class TestGetStats:
         assert stats["avg_latency"] == 0.25
         assert stats["cache_hit_rate"] == 0.75
 
-    def test_get_stats_zero_cache_activity(self):
+    def test_get_stats_zero_cache_activity(self, mock_connection_manager):
         """Test get_stats with zero cache activity (line 398)."""
-        search = VectorSearch()
+        search = VectorSearch(mock_connection_manager)
         search._stats["searches"] = 10
         search._stats["total_latency"] = 2.0
         search._stats["cache_hits"] = 0
@@ -801,9 +809,9 @@ class TestGetStats:
         stats = search.get_stats()
         assert stats["cache_hit_rate"] == 0.0
 
-    def test_get_stats_all_cache_hits(self):
+    def test_get_stats_all_cache_hits(self, mock_connection_manager):
         """Test get_stats with all cache hits."""
-        search = VectorSearch()
+        search = VectorSearch(mock_connection_manager)
         search._stats["searches"] = 10
         search._stats["total_latency"] = 1.0
         search._stats["cache_hits"] = 10
@@ -816,7 +824,7 @@ class TestGetStats:
 class TestClearCache:
     """Test clear_cache method (lines 404-406)."""
 
-    def test_clear_cache_when_enabled(self):
+    def test_clear_cache_when_enabled(self, mock_connection_manager):
         """Test clear_cache when cache is enabled (lines 404-406)."""
         with patch("src.agentic_rag.search.vector_search.get_config") as mock_config:
             mock_perf = Mock()
@@ -824,7 +832,7 @@ class TestClearCache:
             mock_perf.embedding_cache_ttl = 3600
             mock_config.return_value.performance = mock_perf
 
-            search = VectorSearch()
+            search = VectorSearch(mock_connection_manager)
 
             # Add some data to cache
             search.cache.set("key1", [])
@@ -835,14 +843,14 @@ class TestClearCache:
             search.clear_cache()
             assert len(search.cache._cache) == 0
 
-    def test_clear_cache_when_disabled(self):
+    def test_clear_cache_when_disabled(self, mock_connection_manager):
         """Test clear_cache when cache is disabled."""
         with patch("src.agentic_rag.search.vector_search.get_config") as mock_config:
             mock_perf = Mock()
             mock_perf.enable_caching = False
             mock_config.return_value.performance = mock_perf
 
-            search = VectorSearch()
+            search = VectorSearch(mock_connection_manager)
 
             # Should not raise error
             search.clear_cache()
@@ -852,9 +860,9 @@ class TestEdgeCases:
     """Test edge cases and special scenarios."""
 
     @pytest.mark.asyncio
-    async def test_search_with_empty_query(self):
+    async def test_search_with_empty_query(self, mock_connection_manager):
         """Test search with empty query."""
-        search = VectorSearch()
+        search = VectorSearch(mock_connection_manager)
 
         with patch.object(search.embedder, "embed", return_value=[0.0] * 1536):
             with patch.object(search, "_search_vectors", return_value=[]):
@@ -862,9 +870,9 @@ class TestEdgeCases:
                 assert results == []
 
     @pytest.mark.asyncio
-    async def test_search_with_very_long_query(self):
+    async def test_search_with_very_long_query(self, mock_connection_manager):
         """Test search with very long query."""
-        search = VectorSearch()
+        search = VectorSearch(mock_connection_manager)
 
         long_query = "test " * 1000  # Very long query
 
@@ -874,9 +882,9 @@ class TestEdgeCases:
                 assert isinstance(results, list)
 
     @pytest.mark.asyncio
-    async def test_search_with_special_characters(self):
+    async def test_search_with_special_characters(self, mock_connection_manager):
         """Test search with special characters in query."""
-        search = VectorSearch()
+        search = VectorSearch(mock_connection_manager)
 
         special_query = "test @#$%^&*() query\n\t\r"
 
@@ -886,9 +894,9 @@ class TestEdgeCases:
                 assert isinstance(results, list)
 
     @pytest.mark.asyncio
-    async def test_search_with_zero_limit(self):
+    async def test_search_with_zero_limit(self, mock_connection_manager):
         """Test search with zero limit."""
-        search = VectorSearch()
+        search = VectorSearch(mock_connection_manager)
 
         with patch.object(search.embedder, "embed", return_value=[0.1] * 1536):
             with patch.object(search, "_search_vectors", return_value=[]):
@@ -896,9 +904,9 @@ class TestEdgeCases:
                 assert results == []
 
     @pytest.mark.asyncio
-    async def test_search_with_very_high_threshold(self):
+    async def test_search_with_very_high_threshold(self, mock_connection_manager):
         """Test search with very high similarity threshold."""
-        search = VectorSearch()
+        search = VectorSearch(mock_connection_manager)
 
         with patch.object(search.embedder, "embed", return_value=[0.1] * 1536):
             with patch.object(search, "_search_vectors", return_value=[]):
@@ -906,9 +914,9 @@ class TestEdgeCases:
                 assert isinstance(results, list)
 
     @pytest.mark.asyncio
-    async def test_search_with_complex_filters(self):
+    async def test_search_with_complex_filters(self, mock_connection_manager):
         """Test search with complex metadata filters."""
-        search = VectorSearch()
+        search = VectorSearch(mock_connection_manager)
 
         complex_filters = {
             "type": "article",
@@ -924,9 +932,9 @@ class TestEdgeCases:
                 assert isinstance(results, list)
 
     @pytest.mark.asyncio
-    async def test_search_returns_more_than_limit(self):
+    async def test_search_returns_more_than_limit(self, mock_connection_manager):
         """Test that search respects limit even if more results available."""
-        search = VectorSearch()
+        search = VectorSearch(mock_connection_manager)
 
         # Create 20 mock results
         mock_results = [
@@ -947,9 +955,9 @@ class TestEdgeCases:
                 assert len(results) == 5
 
     @pytest.mark.asyncio
-    async def test_search_with_768_dim_embedding(self):
+    async def test_search_with_768_dim_embedding(self, mock_connection_manager):
         """Test search with 768-dimensional embedding."""
-        search = VectorSearch()
+        search = VectorSearch(mock_connection_manager)
 
         embedding_768 = [0.1] * 768
 
@@ -962,7 +970,7 @@ class TestEdgeCases:
                 assert len(call_args[0][0]) == 768
 
     @pytest.mark.asyncio
-    async def test_cache_key_with_unicode_filters(self):
+    async def test_cache_key_with_unicode_filters(self, mock_connection_manager):
         """Test cache key generation with unicode in filters."""
         embedding = [0.1] * 10
         filters = {"author": "José", "title": "日本語", "emoji": "😀"}
@@ -971,7 +979,7 @@ class TestEdgeCases:
         assert isinstance(key, str)
         assert len(key) == 32
 
-    def test_chunk_result_with_none_entities(self):
+    def test_chunk_result_with_none_entities(self, mock_connection_manager):
         """Test ChunkResult with None entities."""
         chunk = ChunkResult(
             chunk_id=uuid4(),
@@ -986,9 +994,9 @@ class TestEdgeCases:
         assert chunk.entities is None
 
     @pytest.mark.asyncio
-    async def test_search_updates_stats(self):
+    async def test_search_updates_stats(self, mock_connection_manager):
         """Test that search updates statistics correctly."""
-        search = VectorSearch()
+        search = VectorSearch(mock_connection_manager)
 
         with patch.object(search.embedder, "embed", return_value=[0.1] * 1536):
             with patch.object(search, "_search_vectors", return_value=[]):
@@ -1006,9 +1014,9 @@ class TestAsyncContextManagers:
     """Test async context manager usage."""
 
     @pytest.mark.asyncio
-    async def test_search_vectors_connection_cleanup(self):
+    async def test_search_vectors_connection_cleanup(self, mock_connection_manager):
         """Test that connection is properly cleaned up."""
-        search = VectorSearch()
+        search = VectorSearch(mock_connection_manager)
 
         mock_conn = AsyncMock()
         mock_conn.fetch = AsyncMock(return_value=[])
@@ -1027,9 +1035,9 @@ class TestAsyncContextManagers:
             mock_context.__aexit__.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_search_similar_chunks_connection_cleanup(self):
+    async def test_search_similar_chunks_connection_cleanup(self, mock_connection_manager):
         """Test connection cleanup in search_similar_chunks."""
-        search = VectorSearch()
+        search = VectorSearch(mock_connection_manager)
 
         mock_conn = AsyncMock()
         mock_conn.fetchrow = AsyncMock(return_value=None)
@@ -1047,9 +1055,9 @@ class TestAsyncContextManagers:
             mock_context.__aexit__.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_get_chunks_by_ids_connection_cleanup(self):
+    async def test_get_chunks_by_ids_connection_cleanup(self, mock_connection_manager):
         """Test connection cleanup in get_chunks_by_ids."""
-        search = VectorSearch()
+        search = VectorSearch(mock_connection_manager)
 
         mock_conn = AsyncMock()
         mock_conn.fetch = AsyncMock(return_value=[])

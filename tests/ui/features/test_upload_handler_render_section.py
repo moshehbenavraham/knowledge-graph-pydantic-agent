@@ -520,11 +520,11 @@ def test_render_upload_section_file_size_display(mock_st, mock_supabase, mock_em
 
     render_upload_section(mock_supabase, mock_embedding_client)
 
-    # Verify file info is displayed
-    mock_col1.caption.assert_called_once()
-    caption_text = mock_col1.caption.call_args[0][0]
-    assert "large_file.txt" in caption_text
-    assert "KB" in caption_text
+    # Verify file info is displayed (st.caption is called within col1 context)
+    mock_st.caption.assert_called()
+    caption_calls = [call[0][0] for call in mock_st.caption.call_args_list]
+    assert any("large_file.txt" in str(call) for call in caption_calls)
+    assert any("KB" in str(call) for call in caption_calls)
 
 
 # ============================================================================
@@ -533,8 +533,8 @@ def test_render_upload_section_file_size_display(mock_st, mock_supabase, mock_em
 
 
 @pytest.mark.asyncio
-@patch("src.ui.features.upload_handler.generate_embeddings")
-@patch("src.ui.features.upload_handler.semantic_chunk")
+@patch("src.agentic_rag.ingestion.embedder.generate_embeddings")
+@patch("src.agentic_rag.ingestion.chunker.semantic_chunk")
 async def test_process_document_upload_with_non_utf8(
     mock_chunk, mock_embeddings, mock_supabase, mock_embedding_client
 ):

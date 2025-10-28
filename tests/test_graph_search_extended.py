@@ -20,13 +20,22 @@ from src.agentic_rag.search.graph_search import (
 )
 
 
+@pytest.fixture
+def mock_connection_manager():
+    """Mock ConnectionManager for GraphSearch tests."""
+    from unittest.mock import Mock
+
+    mock_manager = Mock()
+    return mock_manager
+
+
 class TestEntitySearchEdgeCases:
     """Test entity search edge cases and corner scenarios."""
 
     @pytest.mark.asyncio
-    async def test_entity_search_case_insensitive(self):
+    async def test_entity_search_case_insensitive(self, mock_connection_manager):
         """Test that entity search is case-insensitive."""
-        search = GraphSearch()
+        search = GraphSearch(mock_connection_manager)
 
         with patch.object(search.neo4j_store, "execute_query") as mock_query:
             mock_query.return_value = [
@@ -46,9 +55,9 @@ class TestEntitySearchEdgeCases:
             mock_query.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_entity_search_empty_query(self):
+    async def test_entity_search_empty_query(self, mock_connection_manager):
         """Test entity search with empty query."""
-        search = GraphSearch()
+        search = GraphSearch(mock_connection_manager)
 
         with patch.object(search.neo4j_store, "execute_query") as mock_query:
             mock_query.return_value = []
@@ -58,9 +67,9 @@ class TestEntitySearchEdgeCases:
             assert results == []
 
     @pytest.mark.asyncio
-    async def test_entity_search_special_characters(self):
+    async def test_entity_search_special_characters(self, mock_connection_manager):
         """Test entity search with special characters."""
-        search = GraphSearch()
+        search = GraphSearch(mock_connection_manager)
 
         with patch.object(search.neo4j_store, "execute_query") as mock_query:
             mock_query.return_value = [
@@ -79,9 +88,9 @@ class TestEntitySearchEdgeCases:
             assert results[0].name == "AT&T Corp."
 
     @pytest.mark.asyncio
-    async def test_entity_search_partial_match(self):
+    async def test_entity_search_partial_match(self, mock_connection_manager):
         """Test entity search with partial name matching."""
-        search = GraphSearch()
+        search = GraphSearch(mock_connection_manager)
 
         with patch.object(search.neo4j_store, "execute_query") as mock_query:
             mock_query.return_value = [
@@ -108,9 +117,9 @@ class TestEntitySearchEdgeCases:
 
     @pytest.mark.asyncio
     @pytest.mark.skip(reason="chunk_refs handling issue")
-    async def test_entity_search_no_chunk_refs(self):
+    async def test_entity_search_no_chunk_refs(self, mock_connection_manager):
         """Test entity search when entities have no chunk references."""
-        search = GraphSearch()
+        search = GraphSearch(mock_connection_manager)
 
         with patch.object(search.neo4j_store, "execute_query") as mock_query:
             mock_query.return_value = [
@@ -129,9 +138,9 @@ class TestEntitySearchEdgeCases:
             assert results[0].chunk_refs == []
 
     @pytest.mark.asyncio
-    async def test_entity_search_missing_confidence(self):
+    async def test_entity_search_missing_confidence(self, mock_connection_manager):
         """Test entity search when confidence is missing."""
-        search = GraphSearch()
+        search = GraphSearch(mock_connection_manager)
 
         with patch.object(search.neo4j_store, "execute_query") as mock_query:
             mock_query.return_value = [
@@ -149,9 +158,9 @@ class TestEntitySearchEdgeCases:
             assert results[0].confidence == 1.0  # Default value
 
     @pytest.mark.asyncio
-    async def test_entity_search_unicode_characters(self):
+    async def test_entity_search_unicode_characters(self, mock_connection_manager):
         """Test entity search with unicode characters."""
-        search = GraphSearch()
+        search = GraphSearch(mock_connection_manager)
 
         with patch.object(search.neo4j_store, "execute_query") as mock_query:
             mock_query.return_value = [
@@ -174,9 +183,9 @@ class TestRelationshipTraversal:
     """Test relationship traversal and graph navigation."""
 
     @pytest.mark.asyncio
-    async def test_relationship_search_no_entities(self):
+    async def test_relationship_search_no_entities(self, mock_connection_manager):
         """Test relationship search when no entities are found."""
-        search = GraphSearch()
+        search = GraphSearch(mock_connection_manager)
 
         with patch.object(search, "_search_entities") as mock_entities:
             mock_entities.return_value = []
@@ -186,9 +195,9 @@ class TestRelationshipTraversal:
             assert results == []
 
     @pytest.mark.asyncio
-    async def test_relationship_traversal_depth_1(self):
+    async def test_relationship_traversal_depth_1(self, mock_connection_manager):
         """Test relationship traversal with depth 1."""
-        search = GraphSearch()
+        search = GraphSearch(mock_connection_manager)
 
         with patch.object(search.neo4j_store, "execute_query") as mock_query:
             mock_query.return_value = [
@@ -212,9 +221,9 @@ class TestRelationshipTraversal:
             assert result["related_entities"][0]["name"] == "OpenAI"
 
     @pytest.mark.asyncio
-    async def test_relationship_traversal_depth_3(self):
+    async def test_relationship_traversal_depth_3(self, mock_connection_manager):
         """Test relationship traversal with depth 3."""
-        search = GraphSearch()
+        search = GraphSearch(mock_connection_manager)
 
         with patch.object(search.neo4j_store, "execute_query") as mock_query:
             mock_query.return_value = [
@@ -238,9 +247,9 @@ class TestRelationshipTraversal:
             assert len(result["related_entities"]) == 2
 
     @pytest.mark.asyncio
-    async def test_relationship_search_bidirectional(self):
+    async def test_relationship_search_bidirectional(self, mock_connection_manager):
         """Test that relationship search finds bidirectional relationships."""
-        search = GraphSearch()
+        search = GraphSearch(mock_connection_manager)
 
         with patch.object(search, "_search_entities") as mock_entities:
             mock_entities.return_value = [
@@ -265,9 +274,9 @@ class TestRelationshipTraversal:
                 assert results[0].target == "Entity2"
 
     @pytest.mark.asyncio
-    async def test_relationship_search_missing_confidence(self):
+    async def test_relationship_search_missing_confidence(self, mock_connection_manager):
         """Test relationship search when confidence is missing."""
-        search = GraphSearch()
+        search = GraphSearch(mock_connection_manager)
 
         with patch.object(search, "_search_entities") as mock_entities:
             mock_entities.return_value = [
@@ -285,9 +294,9 @@ class TestRelationshipTraversal:
                 assert results[0].confidence == 1.0  # Default value
 
     @pytest.mark.asyncio
-    async def test_relationship_with_complex_properties(self):
+    async def test_relationship_with_complex_properties(self, mock_connection_manager):
         """Test relationship with complex properties."""
-        search = GraphSearch()
+        search = GraphSearch(mock_connection_manager)
 
         with patch.object(search, "_search_entities") as mock_entities:
             mock_entities.return_value = [
@@ -321,9 +330,9 @@ class TestTimelineQueries:
     """Test timeline and temporal query functionality."""
 
     @pytest.mark.asyncio
-    async def test_timeline_entity_not_found(self):
+    async def test_timeline_entity_not_found(self, mock_connection_manager):
         """Test timeline retrieval when entity doesn't exist."""
-        search = GraphSearch()
+        search = GraphSearch(mock_connection_manager)
 
         with patch.object(search.neo4j_store, "execute_query") as mock_query:
             mock_query.return_value = []
@@ -333,9 +342,9 @@ class TestTimelineQueries:
             assert timeline == []
 
     @pytest.mark.asyncio
-    async def test_timeline_chronological_order(self):
+    async def test_timeline_chronological_order(self, mock_connection_manager):
         """Test that timeline facts are returned in chronological order."""
-        search = GraphSearch()
+        search = GraphSearch(mock_connection_manager)
 
         with patch.object(search.neo4j_store, "execute_query") as mock_query:
             mock_query.return_value = [{"entity_id": "entity-1"}]
@@ -369,9 +378,9 @@ class TestTimelineQueries:
                 assert timeline[1].timestamp < timeline[2].timestamp
 
     @pytest.mark.asyncio
-    async def test_timeline_missing_timestamps(self):
+    async def test_timeline_missing_timestamps(self, mock_connection_manager):
         """Test timeline with facts that have missing timestamps."""
-        search = GraphSearch()
+        search = GraphSearch(mock_connection_manager)
 
         with patch.object(search.neo4j_store, "execute_query") as mock_query:
             mock_query.return_value = [{"entity_id": "entity-1"}]
@@ -391,9 +400,9 @@ class TestTimelineQueries:
                 assert timeline[0].timestamp is None
 
     @pytest.mark.asyncio
-    async def test_timeline_limit_enforcement(self):
+    async def test_timeline_limit_enforcement(self, mock_connection_manager):
         """Test that timeline respects limit parameter."""
-        search = GraphSearch()
+        search = GraphSearch(mock_connection_manager)
 
         with patch.object(search.neo4j_store, "execute_query") as mock_query:
             mock_query.return_value = [{"entity_id": "entity-1"}]
@@ -415,9 +424,9 @@ class TestTimelineQueries:
                 mock_timeline.assert_called_with("entity-1", limit=5)
 
     @pytest.mark.asyncio
-    async def test_timeline_long_fact_truncation(self):
+    async def test_timeline_long_fact_truncation(self, mock_connection_manager):
         """Test that long facts are truncated to 500 characters."""
-        search = GraphSearch()
+        search = GraphSearch(mock_connection_manager)
 
         long_fact = "A" * 1000
 
@@ -443,9 +452,9 @@ class TestErrorHandling:
     """Test error handling and resilience."""
 
     @pytest.mark.asyncio
-    async def test_fact_search_exception_handling(self):
+    async def test_fact_search_exception_handling(self, mock_connection_manager):
         """Test that fact search exceptions are caught and logged."""
-        search = GraphSearch()
+        search = GraphSearch(mock_connection_manager)
 
         with patch.object(search.graphiti_client, "search") as mock_search:
             mock_search.side_effect = Exception("Database connection failed")
@@ -463,9 +472,9 @@ class TestErrorHandling:
                     assert isinstance(result, GraphSearchResult)
 
     @pytest.mark.asyncio
-    async def test_entity_search_exception_handling(self):
+    async def test_entity_search_exception_handling(self, mock_connection_manager):
         """Test that entity search exceptions are caught and logged."""
-        search = GraphSearch()
+        search = GraphSearch(mock_connection_manager)
 
         with patch.object(search.neo4j_store, "execute_query") as mock_query:
             mock_query.side_effect = Exception("Neo4j query failed")
@@ -475,9 +484,9 @@ class TestErrorHandling:
             assert results == []
 
     @pytest.mark.asyncio
-    async def test_relationship_search_exception_handling(self):
+    async def test_relationship_search_exception_handling(self, mock_connection_manager):
         """Test that relationship search exceptions are caught and logged."""
-        search = GraphSearch()
+        search = GraphSearch(mock_connection_manager)
 
         with patch.object(search, "_search_entities") as mock_entities:
             mock_entities.side_effect = Exception("Entity search failed")
@@ -487,9 +496,9 @@ class TestErrorHandling:
             assert results == []
 
     @pytest.mark.asyncio
-    async def test_timeline_exception_handling(self):
+    async def test_timeline_exception_handling(self, mock_connection_manager):
         """Test that timeline query exceptions are caught."""
-        search = GraphSearch()
+        search = GraphSearch(mock_connection_manager)
 
         with patch.object(search.neo4j_store, "execute_query") as mock_query:
             mock_query.side_effect = Exception("Query execution failed")
@@ -499,9 +508,9 @@ class TestErrorHandling:
             assert timeline == []
 
     @pytest.mark.asyncio
-    async def test_relationship_traversal_exception_handling(self):
+    async def test_relationship_traversal_exception_handling(self, mock_connection_manager):
         """Test that relationship traversal exceptions are caught."""
-        search = GraphSearch()
+        search = GraphSearch(mock_connection_manager)
 
         with patch.object(search.neo4j_store, "execute_query") as mock_query:
             mock_query.side_effect = Exception("Traversal failed")
@@ -511,9 +520,9 @@ class TestErrorHandling:
             assert result == {"central_entity": "TestEntity", "related_entities": []}
 
     @pytest.mark.asyncio
-    async def test_parallel_search_partial_failure(self):
+    async def test_parallel_search_partial_failure(self, mock_connection_manager):
         """Test that parallel search continues when one component fails."""
-        search = GraphSearch()
+        search = GraphSearch(mock_connection_manager)
 
         with patch.object(search, "_search_facts") as mock_facts:
             mock_facts.side_effect = Exception("Fact search failed")
@@ -537,9 +546,9 @@ class TestCypherQueryGeneration:
     """Test Cypher query generation and execution."""
 
     @pytest.mark.asyncio
-    async def test_entity_search_cypher_parameters(self):
+    async def test_entity_search_cypher_parameters(self, mock_connection_manager):
         """Test that entity search Cypher query uses correct parameters."""
-        search = GraphSearch()
+        search = GraphSearch(mock_connection_manager)
 
         with patch.object(search.neo4j_store, "execute_query") as mock_query:
             mock_query.return_value = []
@@ -552,9 +561,9 @@ class TestCypherQueryGeneration:
             assert call_args[0][1]["limit"] == 20
 
     @pytest.mark.asyncio
-    async def test_relationship_search_cypher_parameters(self):
+    async def test_relationship_search_cypher_parameters(self, mock_connection_manager):
         """Test that relationship search Cypher query uses correct parameters."""
-        search = GraphSearch()
+        search = GraphSearch(mock_connection_manager)
 
         with patch.object(search, "_search_entities") as mock_entities:
             mock_entities.return_value = [
@@ -574,9 +583,9 @@ class TestCypherQueryGeneration:
                 assert call_args[0][1]["limit"] == 15
 
     @pytest.mark.asyncio
-    async def test_timeline_cypher_entity_lookup(self):
+    async def test_timeline_cypher_entity_lookup(self, mock_connection_manager):
         """Test that timeline query correctly looks up entity by name."""
-        search = GraphSearch()
+        search = GraphSearch(mock_connection_manager)
 
         with patch.object(search.neo4j_store, "execute_query") as mock_query:
             mock_query.return_value = [{"entity_id": "found-entity-123"}]
@@ -591,9 +600,9 @@ class TestCypherQueryGeneration:
                 assert first_call_args[0][1]["name"] == "ExactEntityName"
 
     @pytest.mark.asyncio
-    async def test_relationship_traversal_depth_parameter(self):
+    async def test_relationship_traversal_depth_parameter(self, mock_connection_manager):
         """Test that relationship traversal uses correct depth parameter."""
-        search = GraphSearch()
+        search = GraphSearch(mock_connection_manager)
 
         with patch.object(search.neo4j_store, "execute_query") as mock_query:
             mock_query.return_value = []
@@ -609,9 +618,9 @@ class TestResultFilteringAndRanking:
     """Test result filtering and ranking logic."""
 
     @pytest.mark.asyncio
-    async def test_fact_confidence_ordering(self):
+    async def test_fact_confidence_ordering(self, mock_connection_manager):
         """Test that facts are ordered by confidence."""
-        search = GraphSearch()
+        search = GraphSearch(mock_connection_manager)
 
         with patch.object(search.graphiti_client, "search") as mock_search:
             mock_search.return_value = [
@@ -634,9 +643,9 @@ class TestResultFilteringAndRanking:
                     assert result.facts[1].confidence == 0.9
                     assert result.facts[2].confidence == 0.85
 
-    def test_chunk_ref_deduplication(self):
+    def test_chunk_ref_deduplication(self, mock_connection_manager):
         """Test that chunk references are deduplicated."""
-        search = GraphSearch()
+        search = GraphSearch(mock_connection_manager)
 
         facts = [
             GraphFact(fact="Fact 1", timestamp=None, confidence=0.9, source_chunk="chunk-1"),
@@ -663,9 +672,9 @@ class TestResultFilteringAndRanking:
         assert len(refs) == 2
         assert set(refs) == {"chunk-1", "chunk-2"}
 
-    def test_chunk_ref_extraction_empty_sources(self):
+    def test_chunk_ref_extraction_empty_sources(self, mock_connection_manager):
         """Test chunk ref extraction with empty source chunks."""
-        search = GraphSearch()
+        search = GraphSearch(mock_connection_manager)
 
         facts = [GraphFact(fact="Fact", timestamp=None, confidence=0.9, source_chunk="")]
 
@@ -682,9 +691,9 @@ class TestResultFilteringAndRanking:
         assert refs == []
 
     @pytest.mark.asyncio
-    async def test_search_result_limit_enforcement(self):
+    async def test_search_result_limit_enforcement(self, mock_connection_manager):
         """Test that search respects limit parameter."""
-        search = GraphSearch()
+        search = GraphSearch(mock_connection_manager)
 
         with patch.object(search, "_search_facts") as mock_facts:
             mock_facts.return_value = [
@@ -708,9 +717,9 @@ class TestStatisticsAndMetrics:
     """Test statistics collection and reporting."""
 
     @pytest.mark.asyncio
-    async def test_statistics_tracking(self):
+    async def test_statistics_tracking(self, mock_connection_manager):
         """Test that search statistics are tracked correctly."""
-        search = GraphSearch()
+        search = GraphSearch(mock_connection_manager)
 
         with patch.object(search, "_search_facts") as mock_facts:
             mock_facts.return_value = [
@@ -740,9 +749,9 @@ class TestStatisticsAndMetrics:
                     assert "avg_latency" in stats
 
     @pytest.mark.asyncio
-    async def test_statistics_accumulation(self):
+    async def test_statistics_accumulation(self, mock_connection_manager):
         """Test that statistics accumulate across multiple searches."""
-        search = GraphSearch()
+        search = GraphSearch(mock_connection_manager)
 
         with patch.object(search, "_search_facts") as mock_facts:
             mock_facts.return_value = []
@@ -763,9 +772,9 @@ class TestStatisticsAndMetrics:
                     assert stats["total_latency"] > 0
                     assert stats["avg_latency"] == stats["total_latency"] / 3
 
-    def test_statistics_with_no_searches(self):
+    def test_statistics_with_no_searches(self, mock_connection_manager):
         """Test statistics when no searches have been performed."""
-        search = GraphSearch()
+        search = GraphSearch(mock_connection_manager)
 
         stats = search.get_stats()
 
@@ -822,7 +831,7 @@ class TestDataModelConversion:
         assert result["chunk_refs"] == ["chunk-1", "chunk-2"]
         assert result["confidence"] == 0.92
 
-    def test_graph_relationship_to_dict(self):
+    def test_graph_relationship_to_dict(self, mock_connection_manager):
         """Test GraphRelationship to_dict conversion."""
         rel = GraphRelationship(
             source="Entity1",
@@ -840,7 +849,7 @@ class TestDataModelConversion:
         assert result["confidence"] == 0.89
         assert result["properties"]["amount"] == "$10B"
 
-    def test_graph_search_result_to_dict(self):
+    def test_graph_search_result_to_dict(self, mock_connection_manager):
         """Test GraphSearchResult to_dict conversion."""
         result = GraphSearchResult(
             facts=[GraphFact(fact="Test", timestamp=None, confidence=0.8, source_chunk="chunk-1")],
@@ -865,9 +874,9 @@ class TestPerformanceAndScaling:
     """Test performance characteristics and scaling behavior."""
 
     @pytest.mark.asyncio
-    async def test_query_time_tracking(self):
+    async def test_query_time_tracking(self, mock_connection_manager):
         """Test that query time is accurately tracked."""
-        search = GraphSearch()
+        search = GraphSearch(mock_connection_manager)
 
         with patch.object(search, "_search_facts") as mock_facts:
             mock_facts.return_value = []
@@ -884,9 +893,9 @@ class TestPerformanceAndScaling:
                     assert result.query_time < 10  # Should be subsecond
 
     @pytest.mark.asyncio
-    async def test_parallel_execution_of_searches(self):
+    async def test_parallel_execution_of_searches(self, mock_connection_manager):
         """Test that fact, entity, and relationship searches execute in parallel."""
-        search = GraphSearch()
+        search = GraphSearch(mock_connection_manager)
 
         call_order = []
 

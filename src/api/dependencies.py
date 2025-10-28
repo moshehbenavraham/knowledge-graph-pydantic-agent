@@ -254,8 +254,8 @@ async def get_api_settings() -> dict:
         "version": "0.8.0",
         "environment": settings.app_env,
         "features": {
-            "graph_rag": settings.enable_graph_rag,
-            "web_search": settings.enable_web_search,
+            "graph_rag": settings.enable_graph,
+            "web_search": settings.web_search_provider is not None,
             "streaming": True,
             "caching": settings.enable_redis_cache,
         },

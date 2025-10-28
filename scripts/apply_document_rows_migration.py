@@ -28,7 +28,9 @@ def main():
         import psycopg2
 
         # Connect to database
-        conn = psycopg2.connect(settings.database_url)  # noqa: CONST-III-001 - Standalone migration script using centralized config
+        conn = psycopg2.connect(
+            settings.database_url
+        )  # noqa: CONST-III-001 - Standalone migration script using centralized config
         cursor = conn.cursor()
 
         # Execute SQL

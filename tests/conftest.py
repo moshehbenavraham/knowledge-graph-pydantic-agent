@@ -84,7 +84,7 @@ def event_loop():
 
 
 @pytest.fixture(scope="module")
-async def connection_manager_module(_event_loop):
+async def connection_manager_module(event_loop):
     """
     Module-scoped connection manager for tests.
 
@@ -97,9 +97,12 @@ async def connection_manager_module(_event_loop):
 
     cm_module._connection_manager = None
 
-    # Create and initialize connection manager in the current event loop
-    manager = ConnectionManager()
-    await manager.initialize()
+    # Skip if database is not available
+    try:
+        manager = ConnectionManager()
+        await manager.initialize()
+    except Exception as e:
+        pytest.skip(f"Database not available: {e}")
 
     yield manager
 

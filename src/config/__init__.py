@@ -17,11 +17,17 @@ from .settings import (
     reload_settings,
 )
 
+try:
+    from src.agentic_rag.search.intent_analyzer import SearchIntent
+except ImportError:
+    SearchIntent = None
+
 __all__ = [
     "ChunkingStrategy",
     "EmbeddingProvider",
     "Environment",
     "LLMProvider",
+    "SearchIntent",
     "SearchStrategy",
     "Settings",
     "UIMode",

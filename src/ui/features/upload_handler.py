@@ -6,6 +6,7 @@ import contextlib
 import io
 from typing import Any
 
+import nest_asyncio
 import pandas as pd
 import streamlit as st
 import structlog
@@ -375,8 +376,6 @@ def render_upload_section(supabase_client: Client, embedding_client: Any):
                 with st.spinner("Processing..."):
                     # Process based on file type
                     # Use asyncio.create_task or run in executor since we're already in an event loop
-                    import nest_asyncio
-
                     # Enable nested event loops for Streamlit compatibility
                     with contextlib.suppress(Exception):
                         nest_asyncio.apply()  # May already be applied

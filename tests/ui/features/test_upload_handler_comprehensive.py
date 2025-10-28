@@ -122,8 +122,8 @@ def mock_excel_file():
 
 
 @pytest.mark.asyncio
-@patch("src.ui.features.upload_handler.generate_embeddings")
-@patch("src.ui.features.upload_handler.semantic_chunk")
+@patch("src.agentic_rag.ingestion.embedder.generate_embeddings")
+@patch("src.agentic_rag.ingestion.chunker.semantic_chunk")
 async def test_process_document_upload_success(
     mock_chunk, mock_embeddings, mock_text_file, mock_supabase, mock_embedding_client
 ):
@@ -155,8 +155,8 @@ async def test_process_document_upload_success(
 
 
 @pytest.mark.asyncio
-@patch("src.ui.features.upload_handler.generate_embeddings")
-@patch("src.ui.features.upload_handler.semantic_chunk")
+@patch("src.agentic_rag.ingestion.embedder.generate_embeddings")
+@patch("src.agentic_rag.ingestion.chunker.semantic_chunk")
 async def test_process_document_upload_markdown(
     mock_chunk, mock_embeddings, mock_markdown_file, mock_supabase, mock_embedding_client
 ):
@@ -172,8 +172,8 @@ async def test_process_document_upload_markdown(
 
 
 @pytest.mark.asyncio
-@patch("src.ui.features.upload_handler.generate_embeddings")
-@patch("src.ui.features.upload_handler.semantic_chunk")
+@patch("src.agentic_rag.ingestion.embedder.generate_embeddings")
+@patch("src.agentic_rag.ingestion.chunker.semantic_chunk")
 async def test_process_document_upload_large_file(
     mock_chunk, mock_embeddings, mock_supabase, mock_embedding_client
 ):
@@ -195,8 +195,8 @@ async def test_process_document_upload_large_file(
 
 
 @pytest.mark.asyncio
-@patch("src.ui.features.upload_handler.generate_embeddings")
-@patch("src.ui.features.upload_handler.semantic_chunk")
+@patch("src.agentic_rag.ingestion.embedder.generate_embeddings")
+@patch("src.agentic_rag.ingestion.chunker.semantic_chunk")
 async def test_process_document_upload_metadata(
     mock_chunk, mock_embeddings, mock_text_file, mock_supabase, mock_embedding_client
 ):
@@ -220,8 +220,8 @@ async def test_process_document_upload_metadata(
 
 
 @pytest.mark.asyncio
-@patch("src.ui.features.upload_handler.generate_embeddings")
-@patch("src.ui.features.upload_handler.semantic_chunk")
+@patch("src.agentic_rag.ingestion.embedder.generate_embeddings")
+@patch("src.agentic_rag.ingestion.chunker.semantic_chunk")
 async def test_process_document_upload_chunking_params(
     mock_chunk, mock_embeddings, mock_text_file, mock_supabase, mock_embedding_client
 ):
@@ -238,8 +238,8 @@ async def test_process_document_upload_chunking_params(
 
 
 @pytest.mark.asyncio
-@patch("src.ui.features.upload_handler.generate_embeddings")
-@patch("src.ui.features.upload_handler.semantic_chunk")
+@patch("src.agentic_rag.ingestion.embedder.generate_embeddings")
+@patch("src.agentic_rag.ingestion.chunker.semantic_chunk")
 async def test_process_document_upload_decode_error(
     mock_chunk, mock_embeddings, mock_supabase, mock_embedding_client
 ):
@@ -260,8 +260,8 @@ async def test_process_document_upload_decode_error(
 
 
 @pytest.mark.asyncio
-@patch("src.ui.features.upload_handler.generate_embeddings")
-@patch("src.ui.features.upload_handler.semantic_chunk")
+@patch("src.agentic_rag.ingestion.embedder.generate_embeddings")
+@patch("src.agentic_rag.ingestion.chunker.semantic_chunk")
 async def test_process_document_upload_chunking_failure(
     mock_chunk, mock_embeddings, mock_text_file, mock_supabase, mock_embedding_client
 ):
@@ -275,8 +275,8 @@ async def test_process_document_upload_chunking_failure(
 
 
 @pytest.mark.asyncio
-@patch("src.ui.features.upload_handler.generate_embeddings")
-@patch("src.ui.features.upload_handler.semantic_chunk")
+@patch("src.agentic_rag.ingestion.embedder.generate_embeddings")
+@patch("src.agentic_rag.ingestion.chunker.semantic_chunk")
 async def test_process_document_upload_embedding_failure(
     mock_chunk, mock_embeddings, mock_text_file, mock_supabase, mock_embedding_client
 ):
@@ -291,8 +291,8 @@ async def test_process_document_upload_embedding_failure(
 
 
 @pytest.mark.asyncio
-@patch("src.ui.features.upload_handler.generate_embeddings")
-@patch("src.ui.features.upload_handler.semantic_chunk")
+@patch("src.agentic_rag.ingestion.embedder.generate_embeddings")
+@patch("src.agentic_rag.ingestion.chunker.semantic_chunk")
 async def test_process_document_upload_db_failure(
     mock_chunk, mock_embeddings, mock_text_file, mock_supabase, mock_embedding_client
 ):
@@ -310,8 +310,8 @@ async def test_process_document_upload_db_failure(
 
 
 @pytest.mark.asyncio
-@patch("src.ui.features.upload_handler.generate_embeddings")
-@patch("src.ui.features.upload_handler.semantic_chunk")
+@patch("src.agentic_rag.ingestion.embedder.generate_embeddings")
+@patch("src.agentic_rag.ingestion.chunker.semantic_chunk")
 async def test_process_document_upload_empty_file(
     mock_chunk, mock_embeddings, mock_supabase, mock_embedding_client
 ):
@@ -670,8 +670,8 @@ async def test_process_tabular_upload_missing_dataset_id(mock_csv_file, mock_sup
 
 
 @pytest.mark.asyncio
-@patch("src.ui.features.upload_handler.generate_embeddings")
-@patch("src.ui.features.upload_handler.semantic_chunk")
+@patch("src.agentic_rag.ingestion.embedder.generate_embeddings")
+@patch("src.agentic_rag.ingestion.chunker.semantic_chunk")
 async def test_concurrent_uploads(
     mock_chunk, mock_embeddings, mock_text_file, mock_supabase, mock_embedding_client
 ):
@@ -692,8 +692,8 @@ async def test_concurrent_uploads(
 
 
 @pytest.mark.asyncio
-@patch("src.ui.features.upload_handler.generate_embeddings")
-@patch("src.ui.features.upload_handler.semantic_chunk")
+@patch("src.agentic_rag.ingestion.embedder.generate_embeddings")
+@patch("src.agentic_rag.ingestion.chunker.semantic_chunk")
 async def test_document_upload_with_special_characters_in_name(
     mock_chunk, mock_embeddings, mock_supabase, mock_embedding_client
 ):
@@ -744,8 +744,8 @@ async def test_tabular_upload_with_mixed_dtypes(mock_supabase):
 
 
 @pytest.mark.asyncio
-@patch("src.ui.features.upload_handler.generate_embeddings")
-@patch("src.ui.features.upload_handler.semantic_chunk")
+@patch("src.agentic_rag.ingestion.embedder.generate_embeddings")
+@patch("src.agentic_rag.ingestion.chunker.semantic_chunk")
 async def test_document_upload_logging(
     mock_chunk, mock_embeddings, mock_text_file, mock_supabase, mock_embedding_client
 ):
@@ -782,8 +782,8 @@ async def test_tabular_upload_logging(mock_csv_file, mock_supabase):
 
 
 @pytest.mark.asyncio
-@patch("src.ui.features.upload_handler.generate_embeddings")
-@patch("src.ui.features.upload_handler.semantic_chunk")
+@patch("src.agentic_rag.ingestion.embedder.generate_embeddings")
+@patch("src.agentic_rag.ingestion.chunker.semantic_chunk")
 async def test_document_upload_error_logging(
     mock_chunk, mock_embeddings, mock_text_file, mock_supabase, mock_embedding_client
 ):

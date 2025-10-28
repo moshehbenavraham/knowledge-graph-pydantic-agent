@@ -89,7 +89,7 @@ def mock_search_result():
     ]
     result.facts = [MockFact("Test fact 1"), MockFact("Test fact 2")]
     result.relationships = []
-    result.search_strategy = SearchStrategy.COMPREHENSIVE
+    result.search_strategy = SearchStrategy.HYBRID
     result.query_time = 0.125
     return result
 
@@ -324,7 +324,7 @@ async def test_smart_search_with_intent_analysis(mock_get_ia, mock_get_hs, mock_
     # Mock intent analyzer
     mock_ia = MagicMock()
     mock_intent_result = MagicMock()
-    mock_intent_result.primary_intent = SearchStrategy.COMPREHENSIVE
+    mock_intent_result.primary_intent = SearchStrategy.HYBRID
     mock_ia.analyze.return_value = mock_intent_result
     mock_get_ia.return_value = mock_ia
 

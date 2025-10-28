@@ -190,6 +190,7 @@ async def chat_stream(
 @router.websocket("/ws")
 async def chat_websocket(
     websocket: WebSocket,
+    deps: UnifiedAgentDeps = Depends(get_agent_deps),
 ):
     """
     WebSocket endpoint for bidirectional chat.
@@ -214,12 +215,7 @@ async def chat_websocket(
             message_type = data.get("type", "chat")
 
             if message_type == "chat":
-                # Get agent dependencies (simplified for WebSocket)
-                from src.agent.unified_agent import UnifiedAgentDeps
-
-                deps = UnifiedAgentDeps()
-
-                # Stream agent response
+                # Stream agent response using injected deps
                 await websocket_manager.handle_agent_stream(
                     connection_id=conn_id,
                     agent=super_agent,

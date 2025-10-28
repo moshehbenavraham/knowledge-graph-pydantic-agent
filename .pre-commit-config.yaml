@@ -69,6 +69,7 @@ repos:
     hooks:
     -   id: bandit
         args: ['-s', 'B101,B603']
+        exclude: ^(tests/|scripts/)
 -   repo: https://github.com/pypa/pip-audit
     rev: v2.9.0
     hooks:

@@ -179,21 +179,13 @@ async def get_document(
                 detail="Document not found",
             )
 
-        # Get chunks if requested
+        # Get chunks if requested (return just content strings per model spec)
         chunks = None
         if include_chunks:
             raw_chunks = await postgres_store.get_document_chunks(
                 document_id, include_embeddings=False
             )
-            chunks = [
-                {
-                    "id": str(chunk["id"]),
-                    "content": chunk["content"],
-                    "chunk_index": chunk["chunk_index"],
-                    "token_count": chunk.get("token_count"),
-                }
-                for chunk in raw_chunks
-            ]
+            chunks = [chunk["content"] for chunk in raw_chunks]
 
         return DocumentContent(
             metadata=DocumentMetadata(

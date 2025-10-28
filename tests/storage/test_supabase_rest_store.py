@@ -129,6 +129,9 @@ def supabase_store(mock_supabase_client):
         mock_create.return_value = mock_supabase_client
         store = SupabaseRestStore(supabase_url="https://test.supabase.co", supabase_key="test_key")
         store.client = mock_supabase_client
+        # Pre-create tables so tests can access them
+        mock_supabase_client.table("documents")
+        mock_supabase_client.table("chunks")
         return store
 
 
