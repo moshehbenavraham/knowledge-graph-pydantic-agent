@@ -116,7 +116,7 @@ class TestCheck2FARequirement:
         mock_totp.is_2fa_enabled.return_value = False
         mock_get_totp.return_value = mock_totp
 
-        requires, enabled = check_2fa_requirement("testuser")
+        requires, _enabled = check_2fa_requirement("testuser")
 
         assert requires is False
 
@@ -198,10 +198,10 @@ class TestRender2FASetupRequired:
         self, mock_get_user, mock_get_totp, mock_get_backup, mock_st
     ):
         """Test rendering when secret already in session (step 2)."""
-        from src.auth.enforce_2fa import render_2fa_setup_required
-
         # Mock session state with existing secret
         from unittest.mock import MagicMock
+
+        from src.auth.enforce_2fa import render_2fa_setup_required
 
         mock_session_dict = {"username": "testuser", "2fa_setup_secret": "EXISTING_SECRET"}
         mock_session = MagicMock()
@@ -293,7 +293,7 @@ class TestEdgeCases:
         mock_totp.is_2fa_enabled.return_value = False
         mock_get_totp.return_value = mock_totp
 
-        requires, enabled = check_2fa_requirement("testuser")
+        _requires, _enabled = check_2fa_requirement("testuser")
 
         # Should still work with empty ID
         mock_totp.is_2fa_enabled.assert_called_once_with("")

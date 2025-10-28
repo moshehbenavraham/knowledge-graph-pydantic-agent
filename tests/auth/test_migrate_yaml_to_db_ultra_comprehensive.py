@@ -111,7 +111,7 @@ class TestMigrateUsers:
         with patch("src.auth.migrate_yaml_to_db.get_supabase_client") as mock_get_client:
             mock_get_client.return_value = mock_client
 
-            with patch("src.auth.migrate_yaml_to_db.assign_role") as mock_assign_role:
+            with patch("src.auth.migrate_yaml_to_db.assign_role"):
                 with patch("builtins.print"):
                     results = await migrate_users(temp_yaml_config, dry_run=False)
 
@@ -160,7 +160,7 @@ class TestMigrateUsers:
         with patch("src.auth.migrate_yaml_to_db.get_supabase_client") as mock_get_client:
             mock_get_client.return_value = mock_client
 
-            with patch("src.auth.migrate_yaml_to_db.assign_role") as mock_assign_role:
+            with patch("src.auth.migrate_yaml_to_db.assign_role"):
                 with patch("builtins.print"):
                     results = await migrate_users(temp_yaml_config, dry_run=False)
 
@@ -253,7 +253,7 @@ class TestMigrateUsers:
 
             with patch("src.auth.migrate_yaml_to_db.assign_role") as mock_assign_role:
                 with patch("builtins.print"):
-                    results = await migrate_users(temp_yaml_config, dry_run=False)
+                    await migrate_users(temp_yaml_config, dry_run=False)
 
                 # Verify admin got admin role, user1 got user role
                 role_calls = mock_assign_role.call_args_list

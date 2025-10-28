@@ -265,7 +265,7 @@ def test_chat_stream_with_parameters(app_client, mock_agent_deps):
     with patch(
         "src.api.endpoints.chat.sse_manager.stream_agent_response",
         return_value=mock_stream(),
-    ) as mock_sse:
+    ):
         request_data = {
             "message": "Test",
             "max_tokens": 1000,
@@ -401,7 +401,7 @@ async def test_websocket_chat_error():
         patch(
             "src.api.endpoints.chat.websocket_manager.disconnect",
             new_callable=AsyncMock,
-        ) as mock_disconnect,
+        ),
     ):
         # Should not raise
         await chat_websocket(mock_websocket)

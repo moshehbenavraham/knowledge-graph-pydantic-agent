@@ -75,6 +75,7 @@ ignore = [
     "PLW2901",  # Loop variable overwritten (intentional in some cases)
     "B904",     # Within except, raise with from err/None (not always needed)
     "B027",     # Empty method in abstract class (hook pattern)
+    "B017",     # pytest.raises(Exception) in tests is acceptable
     "E402",     # Module import not at top (valid in test fixtures)
     "E722",     # Bare except (valid for catch-all error handling)
     "ERA001",   # Commented code (sometimes needed for documentation)
@@ -82,6 +83,10 @@ ignore = [
     "PERF401",  # Use list comprehension (sometimes less readable)
     "RUF012",   # Mutable class attributes (Locust and other frameworks need this)
     "SIM117",   # Combine with statements (sometimes clearer as nested)
+    "SIM105",   # Use contextlib.suppress (not always clearer)
+    "N801",     # Class name conventions (test classes can have underscores)
+    "N802",     # Function name conventions (test functions can have caps)
+    "N806",     # Mock variable naming in tests is acceptable
 ]
 
 # Allow fix for all enabled rules (when `--fix`) is provided.

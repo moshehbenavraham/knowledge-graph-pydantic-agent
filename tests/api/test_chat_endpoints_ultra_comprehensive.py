@@ -159,7 +159,7 @@ class TestChatEndpoint:
 
             request = ChatRequest(message="Test", max_tokens=500, temperature=0.7)
 
-            response = asyncio.run(chat(request, mock_agent_deps, mock_cache))
+            asyncio.run(chat(request, mock_agent_deps, mock_cache))
 
         # Verify agent was called with parameters
         mock_agent.run.assert_called_once()

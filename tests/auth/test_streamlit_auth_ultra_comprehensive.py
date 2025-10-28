@@ -298,7 +298,7 @@ class TestGetAuthenticator:
         }
 
         with patch("src.auth.streamlit_auth.stauth.Authenticate") as MockAuthenticate:
-            result = get_authenticator(mock_config)
+            get_authenticator(mock_config)
 
             MockAuthenticate.assert_called_once()
 
@@ -314,7 +314,7 @@ class TestGetAuthenticator:
             mock_load_config.return_value = mock_config
 
             with patch("src.auth.streamlit_auth.stauth.Authenticate") as MockAuthenticate:
-                result = get_authenticator()
+                get_authenticator()
 
                 mock_load_config.assert_called_once()
                 MockAuthenticate.assert_called_once()
@@ -501,7 +501,7 @@ class TestInitiateOAuthLogin:
         mock_auth_url = "https://accounts.google.com/o/oauth2/v2/auth?..."
         mock_state = "random-state-123"
 
-        with patch("src.auth.oauth_handler.initiate_oauth_flow") as mock_initiate_flow:
+        with patch("src.auth.oauth_handler.initiate_oauth_flow"):
             with patch("asyncio.run") as mock_asyncio_run:
                 mock_asyncio_run.return_value = (mock_auth_url, mock_state)
 
@@ -521,7 +521,7 @@ class TestInitiateOAuthLogin:
     def test_initiate_oauth_login_error(self, mock_error):
         from src.auth.streamlit_auth import initiate_oauth_login
 
-        with patch("src.auth.oauth_handler.initiate_oauth_flow") as mock_initiate_flow:
+        with patch("src.auth.oauth_handler.initiate_oauth_flow"):
             with patch("asyncio.run") as mock_asyncio_run:
                 mock_asyncio_run.side_effect = Exception("OAuth initiation failed")
 
@@ -616,7 +616,7 @@ class TestCheckOAuthCallback:
             with patch("src.auth.streamlit_auth.get_use_database_auth") as mock_use_db:
                 mock_use_db.return_value = True
 
-                with patch("src.auth.streamlit_auth.handle_oauth_callback") as mock_handle_callback:
+                with patch("src.auth.streamlit_auth.handle_oauth_callback"):
                     with patch("asyncio.run") as mock_asyncio_run:
                         mock_user = {"username": "google_user", "full_name": "Google User"}
                         mock_asyncio_run.return_value = mock_user
@@ -691,7 +691,7 @@ class TestRenderLogoutButton:
             with patch("streamlit.button") as mock_button:
                 mock_button.return_value = True
 
-                with patch("asyncio.run") as mock_asyncio_run:
+                with patch("asyncio.run"):
                     with patch("src.auth.streamlit_auth.log_auth_event"):
                         render_logout_button(mock_authenticator, "Test User")
 

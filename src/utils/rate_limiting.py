@@ -17,13 +17,17 @@ class RateLimiter:
         self.burst_size = burst_size or max_requests
         self.requests = defaultdict(deque)  # user_id -> deque of timestamps
         self.tokens = defaultdict(lambda: self.burst_size)  # user_id -> available tokens
-        self.last_refill = defaultdict(time.time)  # user_id -> last refill time
+        self.last_refill = {}  # user_id -> last refill time
         self.lock = asyncio.Lock()
 
     async def is_allowed(self, user_id: str) -> tuple[bool, dict]:
         """Check if request is allowed for user."""
         async with self.lock:
             now = time.time()
+
+            # Initialize last_refill for new users
+            if user_id not in self.last_refill:
+                self.last_refill[user_id] = now
 
             # Refill tokens based on time passed
             time_passed = now - self.last_refill[user_id]

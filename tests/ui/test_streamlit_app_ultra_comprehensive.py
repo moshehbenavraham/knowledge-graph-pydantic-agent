@@ -737,7 +737,7 @@ class TestLLMClient:
             mock_config.llm_api_key = "test-key"
 
             with patch("src.clients.llm.AsyncOpenAI") as MockAsyncOpenAI:
-                result = get_llm_client()
+                get_llm_client()
                 MockAsyncOpenAI.assert_called_once()
 
     def test_get_model_anthropic(self):
@@ -749,7 +749,7 @@ class TestLLMClient:
             mock_config.llm_api_key = "test-key"
 
             with patch("src.clients.llm.AnthropicModel") as MockAnthropicModel:
-                result = get_model()
+                get_model()
                 MockAnthropicModel.assert_called_once()
 
     def test_get_model_openai(self):
@@ -762,8 +762,8 @@ class TestLLMClient:
             mock_config.llm_base_url = "https://api.openai.com/v1"
 
             with patch("src.clients.llm.OpenAIChatModel") as MockOpenAIChatModel:
-                with patch("src.clients.llm.OpenAIProvider") as MockOpenAIProvider:
-                    result = get_model()
+                with patch("src.clients.llm.OpenAIProvider"):
+                    get_model()
                     MockOpenAIChatModel.assert_called_once()
 
     def test_get_model_ollama(self):
@@ -777,7 +777,7 @@ class TestLLMClient:
 
             with patch("src.clients.llm.OpenAIChatModel") as MockOpenAIChatModel:
                 with patch("src.clients.llm.OpenAIProvider"):
-                    result = get_model()
+                    get_model()
                     MockOpenAIChatModel.assert_called_once()
 
     def test_get_model_anthropic_name_mapping(self):

@@ -5,6 +5,7 @@ Tests rate limiting for API calls and user requests.
 """
 
 import asyncio
+import contextlib
 import time
 from unittest.mock import AsyncMock, patch
 
@@ -55,8 +56,8 @@ class TestRateLimiter:
         """Test multiple requests within limit."""
         limiter = RateLimiter(max_requests=5, window_seconds=60)
 
-        for i in range(5):
-            allowed, info = await limiter.is_allowed("user1")
+        for _i in range(5):
+            allowed, _info = await limiter.is_allowed("user1")
             assert allowed is True
 
     @pytest.mark.asyncio
@@ -85,7 +86,7 @@ class TestRateLimiter:
         await limiter.is_allowed("user1")
 
         # User2 should still be allowed
-        allowed, info = await limiter.is_allowed("user2")
+        allowed, _info = await limiter.is_allowed("user2")
 
         assert allowed is True
 
@@ -102,7 +103,7 @@ class TestRateLimiter:
         await asyncio.sleep(1.1)
 
         # Should be allowed again
-        allowed, info = await limiter.is_allowed("user1")
+        allowed, _info = await limiter.is_allowed("user1")
 
         assert allowed is True
 
@@ -119,7 +120,7 @@ class TestRateLimiter:
         await asyncio.sleep(1.1)
 
         # Old requests should be cleaned
-        allowed, info = await limiter.is_allowed("user1")
+        allowed, _info = await limiter.is_allowed("user1")
 
         assert allowed is True
 
@@ -188,7 +189,7 @@ class TestAPIRateLimiter:
         """Test checking limit with default system user."""
         api_limiter = APIRateLimiter()
 
-        allowed, info = await api_limiter.check_api_limit("openai")
+        allowed, _info = await api_limiter.check_api_limit("openai")
 
         assert isinstance(allowed, bool)
 
@@ -202,7 +203,7 @@ class TestAPIRateLimiter:
             await api_limiter.check_api_limit("openai", "user1")
 
         # Next should be denied
-        allowed, info = await api_limiter.check_api_limit("openai", "user1")
+        allowed, _info = await api_limiter.check_api_limit("openai", "user1")
 
         assert allowed is False
 
@@ -377,10 +378,8 @@ class TestRateLimitMiddleware:
 
         # Exhaust limit
         for _ in range(11):
-            try:
+            with contextlib.suppress(RateLimitExceededError):
                 await middleware.enforce_limits("user_enforce")
-            except RateLimitExceededError:
-                pass
 
         # Should raise exception
         with pytest.raises(RateLimitExceededError) as exc_info:
@@ -463,10 +462,8 @@ class TestRateLimitDecorator:
 
         # Exhaust limit (free tier = 10 per minute)
         for _ in range(11):
-            try:
+            with contextlib.suppress(RateLimitExceededError):
                 await test_function(user_id="limited_user")
-            except RateLimitExceededError:
-                pass
 
         # Should raise exception
         with pytest.raises(RateLimitExceededError):
@@ -551,7 +548,7 @@ class TestEdgeCases:
         await limiter.is_allowed("user1")
 
         # Should be denied immediately
-        allowed, info = await limiter.is_allowed("user1")
+        allowed, _info = await limiter.is_allowed("user1")
 
         assert allowed is False
 
@@ -559,7 +556,7 @@ class TestEdgeCases:
         await asyncio.sleep(0.2)
 
         # Should be allowed again
-        allowed, info = await limiter.is_allowed("user1")
+        allowed, _info = await limiter.is_allowed("user1")
 
         assert allowed is True
 
@@ -577,7 +574,7 @@ class TestEdgeCases:
         limiter = RateLimiter(max_requests=10, window_seconds=60, burst_size=-1)
 
         # Should still work (implementation may vary)
-        allowed, info = await limiter.is_allowed("user1")
+        allowed, _info = await limiter.is_allowed("user1")
 
         assert isinstance(allowed, bool)
 

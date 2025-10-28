@@ -174,7 +174,7 @@ async def test_chat_with_custom_parameters(client, mock_agent_deps, mock_cache, 
     with (
         patch("src.api.endpoints.chat.get_agent_deps", return_value=mock_agent_deps),
         patch("src.api.endpoints.chat.get_cache_manager", return_value=mock_cache),
-        patch("src.api.endpoints.chat.super_agent.run", return_value=mock_agent_result) as mock_run,
+        patch("src.api.endpoints.chat.super_agent.run", return_value=mock_agent_result),
     ):
         response = client.post(
             "/api/v1/chat",
@@ -274,7 +274,7 @@ async def test_chat_stream_with_parameters(client, mock_agent_deps):
         patch(
             "src.api.endpoints.chat.sse_manager.stream_agent_response",
             return_value=mock_stream_generator(),
-        ) as mock_stream,
+        ),
     ):
         response = client.post(
             "/api/v1/chat/stream",

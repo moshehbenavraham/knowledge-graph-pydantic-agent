@@ -344,7 +344,7 @@ class TestSearchSimilarChunks:
         )
 
         with patch.object(vector_search, "_search_vectors", new=AsyncMock(return_value=[])):
-            results = await vector_search.search_similar_chunks(chunk_id, limit=5)
+            await vector_search.search_similar_chunks(chunk_id, limit=5)
 
             # Should call _search_vectors with limit+1 and higher threshold
             call_args = vector_search._search_vectors.call_args

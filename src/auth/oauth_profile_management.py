@@ -251,7 +251,7 @@ def render_oauth_account_management() -> None:
         available_count = sum(1 for p in OAUTH_PROVIDERS.values() if p["enabled"])
 
         st.info(
-            f"ℹ️ **Connected Accounts**: {linked_count} of {available_count} available providers\n\n"
+            f"**Connected Accounts**: {linked_count} of {available_count} available providers\n\n"
             "Linking multiple providers gives you more sign-in options."
         )
 
@@ -315,7 +315,7 @@ def render_oauth_linking_callback_handler() -> None:
     try:
         from src.auth.oauth_handler import complete_oauth_flow
 
-        result = asyncio.run(complete_oauth_flow(provider, code, state))
+        asyncio.run(complete_oauth_flow(provider, code, state))
 
         # Account should now be linked
         st.success(f"✅ {get_provider_display_name(provider)} account linked successfully!")

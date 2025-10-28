@@ -156,7 +156,7 @@ class TestRetrieveRelevantDocumentsTool:
         mock_get_search.return_value = mock_hybrid_search
         mock_hybrid_search.search.return_value = mock_search_result
 
-        result = await retrieve_relevant_documents_tool(
+        await retrieve_relevant_documents_tool(
             supabase=None,
             embedding_client=None,
             user_query="test query",
@@ -275,7 +275,7 @@ class TestSmartSearchTool:
         intent_result.primary_intent = SearchIntent.VECTOR_HEAVY
         mock_intent_analyzer.analyze.return_value = intent_result
 
-        result = await smart_search_tool("test query", limit=20)
+        await smart_search_tool("test query", limit=20)
 
         call_args = mock_hybrid_search.search.call_args
         assert call_args[1]["limit"] == 20

@@ -1,8 +1,8 @@
 import structlog
+from supabase.client import Client, ClientOptions
 
 from src.config.clients import clients_config
 from supabase import create_client  # type: ignore
-from supabase.client import Client, ClientOptions
 
 logger = structlog.get_logger(__name__)
 
@@ -26,8 +26,8 @@ def get_supabase_client() -> Client:
         storage_client_timeout=60,
     )
 
-    supabase = create_client(  # noqa: CONST-III-001 - Centralized client factory
+    supabase = create_client(  # CONST-III-001 - Centralized client factory
         supabase_url, supabase_key, options=options
-    )  # noqa: CONST-III-001 - This IS the centralized client factory
+    )  # CONST-III-001 - This IS the centralized client factory
 
     return supabase

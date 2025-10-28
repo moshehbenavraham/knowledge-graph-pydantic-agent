@@ -81,7 +81,7 @@ class BreachDetectionManager:
 
         try:
             # Query haveibeenpwned.com API
-            async with httpx.AsyncClient(  # noqa: CONST-III-001 - HTTP client for external API
+            async with httpx.AsyncClient(  # CONST-III-001 - HTTP client for external API
                 timeout=self.TIMEOUT
             ) as client:
                 response = await client.get(
@@ -168,19 +168,16 @@ class BreachDetectionManager:
             return (False, 0, "Password has not been found in any known data breaches.")
 
         if breach_count < 10:
-            severity = "low"
             message = (
                 f"⚠️ This password has been found in {breach_count} data breach(es). "
                 "We recommend choosing a different password for better security."
             )
         elif breach_count < 100:
-            severity = "medium"
             message = (
                 f"⚠️ Warning: This password has been found in {breach_count} data breaches. "
                 "Please choose a more secure password."
             )
         else:
-            severity = "high"
             message = (
                 f"🚨 Critical: This password has been found in {breach_count:,} data breaches! "
                 "This password is highly compromised and should NOT be used."

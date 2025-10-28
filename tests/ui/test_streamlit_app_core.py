@@ -200,7 +200,7 @@ class TestUIConfig:
             mock_config.mode = UIMode.SIMPLE
             with patch("src.ui.streamlit_app.SimpleHandler") as mock_handler:
                 config = UIConfig()
-                handler = config.get_handler()
+                config.get_handler()
 
                 mock_handler.assert_called_once()
                 call_args = mock_handler.call_args[0][0]
@@ -215,7 +215,7 @@ class TestUIConfig:
             mock_config.mode = UIMode.STANDARD
             with patch("src.ui.streamlit_app.StreamingHandler") as mock_handler:
                 config = UIConfig()
-                handler = config.get_handler()
+                config.get_handler()
 
                 mock_handler.assert_called_once()
                 call_args = mock_handler.call_args[0][0]
@@ -230,7 +230,7 @@ class TestUIConfig:
             mock_config.mode = UIMode.ADVANCED
             with patch("src.ui.streamlit_app.MCPHandler") as mock_handler:
                 config = UIConfig()
-                handler = config.get_handler()
+                config.get_handler()
 
                 mock_handler.assert_called_once()
                 call_args = mock_handler.call_args[0][0]

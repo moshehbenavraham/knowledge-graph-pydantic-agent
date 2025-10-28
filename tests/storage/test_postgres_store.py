@@ -111,7 +111,7 @@ class TestStoreDocument:
         )
 
         assert result == doc_id
-        query, args = mock_connection.executed_queries[0]
+        _query, args = mock_connection.executed_queries[0]
         assert args[3] == "{}"  # Empty metadata dict
 
 
@@ -177,7 +177,7 @@ class TestStoreChunks:
         result = await postgres_store.store_chunks(doc_id, chunks)
 
         assert len(result) == 1
-        query, args = mock_connection.executed_queries[0]
+        _query, args = mock_connection.executed_queries[0]
         assert args[2] is None  # embedding_1536 should be None
         assert args[3] is None  # embedding_768 should be None
 
@@ -265,7 +265,7 @@ class TestSearchSimilar:
         mock_connection.set_fetch([])
 
         embedding = [0.1] * 768
-        results = await postgres_store.search_similar(embedding, limit=10)
+        await postgres_store.search_similar(embedding, limit=10)
 
         query = mock_connection.executed_queries[0][0]
         assert "embedding_768" in query
@@ -400,7 +400,7 @@ class TestSessionManagement:
         )
 
         assert result == session_id
-        query, args = mock_connection.executed_queries[0]
+        query, _args = mock_connection.executed_queries[0]
         assert "INSERT INTO sessions" in query
 
     @pytest.mark.asyncio
@@ -552,7 +552,7 @@ class TestListDocuments:
         """Test document listing with source filter."""
         mock_connection.set_fetch([])
 
-        results = await postgres_store.list_documents(limit=10, offset=0, source_filter="%.pdf")
+        await postgres_store.list_documents(limit=10, offset=0, source_filter="%.pdf")
 
         query = mock_connection.executed_queries[0][0]
         assert "d.source LIKE $3" in query
@@ -629,7 +629,7 @@ class TestGetDocumentChunks:
         doc_id = uuid4()
         mock_connection.set_fetch([])
 
-        results = await postgres_store.get_document_chunks(doc_id, include_embeddings=True)
+        await postgres_store.get_document_chunks(doc_id, include_embeddings=True)
 
         query = mock_connection.executed_queries[0][0]
         assert "embedding_1536" in query

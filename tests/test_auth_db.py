@@ -804,7 +804,7 @@ def test_assign_role_not_found(mock_supabase_client, sample_user_role_data):
         role_response.data = []  # Role not found
         mock_supabase_client.table().execute.return_value = role_response
 
-        with pytest.raises(Exception, match="Role .* not found"):
+        with pytest.raises(Exception, match=r"Role .* not found"):
             db.assign_role(
                 user_id=sample_user_role_data["user_id"],
                 role_name="nonexistent",
@@ -900,7 +900,7 @@ def test_set_2fa_requirement_user_not_found(mock_supabase_client):
         mock_response.data = []
         mock_supabase_client.table().update().eq().execute.return_value = mock_response
 
-        with pytest.raises(Exception, match="User .* not found"):
+        with pytest.raises(Exception, match=r"User .* not found"):
             db.set_2fa_requirement("nonexistent", required=True)
 
 
@@ -932,5 +932,5 @@ def test_get_2fa_requirement_user_not_found(mock_supabase_client):
     """Test getting 2FA requirement for non-existent user."""
     with patch("src.auth.db.get_supabase_client", return_value=mock_supabase_client):
         with patch("src.auth.db.get_user_by_username", return_value=None):
-            with pytest.raises(Exception, match="User .* not found"):
+            with pytest.raises(Exception, match=r"User .* not found"):
                 db.get_2fa_requirement("nonexistent")

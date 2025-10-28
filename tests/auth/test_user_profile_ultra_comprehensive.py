@@ -108,7 +108,7 @@ class TestRenderUserProfile:
         with patch("src.auth.user_profile.get_user_info") as mock_get_user:
             mock_get_user.return_value = mock_user
 
-            with patch("streamlit.sidebar.markdown") as mock_markdown:
+            with patch("streamlit.sidebar.markdown"):
                 with patch("streamlit.sidebar.expander") as mock_expander:
                     mock_expander_context = MagicMock()
                     mock_expander.return_value.__enter__.return_value = mock_expander_context
@@ -153,7 +153,7 @@ class TestRenderUserProfile:
                     mock_expander_context = MagicMock()
                     mock_expander.return_value.__enter__.return_value = mock_expander_context
 
-                    with patch("streamlit.markdown") as mock_markdown:
+                    with patch("streamlit.markdown"):
                         with patch("streamlit.warning") as mock_warning:
                             with patch("streamlit.button") as mock_button:
                                 mock_button.return_value = False
@@ -212,8 +212,8 @@ class TestRenderUserProfile:
                                 ) as mock_change:
                                     mock_change.return_value = (True, "Success")
 
-                                    with patch("streamlit.success") as mock_success:
-                                        with patch("streamlit.rerun") as mock_rerun:
+                                    with patch("streamlit.success"):
+                                        with patch("streamlit.rerun"):
                                             render_user_profile("test_user")
 
                                             mock_change.assert_called()
@@ -352,13 +352,11 @@ class TestRenderUserProfile:
                                 with patch("streamlit.button") as mock_button:
                                     mock_button.return_value = True
 
-                                    with patch(
-                                        "src.auth.db.revoke_session"
-                                    ) as mock_revoke:
+                                    with patch("src.auth.db.revoke_session") as mock_revoke:
                                         mock_revoke.return_value = True
 
-                                        with patch("streamlit.success") as mock_success:
-                                            with patch("streamlit.rerun") as mock_rerun:
+                                        with patch("streamlit.success"):
+                                            with patch("streamlit.rerun"):
                                                 render_user_profile("test_user")
 
                                                 mock_revoke.assert_called_once()
@@ -424,9 +422,9 @@ class TestRenderUserProfile:
                                     ) as mock_revoke_all:
                                         mock_revoke_all.return_value = 2
 
-                                        with patch("streamlit.success") as mock_success:
-                                            with patch("streamlit.info") as mock_info:
-                                                with patch("streamlit.rerun") as mock_rerun:
+                                        with patch("streamlit.success"):
+                                            with patch("streamlit.info"):
+                                                with patch("streamlit.rerun"):
                                                     render_user_profile("test_user")
 
                                                     mock_revoke_all.assert_called_once()
@@ -456,7 +454,7 @@ class TestRenderUserProfileSimple:
                 mock_expander_context = MagicMock()
                 mock_expander.return_value.__enter__.return_value = mock_expander_context
 
-                with patch("streamlit.markdown") as mock_markdown_inner:
+                with patch("streamlit.markdown"):
                     with patch("streamlit.info") as mock_info:
                         render_user_profile_simple("test_user", "Test User", "test@example.com")
 
@@ -472,7 +470,7 @@ class TestRenderUserProfileSimple:
                 mock_expander_context = MagicMock()
                 mock_expander.return_value.__enter__.return_value = mock_expander_context
 
-                with patch("streamlit.markdown") as mock_markdown_inner:
+                with patch("streamlit.markdown"):
                     with patch("streamlit.info") as mock_info:
                         render_user_profile_simple("test_user", "Test User")
 

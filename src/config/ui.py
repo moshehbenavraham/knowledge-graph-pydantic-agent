@@ -41,22 +41,22 @@ class UIConfig:
     @property
     def ui_mode(self) -> str:
         """Get UI mode as string (alias for mode)."""
-        return self.mode.value if hasattr(self.mode, 'value') else str(self.mode)
+        return self.mode.value if hasattr(self.mode, "value") else str(self.mode)
 
     @property
     def ui_port(self) -> int:
         """Get UI port."""
-        return getattr(self._settings, 'streamlit_port', 8501)
+        return getattr(self._settings, "streamlit_port", 8501)
 
     @property
     def enable_memory(self) -> bool:
         """Check if memory (mem0) is enabled."""
-        return getattr(self._settings, 'enable_mem0', False)
+        return getattr(self._settings, "enable_mem0", False)
 
     @property
     def enable_mcp(self) -> bool:
         """Check if MCP is enabled."""
-        return getattr(self._settings, 'enable_mcp', False)
+        return getattr(self._settings, "enable_mcp", False)
 
     @property
     def is_simple_mode(self) -> bool:

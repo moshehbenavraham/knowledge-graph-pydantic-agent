@@ -72,7 +72,7 @@ class TestSSEManager:
         # Verify JSON serialization
         assert "event: test" in event
         assert "data:" in event
-        parsed_line = [line for line in event.split("\n") if line.startswith("data:")][0]
+        parsed_line = next(line for line in event.split("\n") if line.startswith("data:"))
         parsed_data = json.loads(parsed_line[6:])  # Skip "data: "
         assert parsed_data == data
 

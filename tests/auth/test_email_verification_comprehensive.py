@@ -549,7 +549,7 @@ class TestIntegrationScenarios:
         mock_create_token.return_value = "TOKEN123"
         mock_send.return_value = True
 
-        success1, message1 = await request_email_verification(
+        success1, _message1 = await request_email_verification(
             "user-123", "https://example.com/verify"
         )
         assert success1 is True

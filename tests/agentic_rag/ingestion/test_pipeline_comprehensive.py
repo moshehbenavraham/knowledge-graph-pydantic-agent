@@ -473,7 +473,7 @@ async def test_ingest_document_updates_stats():
             initial_entities = pipeline._stats["entities_extracted"]
             initial_facts = pipeline._stats["facts_extracted"]
 
-            result = await pipeline.ingest_document(content, title, source)
+            await pipeline.ingest_document(content, title, source)
 
             assert pipeline._stats["documents_processed"] == initial_docs + 1
             assert pipeline._stats["chunks_created"] == initial_chunks + 2

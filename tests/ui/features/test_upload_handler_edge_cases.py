@@ -487,7 +487,7 @@ async def test_process_tabular_mixed_data_types(mock_supabase):
 @pytest.mark.asyncio
 async def test_process_tabular_unicode_data(mock_supabase):
     """Test CSV with unicode characters."""
-    csv_data = "name,city\n测试,北京\nтест,Москва\n".encode()
+    csv_data = "name,city\n测试,北京\nтест,Москва\n".encode()  # noqa: RUF001
 
     mock_file = Mock()
     mock_file.name = "unicode.csv"

@@ -185,7 +185,7 @@ class TestCaptchaVerification:
             mock_client_class.return_value = mock_client
 
             with patch.object(manager, "_log_challenge", new_callable=AsyncMock):
-                is_valid, error = await manager.verify_response("response_token")
+                is_valid, _error = await manager.verify_response("response_token")
 
                 assert is_valid is True
 
@@ -205,7 +205,7 @@ class TestCaptchaVerification:
             mock_client_class.return_value = mock_client
 
             with patch.object(manager, "_log_challenge", new_callable=AsyncMock):
-                is_valid, error = await manager.verify_response("response_token")
+                is_valid, _error = await manager.verify_response("response_token")
 
                 assert is_valid is False
 
@@ -225,7 +225,7 @@ class TestCaptchaVerification:
             mock_client_class.return_value = mock_client
 
             with patch.object(manager, "_log_challenge", new_callable=AsyncMock):
-                is_valid, error = await manager.verify_response(
+                is_valid, _error = await manager.verify_response(
                     "token", username="user", ip_address="1.2.3.4"
                 )
 
@@ -529,7 +529,7 @@ class TestEdgeCases:
             mock_client_class.return_value = mock_client
 
             with patch.object(manager, "_log_challenge", new_callable=AsyncMock):
-                is_valid, error = await manager.verify_response("")
+                is_valid, _error = await manager.verify_response("")
 
                 assert is_valid is False
 

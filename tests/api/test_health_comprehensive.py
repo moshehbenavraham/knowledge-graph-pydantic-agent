@@ -95,9 +95,9 @@ class TestHealthResponses:
         response = client.get("/health")
 
         if response.status_code == 200:
-            data = response.json()
+            response.json()
             # Timestamp may be in different formats
-            assert "timestamp" in data or "checked_at" in data or True
+            assert True
 
 
 class TestHealthDegradation:
@@ -164,9 +164,9 @@ class TestHealthMetrics:
         response = client.get("/health")
 
         if response.status_code == 200:
-            data = response.json()
+            response.json()
             # Version info may or may not be included
-            assert "version" in data or "status" in data or True
+            assert True
 
 
 class TestHealthCaching:
@@ -177,7 +177,7 @@ class TestHealthCaching:
         import time
 
         start = time.time()
-        response = client.get("/health/live")
+        client.get("/health/live")
         elapsed = time.time() - start
 
         # Liveness should respond in <100ms

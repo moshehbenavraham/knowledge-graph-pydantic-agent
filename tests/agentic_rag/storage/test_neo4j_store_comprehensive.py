@@ -506,7 +506,7 @@ async def test_get_entity_relationships_depth_cap(neo4j_store, mock_connection_m
     mock_context = mock_connection_manager.get_neo4j_session.return_value
     mock_context.__aenter__ = AsyncMock(return_value=mock_session)
 
-    result = await neo4j_store.get_entity_relationships(entity_id, depth)
+    await neo4j_store.get_entity_relationships(entity_id, depth)
 
     # Verify depth was capped
     call_args = mock_session.run.call_args
@@ -585,7 +585,7 @@ async def test_search_episodes_with_entity_filter(neo4j_store, mock_connection_m
     mock_context = mock_connection_manager.get_neo4j_session.return_value
     mock_context.__aenter__ = AsyncMock(return_value=mock_session)
 
-    episodes = await neo4j_store.search_episodes(query, entity_ids=entity_ids, limit=limit)
+    await neo4j_store.search_episodes(query, entity_ids=entity_ids, limit=limit)
 
     # Verify entity_ids were passed (params dict is 2nd positional arg)
     call_args = mock_session.run.call_args
@@ -614,7 +614,7 @@ async def test_search_episodes_with_time_range(neo4j_store, mock_connection_mana
     mock_context = mock_connection_manager.get_neo4j_session.return_value
     mock_context.__aenter__ = AsyncMock(return_value=mock_session)
 
-    episodes = await neo4j_store.search_episodes(query, time_range=time_range, limit=limit)
+    await neo4j_store.search_episodes(query, time_range=time_range, limit=limit)
 
     # Verify time range was passed (params dict is 2nd positional arg)
     call_args = mock_session.run.call_args

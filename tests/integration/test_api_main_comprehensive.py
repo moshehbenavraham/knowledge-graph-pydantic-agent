@@ -357,7 +357,7 @@ class TestCORSConfiguration:
         }
 
         # Middleware should be configured
-        middleware = [m for m in app.user_middleware]
+        middleware = list(app.user_middleware)
         assert len(middleware) > 0
 
 

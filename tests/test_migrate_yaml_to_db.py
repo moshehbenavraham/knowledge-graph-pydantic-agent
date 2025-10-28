@@ -196,8 +196,6 @@ async def test_migrate_users_success(temp_yaml_config, mock_supabase_client):
         "src.auth.migrate_yaml_to_db.get_supabase_client", return_value=mock_supabase_client
     ):
         # Create a fresh mock table for each user check
-        check_call_count = [0]
-        insert_call_count = [0]
 
         def mock_table_method(table_name):
             mock_table = MagicMock()

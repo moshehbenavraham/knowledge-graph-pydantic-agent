@@ -61,7 +61,7 @@ def render_password_reset_page():
 
     # Validate token
     try:
-        is_valid, message, token_record = asyncio.run(validate_reset_token(token))
+        is_valid, message, _token_record = asyncio.run(validate_reset_token(token))
 
         if not is_valid:
             st.error(f"❌ {message}")

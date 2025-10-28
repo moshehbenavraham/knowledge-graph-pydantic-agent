@@ -437,7 +437,7 @@ async def test_change_password_with_same_password(sample_user, mock_supabase_cli
         "src.auth.db.verify_user_password", new_callable=AsyncMock, return_value=sample_user
     ):
         with patch("src.auth.db.update_user_password", new_callable=AsyncMock, return_value=True):
-            success, message = await user_profile.change_user_password(
+            success, _message = await user_profile.change_user_password(
                 username="testuser",
                 current_password="Password123!",
                 new_password="Password123!",  # Same password

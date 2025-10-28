@@ -642,7 +642,7 @@ class TestStatistics:
         stats = graph_search.get_stats()
 
         assert stats["searches"] == 2
-        assert stats["facts_found"] == 4  # 2 facts × 2 searches
+        assert stats["facts_found"] == 4  # 2 facts x 2 searches
         assert "avg_latency" in stats
         assert "avg_facts_per_search" in stats
 

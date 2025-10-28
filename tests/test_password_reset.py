@@ -67,31 +67,39 @@ def mock_smtp_server():
 @pytest.mark.asyncio
 async def test_send_reset_email_smtp_success(mock_smtp_server):
     """Test successful SMTP email sending."""
-    # Patch module-level variables instead of os.environ (they're loaded at import time)
-    with patch("src.auth.password_reset.SMTP_HOST", "smtp.gmail.com"):
-        with patch("src.auth.password_reset.SMTP_PORT", 587):
-            with patch("src.auth.password_reset.SMTP_USER", "test@gmail.com"):
-                with patch("src.auth.password_reset.SMTP_PASSWORD", "testpass"):
-                    with patch("src.auth.password_reset.SMTP_FROM_EMAIL", "noreply@test.com"):
-                        result = await password_reset.send_reset_email_smtp(
-                            email="recipient@example.com",
-                            reset_token="token123",
-                            reset_url="http://localhost:8501/reset",
-                        )
+    # Create mock settings with SMTP configuration
+    mock_settings = MagicMock()
+    mock_settings.smtp_host = "smtp.gmail.com"
+    mock_settings.smtp_port = 587
+    mock_settings.smtp_user = "test@gmail.com"
+    mock_settings.smtp_password = "testpass"
+    mock_settings.smtp_from_email = "noreply@test.com"
 
-                        assert result is True
-                        mock_smtp_server.starttls.assert_called_once()
-                        mock_smtp_server.login.assert_called_once_with("test@gmail.com", "testpass")
-                        mock_smtp_server.send_message.assert_called_once()
+    with patch("src.auth.password_reset.get_settings", return_value=mock_settings):
+        result = await password_reset.send_reset_email_smtp(
+            email="recipient@example.com",
+            reset_token="token123",
+            reset_url="http://localhost:8501/reset",
+        )
+
+        assert result is True
+        mock_smtp_server.starttls.assert_called_once()
+        mock_smtp_server.login.assert_called_once_with("test@gmail.com", "testpass")
+        mock_smtp_server.send_message.assert_called_once()
 
 
 @pytest.mark.asyncio
 async def test_send_reset_email_smtp_no_auth(mock_smtp_server):
     """Test SMTP email sending without authentication."""
-    with patch.dict(
-        "os.environ",
-        {"SMTP_HOST": "localhost", "SMTP_PORT": "25", "SMTP_USER": "", "SMTP_PASSWORD": ""},
-    ):
+    # Create mock settings with no auth credentials
+    mock_settings = MagicMock()
+    mock_settings.smtp_host = "localhost"
+    mock_settings.smtp_port = 25
+    mock_settings.smtp_user = ""
+    mock_settings.smtp_password = ""
+    mock_settings.smtp_from_email = "noreply@test.com"
+
+    with patch("src.auth.password_reset.get_settings", return_value=mock_settings):
         result = await password_reset.send_reset_email_smtp(
             email="recipient@example.com",
             reset_token="token123",
@@ -125,30 +133,36 @@ async def test_send_reset_email_smtp_authentication_error():
     mock_server.starttls = MagicMock()
     mock_server.login.side_effect = Exception("Authentication failed")
 
+    # Create mock settings
+    mock_settings = MagicMock()
+    mock_settings.smtp_host = "smtp.gmail.com"
+    mock_settings.smtp_port = 587
+    mock_settings.smtp_user = "test@gmail.com"
+    mock_settings.smtp_password = "wrongpass"
+    mock_settings.smtp_from_email = "noreply@test.com"
+
     with patch("smtplib.SMTP") as mock_smtp:
         mock_smtp.return_value.__enter__.return_value = mock_server
         # __exit__ should return None/False to allow exceptions to propagate
         mock_smtp.return_value.__exit__ = MagicMock(return_value=None)
 
-        # Patch module-level variables instead of os.environ
-        with patch("src.auth.password_reset.SMTP_HOST", "smtp.gmail.com"):
-            with patch("src.auth.password_reset.SMTP_PORT", 587):
-                with patch("src.auth.password_reset.SMTP_USER", "test@gmail.com"):
-                    with patch("src.auth.password_reset.SMTP_PASSWORD", "wrongpass"):
-                        with patch("src.auth.password_reset.SMTP_FROM_EMAIL", "noreply@test.com"):
-                            result = await password_reset.send_reset_email_smtp(
-                                email="recipient@example.com",
-                                reset_token="token123",
-                                reset_url="http://localhost:8501/reset",
-                            )
+        with patch("src.auth.password_reset.get_settings", return_value=mock_settings):
+            result = await password_reset.send_reset_email_smtp(
+                email="recipient@example.com",
+                reset_token="token123",
+                reset_url="http://localhost:8501/reset",
+            )
 
-                            assert result is False
+            assert result is False
 
 
 @pytest.mark.asyncio
 async def test_send_reset_email_disabled():
     """Test email sending when disabled."""
-    with patch.dict("os.environ", {"EMAIL_ENABLED": "false"}):
+    mock_settings = MagicMock()
+    mock_settings.email_enabled = False
+
+    with patch("src.auth.password_reset.get_settings", return_value=mock_settings):
         result = await password_reset.send_reset_email(
             email="max@apexwebservices.com",
             reset_token="token123",
@@ -161,31 +175,33 @@ async def test_send_reset_email_disabled():
 @pytest.mark.asyncio
 async def test_send_reset_email_smtp_provider(mock_smtp_server):
     """Test email sending with SMTP provider."""
-    with patch("src.auth.password_reset.EMAIL_ENABLED", True):
-        with patch("src.auth.password_reset.EMAIL_PROVIDER", "smtp"):
-            with patch.dict(
-                "os.environ",
-                {
-                    "SMTP_HOST": "smtp.gmail.com",
-                    "SMTP_PORT": "587",
-                    "SMTP_USER": "test@gmail.com",
-                    "SMTP_PASSWORD": "testpass",
-                    "SMTP_FROM_EMAIL": "noreply@test.com",
-                },
-            ):
-                result = await password_reset.send_reset_email(
-                    email="max@apexwebservices.com",
-                    reset_token="token123",
-                    reset_url="http://localhost:8501",
-                )
+    mock_settings = MagicMock()
+    mock_settings.email_enabled = True
+    mock_settings.email_provider = "smtp"
+    mock_settings.smtp_host = "smtp.gmail.com"
+    mock_settings.smtp_port = 587
+    mock_settings.smtp_user = "test@gmail.com"
+    mock_settings.smtp_password = "testpass"
+    mock_settings.smtp_from_email = "noreply@test.com"
 
-                assert result is True
+    with patch("src.auth.password_reset.get_settings", return_value=mock_settings):
+        result = await password_reset.send_reset_email(
+            email="max@apexwebservices.com",
+            reset_token="token123",
+            reset_url="http://localhost:8501",
+        )
+
+        assert result is True
 
 
 @pytest.mark.asyncio
 async def test_send_reset_email_unsupported_provider():
     """Test email sending with unsupported provider."""
-    with patch.dict("os.environ", {"EMAIL_ENABLED": "true", "EMAIL_PROVIDER": "unsupported"}):
+    mock_settings = MagicMock()
+    mock_settings.email_enabled = True
+    mock_settings.email_provider = "unsupported"
+
+    with patch("src.auth.password_reset.get_settings", return_value=mock_settings):
         result = await password_reset.send_reset_email(
             email="max@apexwebservices.com",
             reset_token="token123",
@@ -203,9 +219,18 @@ async def test_send_reset_email_unsupported_provider():
 @pytest.mark.asyncio
 async def test_request_password_reset_by_username(sample_user, mock_smtp_server):
     """Test password reset request by username."""
+    mock_settings = MagicMock()
+    mock_settings.email_enabled = True
+    mock_settings.email_provider = "smtp"
+    mock_settings.smtp_host = "smtp.gmail.com"
+    mock_settings.smtp_port = 587
+    mock_settings.smtp_user = "test@gmail.com"
+    mock_settings.smtp_password = "testpass"
+    mock_settings.smtp_from_email = "noreply@test.com"
+
     with patch("src.auth.password_reset.get_user_by_username", return_value=sample_user):
         with patch("src.auth.password_reset.create_reset_token", return_value="token123"):
-            with patch.dict("os.environ", {"EMAIL_ENABLED": "true", "EMAIL_PROVIDER": "smtp"}):
+            with patch("src.auth.password_reset.get_settings", return_value=mock_settings):
                 success, message = await password_reset.request_password_reset(
                     username_or_email="testuser",
                     reset_url="http://localhost:8501",
@@ -219,10 +244,19 @@ async def test_request_password_reset_by_username(sample_user, mock_smtp_server)
 @pytest.mark.asyncio
 async def test_request_password_reset_by_email(sample_user, mock_smtp_server):
     """Test password reset request by email."""
+    mock_settings = MagicMock()
+    mock_settings.email_enabled = True
+    mock_settings.email_provider = "smtp"
+    mock_settings.smtp_host = "smtp.gmail.com"
+    mock_settings.smtp_port = 587
+    mock_settings.smtp_user = "test@gmail.com"
+    mock_settings.smtp_password = "testpass"
+    mock_settings.smtp_from_email = "noreply@test.com"
+
     with patch("src.auth.password_reset.get_user_by_username", return_value=None):
         with patch("src.auth.password_reset.get_user_by_email", return_value=sample_user):
             with patch("src.auth.password_reset.create_reset_token", return_value="token123"):
-                with patch.dict("os.environ", {"EMAIL_ENABLED": "true", "EMAIL_PROVIDER": "smtp"}):
+                with patch("src.auth.password_reset.get_settings", return_value=mock_settings):
                     success, message = await password_reset.request_password_reset(
                         username_or_email="max@apexwebservices.com",
                         reset_url="http://localhost:8501",
@@ -267,9 +301,12 @@ async def test_request_password_reset_inactive_user(sample_user):
 @pytest.mark.asyncio
 async def test_request_password_reset_email_disabled(sample_user):
     """Test password reset when email is disabled."""
+    mock_settings = MagicMock()
+    mock_settings.email_enabled = False
+
     with patch("src.auth.password_reset.get_user_by_username", return_value=sample_user):
         with patch("src.auth.password_reset.create_reset_token", return_value="token123"):
-            with patch.dict("os.environ", {"EMAIL_ENABLED": "false"}):
+            with patch("src.auth.password_reset.get_settings", return_value=mock_settings):
                 success, message = await password_reset.request_password_reset(
                     username_or_email="testuser",
                     reset_url="http://localhost:8501",
@@ -482,7 +519,7 @@ async def test_complete_password_reset_flow(sample_user, sample_reset_token, moc
             return_value=sample_reset_token["token"],
         ):
             with patch.dict("os.environ", {"EMAIL_ENABLED": "true", "EMAIL_PROVIDER": "smtp"}):
-                success, message = await password_reset.request_password_reset(
+                success, _message = await password_reset.request_password_reset(
                     username_or_email="testuser",
                     reset_url="http://localhost:8501",
                 )
@@ -491,19 +528,19 @@ async def test_complete_password_reset_flow(sample_user, sample_reset_token, moc
 
     # Step 2: Validate token
     with patch("src.auth.password_reset.verify_reset_token", return_value=sample_reset_token):
-        is_valid, message, token_record = await password_reset.validate_reset_token(
+        is_valid, _message, _token_record = await password_reset.validate_reset_token(
             sample_reset_token["token"]
         )
 
         assert is_valid is True
 
     # Step 3: Check password strength
-    is_strong, message = password_reset.is_password_strong("NewStrongPass123!")
+    is_strong, _message = password_reset.is_password_strong("NewStrongPass123!")
     assert is_strong is True
 
     # Step 4: Reset password
     with patch("src.auth.password_reset.use_reset_token", return_value=True):
-        success, message = await password_reset.reset_password_with_token(
+        success, _message = await password_reset.reset_password_with_token(
             token=sample_reset_token["token"],
             new_password="NewStrongPass123!",
             client_ip="127.0.0.1",

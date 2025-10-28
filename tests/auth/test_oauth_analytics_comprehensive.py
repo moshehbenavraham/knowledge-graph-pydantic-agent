@@ -140,7 +140,7 @@ class TestGetLoginActivity:
         mock_client.rpc.return_value.execute.return_value = Mock(data=[])
         mock_get_client.return_value = mock_client
 
-        result = await get_login_activity(days=7)
+        await get_login_activity(days=7)
 
         mock_client.rpc.assert_called_once_with("get_oauth_login_activity", {"days": 7})
 

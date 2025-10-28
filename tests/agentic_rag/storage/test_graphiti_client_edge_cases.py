@@ -93,7 +93,7 @@ async def test_extract_entities_very_long_text(client_with_llm):
         return_value=[{"name": "OpenAI", "type": "company"}]
     )
 
-    result = await client_with_llm.extract_entities(long_text)
+    await client_with_llm.extract_entities(long_text)
 
     # Should truncate text to 2000 chars
     call_args = client_with_llm.llm_client.extract.call_args[0][0]

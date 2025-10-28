@@ -551,7 +551,7 @@ async def test_full_lifecycle():
 
     with (
         patch("src.api.main.init_dependencies", new_callable=AsyncMock) as mock_init,
-        patch("src.api.main.cleanup_dependencies", new_callable=AsyncMock) as mock_cleanup,
+        patch("src.api.main.cleanup_dependencies", new_callable=AsyncMock),
     ):
         client = TestClient(app)
 

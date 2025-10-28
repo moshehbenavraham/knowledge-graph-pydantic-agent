@@ -542,8 +542,8 @@ class TestBackupCodeHashing:
         """Test hashing code without dash."""
         manager = BackupCodeManager()
 
-        hash1 = manager.hash_code("ABCD-1234")
-        hash2 = manager.hash_code("ABCD1234")
+        manager.hash_code("ABCD-1234")
+        manager.hash_code("ABCD1234")
 
         # Should produce same hash (dash removed)
         # Note: Can't directly compare bcrypt hashes due to salt

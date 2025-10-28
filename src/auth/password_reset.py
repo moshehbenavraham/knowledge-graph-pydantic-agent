@@ -180,7 +180,7 @@ async def request_password_reset(
             )
 
         # Generate reset token
-        reset_token = await create_reset_token(
+        reset_token = create_reset_token(
             user_id=user["id"], expires_in_hours=1, created_ip=client_ip
         )
 
@@ -217,7 +217,7 @@ async def validate_reset_token(token: str) -> tuple[bool, str, dict | None]:
         Tuple of (is_valid, message, token_record)
     """
     try:
-        token_record = await verify_reset_token(token)
+        token_record = verify_reset_token(token)
 
         if not token_record:
             logger.warning("Invalid or expired reset token", token_preview=token[:8] + "...")
@@ -245,7 +245,7 @@ async def reset_password_with_token(
     """
     try:
         # Use the reset token to change password
-        success = await use_reset_token(token, new_password, used_ip=client_ip)
+        success = use_reset_token(token, new_password, used_ip=client_ip)
 
         if success:
             logger.info("Password reset successful via token")

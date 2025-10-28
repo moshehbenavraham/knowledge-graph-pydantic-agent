@@ -5,8 +5,9 @@ import traceback
 from pathlib import Path
 from typing import Any
 
-from supabase import create_client  # type: ignore
 from supabase.client import Client
+
+from supabase import create_client  # type: ignore
 
 sys.path.append(str(Path(__file__).parent.resolve()))
 from text_processor import (
@@ -25,11 +26,9 @@ from src.config import get_settings
 
 # Initialize Supabase client using centralized configuration
 settings = get_settings()
-supabase: Client = (
-    create_client(  # noqa: CONST-III-001 - RAG pipeline client using centralized config
-        settings.supabase_url, settings.supabase_service_key
-    )
-)  # noqa: CONST-III-001 - RAG pipeline module-level client using centralized config
+supabase: Client = create_client(  # CONST-III-001 - RAG pipeline client using centralized config
+    settings.supabase_url, settings.supabase_service_key
+)  # CONST-III-001 - RAG pipeline module-level client using centralized config
 
 
 def delete_document_by_file_id(file_id: str) -> None:

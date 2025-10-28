@@ -489,7 +489,7 @@ class TestErrorHandling:
                 )
 
                 # Should not crash, but may return partial results
-                with pytest.raises(Exception):  # noqa: B017
+                with pytest.raises(Exception):
                     await search._hybrid_search("test query", 10, mock_intent)
 
     @pytest.mark.asyncio
@@ -520,7 +520,7 @@ class TestErrorHandling:
                 )
 
                 # Should not crash, but may return partial results
-                with pytest.raises(Exception):  # noqa: B017
+                with pytest.raises(Exception):
                     await search._hybrid_search("test query", 10, mock_intent)
 
     @pytest.mark.asyncio

@@ -585,7 +585,7 @@ class TestConfigIntegration:
         from src.config.api import APIConfig
         from src.config.settings import get_settings
 
-        settings = get_settings()
+        get_settings()
         agent_config = AgentConfig()
         api_config = APIConfig()
 

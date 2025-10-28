@@ -150,7 +150,9 @@ class TestCompleteUserWorkflows:
             mock_run.__aiter__ = lambda self: mock_stream_generator()
 
             # Execute the workflow
-            response_parts = [part async for part in run_agent_with_streaming(user_query)]
+            response_parts = [
+                part async for part in run_agent_with_streaming(user_query)  # noqa: F821
+            ]
 
             # Verify workflow execution
             full_response = "".join(response_parts)
@@ -179,7 +181,7 @@ class TestCompleteUserWorkflows:
 
         # Execute simple UI workflow
         with patch("streamlit.session_state", mock_session_state):
-            response = await run_agent("What is artificial intelligence?")
+            response = await run_agent("What is artificial intelligence?")  # noqa: F821
 
             # Verify response
             assert response == "This is a simple response to your query."
@@ -357,8 +359,8 @@ class TestStreamlitUIFunctionality:
         mock_mem0.return_value = mock_mem0_client
 
         # Call cached functions multiple times
-        deps1 = get_agent_deps()
-        deps2 = get_agent_deps()
+        deps1 = get_agent_deps()  # noqa: F821
+        deps2 = get_agent_deps()  # noqa: F821
 
         mem0_1 = mock_mem0()
         mem0_2 = mock_mem0()
@@ -474,7 +476,7 @@ class TestErrorHandlingWorkflows:
             mock_agent_run.return_value = mock_result
 
             # Should handle partial response gracefully
-            response = await run_agent("test query")
+            response = await run_agent("test query")  # noqa: F821
             assert "Partial response due to" in response
 
     @pytest.mark.asyncio
@@ -512,7 +514,7 @@ class TestEdgeCaseWorkflows:
             mock_result.new_messages.return_value = []
             mock_agent_run.return_value = mock_result
 
-            response = await run_agent("")
+            response = await run_agent("")  # noqa: F821
             assert "Please provide a valid query" in response
 
     @pytest.mark.asyncio
@@ -527,7 +529,7 @@ class TestEdgeCaseWorkflows:
             mock_result.new_messages.return_value = []
             mock_agent_run.return_value = mock_result
 
-            response = await run_agent(long_query)
+            response = await run_agent(long_query)  # noqa: F821
             assert "I understand" in response
 
     @pytest.mark.asyncio
@@ -543,7 +545,7 @@ class TestEdgeCaseWorkflows:
             mock_result.new_messages.return_value = []
             mock_agent_run.return_value = mock_result
 
-            response = await run_agent(special_query)
+            response = await run_agent(special_query)  # noqa: F821
             assert "programming languages" in response
 
     @pytest.mark.asyncio
@@ -567,7 +569,7 @@ class TestEdgeCaseWorkflows:
                 mock_result.new_messages.return_value = []
                 mock_agent_run.return_value = mock_result
 
-                return await run_agent(f"Query from session {session_id}")
+                return await run_agent(f"Query from session {session_id}")  # noqa: F821
 
         # Execute concurrent sessions
         tasks = [simulate_session(i) for i in range(5)]
@@ -590,7 +592,7 @@ class TestEdgeCaseWorkflows:
             mock_result.new_messages.return_value = []
             mock_agent_run.return_value = mock_result
 
-            response = await run_agent("Give me a detailed explanation")
+            response = await run_agent("Give me a detailed explanation")  # noqa: F821
 
             # Should handle large response
             assert len(response) > 10000
@@ -632,7 +634,7 @@ class TestPerformanceWorkflows:
                 mock_result.new_messages.return_value = []
                 mock_agent_run.return_value = mock_result
 
-                return await run_agent("test query")
+                return await run_agent("test query")  # noqa: F821
 
         # Execute many concurrent requests
         tasks = [simulate_load() for _ in range(20)]

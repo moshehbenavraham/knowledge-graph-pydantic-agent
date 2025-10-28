@@ -536,7 +536,7 @@ class TestWebSocketManagerReceiveLoop:
         mock_websocket = AsyncMock()
 
         messages = [{"type": "test1"}, {"type": "test2"}]
-        mock_websocket.receive_json.side_effect = messages + [WebSocketDisconnect()]
+        mock_websocket.receive_json.side_effect = [*messages, WebSocketDisconnect()]
 
         connection_id = await manager.connect(mock_websocket)
 

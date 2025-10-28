@@ -109,8 +109,8 @@ class TestTrackRequest:
         mon = PerformanceMonitor()
 
         with patch("src.utils.monitoring.REQUEST_COUNT") as mock_count:
-            with patch("src.utils.monitoring.REQUEST_DURATION") as mock_duration:
-                with patch("src.utils.monitoring.ERROR_COUNT") as mock_error:
+            with patch("src.utils.monitoring.REQUEST_DURATION"):
+                with patch("src.utils.monitoring.ERROR_COUNT"):
                     with pytest.raises(ValueError):
                         with mon.track_request("POST", "/fail"):
                             raise ValueError("Test error")
@@ -173,8 +173,8 @@ class TestTrackToolExecution:
         mon = PerformanceMonitor()
 
         with patch("src.utils.monitoring.TOOL_EXECUTION_COUNT") as mock_count:
-            with patch("src.utils.monitoring.TOOL_EXECUTION_DURATION") as mock_duration:
-                with patch("src.utils.monitoring.ERROR_COUNT") as mock_error:
+            with patch("src.utils.monitoring.TOOL_EXECUTION_DURATION"):
+                with patch("src.utils.monitoring.ERROR_COUNT"):
                     with pytest.raises(RuntimeError):
                         async with mon.track_tool_execution("failing_tool"):
                             raise RuntimeError("Tool failed")
@@ -219,7 +219,7 @@ class TestTrackDatabaseQuery:
 
         with patch("src.utils.monitoring.DATABASE_QUERY_COUNT") as mock_count:
             with patch("src.utils.monitoring.DATABASE_QUERY_DURATION"):
-                with patch("src.utils.monitoring.ERROR_COUNT") as mock_error:
+                with patch("src.utils.monitoring.ERROR_COUNT"):
                     with pytest.raises(Exception):
                         with mon.track_database_query("INSERT", "posts"):
                             raise Exception("DB error")

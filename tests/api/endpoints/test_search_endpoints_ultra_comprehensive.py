@@ -121,7 +121,7 @@ class TestSearchEndpoint:
             "src.api.endpoints.search._execute_adaptive_search",
             return_value={"results": [], "strategy_used": "vector"},
         ):
-            result = await search(
+            await search(
                 request=request,
                 vector_search=MagicMock(),
                 hybrid_search=MagicMock(),

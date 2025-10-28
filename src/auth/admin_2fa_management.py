@@ -203,7 +203,7 @@ def render_2fa_management_ui() -> None:
                 # Warning for removing requirement
                 if current_requirement and is_2fa_enabled:
                     st.info(
-                        "ℹ️ **Note**: Removing the 2FA requirement will allow this user to log in "
+                        "**Note**: Removing the 2FA requirement will allow this user to log in "
                         "without 2FA verification, but their 2FA configuration will be preserved."
                     )
 

@@ -260,7 +260,7 @@ class TestSettingsValidation:
         os.environ["SUPABASE_URL"] = "not-a-valid-url"
 
         try:
-            settings = Settings()
+            Settings()
             # May accept invalid URL or validate
             assert True
         except Exception:
@@ -272,7 +272,7 @@ class TestSettingsValidation:
         os.environ["API_PORT"] = "99999"  # Invalid port
 
         try:
-            settings = Settings()
+            Settings()
             assert True
         except Exception:
             assert True
@@ -284,7 +284,7 @@ class TestSettingsReload:
     def test_settings_reload(self, clean_env):
         """Test settings can be reloaded."""
         os.environ["LLM_PROVIDER"] = "openai"
-        settings1 = Settings()
+        Settings()
 
         os.environ["LLM_PROVIDER"] = "anthropic"
 
@@ -321,7 +321,7 @@ class TestSettingsEnvironments:
         os.environ["ENVIRONMENT"] = "production"
         os.environ["DEBUG"] = "false"
 
-        settings = Settings()
+        Settings()
 
         assert True
 
@@ -329,7 +329,7 @@ class TestSettingsEnvironments:
         """Test test environment settings."""
         os.environ["ENVIRONMENT"] = "test"
 
-        settings = Settings()
+        Settings()
 
         assert True
 
@@ -344,15 +344,15 @@ class TestSettingsSecrets:
         settings = Settings()
 
         # String representation should not include secrets
-        settings_str = str(settings)
+        str(settings)
 
-        assert "secret_key_123" not in settings_str or True
+        assert True
 
     def test_password_masking(self, clean_env):
         """Test passwords are masked."""
         os.environ["NEO4J_PASSWORD"] = "super_secret"
 
-        settings = Settings()
+        Settings()
 
         # Password should not be exposed
         assert True

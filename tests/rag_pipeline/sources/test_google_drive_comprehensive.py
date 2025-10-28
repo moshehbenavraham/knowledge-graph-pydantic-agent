@@ -14,6 +14,7 @@ Covers:
 - watch_for_changes() initial scan and continuous monitoring
 """
 
+import contextlib
 import json
 import tempfile
 from datetime import UTC, datetime
@@ -573,7 +574,7 @@ class TestDownloadFile:
                     mock_buffer.read = Mock(return_value=b"content")
                     mock_bytesio.return_value = mock_buffer
 
-                    result = watcher.download_file("file_id", "application/pdf")
+                    watcher.download_file("file_id", "application/pdf")
 
         assert mock_downloader.next_chunk.call_count == 3
 
@@ -820,10 +821,8 @@ class TestWatchForChanges:
                         watcher.service = mock_service
                         watcher.folder_id = None
 
-                        try:
+                        with contextlib.suppress(KeyboardInterrupt):
                             watcher.watch_for_changes()
-                        except KeyboardInterrupt:
-                            pass
 
         # Should have populated known_files
         assert len(watcher.known_files) == 2
@@ -852,10 +851,8 @@ class TestWatchForChanges:
                                 watcher.service = Mock()
                                 watcher.initialized = True
 
-                                try:
+                                with contextlib.suppress(KeyboardInterrupt):
                                     watcher.watch_for_changes()
-                                except KeyboardInterrupt:
-                                    pass
 
         mock_process.assert_called_once_with(changed_file)
 
@@ -878,10 +875,8 @@ class TestWatchForChanges:
                                 watcher.initialized = True
                                 watcher.known_files = {"file1": "2024-01-01"}
 
-                                try:
+                                with contextlib.suppress(KeyboardInterrupt):
                                     watcher.watch_for_changes()
-                                except KeyboardInterrupt:
-                                    pass
 
         mock_delete.assert_called_once_with("file1")
         assert "file1" not in watcher.known_files

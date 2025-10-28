@@ -11,7 +11,6 @@ Tests:
 - Security restrictions
 """
 
-
 from src.tools.code_execution import execute_safe_code_tool
 
 
