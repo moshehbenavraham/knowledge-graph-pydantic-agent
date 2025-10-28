@@ -29,14 +29,13 @@ class UIConfig:
     """Facade for UI-related configuration."""
 
     def __init__(self):
-        """Initialize with current settings."""
-        self._settings = get_settings()
+        """Initialize dashboard configuration."""
         self.dashboard = DashboardConfig()
 
     @property
     def mode(self) -> UIMode:
         """Get UI mode."""
-        return self._settings.ui_mode
+        return get_settings().ui_mode
 
     @property
     def ui_mode(self) -> str:
@@ -46,17 +45,17 @@ class UIConfig:
     @property
     def ui_port(self) -> int:
         """Get UI port."""
-        return getattr(self._settings, "streamlit_port", 8501)
+        return getattr(get_settings(), "streamlit_port", 8501)
 
     @property
     def enable_memory(self) -> bool:
         """Check if memory (mem0) is enabled."""
-        return getattr(self._settings, "enable_mem0", False)
+        return getattr(get_settings(), "enable_mem0", False)
 
     @property
     def enable_mcp(self) -> bool:
         """Check if MCP is enabled."""
-        return getattr(self._settings, "enable_mcp", False)
+        return getattr(get_settings(), "enable_mcp", False)
 
     @property
     def is_simple_mode(self) -> bool:

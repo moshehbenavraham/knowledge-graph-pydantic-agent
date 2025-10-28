@@ -32,10 +32,8 @@ class TestTextProcessor:
     @pytest.fixture(autouse=True)
     def mock_openai_client(self):
         # This fixture will run before each test in this class
-        # and ensure the global openai_client is mocked
-        with patch("src.rag_pipeline.common.text_processor.OpenAI") as mock_openai:
-            mock_openai_instance = MagicMock()
-            mock_openai.return_value = mock_openai_instance
+        # and patch the module-level openai_client directly
+        with patch("src.rag_pipeline.common.text_processor.openai_client") as mock_openai_instance:
             yield mock_openai_instance
 
     def test_chunk_text(self):
@@ -47,28 +45,23 @@ class TestTextProcessor:
             "This is a ",
             "long text ",
             "that needs",
-            " to be ch",
-            "unked for ",
-            "processin",
-            "g.",
+            " to be chu",
+            "nked for p",
+            "rocessing.",
         ]
 
         # Test with overlap
         chunks_overlap = chunk_text(text, chunk_size=10, overlap=3)
         assert chunks_overlap == [
             "This is a ",
-            "s a long t",
-            "ong text ",
-            "ext that n",
+            " a long te",
+            " text that",
             "hat needs ",
-            "needs to b",
-            "s to be ch",
-            "be chunked",
-            "unked for ",
-            "d for proc",
-            "r process",
-            "ocessing.",
-            "ssing.",
+            "ds to be c",
+            "e chunked ",
+            "ed for pro",
+            "processing",
+            "ing.",
         ]
 
         # Test empty text
@@ -78,15 +71,25 @@ class TestTextProcessor:
         assert chunk_text("short", chunk_size=10) == ["short"]
 
     @patch("src.rag_pipeline.common.text_processor.tempfile.NamedTemporaryFile")
-    @patch("src.rag_pipeline.common.text_processor.os.remove")
+    @patch("src.rag_pipeline.common.text_processor.Path")
     @patch("src.rag_pipeline.common.text_processor.pypdf.PdfReader")
-    def test_extract_text_from_pdf(self, mock_pdf_reader, mock_os_remove, mock_tempfile):
+    def test_extract_text_from_pdf(self, mock_pdf_reader, mock_path_class, mock_tempfile):
         mock_temp_file = MagicMock()
         mock_temp_file.name = "/tmp/test.pdf"  # nosec B108 - test usage
         mock_temp_file.__enter__.return_value = mock_temp_file
         mock_temp_file.write.return_value = None
         mock_temp_file.__exit__.return_value = None
         mock_tempfile.return_value = mock_temp_file
+
+        # Mock the Path usage for opening the file and cleanup
+        mock_path_instance = MagicMock()
+        mock_file_handle = MagicMock()
+        mock_file_handle.__enter__.return_value = mock_file_handle
+        mock_file_handle.__exit__.return_value = None
+        mock_path_instance.open.return_value = mock_file_handle
+        mock_path_instance.exists.return_value = True
+        mock_path_instance.unlink.return_value = None
+        mock_path_class.return_value = mock_path_instance
 
         mock_reader_instance = MagicMock()
         mock_pdf_reader.return_value = mock_reader_instance
@@ -106,14 +109,16 @@ class TestTextProcessor:
         )  # Check that it's called with a file-like object
         assert "Page 1 content." in result
         assert "Page 2 content." in result
-        mock_os_remove.assert_called_once_with("/tmp/test.pdf")  # nosec B108 - test usage
+        mock_path_instance.unlink.assert_called_once()  # Check cleanup was called
 
     def test_extract_text_from_file_pdf(self):
         file_content = b"pdf_binary_data"
         mime_type = "application/pdf"
         config = {"supported_mime_types": ["application/pdf"]}
 
-        with patch("rag_pipeline.common.text_processor.extract_text_from_pdf") as mock_extract_pdf:
+        with patch(
+            "src.rag_pipeline.common.text_processor.extract_text_from_pdf"
+        ) as mock_extract_pdf:
             mock_extract_pdf.return_value = "Extracted PDF text"
             result = extract_text_from_file(file_content, mime_type, "test.pdf", config)
             mock_extract_pdf.assert_called_once_with(file_content)

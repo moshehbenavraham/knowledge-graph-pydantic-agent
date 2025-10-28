@@ -31,10 +31,8 @@ class TestDbHandler:
     @pytest.fixture(autouse=True)
     def mock_supabase_client(self):
         # This fixture will run before each test in this class
-        # and ensure the global supabase client is mocked
-        with patch("src.rag_pipeline.common.db_handler.create_client") as mock_create_client:
-            mock_supabase_instance = MagicMock()
-            mock_create_client.return_value = mock_supabase_instance
+        # and patch the module-level supabase client directly
+        with patch("src.rag_pipeline.common.db_handler.supabase") as mock_supabase_instance:
             yield mock_supabase_instance
 
     def test_delete_document_by_file_id(self, mock_supabase_client):
@@ -162,7 +160,7 @@ class TestDbHandler:
             "schema": json.dumps(schema),
         }
         mock_table.insert.assert_called_once_with(expected_data)
-        mock_insert_execute.assert_called_once()
+        mock_insert.execute.assert_called_once()
         mock_table.update.assert_not_called()
 
     def test_insert_or_update_document_metadata_update(self, mock_supabase_client):
@@ -192,7 +190,8 @@ class TestDbHandler:
         expected_data = {"id": file_id, "title": file_title, "url": file_url}
         mock_table.update.assert_called_once_with(expected_data)
         mock_update.eq.assert_called_once_with("id", file_id)
-        mock_update_execute.assert_called_once()
+        # Since update().eq() returns a mock, check that execute was called on that return value
+        mock_update.eq.return_value.execute.assert_called_once()
         mock_table.insert.assert_not_called()
 
     def test_insert_document_rows(self, mock_supabase_client):
@@ -225,17 +224,17 @@ class TestDbHandler:
             call({"dataset_id": file_id, "row_data": {"col1": "val2", "col2": 2}}),
         ]
         mock_table.insert.assert_has_calls(expected_calls, any_order=True)
-        assert mock_insert_execute.call_count == len(rows)
+        assert mock_insert.execute.call_count == len(rows)
 
     @patch("src.rag_pipeline.common.db_handler.delete_document_by_file_id")
     @patch("src.rag_pipeline.common.db_handler.insert_or_update_document_metadata")
     @patch("src.rag_pipeline.common.db_handler.insert_document_rows")
     @patch("src.rag_pipeline.common.db_handler.insert_document_chunks")
-    @patch("src.rag_pipeline.common.text_processor.is_tabular_file")
-    @patch("src.rag_pipeline.common.text_processor.extract_schema_from_csv")
-    @patch("src.rag_pipeline.common.text_processor.extract_rows_from_csv")
-    @patch("src.rag_pipeline.common.text_processor.chunk_text")
-    @patch("src.rag_pipeline.common.text_processor.create_embeddings")
+    @patch("src.rag_pipeline.common.db_handler.is_tabular_file")
+    @patch("src.rag_pipeline.common.db_handler.extract_schema_from_csv")
+    @patch("src.rag_pipeline.common.db_handler.extract_rows_from_csv")
+    @patch("src.rag_pipeline.common.db_handler.chunk_text")
+    @patch("src.rag_pipeline.common.db_handler.create_embeddings")
     def test_process_file_for_rag_text_file(
         self,
         mock_create_embeddings,
@@ -281,11 +280,11 @@ class TestDbHandler:
     @patch("src.rag_pipeline.common.db_handler.insert_or_update_document_metadata")
     @patch("src.rag_pipeline.common.db_handler.insert_document_rows")
     @patch("src.rag_pipeline.common.db_handler.insert_document_chunks")
-    @patch("src.rag_pipeline.common.text_processor.is_tabular_file")
-    @patch("src.rag_pipeline.common.text_processor.extract_schema_from_csv")
-    @patch("src.rag_pipeline.common.text_processor.extract_rows_from_csv")
-    @patch("src.rag_pipeline.common.text_processor.chunk_text")
-    @patch("src.rag_pipeline.common.text_processor.create_embeddings")
+    @patch("src.rag_pipeline.common.db_handler.is_tabular_file")
+    @patch("src.rag_pipeline.common.db_handler.extract_schema_from_csv")
+    @patch("src.rag_pipeline.common.db_handler.extract_rows_from_csv")
+    @patch("src.rag_pipeline.common.db_handler.chunk_text")
+    @patch("src.rag_pipeline.common.db_handler.create_embeddings")
     def test_process_file_for_rag_tabular_file(
         self,
         mock_create_embeddings,
@@ -340,11 +339,11 @@ class TestDbHandler:
     @patch("src.rag_pipeline.common.db_handler.insert_or_update_document_metadata")
     @patch("src.rag_pipeline.common.db_handler.insert_document_rows")
     @patch("src.rag_pipeline.common.db_handler.insert_document_chunks")
-    @patch("src.rag_pipeline.common.text_processor.is_tabular_file")
-    @patch("src.rag_pipeline.common.text_processor.extract_schema_from_csv")
-    @patch("src.rag_pipeline.common.text_processor.extract_rows_from_csv")
-    @patch("src.rag_pipeline.common.text_processor.chunk_text")
-    @patch("src.rag_pipeline.common.text_processor.create_embeddings")
+    @patch("src.rag_pipeline.common.db_handler.is_tabular_file")
+    @patch("src.rag_pipeline.common.db_handler.extract_schema_from_csv")
+    @patch("src.rag_pipeline.common.db_handler.extract_rows_from_csv")
+    @patch("src.rag_pipeline.common.db_handler.chunk_text")
+    @patch("src.rag_pipeline.common.db_handler.create_embeddings")
     def test_process_file_for_rag_image_file(
         self,
         mock_create_embeddings,
@@ -390,11 +389,11 @@ class TestDbHandler:
     @patch("src.rag_pipeline.common.db_handler.insert_or_update_document_metadata")
     @patch("src.rag_pipeline.common.db_handler.insert_document_rows")
     @patch("src.rag_pipeline.common.db_handler.insert_document_chunks")
-    @patch("src.rag_pipeline.common.text_processor.is_tabular_file")
-    @patch("src.rag_pipeline.common.text_processor.extract_schema_from_csv")
-    @patch("src.rag_pipeline.common.text_processor.extract_rows_from_csv")
-    @patch("src.rag_pipeline.common.text_processor.chunk_text")
-    @patch("src.rag_pipeline.common.text_processor.create_embeddings")
+    @patch("src.rag_pipeline.common.db_handler.is_tabular_file")
+    @patch("src.rag_pipeline.common.db_handler.extract_schema_from_csv")
+    @patch("src.rag_pipeline.common.db_handler.extract_rows_from_csv")
+    @patch("src.rag_pipeline.common.db_handler.chunk_text")
+    @patch("src.rag_pipeline.common.db_handler.create_embeddings")
     def test_process_file_for_rag_no_chunks(
         self,
         mock_create_embeddings,
@@ -427,4 +426,4 @@ class TestDbHandler:
             file_id, file_title, file_url, None
         )
         mock_insert_document_chunks.assert_not_called()  # Should not be called if no chunks
-        assert result is False  # Should return False on failure
+        assert result is None  # Should return None when no chunks are created

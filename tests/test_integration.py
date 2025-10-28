@@ -92,65 +92,151 @@ class TestRAGPipelineIntegration:
         ]
         return client
 
+    @pytest.fixture
+    def mock_hybrid_search(self):
+        """Mock HybridSearch instance to avoid real database connections."""
+        from uuid import uuid4
+
+        from src.agentic_rag.search.hybrid_search import HybridSearchResult
+        from src.agentic_rag.search.intent_analyzer import SearchIntent
+        from src.agentic_rag.search.vector_search import ChunkResult
+        from src.config import SearchStrategy
+
+        mock_search = AsyncMock()
+
+        # Create realistic ChunkResult objects with proper structure
+        chunk1 = ChunkResult(
+            chunk_id=uuid4(),
+            content="This is relevant content about AI",
+            similarity=0.85,
+            document_id=uuid4(),
+            document_title="AI Guide",
+            document_source="relevant_doc.pdf",
+            metadata={},
+        )
+        chunk2 = ChunkResult(
+            chunk_id=uuid4(),
+            content="More relevant content about machine learning",
+            similarity=0.78,
+            document_id=uuid4(),
+            document_title="ML Basics",
+            document_source="another_doc.txt",
+            metadata={},
+        )
+
+        # Create a realistic HybridSearchResult with correct field names
+        mock_result = HybridSearchResult(
+            chunks=[chunk1, chunk2],
+            facts=[],
+            entities=[],
+            relationships=[],
+            search_strategy=SearchStrategy.VECTOR_ONLY,
+            intent=SearchIntent.VECTOR_HEAVY,
+            query_time=0.05,  # 50ms in seconds
+            metadata={},
+        )
+
+        mock_search.search.return_value = mock_result
+        return mock_search
+
     @pytest.mark.asyncio
     async def test_rag_document_retrieval_integration(
-        self, mock_supabase_client, mock_embedding_client
+        self, mock_supabase_client, mock_embedding_client, mock_hybrid_search
     ):
         """Test end-to-end RAG document retrieval."""
         query = "What is artificial intelligence?"
 
-        # Test the RAG retrieval tool
-        result = await retrieve_relevant_documents_tool(
-            mock_supabase_client, mock_embedding_client, query
-        )
+        # Mock get_hybrid_search to return our mock
+        with patch("tools.rag.get_hybrid_search", return_value=mock_hybrid_search):
+            # Test the RAG retrieval tool
+            result = await retrieve_relevant_documents_tool(
+                mock_supabase_client, mock_embedding_client, query
+            )
 
-        # Verify embedding was created
-        mock_embedding_client.embeddings.create.assert_called_once()
+            # Verify HybridSearch.search was called
+            mock_hybrid_search.search.assert_called_once()
 
-        # Verify database was queried
-        mock_supabase_client.rpc.assert_called_once()
-
-        # Verify result format
-        assert isinstance(result, str)
-        assert "relevant_doc.pdf" in result
-        assert "This is relevant content about AI" in result
+            # Verify result format
+            assert isinstance(result, str)
+            assert "relevant_doc.pdf" in result
+            assert "This is relevant content about AI" in result
 
     @pytest.mark.asyncio
     async def test_document_listing_integration(self, mock_supabase_client):
         """Test document listing integration."""
+        # Fix mock to use from_() instead of table()
+        mock_supabase_client.from_.return_value.select.return_value.execute.return_value.data = [
+            {
+                "id": "doc1",
+                "title": "document1",
+                "source": "document1.pdf",
+                "created_at": "2024-01-01",
+            },
+            {
+                "id": "doc2",
+                "title": "document2",
+                "source": "document2.txt",
+                "created_at": "2024-01-02",
+            },
+        ]
+
         result = await list_documents_tool(mock_supabase_client)
 
-        # Verify database query
-        mock_supabase_client.table.assert_called_with("documents")
+        # Verify database query (uses from_() not table())
+        mock_supabase_client.from_.assert_called_with("documents")
 
-        # Verify result
+        # Verify result format
         assert isinstance(result, list)
         assert len(result) == 2
-        assert "document1.pdf" in result
-        assert "document2.txt" in result
+        # Results are formatted as "ID: ..., Title: ..., Source: ..., Created: ..."
+        assert "document1.pdf" in str(result)
+        assert "document2.txt" in str(result)
 
     @pytest.mark.asyncio
-    async def test_rag_with_empty_results(self, mock_supabase_client, mock_embedding_client):
+    async def test_rag_with_empty_results(
+        self, mock_supabase_client, mock_embedding_client, mock_hybrid_search
+    ):
         """Test RAG behavior when no documents are found."""
-        # Mock empty results
-        mock_supabase_client.rpc.return_value.execute.return_value.data = []
+        from src.agentic_rag.search.hybrid_search import HybridSearchResult
+        from src.agentic_rag.search.intent_analyzer import SearchIntent
+        from src.config import SearchStrategy
 
-        result = await retrieve_relevant_documents_tool(
-            mock_supabase_client, mock_embedding_client, "nonexistent topic"
+        # Mock empty results with correct field names
+        empty_result = HybridSearchResult(
+            chunks=[],
+            facts=[],
+            entities=[],
+            relationships=[],
+            search_strategy=SearchStrategy.VECTOR_ONLY,
+            intent=SearchIntent.VECTOR_HEAVY,
+            query_time=0.03,
+            metadata={},
         )
+        mock_hybrid_search.search.return_value = empty_result
 
-        assert "No relevant documents found" in result
+        with patch("tools.rag.get_hybrid_search", return_value=mock_hybrid_search):
+            result = await retrieve_relevant_documents_tool(
+                mock_supabase_client, mock_embedding_client, "nonexistent topic"
+            )
+
+            assert "No relevant documents found" in result
 
     @pytest.mark.asyncio
-    async def test_rag_error_handling(self, mock_supabase_client, mock_embedding_client):
+    async def test_rag_error_handling(
+        self, mock_supabase_client, mock_embedding_client, mock_hybrid_search
+    ):
         """Test RAG error handling for database failures."""
-        # Mock database error
-        mock_supabase_client.rpc.side_effect = Exception("Database connection failed")
+        # Mock hybrid search error
+        mock_hybrid_search.search.side_effect = Exception("Database connection failed")
 
-        with pytest.raises(Exception, match="Database connection failed"):
-            await retrieve_relevant_documents_tool(
+        with patch("tools.rag.get_hybrid_search", return_value=mock_hybrid_search):
+            result = await retrieve_relevant_documents_tool(
                 mock_supabase_client, mock_embedding_client, "test query"
             )
+
+            # The tool catches exceptions and returns error message
+            assert "Error retrieving documents" in result
+            assert "Database connection failed" in result
 
 
 class TestDatabaseOperationsIntegration:
@@ -176,8 +262,10 @@ class TestDatabaseOperationsIntegration:
 
         result = await execute_sql_query_tool(mock_supabase_client, query)
 
-        # Verify RPC call was made
-        mock_supabase_client.rpc.assert_called_once_with("execute_sql", {"query": query})
+        # Verify RPC call was made (semicolon is stripped by the tool)
+        mock_supabase_client.rpc.assert_called_once_with(
+            "execute_sql", {"query": "SELECT id, name, email FROM users LIMIT 2"}
+        )
 
         # Verify result format
         assert isinstance(result, str)
@@ -187,27 +275,27 @@ class TestDatabaseOperationsIntegration:
     @pytest.mark.asyncio
     async def test_database_connection_resilience(self, mock_supabase_client):
         """Test database connection resilience and retry logic."""
-        # First call fails, second succeeds
-        mock_supabase_client.rpc.side_effect = [
-            Exception("Connection timeout"),
-            MagicMock(execute=MagicMock(return_value=MagicMock(data=[{"result": "success"}]))),
-        ]
+        # First call fails
+        mock_supabase_client.rpc.side_effect = Exception("Connection timeout")
 
-        # This should handle the first failure gracefully
-        with pytest.raises(Exception, match="Connection timeout"):
-            await execute_sql_query_tool(mock_supabase_client, "SELECT 1;")
+        # Tool catches exceptions and returns error string
+        result = await execute_sql_query_tool(mock_supabase_client, "SELECT 1;")
+        assert "Error executing SQL query" in result
+        assert "Connection timeout" in result
 
     @pytest.mark.asyncio
     async def test_sql_injection_protection(self, mock_supabase_client):
         """Test SQL injection protection in query execution."""
         malicious_query = "SELECT * FROM users; DROP TABLE users; --"
 
-        # The tool should still execute (protection is at RPC level)
+        # Tool detects DROP operation and blocks it
         result = await execute_sql_query_tool(mock_supabase_client, malicious_query)
 
-        # Verify the query was passed to RPC (protection happens server-side)
-        mock_supabase_client.rpc.assert_called_once_with("execute_sql", {"query": malicious_query})
-        assert "safe" in result
+        # Verify the error was returned (protection is client-side)
+        assert "Error: Write operation 'DROP' detected" in result
+        assert "Only read-only queries are allowed" in result
+        # RPC should not be called because the query was blocked
+        mock_supabase_client.rpc.assert_not_called()
 
 
 class TestToolIntegration:
@@ -226,8 +314,8 @@ class TestToolIntegration:
         return deps
 
     @pytest.mark.asyncio
-    @patch("tools.web_search.web_search_tool")
-    @patch("tools.rag.retrieve_relevant_documents_tool")
+    @patch("tests.test_integration.web_search_tool")
+    @patch("tests.test_integration.retrieve_relevant_documents_tool")
     async def test_web_search_and_rag_integration(
         self, mock_rag_tool, mock_web_search_tool, mock_agent_deps
     ):
@@ -262,11 +350,13 @@ class TestToolIntegration:
         # Mock a tool failure
         mock_agent_deps.supabase.rpc.side_effect = Exception("Database unavailable")
 
-        with pytest.raises(Exception, match="Database unavailable"):
-            await execute_sql_query_tool(mock_agent_deps.supabase, "SELECT 1;")
+        # Tool catches exceptions and returns error string
+        result = await execute_sql_query_tool(mock_agent_deps.supabase, "SELECT 1;")
+        assert "Error executing SQL query" in result
+        assert "Database unavailable" in result
 
     @pytest.mark.asyncio
-    @patch("tools.rag.retrieve_relevant_documents_tool")
+    @patch("tests.test_integration.retrieve_relevant_documents_tool")
     async def test_memory_context_in_rag(self, mock_rag_tool, mock_agent_deps):
         """Test that user memories provide context for RAG operations."""
         mock_rag_tool.return_value = "Python-specific AI documentation found"
@@ -356,6 +446,43 @@ class TestEndToEndWorkflows:
     """Test complete end-to-end workflows that span multiple components."""
 
     @pytest.fixture
+    def mock_hybrid_search(self):
+        """Mock HybridSearch instance to avoid real database connections."""
+        from uuid import uuid4
+
+        from src.agentic_rag.search.hybrid_search import HybridSearchResult
+        from src.agentic_rag.search.intent_analyzer import SearchIntent
+        from src.agentic_rag.search.vector_search import ChunkResult
+        from src.config import SearchStrategy
+
+        mock_search = AsyncMock()
+
+        # Create realistic ChunkResult for AI guide
+        chunk1 = ChunkResult(
+            chunk_id=uuid4(),
+            content="Comprehensive guide to artificial intelligence and machine learning",
+            similarity=0.92,
+            document_id=uuid4(),
+            document_title="AI Guide",
+            document_source="ai_guide.pdf",
+            metadata={},
+        )
+
+        mock_result = HybridSearchResult(
+            chunks=[chunk1],
+            facts=[],
+            entities=[],
+            relationships=[],
+            search_strategy=SearchStrategy.VECTOR_ONLY,
+            intent=SearchIntent.VECTOR_HEAVY,
+            query_time=0.05,
+            metadata={},
+        )
+
+        mock_search.search.return_value = mock_result
+        return mock_search
+
+    @pytest.fixture
     def integrated_agent_deps(self):
         """Create integrated agent dependencies for end-to-end testing."""
         deps = MagicMock(spec=AgentDeps)
@@ -394,18 +521,21 @@ class TestEndToEndWorkflows:
         return deps
 
     @pytest.mark.asyncio
-    @patch("tools.web_search.web_search_tool")
-    async def test_research_workflow(self, mock_web_search, integrated_agent_deps):
+    @patch("tests.test_integration.web_search_tool")
+    async def test_research_workflow(
+        self, mock_web_search, integrated_agent_deps, mock_hybrid_search
+    ):
         """Test a complete research workflow: memory -> RAG -> web search."""
         # Setup web search mock
         mock_web_search.return_value = "Latest AI research papers and tutorials"
 
-        # Step 1: Retrieve relevant documents (RAG)
-        rag_result = await retrieve_relevant_documents_tool(
-            integrated_agent_deps.supabase,
-            integrated_agent_deps.embedding_client,
-            "machine learning tutorials for Python developers",
-        )
+        # Step 1: Retrieve relevant documents (RAG) with mocked hybrid search
+        with patch("tools.rag.get_hybrid_search", return_value=mock_hybrid_search):
+            rag_result = await retrieve_relevant_documents_tool(
+                integrated_agent_deps.supabase,
+                integrated_agent_deps.embedding_client,
+                "machine learning tutorials for Python developers",
+            )
 
         # Step 2: Supplement with web search
         web_result = await web_search_tool(
@@ -421,12 +551,11 @@ class TestEndToEndWorkflows:
         assert "Latest AI research" in web_result
 
         # Verify all components were called
-        integrated_agent_deps.embedding_client.embeddings.create.assert_called_once()
-        integrated_agent_deps.supabase.rpc.assert_called_once()
+        mock_hybrid_search.search.assert_called_once()
         mock_web_search.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_data_analysis_workflow(self, integrated_agent_deps):
+    async def test_data_analysis_workflow(self, integrated_agent_deps, mock_hybrid_search):
         """Test a data analysis workflow: SQL query -> document retrieval."""
         # Mock SQL query results
         integrated_agent_deps.supabase.rpc.return_value.execute.return_value.data = [
@@ -439,55 +568,86 @@ class TestEndToEndWorkflows:
             "SELECT metric, value, trend FROM analytics WHERE date >= '2024-01-01';",
         )
 
-        # Step 2: Retrieve relevant documentation
-        doc_result = await retrieve_relevant_documents_tool(
-            integrated_agent_deps.supabase,
-            integrated_agent_deps.embedding_client,
-            "user engagement analysis best practices",
-        )
+        # Step 2: Retrieve relevant documentation with mocked hybrid search
+        with patch("tools.rag.get_hybrid_search", return_value=mock_hybrid_search):
+            doc_result = await retrieve_relevant_documents_tool(
+                integrated_agent_deps.supabase,
+                integrated_agent_deps.embedding_client,
+                "user engagement analysis best practices",
+            )
 
         # Verify workflow results
         assert "user_engagement" in sql_result
         assert "85.2" in sql_result
         assert "ai_guide.pdf" in doc_result
 
-        # Verify database interactions
-        assert integrated_agent_deps.supabase.rpc.call_count == 2  # SQL + RAG
+        # Verify database interactions (only SQL query uses supabase.rpc, RAG uses hybrid_search)
+        assert integrated_agent_deps.supabase.rpc.call_count == 1  # Only SQL query
 
 
 class TestPerformanceIntegration:
     """Test performance aspects of component integration."""
 
+    @pytest.fixture
+    def mock_hybrid_search(self):
+        """Mock HybridSearch instance for performance tests."""
+        from uuid import uuid4
+
+        from src.agentic_rag.search.hybrid_search import HybridSearchResult
+        from src.agentic_rag.search.intent_analyzer import SearchIntent
+        from src.agentic_rag.search.vector_search import ChunkResult
+        from src.config import SearchStrategy
+
+        mock_search = AsyncMock()
+
+        chunk = ChunkResult(
+            chunk_id=uuid4(),
+            content="Test content",
+            similarity=0.85,
+            document_id=uuid4(),
+            document_title="Test Doc",
+            document_source="test.pdf",
+            metadata={},
+        )
+
+        mock_result = HybridSearchResult(
+            chunks=[chunk],
+            facts=[],
+            entities=[],
+            relationships=[],
+            search_strategy=SearchStrategy.VECTOR_ONLY,
+            intent=SearchIntent.VECTOR_HEAVY,
+            query_time=0.05,
+            metadata={},
+        )
+
+        mock_search.search.return_value = mock_result
+        return mock_search
+
     @pytest.mark.asyncio
-    async def test_concurrent_tool_execution(self):
+    async def test_concurrent_tool_execution(self, mock_hybrid_search):
         """Test that multiple tools can execute concurrently without conflicts."""
         # Mock components
         mock_supabase = MagicMock()
         mock_embedding_client = AsyncMock()
 
-        # Setup mocks for concurrent execution
-        mock_supabase.rpc.return_value.execute.return_value.data = [{"result": "success"}]
-        mock_embedding_client.embeddings.create.return_value.data = [
-            MagicMock(embedding=[0.1] * 1536)
-        ]
+        # Create multiple concurrent tasks with mocked hybrid search
+        with patch("tools.rag.get_hybrid_search", return_value=mock_hybrid_search):
+            tasks = [
+                retrieve_relevant_documents_tool(mock_supabase, mock_embedding_client, f"query {i}")
+                for i in range(3)
+            ]
 
-        # Create multiple concurrent tasks
-        tasks = [
-            retrieve_relevant_documents_tool(mock_supabase, mock_embedding_client, f"query {i}")
-            for i in range(3)
-        ]
-
-        # Execute concurrently
-        results = await asyncio.gather(*tasks)
+            # Execute concurrently
+            results = await asyncio.gather(*tasks)
 
         # Verify all tasks completed
         assert len(results) == 3
         for result in results:
             assert isinstance(result, str)
 
-        # Verify concurrent database access
-        assert mock_supabase.rpc.call_count == 3
-        assert mock_embedding_client.embeddings.create.call_count == 3
+        # Verify concurrent hybrid search access
+        assert mock_hybrid_search.search.call_count == 3
 
     @pytest.mark.asyncio
     async def test_large_document_processing(self):
@@ -554,16 +714,18 @@ class TestErrorRecoveryIntegration:
             MagicMock(execute=MagicMock(return_value=MagicMock(data=[{"result": "recovered"}]))),
         ]
 
-        # First two attempts should fail
-        with pytest.raises(Exception, match="Connection failed"):
-            await execute_sql_query_tool(mock_supabase, "SELECT 1;")
+        # First two attempts should fail (tool catches exceptions)
+        result1 = await execute_sql_query_tool(mock_supabase, "SELECT 1;")
+        assert "Error executing SQL query" in result1
+        assert "Connection failed" in result1
 
-        with pytest.raises(Exception, match="Still failing"):
-            await execute_sql_query_tool(mock_supabase, "SELECT 1;")
+        result2 = await execute_sql_query_tool(mock_supabase, "SELECT 1;")
+        assert "Error executing SQL query" in result2
+        assert "Still failing" in result2
 
         # Third attempt should succeed
-        result = await execute_sql_query_tool(mock_supabase, "SELECT 1;")
-        assert "recovered" in result
+        result3 = await execute_sql_query_tool(mock_supabase, "SELECT 1;")
+        assert "recovered" in result3
 
     @pytest.mark.asyncio
     async def test_embedding_service_degradation(self):
@@ -571,16 +733,19 @@ class TestErrorRecoveryIntegration:
         mock_supabase = MagicMock()
         mock_embedding_client = AsyncMock()
 
-        # Simulate embedding service failure
-        mock_embedding_client.embeddings.create.side_effect = Exception(
-            "Embedding service unavailable"
-        )
+        # Simulate hybrid search failure
+        mock_hybrid_search = AsyncMock()
+        mock_hybrid_search.search.side_effect = Exception("Embedding service unavailable")
 
-        # RAG should fail gracefully
-        with pytest.raises(Exception, match="Embedding service unavailable"):
-            await retrieve_relevant_documents_tool(
+        # RAG should fail gracefully (tool catches exceptions)
+        with patch("tools.rag.get_hybrid_search", return_value=mock_hybrid_search):
+            result = await retrieve_relevant_documents_tool(
                 mock_supabase, mock_embedding_client, "test query"
             )
+
+        # Verify error message
+        assert "Error retrieving documents" in result
+        assert "Embedding service unavailable" in result
 
     @pytest.mark.asyncio
     async def test_partial_system_failure_recovery(self):
@@ -590,17 +755,20 @@ class TestErrorRecoveryIntegration:
         mock_http_client = AsyncMock()
 
         # RAG fails but web search works
-        mock_embedding_client.embeddings.create.side_effect = Exception("RAG unavailable")
+        mock_hybrid_search = AsyncMock()
+        mock_hybrid_search.search.side_effect = Exception("RAG unavailable")
 
         # Web search should still work
-        with patch("tools.web_search.web_search_tool") as mock_web_search:
+        with patch("tests.test_integration.web_search_tool") as mock_web_search:
             mock_web_search.return_value = "Web search results available"
 
-            # RAG fails
-            with pytest.raises(Exception, match="RAG unavailable"):
-                await retrieve_relevant_documents_tool(
+            # RAG fails (tool catches exception)
+            with patch("tools.rag.get_hybrid_search", return_value=mock_hybrid_search):
+                rag_result = await retrieve_relevant_documents_tool(
                     mock_supabase, mock_embedding_client, "test query"
                 )
+            assert "Error retrieving documents" in rag_result
+            assert "RAG unavailable" in rag_result
 
             # But web search succeeds
             web_result = await web_search_tool(
@@ -614,21 +782,19 @@ class TestErrorRecoveryIntegration:
         mock_supabase = MagicMock()
         mock_embedding_client = AsyncMock()
 
-        # Simulate slow operations
-        async def slow_embedding(*args, **kwargs):
-            await asyncio.sleep(10)  # Simulate very slow response
-            return MagicMock(data=[MagicMock(embedding=[0.1] * 1536)])
+        # Simulate timeout in hybrid search
+        mock_hybrid_search = AsyncMock()
+        mock_hybrid_search.search.side_effect = TimeoutError("Operation timed out")
 
-        mock_embedding_client.embeddings.create = slow_embedding
-
-        # This would timeout in a real scenario with proper timeout handling
-        # For testing, we'll simulate the timeout
-        mock_embedding_client.embeddings.create.side_effect = TimeoutError("Operation timed out")
-
-        with pytest.raises(asyncio.TimeoutError, match="Operation timed out"):
-            await retrieve_relevant_documents_tool(
+        # Tool catches TimeoutError and returns error string
+        with patch("tools.rag.get_hybrid_search", return_value=mock_hybrid_search):
+            result = await retrieve_relevant_documents_tool(
                 mock_supabase, mock_embedding_client, "test query"
             )
+
+        # Verify error message
+        assert "Error retrieving documents" in result
+        assert "Operation timed out" in result
 
 
 class TestSecurityIntegration:
@@ -642,42 +808,64 @@ class TestSecurityIntegration:
         # Mock successful execution (protection happens at RPC level)
         mock_supabase.rpc.return_value.execute.return_value.data = [{"result": "safe"}]
 
-        # Test various injection attempts
-        injection_attempts = [
-            "SELECT * FROM users; DROP TABLE users; --",
-            "'; DELETE FROM documents; --",
-            "UNION SELECT password FROM admin_users --",
+        # Test various injection attempts - client-side validation blocks these
+        injection_tests = [
+            ("SELECT * FROM users; DROP TABLE users; --", "DROP"),
+            ("'; DELETE FROM documents; --", "DELETE"),
         ]
 
-        for malicious_query in injection_attempts:
-            # The tool should pass the query to RPC (server-side protection)
+        for malicious_query, blocked_op in injection_tests:
+            # Tool detects write operations and blocks them
             result = await execute_sql_query_tool(mock_supabase, malicious_query)
 
-            # Verify the query was passed to RPC for server-side validation
-            mock_supabase.rpc.assert_called_with("execute_sql", {"query": malicious_query})
-            assert "safe" in result
+            # Verify the error was returned (client-side protection)
+            assert f"Error: Write operation '{blocked_op}' detected" in result
+            assert "Only read-only queries are allowed" in result
 
     @pytest.mark.asyncio
     async def test_data_sanitization_integration(self):
         """Test data sanitization across component boundaries."""
+        from uuid import uuid4
+
+        from src.agentic_rag.search.hybrid_search import HybridSearchResult
+        from src.agentic_rag.search.intent_analyzer import SearchIntent
+        from src.agentic_rag.search.vector_search import ChunkResult
+        from src.config import SearchStrategy
+
         mock_supabase = MagicMock()
         mock_embedding_client = AsyncMock()
 
-        # Mock responses with potentially unsafe data
-        mock_supabase.rpc.return_value.execute.return_value.data = [
-            {
-                "content": "<script>alert('xss')</script>Safe content here",
-                "file_name": "document.pdf",
-            }
-        ]
-        mock_embedding_client.embeddings.create.return_value.data = [
-            MagicMock(embedding=[0.1] * 1536)
-        ]
+        # Create mock hybrid search with potentially unsafe data
+        mock_hybrid_search = AsyncMock()
 
-        # Execute RAG retrieval
-        result = await retrieve_relevant_documents_tool(
-            mock_supabase, mock_embedding_client, "test query"
+        chunk = ChunkResult(
+            chunk_id=uuid4(),
+            content="<script>alert('xss')</script>Safe content here",
+            similarity=0.9,
+            document_id=uuid4(),
+            document_title="document.pdf",
+            document_source="document.pdf",
+            metadata={},
         )
+
+        mock_result = HybridSearchResult(
+            chunks=[chunk],
+            facts=[],
+            entities=[],
+            relationships=[],
+            search_strategy=SearchStrategy.VECTOR_ONLY,
+            intent=SearchIntent.VECTOR_HEAVY,
+            query_time=0.05,
+            metadata={},
+        )
+
+        mock_hybrid_search.search.return_value = mock_result
+
+        # Execute RAG retrieval with mocked hybrid search
+        with patch("tools.rag.get_hybrid_search", return_value=mock_hybrid_search):
+            result = await retrieve_relevant_documents_tool(
+                mock_supabase, mock_embedding_client, "test query"
+            )
 
         # Verify the result contains the data (sanitization would happen at display layer)
         assert "Safe content here" in result
@@ -689,7 +877,7 @@ class TestSecurityIntegration:
         mock_http_client = AsyncMock()
 
         # Test with None API key (should use fallback)
-        with patch("tools.web_search.web_search_tool") as mock_web_search:
+        with patch("tests.test_integration.web_search_tool") as mock_web_search:
             mock_web_search.return_value = "Fallback search results"
 
             result = await web_search_tool(

@@ -31,14 +31,24 @@ class TestSettings:
 
     def test_default_settings_load(self):
         """Test that default settings load correctly."""
-        settings = Settings()
+        # Isolate environment to test defaults
+        with patch.dict(
+            os.environ,
+            {
+                "SUPABASE_URL": "https://test.supabase.co",
+                "NEO4J_PASSWORD": "test",
+                "LOG_LEVEL": "INFO",  # Explicitly set to test default
+            },
+            clear=True,
+        ):
+            settings = Settings()
 
-        # Check defaults
-        assert settings.app_env == Environment.DEVELOPMENT
-        assert settings.log_level == "INFO"
-        assert settings.api_port == 8058
-        assert settings.chunk_size == 1000
-        assert settings.chunk_overlap == 200
+            # Check defaults
+            assert settings.app_env == Environment.DEVELOPMENT
+            assert settings.log_level == "INFO"
+            assert settings.api_port == 8058
+            assert settings.chunk_size == 1000
+            assert settings.chunk_overlap == 200
 
     def test_env_var_override(self):
         """Test that environment variables override defaults."""
@@ -206,7 +216,10 @@ class TestAPIConfig:
                 "LOG_LEVEL": "WARNING",
                 "DEBUG": "true",
                 "HOT_RELOAD": "true",
+                "SUPABASE_URL": "https://test.supabase.co",
+                "NEO4J_PASSWORD": "test",
             },
+            clear=True,
         ):
             reload_settings()  # Force reload to pick up env vars
 
@@ -226,7 +239,10 @@ class TestAPIConfig:
                 "HOT_RELOAD": "true",
                 "LOG_LEVEL": "INFO",
                 "DEBUG": "true",
+                "SUPABASE_URL": "https://test.supabase.co",
+                "NEO4J_PASSWORD": "test",
             },
+            clear=True,
         ):
             reload_settings()
 
@@ -239,7 +255,15 @@ class TestAPIConfig:
 
     def test_cors_config(self):
         """Test CORS configuration generation."""
-        with patch.dict(os.environ, {"CORS_ORIGINS": "http://app.local,https://app.prod"}):
+        with patch.dict(
+            os.environ,
+            {
+                "CORS_ORIGINS": "http://app.local,https://app.prod",
+                "SUPABASE_URL": "https://test.supabase.co",
+                "NEO4J_PASSWORD": "test",
+            },
+            clear=True,
+        ):
             reload_settings()
 
             config = api_config.get_cors_config()
@@ -259,11 +283,15 @@ class TestAgentConfig:
             os.environ,
             {
                 "LLM_MODEL": "claude-3-opus",
+                "LLM_CHOICE": "",  # Clear legacy choice to test LLM_MODEL
                 "LLM_TEMPERATURE": "0.5",
                 "LLM_MAX_TOKENS": "4000",
                 "EXTRACTION_MODEL": "gpt-4",
                 "ENABLE_GRAPH": "false",
+                "SUPABASE_URL": "https://test.supabase.co",
+                "NEO4J_PASSWORD": "test",
             },
+            clear=True,
         ):
             reload_settings()
 
@@ -282,7 +310,10 @@ class TestAgentConfig:
                 "JINA_API_KEY": "jina-key",
                 "BRAVE_API_KEY": "brave-key",
                 "SEARXNG_BASE_URL": "http://searxng.local",
+                "SUPABASE_URL": "https://test.supabase.co",
+                "NEO4J_PASSWORD": "test",
             },
+            clear=True,
         ):
             reload_settings()
 
@@ -301,7 +332,10 @@ class TestAgentConfig:
                 "ENABLE_PARALLEL_SEARCH": "false",
                 "VECTOR_SEARCH_TIMEOUT": "1.5",
                 "GRAPH_SEARCH_TIMEOUT": "2.5",
+                "SUPABASE_URL": "https://test.supabase.co",
+                "NEO4J_PASSWORD": "test",
             },
+            clear=True,
         ):
             reload_settings()
 
@@ -324,7 +358,11 @@ class TestClientsConfig:
                 "LLM_BASE_URL": "https://api.openai.com/v1",
                 "LLM_API_KEY": "sk-test",
                 "LLM_MODEL": "gpt-4",
+                "LLM_CHOICE": "",  # Clear legacy choice to test LLM_MODEL
+                "SUPABASE_URL": "https://test.supabase.co",
+                "NEO4J_PASSWORD": "test",
             },
+            clear=True,
         ):
             reload_settings()
 
@@ -342,8 +380,12 @@ class TestClientsConfig:
                 "EMBEDDING_BASE_URL": "https://api.openai.com/v1",
                 "EMBEDDING_API_KEY": "sk-embed",
                 "EMBEDDING_MODEL": "text-embedding-ada-002",
+                "EMBEDDING_MODEL_CHOICE": "",  # Clear legacy choice to test EMBEDDING_MODEL
                 "EMBEDDING_DIMENSION": "1536",
+                "SUPABASE_URL": "https://test.supabase.co",
+                "NEO4J_PASSWORD": "test",
             },
+            clear=True,
         ):
             reload_settings()
 
@@ -365,6 +407,7 @@ class TestClientsConfig:
                 "NEO4J_USER": "neo4j_user",
                 "NEO4J_PASSWORD": "neo4j_pass",
             },
+            clear=True,
         ):
             reload_settings()
 
@@ -383,14 +426,30 @@ class TestUIConfig:
 
     def test_ui_mode_properties(self):
         """Test UI mode properties."""
-        with patch.dict(os.environ, {"UI_MODE": "simple"}):
+        with patch.dict(
+            os.environ,
+            {
+                "UI_MODE": "simple",
+                "SUPABASE_URL": "https://test.supabase.co",
+                "NEO4J_PASSWORD": "test",
+            },
+            clear=True,
+        ):
             reload_settings()
             assert ui_config.mode == UIMode.SIMPLE
             assert ui_config.is_simple_mode is True
             assert ui_config.is_standard_mode is False
             assert ui_config.is_advanced_mode is False
 
-        with patch.dict(os.environ, {"UI_MODE": "advanced"}):
+        with patch.dict(
+            os.environ,
+            {
+                "UI_MODE": "advanced",
+                "SUPABASE_URL": "https://test.supabase.co",
+                "NEO4J_PASSWORD": "test",
+            },
+            clear=True,
+        ):
             reload_settings()
             assert ui_config.mode == UIMode.ADVANCED
             assert ui_config.is_simple_mode is False
@@ -399,14 +458,30 @@ class TestUIConfig:
 
     def test_feature_flags(self):
         """Test UI feature flags based on mode."""
-        with patch.dict(os.environ, {"UI_MODE": "simple"}):
+        with patch.dict(
+            os.environ,
+            {
+                "UI_MODE": "simple",
+                "SUPABASE_URL": "https://test.supabase.co",
+                "NEO4J_PASSWORD": "test",
+            },
+            clear=True,
+        ):
             reload_settings()
             assert ui_config.enable_persistence is False
             assert ui_config.enable_advanced_features is False
             assert ui_config.show_metrics is False
             assert ui_config.show_export is False
 
-        with patch.dict(os.environ, {"UI_MODE": "advanced"}):
+        with patch.dict(
+            os.environ,
+            {
+                "UI_MODE": "advanced",
+                "SUPABASE_URL": "https://test.supabase.co",
+                "NEO4J_PASSWORD": "test",
+            },
+            clear=True,
+        ):
             reload_settings()
             assert ui_config.enable_persistence is True
             assert ui_config.enable_advanced_features is True
