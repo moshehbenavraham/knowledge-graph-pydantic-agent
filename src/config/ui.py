@@ -39,6 +39,26 @@ class UIConfig:
         return self._settings.ui_mode
 
     @property
+    def ui_mode(self) -> str:
+        """Get UI mode as string (alias for mode)."""
+        return self.mode.value if hasattr(self.mode, 'value') else str(self.mode)
+
+    @property
+    def ui_port(self) -> int:
+        """Get UI port."""
+        return getattr(self._settings, 'streamlit_port', 8501)
+
+    @property
+    def enable_memory(self) -> bool:
+        """Check if memory (mem0) is enabled."""
+        return getattr(self._settings, 'enable_mem0', False)
+
+    @property
+    def enable_mcp(self) -> bool:
+        """Check if MCP is enabled."""
+        return getattr(self._settings, 'enable_mcp', False)
+
+    @property
     def is_simple_mode(self) -> bool:
         """Check if UI is in simple mode."""
         return self.mode == UIMode.SIMPLE
@@ -102,6 +122,21 @@ class UIConfig:
             UIMode.ADVANCED: "Advanced interface with all features and metrics",
         }
         return descriptions.get(self.mode, "Unknown mode")
+
+    def get_ui_config(self) -> dict:
+        """Get UI configuration dictionary."""
+        logger.info("Getting UI configuration", mode=self.ui_mode, port=self.ui_port)
+        return {
+            "mode": self.ui_mode,
+            "port": self.ui_port,
+            "enable_memory": self.enable_memory,
+            "enable_mcp": self.enable_mcp,
+            "enable_persistence": self.enable_persistence,
+            "enable_advanced_features": self.enable_advanced_features,
+            "max_message_length": self.max_message_length,
+            "show_metrics": self.show_metrics,
+            "show_export": self.show_export,
+        }
 
 
 # Singleton instance

@@ -25,6 +25,11 @@ def clean_env():
         "NEO4J_URI",
         "BRAVE_API_KEY",
         "JINA_API_KEY",
+        "API_PORT",
+        "ENVIRONMENT",
+        "DEBUG",
+        "NEO4J_PASSWORD",
+        "CORS_ORIGINS",
     ]
 
     original_values = {}

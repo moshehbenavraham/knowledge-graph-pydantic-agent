@@ -19,6 +19,11 @@ class AgentConfig:
         self._settings = get_settings()
 
     @property
+    def llm_provider(self) -> str:
+        """Get LLM provider."""
+        return self._settings.llm_provider
+
+    @property
     def llm_model(self) -> str:
         """Get LLM model name."""
         return self._settings.get_effective_llm_model()

@@ -305,7 +305,7 @@ class TestRenderOAuthAnalyticsDashboard:
 
     @patch("src.auth.oauth_analytics_dashboard.st")
     @patch("src.auth.oauth_analytics_dashboard.asyncio")
-    @patch("src.auth.oauth_analytics_dashboard.is_admin")
+    @patch("src.auth.admin_2fa_management.is_admin")
     async def test_render_dashboard_not_admin(self, mock_is_admin, mock_asyncio, mock_st):
         """Test rendering dashboard when user is not admin."""
         mock_st.session_state.get.return_value = "testuser"
@@ -317,7 +317,7 @@ class TestRenderOAuthAnalyticsDashboard:
 
     @patch("src.auth.oauth_analytics_dashboard.st")
     @patch("src.auth.oauth_analytics_dashboard.asyncio")
-    @patch("src.auth.oauth_analytics_dashboard.is_admin")
+    @patch("src.auth.admin_2fa_management.is_admin")
     @patch("src.auth.oauth_analytics_dashboard.get_provider_summary")
     @patch("src.auth.oauth_analytics_dashboard.get_adoption_rate")
     @patch("src.auth.oauth_analytics_dashboard.get_login_activity")
@@ -364,7 +364,7 @@ class TestRenderOAuthAnalyticsDashboard:
 
     @patch("src.auth.oauth_analytics_dashboard.st")
     @patch("src.auth.oauth_analytics_dashboard.asyncio")
-    @patch("src.auth.oauth_analytics_dashboard.is_admin")
+    @patch("src.auth.admin_2fa_management.is_admin")
     @patch("src.auth.oauth_analytics_dashboard.get_provider_summary")
     async def test_render_dashboard_no_oauth_data(
         self, mock_get_summary, mock_is_admin, mock_asyncio, mock_st
@@ -387,7 +387,7 @@ class TestRenderOAuthAnalyticsDashboard:
 
     @patch("src.auth.oauth_analytics_dashboard.st")
     @patch("src.auth.oauth_analytics_dashboard.asyncio")
-    @patch("src.auth.oauth_analytics_dashboard.is_admin")
+    @patch("src.auth.admin_2fa_management.is_admin")
     @patch("src.auth.oauth_analytics_dashboard.refresh_analytics_views")
     async def test_render_dashboard_refresh_button(
         self, mock_refresh, mock_is_admin, mock_asyncio, mock_st

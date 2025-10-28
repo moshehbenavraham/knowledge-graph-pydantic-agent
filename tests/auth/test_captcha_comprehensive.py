@@ -100,10 +100,11 @@ class TestCaptchaVerification:
         """Test verification when CAPTCHA not configured."""
         manager = CaptchaManager(provider="hcaptcha", site_key="", secret_key="")
 
-        is_valid, error = await manager.verify_response("token")
+        with patch.object(manager, "_log_challenge", new_callable=AsyncMock):
+            is_valid, error = await manager.verify_response("token")
 
-        assert is_valid is True
-        assert error is None
+            assert is_valid is True
+            assert error is None
 
     @pytest.mark.asyncio
     async def test_verify_hcaptcha_success(self):

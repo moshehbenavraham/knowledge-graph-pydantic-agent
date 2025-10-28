@@ -276,7 +276,7 @@ class TestAPIConfig:
         from src.config.api import APIConfig
 
         mock_settings = MagicMock()
-        mock_settings.enable_opentelemetry = True
+        mock_settings.enable_tracing = True
         mock_get_settings.return_value = mock_settings
 
         config = APIConfig()
@@ -302,9 +302,7 @@ class TestAPIConfig:
         from src.config.api import APIConfig
 
         mock_settings = MagicMock()
-        mock_settings.cors_allow_origins = ["*"]
-        mock_settings.cors_allow_methods = ["*"]
-        mock_settings.cors_allow_headers = ["*"]
+        mock_settings.get_cors_origins_list.return_value = ["*"]
         mock_get_settings.return_value = mock_settings
 
         config = APIConfig()
@@ -313,6 +311,7 @@ class TestAPIConfig:
         assert cors_config["allow_origins"] == ["*"]
         assert cors_config["allow_methods"] == ["*"]
         assert cors_config["allow_headers"] == ["*"]
+        assert cors_config["allow_credentials"] is True
 
     @patch("src.config.api.get_settings")
     def test_get_uvicorn_config(self, mock_get_settings):
@@ -322,8 +321,9 @@ class TestAPIConfig:
         mock_settings = MagicMock()
         mock_settings.api_host = "127.0.0.1"
         mock_settings.api_port = 8080
-        mock_settings.api_reload = True
-        mock_settings.api_workers = 4
+        mock_settings.hot_reload = True
+        mock_settings.log_level = "INFO"
+        mock_settings.debug = True
         mock_get_settings.return_value = mock_settings
 
         config = APIConfig()
@@ -332,7 +332,8 @@ class TestAPIConfig:
         assert uvicorn_config["host"] == "127.0.0.1"
         assert uvicorn_config["port"] == 8080
         assert uvicorn_config["reload"] is True
-        assert uvicorn_config["workers"] == 4
+        assert uvicorn_config["log_level"] == "info"
+        assert uvicorn_config["access_log"] is True
 
     def test_api_config_singleton(self):
         """Test api_config singleton instance."""
@@ -364,13 +365,14 @@ class TestClientsConfig:
 
         mock_settings = MagicMock()
         mock_settings.supabase_url = "https://test.supabase.co"
-        mock_settings.supabase_key = "test-key-123"
+        mock_settings.supabase_service_key = "test-key-123"
         mock_get_settings.return_value = mock_settings
 
         config = ClientsConfig()
 
         assert config.supabase_url == "https://test.supabase.co"
         assert config.supabase_key == "test-key-123"
+        assert config.supabase_service_key == "test-key-123"
 
     @patch("src.config.clients.get_settings")
     def test_neo4j_config(self, mock_get_settings):
@@ -396,12 +398,13 @@ class TestClientsConfig:
 
         mock_settings = MagicMock()
         mock_settings.llm_provider = "openai"
-        mock_settings.openai_api_key = "sk-test123"
+        mock_settings.llm_api_key = "sk-test123"
         mock_get_settings.return_value = mock_settings
 
         config = ClientsConfig()
 
         assert config.llm_provider == "openai"
+        assert config.llm_api_key == "sk-test123"
         assert config.openai_api_key == "sk-test123"
 
     @patch("src.config.clients.get_settings")
@@ -458,10 +461,10 @@ class TestUIConfig:
     @patch("src.config.ui.get_settings")
     def test_ui_mode(self, mock_get_settings):
         """Test ui_mode property."""
-        from src.config.ui import UIConfig
+        from src.config.ui import UIConfig, UIMode
 
         mock_settings = MagicMock()
-        mock_settings.ui_mode = "advanced"
+        mock_settings.ui_mode = UIMode.ADVANCED
         mock_get_settings.return_value = mock_settings
 
         config = UIConfig()
@@ -509,37 +512,37 @@ class TestUIConfig:
 
     @patch("src.config.ui.get_settings")
     def test_is_simple_mode(self, mock_get_settings):
-        """Test is_simple_mode method."""
-        from src.config.ui import UIConfig
+        """Test is_simple_mode property."""
+        from src.config.ui import UIConfig, UIMode
 
         mock_settings = MagicMock()
-        mock_settings.ui_mode = "simple"
+        mock_settings.ui_mode = UIMode.SIMPLE
         mock_get_settings.return_value = mock_settings
 
         config = UIConfig()
 
-        assert config.is_simple_mode() is True
+        assert config.is_simple_mode is True
 
     @patch("src.config.ui.get_settings")
     def test_is_advanced_mode(self, mock_get_settings):
-        """Test is_advanced_mode method."""
-        from src.config.ui import UIConfig
+        """Test is_advanced_mode property."""
+        from src.config.ui import UIConfig, UIMode
 
         mock_settings = MagicMock()
-        mock_settings.ui_mode = "advanced"
+        mock_settings.ui_mode = UIMode.ADVANCED
         mock_get_settings.return_value = mock_settings
 
         config = UIConfig()
 
-        assert config.is_advanced_mode() is True
+        assert config.is_advanced_mode is True
 
     @patch("src.config.ui.get_settings")
     def test_get_ui_config(self, mock_get_settings):
         """Test get_ui_config method."""
-        from src.config.ui import UIConfig
+        from src.config.ui import UIConfig, UIMode
 
         mock_settings = MagicMock()
-        mock_settings.ui_mode = "standard"
+        mock_settings.ui_mode = UIMode.STANDARD
         mock_settings.streamlit_port = 8501
         mock_settings.enable_mem0 = True
         mock_settings.enable_mcp = False

@@ -82,6 +82,16 @@ class ClientsConfig:
         return self._settings.supabase_service_key
 
     @property
+    def supabase_key(self) -> str | None:
+        """Get Supabase key (alias for supabase_service_key)."""
+        return self.supabase_service_key
+
+    @property
+    def openai_api_key(self) -> str:
+        """Get OpenAI API key (alias for llm_api_key when provider is OpenAI)."""
+        return self.llm_api_key
+
+    @property
     def neo4j_uri(self) -> str:
         """Get Neo4j URI."""
         return self._settings.neo4j_uri
@@ -175,6 +185,14 @@ class ClientsConfig:
             "pool_size": self._settings.redis_pool_size,
             "socket_timeout": self._settings.redis_socket_timeout,
         }
+
+    def has_supabase_configured(self) -> bool:
+        """Check if Supabase is configured."""
+        return bool(self.supabase_url and self.supabase_service_key)
+
+    def has_neo4j_configured(self) -> bool:
+        """Check if Neo4j is configured."""
+        return bool(self.neo4j_uri and self.neo4j_user and self.neo4j_password)
 
 
 # Singleton instance

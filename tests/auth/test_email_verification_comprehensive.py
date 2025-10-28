@@ -255,7 +255,7 @@ class TestSendVerificationEmailSMTP:
 
     @pytest.mark.asyncio
     @patch("src.auth.email_verification.get_settings")
-    @patch("src.auth.email_verification.smtplib.SMTP")
+    @patch("smtplib.SMTP")
     async def test_send_email_smtp_success(self, mock_smtp_class, mock_get_settings):
         """Test successful SMTP email send."""
         mock_settings = MagicMock()
@@ -282,7 +282,7 @@ class TestSendVerificationEmailSMTP:
 
     @pytest.mark.asyncio
     @patch("src.auth.email_verification.get_settings")
-    @patch("src.auth.email_verification.smtplib.SMTP")
+    @patch("smtplib.SMTP")
     async def test_send_email_smtp_no_auth(self, mock_smtp_class, mock_get_settings):
         """Test SMTP email without authentication."""
         mock_settings = MagicMock()
@@ -309,7 +309,7 @@ class TestSendVerificationEmailSMTP:
 
     @pytest.mark.asyncio
     @patch("src.auth.email_verification.get_settings")
-    @patch("src.auth.email_verification.smtplib.SMTP")
+    @patch("smtplib.SMTP")
     async def test_send_email_smtp_error(self, mock_smtp_class, mock_get_settings):
         """Test SMTP email with error."""
         mock_settings = MagicMock()

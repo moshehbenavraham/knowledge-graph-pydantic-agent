@@ -26,7 +26,7 @@ class TestProviderHelpers:
     def test_get_provider_icon_google(self):
         """Test getting icon for Google."""
         icon = get_provider_icon("google")
-        assert icon == "=5"
+        assert icon == "🔵"
 
 
 class TestGetLinkedOAuthAccounts:

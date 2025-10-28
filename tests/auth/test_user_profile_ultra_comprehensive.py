@@ -16,7 +16,7 @@ class TestGetUserInfo:
             "full_name": "Test User",
         }
 
-        with patch("src.auth.user_profile.get_user_by_username") as mock_get_user:
+        with patch("src.auth.db.get_user_by_username") as mock_get_user:
             mock_get_user.return_value = mock_user
 
             result = get_user_info("test_user")
@@ -27,7 +27,7 @@ class TestGetUserInfo:
     def test_get_user_info_not_found(self):
         from src.auth.user_profile import get_user_info
 
-        with patch("src.auth.user_profile.get_user_by_username") as mock_get_user:
+        with patch("src.auth.db.get_user_by_username") as mock_get_user:
             mock_get_user.return_value = None
 
             result = get_user_info("nonexistent")
@@ -37,7 +37,7 @@ class TestGetUserInfo:
     def test_get_user_info_error(self):
         from src.auth.user_profile import get_user_info
 
-        with patch("src.auth.user_profile.get_user_by_username") as mock_get_user:
+        with patch("src.auth.db.get_user_by_username") as mock_get_user:
             mock_get_user.side_effect = Exception("Database error")
 
             result = get_user_info("test_user")
@@ -53,10 +53,10 @@ class TestChangeUserPassword:
 
         mock_user = {"id": 123, "username": "test_user"}
 
-        with patch("src.auth.user_profile.verify_user_password") as mock_verify:
+        with patch("src.auth.db.verify_user_password") as mock_verify:
             mock_verify.return_value = mock_user
 
-            with patch("src.auth.user_profile.update_user_password") as mock_update:
+            with patch("src.auth.db.update_user_password") as mock_update:
                 success, message = change_user_password("test_user", "old_password", "new_password")
 
                 assert success is True
@@ -67,7 +67,7 @@ class TestChangeUserPassword:
     def test_change_user_password_wrong_current_password(self):
         from src.auth.user_profile import change_user_password
 
-        with patch("src.auth.user_profile.verify_user_password") as mock_verify:
+        with patch("src.auth.db.verify_user_password") as mock_verify:
             mock_verify.return_value = None
 
             success, message = change_user_password("test_user", "wrong_password", "new_password")
@@ -78,7 +78,7 @@ class TestChangeUserPassword:
     def test_change_user_password_error(self):
         from src.auth.user_profile import change_user_password
 
-        with patch("src.auth.user_profile.verify_user_password") as mock_verify:
+        with patch("src.auth.db.verify_user_password") as mock_verify:
             mock_verify.side_effect = Exception("Database error")
 
             success, message = change_user_password("test_user", "old_password", "new_password")
@@ -294,7 +294,7 @@ class TestRenderUserProfile:
         with patch("src.auth.user_profile.get_user_info") as mock_get_user:
             mock_get_user.return_value = mock_user
 
-            with patch("src.auth.user_profile.get_user_sessions") as mock_get_sessions:
+            with patch("src.auth.db.get_user_sessions") as mock_get_sessions:
                 mock_get_sessions.return_value = mock_sessions
 
                 with patch("streamlit.sidebar.markdown"):
@@ -339,7 +339,7 @@ class TestRenderUserProfile:
         with patch("src.auth.user_profile.get_user_info") as mock_get_user:
             mock_get_user.return_value = mock_user
 
-            with patch("src.auth.user_profile.get_user_sessions") as mock_get_sessions:
+            with patch("src.auth.db.get_user_sessions") as mock_get_sessions:
                 mock_get_sessions.return_value = mock_sessions
 
                 with patch("streamlit.sidebar.markdown"):
@@ -353,7 +353,7 @@ class TestRenderUserProfile:
                                     mock_button.return_value = True
 
                                     with patch(
-                                        "src.auth.user_profile.revoke_session"
+                                        "src.auth.db.revoke_session"
                                     ) as mock_revoke:
                                         mock_revoke.return_value = True
 
@@ -404,7 +404,7 @@ class TestRenderUserProfile:
         with patch("src.auth.user_profile.get_user_info") as mock_get_user:
             mock_get_user.return_value = mock_user
 
-            with patch("src.auth.user_profile.get_user_sessions") as mock_get_sessions:
+            with patch("src.auth.db.get_user_sessions") as mock_get_sessions:
                 mock_get_sessions.return_value = mock_sessions
 
                 with patch("streamlit.sidebar.markdown"):
@@ -420,7 +420,7 @@ class TestRenderUserProfile:
                                     mock_button.side_effect = [False, False, True]
 
                                     with patch(
-                                        "src.auth.user_profile.revoke_all_user_sessions"
+                                        "src.auth.db.revoke_all_user_sessions"
                                     ) as mock_revoke_all:
                                         mock_revoke_all.return_value = 2
 

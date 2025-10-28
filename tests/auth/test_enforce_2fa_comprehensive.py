@@ -201,14 +201,14 @@ class TestRender2FASetupRequired:
         from src.auth.enforce_2fa import render_2fa_setup_required
 
         # Mock session state with existing secret
-        mock_session = {"username": "testuser", "2fa_setup_secret": "EXISTING_SECRET"}
+        from unittest.mock import MagicMock
+
+        mock_session_dict = {"username": "testuser", "2fa_setup_secret": "EXISTING_SECRET"}
+        mock_session = MagicMock()
+        mock_session.get.side_effect = lambda key, default=None: mock_session_dict.get(key, default)
+        mock_session.__getitem__.side_effect = lambda key: mock_session_dict[key]
+        mock_session.__contains__.side_effect = lambda key: key in mock_session_dict
         mock_st.session_state = mock_session
-
-        # Create a property mock for get method
-        def session_get(key, default=None):
-            return mock_session.get(key, default)
-
-        type(mock_st.session_state).get = session_get
 
         mock_get_user.return_value = {
             "id": "user-123",
