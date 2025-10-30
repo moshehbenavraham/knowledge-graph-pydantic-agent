@@ -19,12 +19,14 @@ Features:
 from datetime import datetime
 
 import httpx
+import structlog
 
 from src.clients.database import get_supabase_client
 from src.config import get_settings
 from supabase import Client
 
 settings = get_settings()
+logger = structlog.get_logger(__name__)
 
 
 class CaptchaManager:
@@ -85,6 +87,12 @@ class CaptchaManager:
         Returns:
             True if site_key and secret_key are set
         """
+        logger.debug(
+            "Checking CAPTCHA configuration",
+            provider=self.provider,
+            has_site_key=bool(self.site_key),
+            has_secret_key=bool(self.secret_key),
+        )
         return bool(self.site_key and self.secret_key)
 
     async def verify_response(
@@ -224,6 +232,7 @@ class CaptchaManager:
         Returns:
             HTML string for embedding CAPTCHA widget
         """
+        logger.debug("Generating CAPTCHA widget HTML", provider=self.provider, theme=theme)
         if not self.is_configured():
             return ""
 
@@ -307,6 +316,12 @@ def get_captcha_manager(
     Returns:
         CaptchaManager instance
     """
+    logger.debug(
+        "Getting CAPTCHA manager instance",
+        provider=provider,
+        has_site_key=bool(site_key),
+        has_secret_key=bool(secret_key),
+    )
     global _captcha_manager
 
     if _captcha_manager is None:

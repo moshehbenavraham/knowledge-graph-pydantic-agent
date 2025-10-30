@@ -4,9 +4,14 @@ Clients configuration facade.
 Provides convenient access to database and API client settings.
 """
 
+from typing import TYPE_CHECKING
+
 import structlog
 
 from .settings import EmbeddingProvider, LLMProvider, get_settings
+
+if TYPE_CHECKING:
+    from httpx import AsyncClient
 
 logger = structlog.get_logger(__name__)
 
@@ -194,6 +199,33 @@ class ClientsConfig:
     def has_neo4j_configured(self) -> bool:
         """Check if Neo4j is configured."""
         return bool(self.neo4j_uri and self.neo4j_user and self.neo4j_password)
+
+    def create_http_client(self, timeout: float = 30.0, **kwargs) -> "AsyncClient":
+        """
+        Create a properly configured HTTP client for external API calls.
+
+        This is the centralized factory for HTTP clients to comply with
+        Constitution Principle III (Type-Safe Centralized Configuration).
+
+        Args:
+            timeout: Request timeout in seconds (default: 30.0)
+            **kwargs: Additional httpx.AsyncClient configuration options
+
+        Returns:
+            Configured httpx.AsyncClient instance
+        """
+        from httpx import AsyncClient
+
+        logger.info("Creating HTTP client", timeout=timeout, kwargs=kwargs)
+
+        # Default configuration for HTTP clients
+        config = {
+            "timeout": timeout,
+            "follow_redirects": True,
+            **kwargs,
+        }
+
+        return AsyncClient(**config)
 
 
 # Singleton instance

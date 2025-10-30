@@ -159,11 +159,28 @@ class RedisCache:
 
     def health_check(self) -> bool:
         """Check if Redis is healthy."""
+        logger.info(
+            "health_check called",
+            redis_client_available=self._redis_client is not None,
+            fallback_enabled=self.enable_fallback,
+        )
         try:
             if self._redis_client:
-                return self._redis_client.ping()
+                logger.info("Checking Redis health with ping")
+                ping_result = self._redis_client.ping()
+                logger.info(
+                    "Redis health check completed",
+                    status="healthy" if ping_result else "unhealthy",
+                    ping_result=ping_result,
+                )
+                return ping_result
+            logger.info(
+                "Redis client not available, using fallback mode",
+                fallback_healthy=self.enable_fallback,
+            )
             return self.enable_fallback  # Fallback mode is "healthy"
-        except:
+        except Exception as e:
+            logger.error("Redis health check failed", error=str(e), error_type=type(e).__name__)
             return False
 
 
@@ -174,8 +191,18 @@ _cache_instance: RedisCache | None = None
 def get_cache() -> RedisCache:
     """Get or create global cache instance."""
     global _cache_instance
+    logger.info("get_cache called", instance_exists=_cache_instance is not None)
     if _cache_instance is None:
+        logger.info("Creating new global RedisCache instance")
         _cache_instance = RedisCache()
+        logger.info(
+            "Global RedisCache instance created",
+            redis_available=_cache_instance._redis_client is not None,
+            fallback_enabled=_cache_instance.enable_fallback,
+            ttl=_cache_instance.ttl,
+        )
+    else:
+        logger.info("Returning existing global RedisCache instance")
     return _cache_instance
 
 

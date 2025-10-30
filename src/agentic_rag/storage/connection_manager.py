@@ -12,9 +12,11 @@ from typing import Any
 
 import asyncpg
 import redis.asyncio as redis
+import structlog
 from neo4j import AsyncGraphDatabase
 
 logger = logging.getLogger(__name__)
+structlog_logger = structlog.get_logger(__name__)
 
 
 class ConnectionState(Enum):
@@ -83,22 +85,27 @@ class ConnectionManager:
 
     async def initialize(self):
         """Initialize all connection pools with proper error handling."""
-        logger.info("=" * 60)
-        logger.info("ConnectionManager.initialize() called")
+        structlog_logger.info("ConnectionManager.initialize() called")
 
         # Log event loop information
         try:
             loop = asyncio.get_running_loop()
-            logger.info(f"Event loop: {loop}")
-            logger.info(f"Event loop running: {loop.is_running()}")
-            logger.info(f"Event loop closed: {loop.is_closed()}")
+            structlog_logger.info(
+                "Event loop status",
+                loop_id=id(loop),
+                is_running=loop.is_running(),
+                is_closed=loop.is_closed(),
+            )
         except RuntimeError as e:
-            logger.error(f"No running event loop! {e}")
+            structlog_logger.error("No running event loop", error=str(e))
             raise
 
-        logger.info(f"Config keys: {list(self.config.keys())}")
-        logger.info(f"Enable graph: {self.config.get('enable_graph', True)}")
-        logger.info(f"Enable redis: {self.config.get('enable_redis_cache', False)}")
+        structlog_logger.info(
+            "Configuration loaded",
+            config_keys=list(self.config.keys()),
+            enable_graph=self.config.get("enable_graph", True),
+            enable_redis=self.config.get("enable_redis_cache", False),
+        )
 
         initialization_tasks = [
             self._init_postgresql(),
@@ -107,44 +114,51 @@ class ConnectionManager:
         ]
 
         tasks_to_run = [t for t in initialization_tasks if t]
-        logger.info(f"Running {len(tasks_to_run)} initialization tasks")
+        structlog_logger.info("Running initialization tasks", task_count=len(tasks_to_run))
 
         results = await asyncio.gather(*tasks_to_run, return_exceptions=True)
 
         for i, result in enumerate(results):
             if isinstance(result, Exception):
                 service = ["PostgreSQL", "Neo4j", "Redis"][i]
-                logger.error(f"Failed to initialize {service}: {result}")
-                logger.error(f"Exception type: {type(result).__name__}")
-                logger.error(f"Exception args: {result.args}")
+                structlog_logger.error(
+                    "Service initialization failed",
+                    service=service,
+                    error=str(result),
+                    error_type=type(result).__name__,
+                )
                 if i < 2:  # PostgreSQL and Neo4j are critical
                     raise result
 
-        logger.info("ConnectionManager.initialize() completed successfully")
-        logger.info("=" * 60)
+        structlog_logger.info("ConnectionManager.initialize() completed successfully")
 
     async def _init_postgresql(self):
         """Initialize PostgreSQL connection pool with optimized settings."""
-        logger.info(">>> _init_postgresql() starting")
-        logger.info(f"Database URL (masked): {self.config['database_url'][:30]}...")
-        logger.info(f"Pool min_size: {self.config.get('pg_pool_min', 5)}")
-        logger.info(f"Pool max_size: {self.config.get('pg_pool_max', 20)}")
+        structlog_logger.info(
+            "_init_postgresql() starting",
+            database_url_prefix=self.config["database_url"][:30],
+            pool_min_size=self.config.get("pg_pool_min", 5),
+            pool_max_size=self.config.get("pg_pool_max", 20),
+        )
 
         try:
             # Check event loop again right before pool creation
             loop = asyncio.get_running_loop()
-            logger.info(f"Event loop before pool creation: {loop}")
-            logger.info(f"Event loop ID: {id(loop)}")
-            logger.info(f"Event loop is running: {loop.is_running()}")
-            logger.info(f"Event loop is closed: {loop.is_closed()}")
+            structlog_logger.debug(
+                "Event loop before pool creation",
+                loop_id=id(loop),
+                is_running=loop.is_running(),
+                is_closed=loop.is_closed(),
+            )
 
             # Check if pool already exists
             if self.pg_pool is not None:
-                logger.warning(f"PostgreSQL pool already exists! {self.pg_pool}")
-                logger.warning(f"Pool is closed: {self.pg_pool._closed}")
+                structlog_logger.warning(
+                    "PostgreSQL pool already exists", pool_closed=self.pg_pool._closed
+                )
                 return
 
-            logger.info("Calling asyncpg.create_pool()...")
+            structlog_logger.info("Creating asyncpg connection pool")
 
             # Create pool with simplified settings to avoid Streamlit event loop conflicts
             self.pg_pool = await asyncpg.create_pool(
@@ -157,26 +171,30 @@ class ConnectionManager:
                 init=self._init_postgres_connection,
             )
 
-            logger.info(f"asyncpg.create_pool() returned: {self.pg_pool}")
-            logger.info(f"Pool type: {type(self.pg_pool)}")
-            logger.info(f"Pool closed: {self.pg_pool._closed}")
+            structlog_logger.info(
+                "PostgreSQL pool created",
+                pool_type=type(self.pg_pool).__name__,
+                pool_closed=self.pg_pool._closed,
+            )
 
             self.pg_state = ConnectionState.CLOSED  # CLOSED = healthy/normal operation
             self.pg_metrics.total_connections = self.pg_pool.get_size()
-            logger.info(
-                f"✅ PostgreSQL pool initialized with {self.pg_metrics.total_connections} connections"
+            structlog_logger.info(
+                "PostgreSQL pool initialized successfully",
+                total_connections=self.pg_metrics.total_connections,
             )
 
         except Exception as e:
-            logger.error("❌ PostgreSQL initialization FAILED")
-            logger.error(f"Exception type: {type(e).__name__}")
-            logger.error(f"Exception message: {e!s}")
-            logger.error(f"Exception args: {e.args}")
+            structlog_logger.error(
+                "PostgreSQL initialization FAILED",
+                error_type=type(e).__name__,
+                error_message=str(e),
+            )
 
             # Try to get more details about the error
             import traceback
 
-            logger.error(f"Full traceback:\n{traceback.format_exc()}")
+            structlog_logger.error("Full traceback", traceback=traceback.format_exc())
 
             self.pg_state = ConnectionState.OPEN  # OPEN = broken/failure state
             self.pg_metrics.last_error = str(e)
@@ -185,34 +203,22 @@ class ConnectionManager:
 
     async def _setup_postgres_connection(self, connection):
         """Setup function for each PostgreSQL connection."""
-        logger.info(f">>> _setup_postgres_connection() called for {connection}")
+        structlog_logger.debug("_setup_postgres_connection() called", connection_id=id(connection))
         try:
             # Set connection-specific settings
-            logger.info("Setting work_mem...")
             await connection.execute("SET work_mem = '50MB'")
-            logger.info("Setting maintenance_work_mem...")
             await connection.execute("SET maintenance_work_mem = '256MB'")
-            logger.info("✅ Setup complete")
+            structlog_logger.debug("Connection setup complete")
         except Exception as e:
-            logger.error(f"❌ Setup failed: {e}")
+            structlog_logger.error("Connection setup failed", error=str(e))
             raise
 
     async def _init_postgres_connection(self, connection):
         """Initialize function for new PostgreSQL connections."""
-        logger.info(f">>> _init_postgres_connection() called for {connection}")
+        structlog_logger.debug("_init_postgres_connection() called", connection_id=id(connection))
         # Prepare commonly used statements
         # NOTE: Commented out - schema uses embedding_1536/embedding_768 columns, not 'embedding'
-        # await connection.execute(
-        #     """
-        #     PREPARE vector_search (vector, int) AS
-        #     SELECT id, content, 1 - (embedding <=> $1) as similarity
-        #     FROM chunks
-        #     WHERE embedding IS NOT NULL
-        #     ORDER BY embedding <=> $1
-        #     LIMIT $2
-        # """
-        # )
-        logger.info("✅ Init complete (no-op)")
+        structlog_logger.debug("Connection init complete (no-op)")
         pass
 
     async def _init_neo4j(self):
@@ -252,12 +258,13 @@ class ConnectionManager:
                 await result.single()
 
             self.neo4j_state = ConnectionState.CLOSED  # CLOSED = healthy/normal operation
-            logger.info("Neo4j driver initialized successfully")
+            structlog_logger.info("Neo4j driver initialized successfully")
 
         except Exception as e:
             self.neo4j_state = ConnectionState.OPEN  # OPEN = broken/failure state
             self.neo4j_metrics.last_error = str(e)
             self.neo4j_metrics.last_error_time = datetime.now(UTC)
+            structlog_logger.error("Neo4j initialization failed", error=str(e))
             raise
 
     async def _init_redis(self):
@@ -277,10 +284,10 @@ class ConnectionManager:
             # Verify connectivity
             await self.redis_client.ping()
 
-            logger.info("Redis client initialized successfully")
+            structlog_logger.info("Redis client initialized successfully")
 
         except Exception as e:
-            logger.warning(f"Redis initialization failed (non-critical): {e}")
+            structlog_logger.warning("Redis initialization failed (non-critical)", error=str(e))
             self.redis_metrics.last_error = str(e)
             self.redis_metrics.last_error_time = datetime.now(UTC)
 
@@ -314,7 +321,9 @@ class ConnectionManager:
             if self.pg_state == ConnectionState.HALF_OPEN:
                 self.pg_failures = 0
                 self.pg_state = ConnectionState.CLOSED  # Back to healthy state
-                logger.info("PostgreSQL circuit breaker CLOSED (healthy) - connection recovered")
+                structlog_logger.info(
+                    "PostgreSQL circuit breaker CLOSED (healthy) - connection recovered"
+                )
 
         except Exception as e:
             self._record_failure("pg", e)
@@ -355,7 +364,9 @@ class ConnectionManager:
             if self.neo4j_state == ConnectionState.HALF_OPEN:
                 self.neo4j_failures = 0
                 self.neo4j_state = ConnectionState.CLOSED  # Back to healthy state
-                logger.info("Neo4j circuit breaker CLOSED (healthy) - connection recovered")
+                structlog_logger.info(
+                    "Neo4j circuit breaker CLOSED (healthy) - connection recovered"
+                )
 
         except Exception as e:
             self._record_failure("neo4j", e)
@@ -395,12 +406,14 @@ class ConnectionManager:
                 # Try half-open state to test recovery
                 if service == "pg":
                     self.pg_state = ConnectionState.HALF_OPEN
-                    logger.info(
+                    structlog_logger.info(
                         "PostgreSQL circuit breaker entering HALF_OPEN state for recovery test"
                     )
                 else:
                     self.neo4j_state = ConnectionState.HALF_OPEN
-                    logger.info("Neo4j circuit breaker entering HALF_OPEN state for recovery test")
+                    structlog_logger.info(
+                        "Neo4j circuit breaker entering HALF_OPEN state for recovery test"
+                    )
                 return True
             # Still broken, block request
             return False
@@ -419,9 +432,10 @@ class ConnectionManager:
             if self.pg_failures >= self.circuit_config.failure_threshold:
                 self.pg_state = ConnectionState.OPEN  # OPEN = broken/failure state
                 self.pg_last_failure_time = datetime.now(UTC)
-                logger.error(
-                    f"PostgreSQL circuit breaker OPEN (blocking requests) after {self.pg_failures} failures. "
-                    f"Last error: {str(error)[:100]}"
+                structlog_logger.error(
+                    "PostgreSQL circuit breaker OPEN (blocking requests)",
+                    failure_count=self.pg_failures,
+                    last_error=str(error)[:100],
                 )
 
         else:
@@ -433,9 +447,10 @@ class ConnectionManager:
             if self.neo4j_failures >= self.circuit_config.failure_threshold:
                 self.neo4j_state = ConnectionState.OPEN  # OPEN = broken/failure state
                 self.neo4j_last_failure_time = datetime.now(UTC)
-                logger.error(
-                    f"Neo4j circuit breaker OPEN (blocking requests) after {self.neo4j_failures} failures. "
-                    f"Last error: {str(error)[:100]}"
+                structlog_logger.error(
+                    "Neo4j circuit breaker OPEN (blocking requests)",
+                    failure_count=self.neo4j_failures,
+                    last_error=str(error)[:100],
                 )
 
     def _update_query_metrics(self, service: str, elapsed_ms: float):
@@ -458,6 +473,7 @@ class ConnectionManager:
 
     async def health_check(self) -> dict[str, Any]:
         """Perform health check on all connections."""
+        structlog_logger.info("health_check called")
         health = {"timestamp": datetime.now(UTC).isoformat(), "services": {}}
 
         # PostgreSQL health check
@@ -467,7 +483,7 @@ class ConnectionManager:
                 await conn.fetchval("SELECT 1")
                 pg_healthy = True
         except Exception as e:
-            logger.error(f"PostgreSQL health check failed: {e}")
+            structlog_logger.error("PostgreSQL health check failed", error=str(e))
 
         health["services"]["postgresql"] = {
             "healthy": pg_healthy,
@@ -489,7 +505,7 @@ class ConnectionManager:
                 await result.single()
                 neo4j_healthy = True
         except Exception as e:
-            logger.error(f"Neo4j health check failed: {e}")
+            structlog_logger.error("Neo4j health check failed", error=str(e))
 
         health["services"]["neo4j"] = {
             "healthy": neo4j_healthy,
@@ -508,7 +524,7 @@ class ConnectionManager:
                 await self.redis_client.ping()
                 redis_healthy = True
             except Exception as e:
-                logger.warning(f"Redis health check failed: {e}")
+                structlog_logger.warning("Redis health check failed", error=str(e))
 
         health["services"]["redis"] = {
             "healthy": redis_healthy,
@@ -517,54 +533,59 @@ class ConnectionManager:
 
         health["overall_health"] = "healthy" if (pg_healthy and neo4j_healthy) else "degraded"
 
+        structlog_logger.info(
+            "health_check completed",
+            overall_health=health["overall_health"],
+            pg_healthy=pg_healthy,
+            neo4j_healthy=neo4j_healthy,
+            redis_healthy=redis_healthy,
+        )
         return health
 
     async def close(self):
         """Close all connections gracefully."""
-        logger.info("=" * 60)
-        logger.info(">>> ConnectionManager.close() called")
-        logger.info(f"ConnectionManager instance ID: {id(self)}")
+        structlog_logger.info("ConnectionManager.close() called", instance_id=id(self))
 
         # Log stack trace to see who called close()
         import traceback
 
-        logger.info(f"Close called from:\n{''.join(traceback.format_stack())}")
+        structlog_logger.debug("Close called from", stack_trace="".join(traceback.format_stack()))
 
         close_tasks = []
 
         if self.pg_pool:
-            logger.info(f"Closing PostgreSQL pool: {self.pg_pool}")
-            logger.info(f"Pool already closed: {self.pg_pool._closed}")
+            structlog_logger.info("Closing PostgreSQL pool", pool_closed=self.pg_pool._closed)
             close_tasks.append(self.pg_pool.close())
 
         if self.neo4j_driver:
-            logger.info(f"Closing Neo4j driver: {self.neo4j_driver}")
+            structlog_logger.info("Closing Neo4j driver")
             close_tasks.append(self.neo4j_driver.close())
 
         if self.redis_client:
-            logger.info(f"Closing Redis client: {self.redis_client}")
+            structlog_logger.info("Closing Redis client")
             close_tasks.append(self.redis_client.aclose())
 
-        logger.info(f"Running {len(close_tasks)} close tasks")
+        structlog_logger.info("Running close tasks", task_count=len(close_tasks))
         await asyncio.gather(*close_tasks, return_exceptions=True)
-        logger.info("✅ All connections closed")
-        logger.info("=" * 60)
+        structlog_logger.info("All connections closed successfully")
 
     async def __aenter__(self):
         """Async context manager entry - initialize connections."""
-        logger.info(">>> ConnectionManager.__aenter__() called")
-        logger.info(f"Instance ID: {id(self)}")
+        structlog_logger.info("ConnectionManager.__aenter__() called", instance_id=id(self))
         await self.initialize()
-        logger.info("<<< ConnectionManager.__aenter__() returning self")
+        structlog_logger.info("ConnectionManager.__aenter__() returning self")
         return self
 
     async def __aexit__(self, exc_type, exc_val, _exc_tb):
         """Async context manager exit - close connections."""
-        logger.info(">>> ConnectionManager.__aexit__() called")
-        logger.info(f"Instance ID: {id(self)}")
-        logger.info(f"Exception: {exc_type}, {exc_val}")
+        structlog_logger.info(
+            "ConnectionManager.__aexit__() called",
+            instance_id=id(self),
+            exception_type=exc_type,
+            exception_value=str(exc_val) if exc_val else None,
+        )
         await self.close()
-        logger.info("<<< ConnectionManager.__aexit__() done")
+        structlog_logger.info("ConnectionManager.__aexit__() done")
         return False  # Don't suppress exceptions
 
 
@@ -590,8 +611,9 @@ async def get_connection_manager() -> ConnectionManager:
     # Use lock to prevent race condition where multiple coroutines
     # try to create the connection manager simultaneously
     async with _connection_manager_lock:
-        logger.info(">>> get_connection_manager() called (inside lock)")
-        logger.info(f"_connection_manager is None: {_connection_manager is None}")
+        structlog_logger.info(
+            "get_connection_manager() called (inside lock)", is_none=_connection_manager is None
+        )
 
         # Check if event loop has changed (Streamlit reruns create new event loops)
         try:
@@ -603,61 +625,72 @@ async def get_connection_manager() -> ConnectionManager:
             )
 
             if loop_changed:
-                logger.info(
-                    f"Event loop changed (Streamlit rerun detected) - this is normal behavior. "
-                    f"Old: {_connection_manager_loop_id}, New: {current_loop_id}"
+                structlog_logger.info(
+                    "Event loop changed (Streamlit rerun detected) - normal behavior",
+                    old_loop_id=_connection_manager_loop_id,
+                    new_loop_id=current_loop_id,
                 )
-                logger.info("Closing old connection manager and creating new one...")
+                structlog_logger.info("Closing old connection manager and creating new one")
                 if _connection_manager is not None:
                     try:
                         await _connection_manager.close()
                     except Exception as e:
-                        logger.warning(f"Error closing old connection manager: {e}")
+                        structlog_logger.warning(
+                            "Error closing old connection manager", error=str(e)
+                        )
                     _connection_manager = None
                     _connection_manager_loop_id = None
 
         except RuntimeError:
-            logger.warning("No running event loop found")
+            structlog_logger.warning("No running event loop found")
             current_loop_id = None
 
         if _connection_manager is not None:
-            logger.info(f"Returning existing connection manager: {id(_connection_manager)}")
-            logger.info(f"Existing PG pool: {_connection_manager.pg_pool}")
-            if _connection_manager.pg_pool:
-                logger.info(f"Existing pool closed: {_connection_manager.pg_pool._closed}")
+            structlog_logger.info(
+                "Returning existing connection manager",
+                instance_id=id(_connection_manager),
+                has_pg_pool=_connection_manager.pg_pool is not None,
+            )
             return _connection_manager
 
-        logger.info("Creating NEW connection manager")
+        structlog_logger.info("Creating NEW connection manager")
 
         from src.agentic_rag.config import config  # Import config when needed
 
         temp_connection_manager = ConnectionManager(config.dict())
-        logger.info(f"ConnectionManager instance created: {id(temp_connection_manager)}")
+        structlog_logger.info(
+            "ConnectionManager instance created", instance_id=id(temp_connection_manager)
+        )
 
         try:
-            logger.info("Calling initialize()...")
+            structlog_logger.info("Calling initialize()")
             await temp_connection_manager.initialize()
-            logger.info("initialize() completed")
+            structlog_logger.info("initialize() completed")
 
             # Initialize analytics logger after connection manager is ready
             try:
                 from src.agentic_rag.analytics import initialize_analytics_logger
 
                 await initialize_analytics_logger(temp_connection_manager)
-                logger.info("Analytics logger initialized successfully")
+                structlog_logger.info("Analytics logger initialized successfully")
             except Exception as e:
-                logger.warning(f"Analytics logger initialization failed (non-critical): {e}")
+                structlog_logger.warning(
+                    "Analytics logger initialization failed (non-critical)", error=str(e)
+                )
 
             # Only set global singleton if initialization succeeded
             _connection_manager = temp_connection_manager
             _connection_manager_loop_id = current_loop_id  # Store current loop ID
-            logger.info(f"Returning NEW connection manager: {id(_connection_manager)}")
-            logger.info(f"Stored event loop ID: {_connection_manager_loop_id}")
+            structlog_logger.info(
+                "Returning NEW connection manager",
+                instance_id=id(_connection_manager),
+                loop_id=_connection_manager_loop_id,
+            )
             return _connection_manager
 
         except Exception as e:
-            logger.error(
-                f"Failed to initialize ConnectionManager: {e}. " f"Will retry on next call."
+            structlog_logger.error(
+                "Failed to initialize ConnectionManager - will retry on next call", error=str(e)
             )
             # Don't set _connection_manager - leave it None so next call will retry
             raise
@@ -667,16 +700,19 @@ async def close_connections():
     """Close all connections."""
     global _connection_manager, _connection_manager_loop_id
 
+    structlog_logger.info("close_connections() called")
+
     if _connection_manager:
         # Shutdown analytics logger first
         try:
             from src.agentic_rag.analytics import shutdown_analytics_logger
 
             await shutdown_analytics_logger()
-            logger.info("Analytics logger shutdown successfully")
+            structlog_logger.info("Analytics logger shutdown successfully")
         except Exception as e:
-            logger.warning(f"Analytics logger shutdown failed: {e}")
+            structlog_logger.warning("Analytics logger shutdown failed", error=str(e))
 
         await _connection_manager.close()
         _connection_manager = None
         _connection_manager_loop_id = None
+        structlog_logger.info("close_connections() completed")

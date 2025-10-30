@@ -66,8 +66,11 @@ def generate_text_summary(report: ComplianceReport) -> str:
     Returns:
         Formatted text summary
     """
+    logger.debug("Generating text summary", report_id=report.report_id)
     # Use the model's built-in print_summary() method
-    return report.print_summary()
+    summary = report.print_summary()
+    logger.debug("Text summary generated", length=len(summary))
+    return summary
 
 
 def generate_detailed_text_report(report: ComplianceReport) -> str:
@@ -80,6 +83,13 @@ def generate_detailed_text_report(report: ComplianceReport) -> str:
     Returns:
         Detailed formatted text report
     """
+    logger.info(
+        "Generating detailed text report",
+        report_id=report.report_id,
+        violations=report.total_violations,
+        passed=report.passed,
+    )
+
     lines = []
 
     # Header
@@ -174,7 +184,9 @@ def generate_detailed_text_report(report: ComplianceReport) -> str:
         lines.append(f"  Fix {report.error_count} error(s) before proceeding")
     lines.append("=" * 80)
 
-    return "\n".join(lines)
+    text_report = "\n".join(lines)
+    logger.info("Detailed text report generated", length=len(text_report), lines=len(lines))
+    return text_report
 
 
 def validate_report_schema(report_dict: dict[str, Any]) -> tuple[bool, list[str]]:
@@ -187,6 +199,7 @@ def validate_report_schema(report_dict: dict[str, Any]) -> tuple[bool, list[str]
     Returns:
         Tuple of (is_valid, errors)
     """
+    logger.debug("Validating report schema")
     errors = []
 
     # Required top-level keys
@@ -267,6 +280,11 @@ class ReportGenerator:
         Returns:
             JSON string
         """
+        logger.debug(
+            "ReportGenerator.generate_json called",
+            report_id=report.report_id,
+            has_output_file=output_file is not None,
+        )
         return generate_json_report(report, output_file)
 
     def generate_text(self, report: ComplianceReport, detailed: bool = True) -> str:
@@ -280,6 +298,9 @@ class ReportGenerator:
         Returns:
             Formatted text string
         """
+        logger.debug(
+            "ReportGenerator.generate_text called", report_id=report.report_id, detailed=detailed
+        )
         if detailed:
             return generate_detailed_text_report(report)
         return generate_text_summary(report)
@@ -313,6 +334,11 @@ class ComplianceReporter:
             validator_version: Version of validator
             constitution_version: Version of constitution
         """
+        logger.debug(
+            "Initializing ComplianceReporter",
+            validator_version=validator_version,
+            constitution_version=constitution_version,
+        )
         self.validator_version = validator_version
         self.constitution_version = constitution_version
 

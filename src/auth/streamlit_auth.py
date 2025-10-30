@@ -236,6 +236,7 @@ def get_authenticator(config: dict | None = None) -> stauth.Authenticate:
     Returns:
         Configured Authenticate instance
     """
+    logger.info("Getting authenticator instance", has_config=bool(config))
     if config is None:
         config = load_auth_config()
 

@@ -11,12 +11,15 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
+import structlog
+
 from src.agentic_rag.config import get_config
 from src.agentic_rag.storage.connection_manager import ConnectionManager
 from src.agentic_rag.storage.graphiti_client import GraphitiClient
 from src.agentic_rag.storage.neo4j_store import Neo4jStore
 
 logger = logging.getLogger(__name__)
+structlog_logger = structlog.get_logger(__name__)
 
 
 @dataclass

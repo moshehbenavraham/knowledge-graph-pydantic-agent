@@ -82,6 +82,7 @@ ignore = [
     "PTH123",   # Use Path.open instead of open (not critical)
     "PERF401",  # Use list comprehension (sometimes less readable)
     "RUF012",   # Mutable class attributes (Locust and other frameworks need this)
+    "RUF100",   # Unused/invalid noqa directive (allow custom codes for external tools)
     "SIM117",   # Combine with statements (sometimes clearer as nested)
     "SIM105",   # Use contextlib.suppress (not always clearer)
     "N801",     # Class name conventions (test classes can have underscores)

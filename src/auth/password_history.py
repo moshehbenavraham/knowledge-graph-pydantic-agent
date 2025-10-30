@@ -14,9 +14,12 @@ Features:
 from datetime import datetime
 
 import bcrypt
+import structlog
 
 from src.clients.database import get_supabase_client
 from supabase import Client
+
+logger = structlog.get_logger(__name__)
 
 
 class PasswordHistoryManager:
@@ -210,6 +213,7 @@ def get_password_history_manager() -> PasswordHistoryManager:
     Returns:
         PasswordHistoryManager instance
     """
+    logger.debug("Getting password history manager singleton instance")
     global _password_history_manager
 
     if _password_history_manager is None:

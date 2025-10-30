@@ -7,7 +7,11 @@ while maintaining the same interface for existing code.
 
 from dataclasses import dataclass
 
+import structlog
+
 from src.config import get_settings, reload_settings
+
+logger = structlog.get_logger(__name__)
 
 
 @dataclass
@@ -178,9 +182,11 @@ def get_config() -> Config:
 
 def reload_config():
     """Reload configuration from environment variables."""
+    logger.info("reload_config called - reloading configuration from environment")
     reload_settings()
     # Note: global config is maintained for backward compatibility
     # pylint: disable=global-statement
     global config
     config = Config()
+    logger.info("reload_config completed - configuration reloaded successfully")
     return config

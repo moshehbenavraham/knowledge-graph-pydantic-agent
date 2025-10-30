@@ -188,6 +188,13 @@ def circuit_breaker(
         async def call_llm():
             ...
     """
+    logger.info(
+        "circuit_breaker_decorator_initialized",
+        failure_threshold=failure_threshold,
+        recovery_timeout=recovery_timeout,
+        name=name or "unnamed",
+        expected_exceptions=[exc.__name__ for exc in expected_exceptions],
+    )
     breaker = CircuitBreaker(
         failure_threshold=failure_threshold,
         recovery_timeout=recovery_timeout,
@@ -196,13 +203,62 @@ def circuit_breaker(
     )
 
     def decorator(func):
+        logger.info(
+            "circuit_breaker_decorator_applied",
+            function=func.__name__,
+            circuit=name or "unnamed",
+            is_async=asyncio.iscoroutinefunction(func),
+        )
+
         @wraps(func)
         async def async_wrapper(*args, **kwargs):
-            return await breaker.call_async(func, *args, **kwargs)
+            logger.debug(
+                "circuit_breaker_async_wrapper_called",
+                function=func.__name__,
+                circuit=name or "unnamed",
+            )
+            try:
+                result = await breaker.call_async(func, *args, **kwargs)
+                logger.debug(
+                    "circuit_breaker_async_wrapper_succeeded",
+                    function=func.__name__,
+                    circuit=name or "unnamed",
+                )
+                return result
+            except Exception as e:
+                logger.error(
+                    "circuit_breaker_async_wrapper_failed",
+                    function=func.__name__,
+                    circuit=name or "unnamed",
+                    error=str(e),
+                    error_type=type(e).__name__,
+                )
+                raise
 
         @wraps(func)
         def sync_wrapper(*args, **kwargs):
-            return breaker.call(func, *args, **kwargs)
+            logger.debug(
+                "circuit_breaker_sync_wrapper_called",
+                function=func.__name__,
+                circuit=name or "unnamed",
+            )
+            try:
+                result = breaker.call(func, *args, **kwargs)
+                logger.debug(
+                    "circuit_breaker_sync_wrapper_succeeded",
+                    function=func.__name__,
+                    circuit=name or "unnamed",
+                )
+                return result
+            except Exception as e:
+                logger.error(
+                    "circuit_breaker_sync_wrapper_failed",
+                    function=func.__name__,
+                    circuit=name or "unnamed",
+                    error=str(e),
+                    error_type=type(e).__name__,
+                )
+                raise
 
         if asyncio.iscoroutinefunction(func):
             return async_wrapper
@@ -247,13 +303,32 @@ class RetryStrategy:
 
     def calculate_delay(self, attempt: int) -> float:
         """Calculate delay for given attempt number."""
+        logger.debug(
+            "calculate_delay_called",
+            attempt=attempt,
+            base_delay=self.base_delay,
+            exponential_base=self.exponential_base,
+            max_delay=self.max_delay,
+            jitter=self.jitter,
+        )
         delay = min(self.base_delay * (self.exponential_base**attempt), self.max_delay)
 
         if self.jitter:
             import random
 
             delay *= 0.5 + random.random()  # nosec B311
+            logger.debug(
+                "calculate_delay_jitter_applied",
+                attempt=attempt,
+                delay_before_jitter=self.base_delay * (self.exponential_base**attempt),
+                delay_after_jitter=delay,
+            )
 
+        logger.debug(
+            "calculate_delay_completed",
+            attempt=attempt,
+            calculated_delay=delay,
+        )
         return delay
 
     async def execute_async(self, func: Callable, *args, **kwargs) -> Any:
@@ -377,6 +452,15 @@ def retry(
         async def unstable_operation():
             ...
     """
+    logger.info(
+        "retry_decorator_initialized",
+        max_attempts=max_attempts,
+        base_delay=base_delay,
+        max_delay=max_delay,
+        exponential_base=exponential_base,
+        jitter=jitter,
+        retriable_exceptions=[exc.__name__ for exc in retriable_exceptions],
+    )
     strategy = RetryStrategy(
         max_attempts=max_attempts,
         base_delay=base_delay,
@@ -387,13 +471,58 @@ def retry(
     )
 
     def decorator(func):
+        logger.info(
+            "retry_decorator_applied",
+            function=func.__name__,
+            max_attempts=max_attempts,
+            is_async=asyncio.iscoroutinefunction(func),
+        )
+
         @wraps(func)
         async def async_wrapper(*args, **kwargs):
-            return await strategy.execute_async(func, *args, **kwargs)
+            logger.debug(
+                "retry_async_wrapper_called",
+                function=func.__name__,
+                max_attempts=max_attempts,
+            )
+            try:
+                result = await strategy.execute_async(func, *args, **kwargs)
+                logger.debug(
+                    "retry_async_wrapper_succeeded",
+                    function=func.__name__,
+                )
+                return result
+            except Exception as e:
+                logger.error(
+                    "retry_async_wrapper_failed",
+                    function=func.__name__,
+                    error=str(e),
+                    error_type=type(e).__name__,
+                )
+                raise
 
         @wraps(func)
         def sync_wrapper(*args, **kwargs):
-            return strategy.execute(func, *args, **kwargs)
+            logger.debug(
+                "retry_sync_wrapper_called",
+                function=func.__name__,
+                max_attempts=max_attempts,
+            )
+            try:
+                result = strategy.execute(func, *args, **kwargs)
+                logger.debug(
+                    "retry_sync_wrapper_succeeded",
+                    function=func.__name__,
+                )
+                return result
+            except Exception as e:
+                logger.error(
+                    "retry_sync_wrapper_failed",
+                    function=func.__name__,
+                    error=str(e),
+                    error_type=type(e).__name__,
+                )
+                raise
 
         if asyncio.iscoroutinefunction(func):
             return async_wrapper
@@ -405,9 +534,14 @@ def retry(
 # Convenience decorators for common patterns
 def retry_on_network_error(max_attempts: int = 3):
     """Retry decorator for network-related errors."""
+    logger.info(
+        "retry_on_network_error_decorator_called",
+        max_attempts=max_attempts,
+        base_delay=1.0,
+    )
     import aiohttp
 
-    return retry(
+    result = retry(
         max_attempts=max_attempts,
         base_delay=1.0,
         retriable_exceptions=(
@@ -416,11 +550,22 @@ def retry_on_network_error(max_attempts: int = 3):
             ConnectionError,
         ),
     )
+    logger.info(
+        "retry_on_network_error_decorator_created",
+        max_attempts=max_attempts,
+        retriable_exceptions=["ClientError", "TimeoutError", "ConnectionError"],
+    )
+    return result
 
 
 def retry_on_database_error(max_attempts: int = 3):
     """Retry decorator for database-related errors."""
-    return retry(
+    logger.info(
+        "retry_on_database_error_decorator_called",
+        max_attempts=max_attempts,
+        base_delay=0.5,
+    )
+    result = retry(
         max_attempts=max_attempts,
         base_delay=0.5,
         retriable_exceptions=(
@@ -428,3 +573,9 @@ def retry_on_database_error(max_attempts: int = 3):
             TimeoutError,
         ),
     )
+    logger.info(
+        "retry_on_database_error_decorator_created",
+        max_attempts=max_attempts,
+        retriable_exceptions=["ConnectionError", "TimeoutError"],
+    )
+    return result

@@ -7,7 +7,10 @@ import logging
 from typing import Any
 from uuid import UUID
 
+import structlog
+
 logger = logging.getLogger(__name__)
+structlog_logger = structlog.get_logger(__name__)
 
 
 class PostgresStore:
@@ -15,12 +18,18 @@ class PostgresStore:
 
     def __init__(self, connection_manager):
         """Initialize with connection manager."""
+        structlog_logger.info("PostgresStore initializing")
         self.connection_manager = connection_manager
+        structlog_logger.info("PostgresStore initialized")
 
     async def store_document(
         self, title: str, source: str, content: str, metadata: dict[str, Any] | None = None
     ) -> UUID:
         """Store a document and return its ID."""
+        structlog_logger.info(
+            "store_document called", title=title, source=source, content_length=len(content)
+        )
+
         async with self.connection_manager.get_pg_connection() as conn:
             doc_id = await conn.fetchval(
                 """
@@ -34,11 +43,15 @@ class PostgresStore:
                 json.dumps(metadata or {}),
             )
 
-            logger.info(f"Stored document {doc_id}: {title}")
+            structlog_logger.info("store_document completed", doc_id=str(doc_id), title=title)
             return doc_id
 
     async def store_chunks(self, document_id: UUID, chunks: list[dict[str, Any]]) -> list[UUID]:
         """Store multiple chunks and return their IDs."""
+        structlog_logger.info(
+            "store_chunks called", document_id=str(document_id), num_chunks=len(chunks)
+        )
+
         chunk_ids = []
 
         async with self.connection_manager.get_pg_connection() as conn:
@@ -82,12 +95,20 @@ class PostgresStore:
                 )
                 chunk_ids.append(row["id"])
 
-            logger.info(f"Stored {len(chunk_ids)} chunks for document {document_id}")
+            structlog_logger.info(
+                "store_chunks completed", document_id=str(document_id), chunks_stored=len(chunk_ids)
+            )
 
         return chunk_ids
 
     async def update_chunk_metadata(self, chunk_id: UUID, metadata_update: dict[str, Any]):
         """Update chunk metadata with entity references."""
+        structlog_logger.info(
+            "update_chunk_metadata called",
+            chunk_id=str(chunk_id),
+            has_entity_refs="entity_refs" in metadata_update,
+        )
+
         async with self.connection_manager.get_pg_connection() as conn:
             # Get existing metadata
             existing = await conn.fetchval("SELECT metadata FROM chunks WHERE id = $1", chunk_id)
@@ -124,10 +145,19 @@ class PostgresStore:
                     chunk_id,
                 )
 
+        structlog_logger.info("update_chunk_metadata completed", chunk_id=str(chunk_id))
+
     async def search_similar(
         self, embedding: list[float], limit: int = 10, similarity_threshold: float = 0.7
     ) -> list[dict[str, Any]]:
         """Search for similar chunks using vector similarity."""
+        structlog_logger.info(
+            "search_similar called",
+            embedding_dim=len(embedding),
+            limit=limit,
+            similarity_threshold=similarity_threshold,
+        )
+
         async with self.connection_manager.get_pg_connection() as conn:
             # Determine embedding dimension
             embedding_dim = len(embedding)
@@ -158,6 +188,7 @@ class PostgresStore:
                 limit,
             )
 
+            structlog_logger.info("search_similar completed", num_results=len(results))
             return [dict(row) for row in results]
 
     async def hybrid_search(
@@ -168,6 +199,14 @@ class PostgresStore:
         limit: int = 10,
     ) -> list[dict[str, Any]]:
         """Perform hybrid search with vector + text + entity boosting."""
+        structlog_logger.info(
+            "hybrid_search called",
+            embedding_dim=len(query_embedding),
+            query_text_length=len(query_text),
+            num_entity_ids=len(entity_ids) if entity_ids else 0,
+            limit=limit,
+        )
+
         async with self.connection_manager.get_pg_connection() as conn:
             # Determine embedding dimension
             embedding_dim = len(query_embedding)
@@ -193,10 +232,13 @@ class PostgresStore:
                 limit,
             )
 
+            structlog_logger.info("hybrid_search completed", num_results=len(results))
             return [dict(row) for row in results]
 
     async def get_chunks_by_ids(self, chunk_ids: list[UUID]) -> list[dict[str, Any]]:
         """Get chunks by their IDs."""
+        structlog_logger.info("get_chunks_by_ids called", num_chunk_ids=len(chunk_ids))
+
         async with self.connection_manager.get_pg_connection() as conn:
             results = await conn.fetch(
                 """
@@ -212,10 +254,13 @@ class PostgresStore:
                 chunk_ids,
             )
 
+            structlog_logger.info("get_chunks_by_ids completed", num_results=len(results))
             return [dict(row) for row in results]
 
     async def get_document(self, document_id: UUID) -> dict[str, Any] | None:
         """Get a document by ID."""
+        structlog_logger.info("get_document called", document_id=str(document_id))
+
         async with self.connection_manager.get_pg_connection() as conn:
             result = await conn.fetchrow(
                 """
@@ -225,10 +270,17 @@ class PostgresStore:
                 document_id,
             )
 
+            structlog_logger.info(
+                "get_document completed", document_id=str(document_id), found=result is not None
+            )
             return dict(result) if result else None
 
     async def delete_document(self, document_id: UUID, hard_delete: bool = False):
         """Delete a document (soft delete by default)."""
+        structlog_logger.info(
+            "delete_document called", document_id=str(document_id), hard_delete=hard_delete
+        )
+
         async with self.connection_manager.get_pg_connection() as conn:
             if hard_delete:
                 # Add to sync queue for Neo4j cleanup
@@ -248,7 +300,9 @@ class PostgresStore:
                     document_id,
                 )
 
-                logger.info(f"Hard deleted document {document_id}")
+                structlog_logger.info(
+                    "delete_document completed - hard delete", document_id=str(document_id)
+                )
             else:
                 # Soft delete
                 await conn.execute(
@@ -260,7 +314,9 @@ class PostgresStore:
                     document_id,
                 )
 
-                logger.info(f"Soft deleted document {document_id}")
+                structlog_logger.info(
+                    "delete_document completed - soft delete", document_id=str(document_id)
+                )
 
     async def create_session(
         self, user_id: str | None = None, metadata: dict[str, Any] | None = None
@@ -422,6 +478,15 @@ class PostgresStore:
                 sort_order="desc"
             )
         """
+        structlog_logger.info(
+            "list_documents called",
+            limit=limit,
+            offset=offset,
+            sort_by=sort_by,
+            sort_order=sort_order,
+            has_source_filter=bool(source_filter),
+        )
+
         async with self.connection_manager.get_pg_connection() as conn:
             # Validate sort parameters
             valid_sort_fields = {"created_at", "title", "updated_at"}
@@ -455,6 +520,7 @@ class PostgresStore:
             """  # nosec B608
 
             rows = await conn.fetch(query, limit, offset, source_filter)
+            structlog_logger.info("list_documents completed", num_documents=len(rows))
             return [dict(row) for row in rows]
 
     async def count_documents(self, source_filter: str | None = None) -> int:
@@ -467,6 +533,8 @@ class PostgresStore:
         Returns:
             Total count of matching documents
         """
+        structlog_logger.info("count_documents called", has_source_filter=bool(source_filter))
+
         async with self.connection_manager.get_pg_connection() as conn:
             query = """
                 SELECT COUNT(*) as total
@@ -476,7 +544,9 @@ class PostgresStore:
             """
 
             row = await conn.fetchrow(query, source_filter)
-            return row["total"] if row else 0
+            count = row["total"] if row else 0
+            structlog_logger.info("count_documents completed", count=count)
+            return count
 
     async def get_document_chunks(
         self, document_id: UUID, include_embeddings: bool = False
@@ -491,6 +561,12 @@ class PostgresStore:
         Returns:
             List of chunk dictionaries
         """
+        structlog_logger.info(
+            "get_document_chunks called",
+            document_id=str(document_id),
+            include_embeddings=include_embeddings,
+        )
+
         async with self.connection_manager.get_pg_connection() as conn:
             if include_embeddings:
                 query = """
@@ -517,6 +593,9 @@ class PostgresStore:
                 """
 
             rows = await conn.fetch(query, document_id)
+            structlog_logger.info(
+                "get_document_chunks completed", document_id=str(document_id), num_chunks=len(rows)
+            )
             return [dict(row) for row in rows]
 
     async def update_document(self, document_id: UUID, updates: dict[str, Any]) -> bool:
@@ -530,6 +609,12 @@ class PostgresStore:
         Returns:
             True if updated, False if not found
         """
+        structlog_logger.info(
+            "update_document called",
+            document_id=str(document_id),
+            update_fields=list(updates.keys()),
+        )
+
         async with self.connection_manager.get_pg_connection() as conn:
             # Build dynamic UPDATE query based on provided fields
             allowed_fields = {"title", "metadata"}
@@ -596,6 +681,8 @@ class PostgresStore:
 
     async def get_statistics(self) -> dict[str, Any]:
         """Get database statistics."""
+        structlog_logger.info("get_statistics called")
+
         async with self.connection_manager.get_pg_connection() as conn:
             stats = {}
 
@@ -659,4 +746,9 @@ class PostgresStore:
             )
             stats.update(dict(cache_stats))
 
+            structlog_logger.info(
+                "get_statistics completed",
+                total_documents=stats.get("total_documents"),
+                total_chunks=stats.get("total_chunks"),
+            )
             return stats

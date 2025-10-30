@@ -25,6 +25,7 @@ from dotenv import load_dotenv
 from httpx import AsyncClient
 from openai import AsyncOpenAI
 from pydantic_ai import Agent, RunContext
+from supabase.client import Client
 
 from src.clients.llm import get_model
 from src.config.agent import agent_config
@@ -38,7 +39,6 @@ from src.tools import (
     web_search_tool,
 )
 from src.tools.rag import graph_query_tool, smart_search_tool
-from supabase.client import Client
 
 # Load environment
 load_dotenv()
@@ -592,11 +592,13 @@ async def run_unified_agent(
         Agent response with answer and metadata
     """
     # Create dependencies
+    from src.config.clients import clients_config
+
     deps = UnifiedAgentDeps(
         supabase=supabase_client,
         embedding_client=embedding_client,
         http_client=http_client
-        or AsyncClient(),  # CONST-III-001 - Fallback client for convenience wrapper
+        or clients_config.create_http_client(),  # CONST-III-001 - Use centralized HTTP client factory
         brave_api_key=agent_config.brave_api_key,
         searxng_base_url=agent_config.searxng_base_url,
         jina_api_key=agent_config.jina_api_key,

@@ -7,11 +7,15 @@ Detects direct database client instantiation instead of using centralized config
 import ast
 from pathlib import Path
 
+import structlog
+
 from src.constitution_validator.models import (
     ConfidenceLevel,
     ViolationRecord,
 )
 from src.constitution_validator.rules.base import BaseValidationRule
+
+logger = structlog.get_logger(__name__)
 
 
 class DualDatabaseRule(BaseValidationRule):
@@ -62,6 +66,7 @@ class DualDatabaseRule(BaseValidationRule):
         Returns:
             List of violations detected
         """
+        logger.info("Executing Principle III rule", rule_id=self.rule_id, file=str(file_path))
         # Prepare instance state
         self._prepare_execution(file_path, tree, source_code)
 
@@ -122,14 +127,23 @@ class DualDatabaseRule(BaseValidationRule):
                                     },
                                 )
 
+        logger.info(
+            "Principle III rule completed", rule_id=self.rule_id, violations=len(self.violations)
+        )
         return self.violations
 
     def _get_client_name(self, node: ast.Call) -> str:
         """Extract client class name from Call node."""
+        logger.debug("Extracting client name from call node")
         if isinstance(node.func, ast.Name):
-            return node.func.id
+            client_name = node.func.id
+            logger.debug("Client name extracted from Name", client_name=client_name)
+            return client_name
         if isinstance(node.func, ast.Attribute):
-            return node.func.attr
+            client_name = node.func.attr
+            logger.debug("Client name extracted from Attribute", client_name=client_name)
+            return client_name
+        logger.debug("No client name found")
         return ""
 
 

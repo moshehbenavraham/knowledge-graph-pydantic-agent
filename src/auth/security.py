@@ -71,6 +71,7 @@ class LoginRateLimiter:
         Returns:
             Tuple of (is_locked_out, seconds_remaining)
         """
+        logger.debug("Checking lockout status", username=username)
         self._cleanup_expired_lockouts()
 
         if username in self._lockouts:
@@ -142,6 +143,7 @@ class LoginRateLimiter:
         Returns:
             Number of remaining attempts (0 if locked out)
         """
+        logger.debug("Getting remaining attempts", username=username)
         self._cleanup_old_attempts(username)
 
         if username in self._lockouts:
@@ -177,6 +179,7 @@ def get_rate_limiter() -> LoginRateLimiter:
     Returns:
         Global LoginRateLimiter instance
     """
+    logger.debug("Getting rate limiter instance")
     global _rate_limiter
     if _rate_limiter is None:
         _rate_limiter = LoginRateLimiter(

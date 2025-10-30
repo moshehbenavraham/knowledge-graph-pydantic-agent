@@ -11,9 +11,12 @@ import logging
 from typing import Any
 from uuid import UUID
 
+import structlog
+
 from supabase import Client, create_client
 
 logger = logging.getLogger(__name__)
+structlog_logger = structlog.get_logger(__name__)
 
 
 class SupabaseRestStore:
@@ -31,12 +34,13 @@ class SupabaseRestStore:
             supabase_url: Supabase project URL
             supabase_key: Supabase service role key
         """
+        structlog_logger.info("SupabaseRestStore initializing", supabase_url=supabase_url)
         self.client: Client = (
             create_client(  # noqa: CONST-III-001 - Storage layer using centralized config
                 supabase_url, supabase_key
             )
         )  # noqa: CONST-III-001 - Storage layer implementation
-        logger.info(f"Initialized SupabaseRestStore for {supabase_url}")
+        structlog_logger.info("SupabaseRestStore initialized", supabase_url=supabase_url)
 
     async def store_document(
         self, title: str, source: str, content: str, metadata: dict[str, Any] | None = None
@@ -53,6 +57,10 @@ class SupabaseRestStore:
         Returns:
             UUID of created document
         """
+        structlog_logger.info(
+            "store_document called", title=title, source=source, content_length=len(content)
+        )
+
         doc_data = {
             "title": title,
             "source": source,
@@ -65,12 +73,12 @@ class SupabaseRestStore:
 
             if result.data and len(result.data) > 0:
                 doc_id = UUID(result.data[0]["id"])
-                logger.info(f"Stored document {doc_id}: {title}")
+                structlog_logger.info("store_document completed", doc_id=str(doc_id), title=title)
                 return doc_id
             raise ValueError("No document ID returned from insert")
 
         except Exception as e:
-            logger.error(f"Failed to store document '{title}': {e}")
+            structlog_logger.error("Failed to store document", title=title, error=str(e))
             raise
 
     async def store_chunks(self, document_id: UUID, chunks: list[dict[str, Any]]) -> list[UUID]:
@@ -84,6 +92,10 @@ class SupabaseRestStore:
         Returns:
             List of chunk UUIDs
         """
+        structlog_logger.info(
+            "store_chunks called", document_id=str(document_id), num_chunks=len(chunks)
+        )
+
         chunk_ids = []
 
         try:
@@ -113,12 +125,18 @@ class SupabaseRestStore:
 
             if result.data:
                 chunk_ids = [UUID(row["id"]) for row in result.data]
-                logger.info(f"Stored {len(chunk_ids)} chunks for document {document_id}")
+                structlog_logger.info(
+                    "store_chunks completed",
+                    num_chunks=len(chunk_ids),
+                    document_id=str(document_id),
+                )
             else:
                 raise ValueError("No chunk IDs returned from insert")
 
         except Exception as e:
-            logger.error(f"Failed to store chunks for document {document_id}: {e}")
+            structlog_logger.error(
+                "Failed to store chunks", document_id=str(document_id), error=str(e)
+            )
             raise
 
         return chunk_ids
@@ -138,7 +156,9 @@ class SupabaseRestStore:
             )
 
             if not result.data or len(result.data) == 0:
-                logger.warning(f"Chunk {chunk_id} not found for metadata update")
+                structlog_logger.warning(
+                    "Chunk not found for metadata update", chunk_id=str(chunk_id)
+                )
                 return
 
             # Merge metadata
@@ -157,10 +177,12 @@ class SupabaseRestStore:
 
             self.client.table("chunks").update(update_data).eq("id", str(chunk_id)).execute()
 
-            logger.debug(f"Updated metadata for chunk {chunk_id}")
+            structlog_logger.debug("Updated chunk metadata", chunk_id=str(chunk_id))
 
         except Exception as e:
-            logger.error(f"Failed to update metadata for chunk {chunk_id}: {e}")
+            structlog_logger.error(
+                "Failed to update chunk metadata", chunk_id=str(chunk_id), error=str(e)
+            )
             raise
 
     async def search_similar(
@@ -198,12 +220,12 @@ class SupabaseRestStore:
             ).execute()
 
             if result.data:
-                logger.info(f"Found {len(result.data)} similar chunks")
+                structlog_logger.info("search_similar completed", num_results=len(result.data))
                 return result.data
             return []
 
         except Exception as e:
-            logger.warning(f"Vector search failed (may not be implemented): {e}")
+            structlog_logger.warning("Vector search failed (may not be implemented)", error=str(e))
             # Fallback: return empty results
             return []
 
@@ -221,11 +243,15 @@ class SupabaseRestStore:
             result = self.client.table("documents").select("*").eq("id", str(document_id)).execute()
 
             if result.data and len(result.data) > 0:
+                structlog_logger.info("get_document completed", document_id=str(document_id))
                 return result.data[0]
+            structlog_logger.info("get_document - not found", document_id=str(document_id))
             return None
 
         except Exception as e:
-            logger.error(f"Failed to get document {document_id}: {e}")
+            structlog_logger.error(
+                "Failed to get document", document_id=str(document_id), error=str(e)
+            )
             return None
 
     async def get_chunks(self, document_id: UUID) -> list[dict[str, Any]]:
@@ -248,11 +274,19 @@ class SupabaseRestStore:
             )
 
             if result.data:
+                structlog_logger.info(
+                    "get_chunks completed",
+                    document_id=str(document_id),
+                    num_chunks=len(result.data),
+                )
                 return result.data
+            structlog_logger.info("get_chunks - no chunks found", document_id=str(document_id))
             return []
 
         except Exception as e:
-            logger.error(f"Failed to get chunks for document {document_id}: {e}")
+            structlog_logger.error(
+                "Failed to get chunks", document_id=str(document_id), error=str(e)
+            )
             return []
 
     async def delete_document(self, document_id: UUID) -> bool:
@@ -272,9 +306,11 @@ class SupabaseRestStore:
             # Delete document
             self.client.table("documents").delete().eq("id", str(document_id)).execute()
 
-            logger.info(f"Deleted document {document_id} and its chunks")
+            structlog_logger.info("delete_document completed", document_id=str(document_id))
             return True
 
         except Exception as e:
-            logger.error(f"Failed to delete document {document_id}: {e}")
+            structlog_logger.error(
+                "Failed to delete document", document_id=str(document_id), error=str(e)
+            )
             return False

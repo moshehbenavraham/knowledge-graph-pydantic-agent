@@ -1,11 +1,11 @@
 """Sphinx configuration for Agentic RAG documentation."""
 
-import os
 import sys
 from datetime import datetime
+from pathlib import Path
 
 # Add source directory to path for autodoc
-sys.path.insert(0, os.path.abspath("../src"))
+sys.path.insert(0, str(Path("../src").resolve()))
 
 # Project information
 project = "Agentic RAG System"

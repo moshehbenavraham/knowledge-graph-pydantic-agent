@@ -192,7 +192,6 @@ def disable_rate_limiting(request, monkeypatch):
     if "test_rate_limiting" in request.node.fspath.basename:
         return
 
-
     async def mock_enforce_limits(*args, **kwargs):
         """Mock rate limiter that always allows requests."""
         pass

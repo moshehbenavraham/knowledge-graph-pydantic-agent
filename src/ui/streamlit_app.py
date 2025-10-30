@@ -65,8 +65,23 @@ def make_json_safe(obj: any, max_depth: int = 10, _current_depth: int = 0) -> an
     Returns:
         JSON-serializable version of the object
     """
+    # Only log at top level to avoid excessive logging during recursion
+    if _current_depth == 0:
+        logger.debug(
+            "make_json_safe() called",
+            obj_type=type(obj).__name__,
+            max_depth=max_depth,
+            is_none=obj is None,
+        )
+
     # Prevent infinite recursion
     if _current_depth >= max_depth:
+        if _current_depth == max_depth:
+            logger.warning(
+                "Maximum recursion depth reached in make_json_safe",
+                max_depth=max_depth,
+                obj_type=type(obj).__name__,
+            )
         return "<max depth reached>"
 
     # Handle None, bool, int, float, str - already JSON-safe
@@ -75,24 +90,43 @@ def make_json_safe(obj: any, max_depth: int = 10, _current_depth: int = 0) -> an
 
     # Handle lists/tuples recursively
     if isinstance(obj, list | tuple):
-        return [make_json_safe(item, max_depth, _current_depth + 1) for item in obj]
+        result = [make_json_safe(item, max_depth, _current_depth + 1) for item in obj]
+        if _current_depth == 0:
+            logger.debug("Converted list/tuple to JSON-safe format", item_count=len(result))
+        return result
 
     # Handle dicts recursively
     if isinstance(obj, dict):
-        return {
+        result = {
             str(key): make_json_safe(value, max_depth, _current_depth + 1)
             for key, value in obj.items()
         }
+        if _current_depth == 0:
+            logger.debug("Converted dict to JSON-safe format", key_count=len(result))
+        return result
 
     # For everything else, try JSON serialization
     try:
         json.dumps(obj)
+        if _current_depth == 0:
+            logger.debug("Object is already JSON-serializable", obj_type=type(obj).__name__)
         return obj
-    except (TypeError, ValueError):
+    except (TypeError, ValueError) as e:
         # Not serializable - convert to string
+        if _current_depth == 0:
+            logger.debug(
+                "Object not JSON-serializable, converting to string",
+                obj_type=type(obj).__name__,
+                error_type=type(e).__name__,
+            )
         try:
             return str(obj)
-        except Exception:
+        except Exception as str_error:
+            logger.warning(
+                "Failed to convert object to string",
+                obj_type=type(obj).__name__,
+                error=str(str_error),
+            )
             return f"<{type(obj).__name__} object>"
 
 
@@ -129,6 +163,12 @@ class UIConfig:
         }
 
     def get_handler(self) -> BaseHandler:
+        logger.info(
+            "get_handler() called",
+            mode=self.mode.value,
+            features=self.features,
+        )
+
         config = {
             "enable_memory": self.features["memory"],
             "enable_mcp": self.features["mcp"],
@@ -136,12 +176,30 @@ class UIConfig:
             "memory_limit": 3,
         }
 
+        logger.debug(
+            "Handler config prepared",
+            config=config,
+        )
+
+        handler = None
         if self.mode == UIMode.SIMPLE:
-            return SimpleHandler(config)
-        if self.mode == UIMode.STANDARD:
-            return StreamingHandler(config)
-        # ADVANCED
-        return MCPHandler(config)
+            logger.info("Creating SimpleHandler for SIMPLE mode")
+            handler = SimpleHandler(config)
+        elif self.mode == UIMode.STANDARD:
+            logger.info("Creating StreamingHandler for STANDARD mode")
+            handler = StreamingHandler(config)
+        else:
+            # ADVANCED
+            logger.info("Creating MCPHandler for ADVANCED mode")
+            handler = MCPHandler(config)
+
+        logger.info(
+            "Handler created successfully",
+            handler_type=type(handler).__name__,
+            mode=self.mode.value,
+        )
+
+        return handler
 
 
 def display_message_part(part):

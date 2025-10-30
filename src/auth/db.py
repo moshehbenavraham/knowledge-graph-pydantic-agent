@@ -138,6 +138,7 @@ def get_user_by_email(email: str) -> dict[str, Any] | None:
     Returns:
         User record (without password_hash) or None if not found
     """
+    logger.debug("get_user_by_email called", email=email)
     client = get_supabase_client()
 
     response = (
@@ -167,6 +168,7 @@ def get_user_by_id(user_id: UUID | str) -> dict[str, Any] | None:
     Returns:
         User record (without password_hash) or None if not found
     """
+    logger.debug("get_user_by_id called", user_id=str(user_id))
     client = get_supabase_client()
 
     response = (
@@ -299,6 +301,15 @@ def update_user(
     Raises:
         Exception: If user not found or database error
     """
+    logger.info(
+        "update_user called",
+        user_id=str(user_id),
+        username=username,
+        email=email,
+        has_full_name=full_name is not None,
+        has_avatar_url=avatar_url is not None,
+        is_active=is_active,
+    )
     client = get_supabase_client()
 
     update_data: dict[str, Any] = {}
@@ -340,6 +351,7 @@ def update_user_password(user_id: UUID | str, new_password: str) -> bool:
     Raises:
         Exception: If user not found or database error
     """
+    logger.info("update_user_password called", user_id=str(user_id))
     client = get_supabase_client()
 
     password_hash = hash_password(new_password)
@@ -371,6 +383,7 @@ def delete_user(user_id: UUID | str, soft_delete: bool = True) -> bool:
     Raises:
         Exception: If user not found or database error
     """
+    logger.info("delete_user called", user_id=str(user_id), soft_delete=soft_delete)
     client = get_supabase_client()
 
     if soft_delete:
@@ -456,6 +469,7 @@ def update_last_login(user_id: UUID | str, ip_address: str | None = None) -> boo
     Returns:
         True if successful
     """
+    logger.debug("update_last_login called", user_id=str(user_id), has_ip_address=bool(ip_address))
     client = get_supabase_client()
 
     update_data = {"last_login_at": datetime.now(UTC).isoformat()}
@@ -480,6 +494,7 @@ def increment_failed_login(username: str) -> int:
     Raises:
         Exception: If user not found
     """
+    logger.info("increment_failed_login called", username=username)
     client = get_supabase_client()
 
     # Get current user
@@ -520,6 +535,7 @@ def reset_failed_login(user_id: UUID | str) -> bool:
     Returns:
         True if successful
     """
+    logger.info("reset_failed_login called", user_id=str(user_id))
     client = get_supabase_client()
 
     response = (
@@ -562,6 +578,14 @@ def create_session(
     Raises:
         Exception: If database error
     """
+    logger.info(
+        "create_session called",
+        user_id=str(user_id),
+        expires_in_days=expires_in_days,
+        session_type=session_type,
+        has_device_info=bool(device_info),
+        has_ip_address=bool(ip_address),
+    )
     client = get_supabase_client()
 
     # Generate secure session token
@@ -595,6 +619,7 @@ def get_session(session_token: str) -> dict[str, Any] | None:
     Returns:
         Session record or None if not found/expired/revoked
     """
+    logger.debug("get_session called", token_length=len(session_token))
     client = get_supabase_client()
 
     now = datetime.now(UTC).isoformat()
@@ -622,6 +647,7 @@ def update_session_activity(session_token: str) -> bool:
     Returns:
         True if successful
     """
+    logger.debug("update_session_activity called", token_length=len(session_token))
     client = get_supabase_client()
 
     response = (
@@ -644,6 +670,7 @@ def revoke_session(session_token: str) -> bool:
     Returns:
         True if successful
     """
+    logger.info("revoke_session called", token_length=len(session_token))
     client = get_supabase_client()
 
     response = (
@@ -666,6 +693,7 @@ def revoke_all_user_sessions(user_id: UUID | str) -> int:
     Returns:
         Number of sessions revoked
     """
+    logger.info("revoke_all_user_sessions called", user_id=str(user_id))
     client = get_supabase_client()
 
     response = (
@@ -690,6 +718,7 @@ def get_user_sessions(user_id: UUID | str, active_only: bool = True) -> list[dic
     Returns:
         List of session records
     """
+    logger.debug("get_user_sessions called", user_id=str(user_id), active_only=active_only)
     client = get_supabase_client()
 
     query = client.table("auth_sessions").select("*").eq("user_id", str(user_id))
@@ -710,6 +739,7 @@ def cleanup_expired_sessions() -> int:
     Returns:
         Number of sessions deleted
     """
+    logger.info("cleanup_expired_sessions called")
     client = get_supabase_client()
 
     # Call the database function
@@ -740,6 +770,12 @@ def create_reset_token(
     Raises:
         Exception: If database error
     """
+    logger.info(
+        "create_reset_token called",
+        user_id=str(user_id),
+        expires_in_hours=expires_in_hours,
+        has_created_ip=bool(created_ip),
+    )
     client = get_supabase_client()
 
     # Generate secure token
@@ -772,6 +808,7 @@ def verify_reset_token(token: str) -> dict[str, Any] | None:
     Returns:
         Token record (with user_id) if valid, None otherwise
     """
+    logger.info("verify_reset_token called", token_length=len(token))
     client = get_supabase_client()
 
     now = datetime.now(UTC).isoformat()
@@ -812,6 +849,7 @@ def use_reset_token(token: str, new_password: str, used_ip: str | None = None) -
     Raises:
         Exception: If token invalid or database error
     """
+    logger.info("use_reset_token called", token_length=len(token), has_used_ip=bool(used_ip))
     # Verify token
     token_record = verify_reset_token(token)
     if not token_record:
@@ -838,6 +876,7 @@ def cleanup_reset_tokens() -> int:
     Returns:
         Number of tokens deleted
     """
+    logger.info("cleanup_reset_tokens called")
     client = get_supabase_client()
 
     # Call the database function
@@ -878,6 +917,14 @@ def link_oauth_account(
     Raises:
         Exception: If database error or account already linked
     """
+    logger.info(
+        "link_oauth_account called",
+        user_id=str(user_id),
+        provider=provider,
+        provider_user_id=provider_user_id,
+        has_refresh_token=bool(refresh_token),
+        has_profile_data=bool(profile_data),
+    )
     client = get_supabase_client()
 
     oauth_data = {
@@ -909,6 +956,7 @@ def get_oauth_account(provider: str, provider_user_id: str) -> dict[str, Any] | 
     Returns:
         OAuth account record or None if not found
     """
+    logger.debug("get_oauth_account called", provider=provider, provider_user_id=provider_user_id)
     client = get_supabase_client()
 
     response = (
@@ -934,6 +982,7 @@ def get_user_oauth_accounts(user_id: UUID | str) -> list[dict[str, Any]]:
     Returns:
         List of OAuth account records
     """
+    logger.debug("get_user_oauth_accounts called", user_id=str(user_id))
     client = get_supabase_client()
 
     response = (
@@ -968,6 +1017,12 @@ def update_oauth_tokens(
     Raises:
         Exception: If database error
     """
+    logger.info(
+        "update_oauth_tokens called",
+        oauth_account_id=str(oauth_account_id),
+        has_refresh_token=bool(refresh_token),
+        has_token_expires_at=bool(token_expires_at),
+    )
     client = get_supabase_client()
 
     update_data: dict[str, Any] = {
@@ -1002,6 +1057,7 @@ def unlink_oauth_account(oauth_account_id: UUID | str) -> bool:
     Returns:
         True if successful
     """
+    logger.info("unlink_oauth_account called", oauth_account_id=str(oauth_account_id))
     client = get_supabase_client()
 
     response = (
@@ -1036,6 +1092,12 @@ def assign_role(
     Raises:
         Exception: If role not found or database error
     """
+    logger.info(
+        "assign_role called",
+        user_id=str(user_id),
+        role_name=role_name,
+        assigned_by=str(assigned_by) if assigned_by else None,
+    )
     client = get_supabase_client()
 
     # Get role ID
@@ -1081,6 +1143,7 @@ def revoke_role(user_id: UUID | str, role_name: str) -> bool:
     Raises:
         Exception: If role not found or database error
     """
+    logger.info("revoke_role called", user_id=str(user_id), role_name=role_name)
     client = get_supabase_client()
 
     # Get role ID
@@ -1114,6 +1177,7 @@ def get_user_roles(user_id: UUID | str) -> list[dict[str, Any]]:
     Returns:
         List of role records with permissions
     """
+    logger.debug("get_user_roles called", user_id=str(user_id))
     client = get_supabase_client()
 
     # Call the database function
@@ -1137,6 +1201,7 @@ def check_permission(user_id: UUID | str, permission: str) -> bool:
     Returns:
         True if user has permission
     """
+    logger.debug("check_permission called", user_id=str(user_id), permission=permission)
     roles = get_user_roles(user_id)
 
     for role in roles:
@@ -1167,6 +1232,7 @@ def set_2fa_requirement(username: str, required: bool) -> bool:
     Raises:
         Exception: If user not found or database error
     """
+    logger.info("set_2fa_requirement called", username=username, required=required)
     client = get_supabase_client()
 
     # Update requires_2fa column
@@ -1196,6 +1262,7 @@ def get_2fa_requirement(username: str) -> bool:
     Raises:
         Exception: If user not found or database error
     """
+    logger.debug("get_2fa_requirement called", username=username)
     user = get_user_by_username(username)
     if not user:
         raise Exception(f"User '{username}' not found")

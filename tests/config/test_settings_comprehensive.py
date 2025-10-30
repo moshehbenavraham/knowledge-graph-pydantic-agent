@@ -125,7 +125,7 @@ class TestLLMSettings:
         settings = Settings()
 
         # Should parse as float
-        assert isinstance(settings.llm_temperature, (int, float)) or True
+        assert isinstance(settings.llm_temperature, int | float) or True
 
 
 class TestDatabaseSettings:
@@ -390,4 +390,4 @@ class TestSettingsTypes:
 
         # Should convert to list
         if hasattr(settings, "cors_origins"):
-            assert isinstance(settings.cors_origins, (list, str)) or True
+            assert isinstance(settings.cors_origins, list | str) or True

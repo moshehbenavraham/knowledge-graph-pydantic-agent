@@ -176,10 +176,22 @@ class UserRateLimiter:
 
     def get_user_stats(self, user_id: str) -> dict:
         """Get rate limiting stats for user."""
+        logger.info("get_user_stats called", user_id=user_id)
+
         tier = self.user_tiers[user_id]
+        logger.info("Retrieved user tier", user_id=user_id, tier=tier)
+
         limiter = self.limiters[tier]
         stats = limiter.get_stats(user_id)
         stats["tier"] = tier
+
+        logger.info(
+            "get_user_stats completed",
+            user_id=user_id,
+            tier=tier,
+            requests_in_window=stats.get("requests_in_window"),
+            remaining_tokens=stats.get("remaining_tokens"),
+        )
         return stats
 
 
@@ -225,14 +237,29 @@ class RateLimitMiddleware:
 
     def get_all_stats(self, user_id: str) -> dict:
         """Get comprehensive rate limiting stats for user."""
+        logger.info("get_all_stats called", user_id=user_id)
+
         user_stats = self.user_limiter.get_user_stats(user_id)
+        logger.info(
+            "Retrieved user stats",
+            user_id=user_id,
+            tier=user_stats.get("tier"),
+            remaining_tokens=user_stats.get("remaining_tokens"),
+        )
 
         api_stats = {}
         for service in self.api_limiter.limiters:
             limiter = self.api_limiter.limiters[service]
             api_stats[service] = limiter.get_stats(f"{service}_{user_id}")
 
-        return {"user": user_stats, "apis": api_stats, "timestamp": datetime.now(UTC).isoformat()}
+        logger.info(
+            "Retrieved API stats for all services", user_id=user_id, services=list(api_stats.keys())
+        )
+
+        result = {"user": user_stats, "apis": api_stats, "timestamp": datetime.now(UTC).isoformat()}
+        logger.info("get_all_stats completed", user_id=user_id, num_services=len(api_stats))
+
+        return result
 
 
 class RateLimitExceededError(Exception):

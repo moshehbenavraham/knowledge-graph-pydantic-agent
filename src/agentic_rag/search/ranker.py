@@ -240,9 +240,14 @@ class ResultRanker:
         """
         # Use existing similarity if available
         if hasattr(chunk, "similarity"):
-            return chunk.similarity
+            score = chunk.similarity
+            structlog_logger.debug("_similarity_score", score=score, source="chunk.similarity")
+            return score
         if hasattr(chunk, "score"):
-            return chunk.score
+            score = chunk.score
+            structlog_logger.debug("_similarity_score", score=score, source="chunk.score")
+            return score
+        structlog_logger.debug("_similarity_score", score=0.5, source="default")
         return 0.5  # Default middle score
 
     def _entity_overlap_score(self, chunk, query_entities: list[str] | None) -> float:
@@ -256,6 +261,10 @@ class ResultRanker:
         Returns:
             Overlap score (0-1)
         """
+        structlog_logger.debug(
+            "_entity_overlap_score called", has_query_entities=bool(query_entities)
+        )
+
         if not query_entities:
             return 0.5  # Neutral score if no query entities
 
@@ -267,6 +276,7 @@ class ResultRanker:
             chunk_entities = {e.lower() for e in chunk.metadata["entity_refs"]}
 
         if not chunk_entities:
+            structlog_logger.debug("_entity_overlap_score - no chunk entities", score=0.0)
             return 0.0
 
         # Calculate overlap
@@ -279,7 +289,14 @@ class ResultRanker:
         # Jaccard similarity
         union = chunk_entities | query_entities_lower
         if union:
-            return len(overlap) / len(union)
+            score = len(overlap) / len(union)
+            structlog_logger.debug(
+                "_entity_overlap_score completed",
+                score=score,
+                overlap_count=len(overlap),
+                union_count=len(union),
+            )
+            return score
         return 0.0
 
     def _temporal_relevance_score(self, chunk, temporal_context: datetime | None) -> float:
@@ -293,6 +310,10 @@ class ResultRanker:
         Returns:
             Temporal score (0-1)
         """
+        structlog_logger.debug(
+            "_temporal_relevance_score called", has_temporal_context=bool(temporal_context)
+        )
+
         if not temporal_context:
             return 0.5  # Neutral score if no temporal context
 
@@ -333,6 +354,12 @@ class ResultRanker:
         if score > 0.5:
             self._stats["temporal_boosts"] += 1
 
+        structlog_logger.debug(
+            "_temporal_relevance_score completed",
+            score=score,
+            time_diff_days=time_diff,
+            temporal_boost=score > 0.5,
+        )
         return score
 
     def _authority_score(self, chunk) -> float:
@@ -353,24 +380,38 @@ class ResultRanker:
             source = chunk.metadata["source"]
 
         if not source:
+            structlog_logger.debug(
+                "_authority_score - no source", score=self.AUTHORITY_SCORES["unknown"]
+            )
             return self.AUTHORITY_SCORES["unknown"]
 
         source_lower = source.lower()
 
         # Check against known patterns
         if "official" in source_lower or "documentation" in source_lower:
-            return self.AUTHORITY_SCORES["official_docs"]
-        if "whitepaper" in source_lower:
-            return self.AUTHORITY_SCORES["whitepaper"]
-        if "research" in source_lower or "paper" in source_lower:
-            return self.AUTHORITY_SCORES["research_paper"]
-        if "news" in source_lower or "article" in source_lower:
-            return self.AUTHORITY_SCORES["news_article"]
-        if "blog" in source_lower:
-            return self.AUTHORITY_SCORES["blog_post"]
-        if "twitter" in source_lower or "social" in source_lower:
-            return self.AUTHORITY_SCORES["social_media"]
-        return self.AUTHORITY_SCORES["unknown"]
+            score = self.AUTHORITY_SCORES["official_docs"]
+            source_type = "official_docs"
+        elif "whitepaper" in source_lower:
+            score = self.AUTHORITY_SCORES["whitepaper"]
+            source_type = "whitepaper"
+        elif "research" in source_lower or "paper" in source_lower:
+            score = self.AUTHORITY_SCORES["research_paper"]
+            source_type = "research_paper"
+        elif "news" in source_lower or "article" in source_lower:
+            score = self.AUTHORITY_SCORES["news_article"]
+            source_type = "news_article"
+        elif "blog" in source_lower:
+            score = self.AUTHORITY_SCORES["blog_post"]
+            source_type = "blog_post"
+        elif "twitter" in source_lower or "social" in source_lower:
+            score = self.AUTHORITY_SCORES["social_media"]
+            source_type = "social_media"
+        else:
+            score = self.AUTHORITY_SCORES["unknown"]
+            source_type = "unknown"
+
+        structlog_logger.debug("_authority_score completed", score=score, source_type=source_type)
+        return score
 
     def _diversity_score(self, chunk, seen_content: set[str]) -> float:
         """
@@ -386,6 +427,7 @@ class ResultRanker:
         # Create content signature
         content = getattr(chunk, "content", "")
         if not content:
+            structlog_logger.debug("_diversity_score - no content", score=1.0)
             return 1.0
 
         # Simple content hash (first 100 chars)
@@ -393,6 +435,7 @@ class ResultRanker:
 
         # Check similarity to seen content
         if content_sig in seen_content:
+            structlog_logger.debug("_diversity_score - duplicate content", score=0.0)
             return 0.0  # Duplicate content
 
         # Check for partial overlap
@@ -402,8 +445,12 @@ class ResultRanker:
             total = len(set(content_sig.split()) | set(seen.split()))
 
             if total > 0 and overlap / total > 0.7:
+                structlog_logger.debug(
+                    "_diversity_score - high overlap", score=0.3, overlap_ratio=overlap / total
+                )
                 return 0.3  # High overlap
 
+        structlog_logger.debug("_diversity_score - novel content", score=1.0)
         return 1.0  # Novel content
 
     def _update_seen_content(self, chunk, seen_content: set[str]):
@@ -430,12 +477,17 @@ class ResultRanker:
         Returns:
             Diverse chunk list
         """
+        structlog_logger.debug(
+            "_ensure_diversity called", num_chunks=len(scored_chunks), limit=limit
+        )
+
         if len(scored_chunks) <= limit:
             return scored_chunks
 
         diverse_results = []
         seen_documents = defaultdict(int)
         seen_topics = defaultdict(int)
+        initial_adjustments = self._stats["diversity_adjustments"]
 
         for item in scored_chunks:
             chunk = item["chunk"]
@@ -463,6 +515,14 @@ class ResultRanker:
         # Re-sort after diversity adjustments
         diverse_results.sort(key=lambda x: x["final_score"], reverse=True)
 
+        adjustments_made = self._stats["diversity_adjustments"] - initial_adjustments
+        structlog_logger.debug(
+            "_ensure_diversity completed",
+            adjustments_made=adjustments_made,
+            unique_documents=len(seen_documents),
+            unique_topics=len(seen_topics),
+        )
+
         return diverse_results
 
     def rerank_with_feedback(
@@ -479,19 +539,39 @@ class ResultRanker:
         Returns:
             Re-ranked results
         """
+        structlog_logger.info(
+            "rerank_with_feedback called",
+            num_chunks=len(chunks),
+            num_positive=len(positive_examples),
+            num_negative=len(negative_examples),
+        )
+
+        positive_count = 0
+        negative_count = 0
+
         for chunk in chunks:
             chunk_id = str(getattr(chunk, "chunk_id", ""))
 
             # Boost positive examples
             if chunk_id in positive_examples and hasattr(chunk, "similarity"):
                 chunk.similarity = min(1.0, chunk.similarity * 1.5)
+                positive_count += 1
 
             # Penalize negative examples
             if chunk_id in negative_examples and hasattr(chunk, "similarity"):
                 chunk.similarity = chunk.similarity * 0.5
+                negative_count += 1
 
         # Re-rank with updated scores
-        return self.rank_chunks(chunks, len(chunks))
+        result = self.rank_chunks(chunks, len(chunks))
+
+        structlog_logger.info(
+            "rerank_with_feedback completed",
+            positive_applied=positive_count,
+            negative_applied=negative_count,
+            result_count=len(result),
+        )
+        return result
 
     def get_stats(self) -> dict[str, Any]:
         """

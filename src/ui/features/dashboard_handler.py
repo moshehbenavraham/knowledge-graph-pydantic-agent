@@ -8,9 +8,10 @@ All metrics are sourced from analytics tables and materialized views,
 not from in-memory counters.
 """
 
-import logging
 from datetime import datetime, timedelta
 from typing import Any
+
+import structlog
 
 from src.agentic_rag.storage.connection_manager import ConnectionManager
 
@@ -20,7 +21,7 @@ from .dashboard_utils import (
     generate_top_entities_cypher,
 )
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class DashboardHandler:

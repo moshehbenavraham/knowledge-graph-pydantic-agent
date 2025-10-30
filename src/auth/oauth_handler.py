@@ -67,6 +67,7 @@ def get_encryption_cipher() -> Fernet:
     Raises:
         ValueError: If OAUTH_ENCRYPTION_KEY not set in environment
     """
+    logger.debug("Getting encryption cipher for OAuth token encryption")
     settings = get_settings()
     if not settings.oauth_encryption_key:
         raise ValueError(
@@ -85,6 +86,7 @@ def encrypt_token(token: str) -> str:
     Returns:
         Encrypted token string
     """
+    logger.debug("Encrypting OAuth token for secure storage", has_token=bool(token))
     cipher = get_encryption_cipher()
     return cipher.encrypt(token.encode()).decode()
 
@@ -98,6 +100,7 @@ def decrypt_token(encrypted_token: str) -> str:
     Returns:
         Plain text token
     """
+    logger.debug("Decrypting OAuth token from storage", has_encrypted_token=bool(encrypted_token))
     cipher = get_encryption_cipher()
     return cipher.decrypt(encrypted_token.encode()).decode()
 

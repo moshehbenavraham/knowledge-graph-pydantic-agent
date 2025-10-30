@@ -5,8 +5,12 @@ import traceback
 from pathlib import Path
 from typing import Any
 
-from supabase import create_client  # type: ignore
+import structlog
 from supabase.client import Client
+
+from supabase import create_client  # type: ignore
+
+structlog_logger = structlog.get_logger(__name__)
 
 sys.path.append(str(Path(__file__).parent.resolve()))
 from text_processor import (
@@ -25,9 +29,11 @@ from src.config import get_settings
 
 # Initialize Supabase client using centralized configuration
 settings = get_settings()
-supabase: Client = create_client(  # CONST-III-001 - RAG pipeline client using centralized config
-    settings.supabase_url, settings.supabase_service_key
-)  # CONST-III-001 - RAG pipeline module-level client using centralized config
+supabase: Client = (
+    create_client(  # noqa: CONST-III-001 - RAG pipeline module-level client using centralized config
+        settings.supabase_url, settings.supabase_service_key
+    )
+)
 
 
 def delete_document_by_file_id(file_id: str) -> None:
@@ -37,29 +43,38 @@ def delete_document_by_file_id(file_id: str) -> None:
     Args:
         file_id: The Google Drive file ID
     """
+    structlog_logger.info("delete_document_by_file_id called", file_id=file_id)
     try:
         # Delete all documents with the specified file_id in metadata
         response = supabase.table("documents").delete().eq("metadata->>file_id", file_id).execute()
-        print(f"Deleted {len(response.data)} document chunks for file ID: {file_id}")
+        structlog_logger.info(
+            "Deleted document chunks", chunks_deleted=len(response.data), file_id=file_id
+        )
 
         # Delete all document_rows with the specified dataset_id
         try:
             rows_response = (
                 supabase.table("document_rows").delete().eq("dataset_id", file_id).execute()
             )
-            print(f"Deleted {len(rows_response.data)} document rows for file ID: {file_id}")
+            structlog_logger.info(
+                "Deleted document rows", rows_deleted=len(rows_response.data), file_id=file_id
+            )
         except Exception as e:
-            print(f"Error deleting document rows: {e}")
+            structlog_logger.error("Error deleting document rows", error=str(e), file_id=file_id)
 
         # Delete the document_metadata record
         try:
             supabase.table("document_metadata").delete().eq("id", file_id).execute()
-            print(f"Deleted metadata for file ID: {file_id}")
+            structlog_logger.info("Deleted document metadata", file_id=file_id)
         except Exception as e:
-            print(f"Error deleting document metadata: {e}")
+            structlog_logger.error(
+                "Error deleting document metadata", error=str(e), file_id=file_id
+            )
 
     except Exception as e:
-        print(f"Error deleting documents: {e}")
+        structlog_logger.error("Error deleting documents", error=str(e), file_id=file_id)
+
+    structlog_logger.info("delete_document_by_file_id completed", file_id=file_id)
 
 
 def insert_document_chunks(
@@ -83,6 +98,13 @@ def insert_document_chunks(
         mime_type: The mime type of the file
         file_contents: Optional binary of the file to store as metadata
     """
+    structlog_logger.info(
+        "insert_document_chunks called",
+        file_id=file_id,
+        file_title=file_title,
+        num_chunks=len(chunks),
+        has_file_contents=file_contents is not None,
+    )
     try:
         # Ensure we have the same number of chunks and embeddings
         if len(chunks) != len(embeddings):
@@ -112,8 +134,12 @@ def insert_document_chunks(
         # Insert the data into the documents table
         for item in data:
             supabase.table("documents").insert(item).execute()
+
+        structlog_logger.info(
+            "insert_document_chunks completed", file_id=file_id, chunks_inserted=len(data)
+        )
     except Exception as e:
-        print(f"Error inserting/updating document chunks: {e}")
+        structlog_logger.error("Error inserting document chunks", error=str(e), file_id=file_id)
 
 
 def insert_or_update_document_metadata(
@@ -128,6 +154,12 @@ def insert_or_update_document_metadata(
         file_url: The URL to access the file
         schema: Optional schema for tabular files (column names)
     """
+    structlog_logger.info(
+        "insert_or_update_document_metadata called",
+        file_id=file_id,
+        file_title=file_title,
+        has_schema=schema is not None,
+    )
     try:
         # Check if the record already exists
         response = supabase.table("document_metadata").select("*").eq("id", file_id).execute()
@@ -142,13 +174,19 @@ def insert_or_update_document_metadata(
         if response.data and len(response.data) > 0:
             # Update existing record
             supabase.table("document_metadata").update(data).eq("id", file_id).execute()
-            print(f"Updated metadata for file '{file_title}' (ID: {file_id})")
+            structlog_logger.info(
+                "Updated document metadata", file_id=file_id, file_title=file_title
+            )
         else:
             # Insert new record
             supabase.table("document_metadata").insert(data).execute()
-            print(f"Inserted metadata for file '{file_title}' (ID: {file_id})")
+            structlog_logger.info(
+                "Inserted document metadata", file_id=file_id, file_title=file_title
+            )
     except Exception as e:
-        print(f"Error inserting/updating document metadata: {e}")
+        structlog_logger.error(
+            "Error inserting/updating document metadata", error=str(e), file_id=file_id
+        )
 
 
 def insert_document_rows(file_id: str, rows: list[dict[str, Any]]) -> None:
@@ -159,19 +197,20 @@ def insert_document_rows(file_id: str, rows: list[dict[str, Any]]) -> None:
         file_id: The Google Drive file ID (references document_metadata.id)
         rows: List of row data as dictionaries
     """
+    structlog_logger.info("insert_document_rows called", file_id=file_id, num_rows=len(rows))
     try:
         # First, delete any existing rows for this file
         supabase.table("document_rows").delete().eq("dataset_id", file_id).execute()
-        print(f"Deleted existing rows for file ID: {file_id}")
+        structlog_logger.info("Deleted existing rows", file_id=file_id)
 
         # Insert new rows
         for row in rows:
             supabase.table("document_rows").insert(
                 {"dataset_id": file_id, "row_data": row}
             ).execute()
-        print(f"Inserted {len(rows)} rows for file ID: {file_id}")
+        structlog_logger.info("Inserted document rows", file_id=file_id, rows_inserted=len(rows))
     except Exception as e:
-        print(f"Error inserting document rows: {e}")
+        structlog_logger.error("Error inserting document rows", error=str(e), file_id=file_id)
 
 
 def process_file_for_rag(
@@ -195,6 +234,13 @@ def process_file_for_rag(
         mime_type: Mime type of the file
         config: Configuration for things like the chunk size and overlap
     """
+    structlog_logger.info(
+        "process_file_for_rag called",
+        file_id=file_id,
+        file_title=file_title,
+        mime_type=mime_type,
+        text_length=len(text),
+    )
     try:
         # First, delete any existing records for this file
         delete_document_by_file_id(file_id)
@@ -228,7 +274,7 @@ def process_file_for_rag(
         # Chunk the text
         chunks = chunk_text(text, chunk_size=chunk_size, overlap=chunk_overlap)
         if not chunks:
-            print(f"No chunks were created for file '{file_title}' (ID: {file_id})")
+            structlog_logger.warning("No chunks created", file_id=file_id, file_title=file_title)
             return None
 
         # Create embeddings for the chunks
@@ -238,6 +284,11 @@ def process_file_for_rag(
         if mime_type and mime_type.startswith("image"):
             insert_document_chunks(
                 chunks, embeddings, file_id, file_url, file_title, mime_type, file_content
+            )
+            structlog_logger.info(
+                "process_file_for_rag completed - image file",
+                file_id=file_id,
+                chunks_created=len(chunks),
             )
             return True
 
@@ -251,8 +302,11 @@ def process_file_for_rag(
             mime_type or "application/octet-stream",
         )
 
+        structlog_logger.info(
+            "process_file_for_rag completed", file_id=file_id, chunks_created=len(chunks)
+        )
         return True
     except Exception as e:
         traceback.print_exc()
-        print(f"Error processing file for RAG: {e}")
+        structlog_logger.error("Error processing file for RAG", error=str(e), file_id=file_id)
         return False

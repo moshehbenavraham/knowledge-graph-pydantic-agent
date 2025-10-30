@@ -7,11 +7,15 @@ Validates that test coverage meets the 75% minimum threshold.
 import ast
 from pathlib import Path
 
+import structlog
+
 from src.constitution_validator.models import (
     ConfidenceLevel,
     ViolationRecord,
 )
 from src.constitution_validator.rules.base import BaseValidationRule
+
+logger = structlog.get_logger(__name__)
 
 
 class TestCoverageRule(BaseValidationRule):
@@ -44,6 +48,7 @@ class TestCoverageRule(BaseValidationRule):
         Returns:
             List of violations detected
         """
+        logger.info("Executing Principle IV rule", rule_id=self.rule_id, file=str(file_path))
         # Prepare instance state
         self._prepare_execution(file_path, tree, source_code)
 
@@ -90,6 +95,9 @@ class TestCoverageRule(BaseValidationRule):
             # Coverage data not available - this is expected in some contexts
             pass
 
+        logger.info(
+            "Principle IV rule completed", rule_id=self.rule_id, violations=len(self.violations)
+        )
         return self.violations
 
     def execute_coverage_check(self, project_root: Path) -> list[ViolationRecord]:
@@ -102,6 +110,7 @@ class TestCoverageRule(BaseValidationRule):
         Returns:
             List of violations detected
         """
+        logger.info("Executing coverage check", project_root=str(project_root))
         from src.constitution_validator.scanners.coverage_scanner import CoverageScanner
 
         self.violations = []
@@ -110,6 +119,7 @@ class TestCoverageRule(BaseValidationRule):
         try:
             scanner = CoverageScanner()
             coverage_pct = scanner.get_coverage(project_root)
+            logger.info("Coverage retrieved", coverage_pct=coverage_pct)
 
             if coverage_pct < self.MINIMUM_COVERAGE:
                 self.add_violation(

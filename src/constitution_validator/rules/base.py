@@ -49,7 +49,7 @@ class BaseValidationRule(ABC):
         self.source_lines: list[str] = []
 
     @abstractmethod
-    def execute(
+    def execute(  # noqa: CONST-V-001 - Abstract method stub
         self, tree: ast.AST, file_path: Path, source_code: str | None = None
     ) -> list[ViolationRecord]:
         """
@@ -78,6 +78,7 @@ class BaseValidationRule(ABC):
             tree: Optional AST tree (used to extract source code if file doesn't exist)
             source_code: Optional source code (takes precedence over file/tree)
         """
+        logger.debug("Preparing rule execution", rule_id=self.rule_id, file=str(file_path))
         self.violations = []
         self.file_path = file_path
 
@@ -100,6 +101,7 @@ class BaseValidationRule(ABC):
             self.source_code = ""
 
         self.source_lines = self.source_code.splitlines()
+        logger.debug("Execution prepared", lines=len(self.source_lines))
 
     def add_violation(
         self,
@@ -180,6 +182,7 @@ class BaseValidationRule(ABC):
         Returns:
             Tuple of (is_suppressed, suppression_reason)
         """
+        logger.debug("Checking suppression", line_number=line_number, rule_id=self.rule_id)
         if line_number < 1 or line_number > len(self.source_lines):
             return False, None
 
@@ -204,7 +207,9 @@ class BaseValidationRule(ABC):
             if expected_rule_id != self.rule_id:
                 return False, None
 
-        return True, (reason.strip() if reason else "Suppressed via noqa comment")
+        suppression_reason = reason.strip() if reason else "Suppressed via noqa comment"
+        logger.debug("Suppression found", line_number=line_number, reason=suppression_reason)
+        return True, suppression_reason
 
     def _get_context_lines(self, line_number: int, context: int = 2) -> str:
         """
@@ -217,6 +222,7 @@ class BaseValidationRule(ABC):
         Returns:
             Formatted context lines
         """
+        logger.debug("Getting context lines", line_number=line_number, context=context)
         start = max(0, line_number - context - 1)  # Convert to 0-indexed
         end = min(len(self.source_lines), line_number + context)
 
@@ -237,12 +243,18 @@ class BaseValidationRule(ABC):
         Returns:
             Source code string for that node
         """
+        logger.debug("Getting source segment for AST node", node_type=type(node).__name__)
         try:
-            return ast.get_source_segment(self.source_code, node) or ""
-        except Exception:
+            segment = ast.get_source_segment(self.source_code, node) or ""
+            logger.debug("Source segment retrieved", length=len(segment))
+            return segment
+        except Exception as e:
+            logger.debug("Failed to get source segment", error=str(e))
             return ""
 
-    def is_name_match(self, node: ast.expr, name: str) -> bool:
+    def is_name_match(
+        self, node: ast.expr, name: str
+    ) -> bool:  # noqa: CONST-V-001 - Simple AST utility
         """
         Check if AST expression node matches a name.
 
@@ -270,16 +282,21 @@ class BaseValidationRule(ABC):
         Returns:
             True if matches pattern
         """
+        logger.debug("Checking attribute call", object_name=object_name, attr_name=attr_name)
         if not isinstance(node.func, ast.Attribute):
             return False
 
-        return (
+        matches = (
             isinstance(node.func.value, ast.Name)
             and node.func.value.id == object_name
             and node.func.attr == attr_name
         )
+        logger.debug("Attribute call check", matches=matches)
+        return matches
 
-    def find_decorator(self, node: ast.ClassDef | ast.FunctionDef, name: str) -> bool:
+    def find_decorator(
+        self, node: ast.ClassDef | ast.FunctionDef, name: str
+    ) -> bool:  # noqa: CONST-V-001 - Simple AST utility
         """
         Check if class/function has a specific decorator.
 
@@ -309,9 +326,13 @@ class BaseValidationRule(ABC):
         Returns:
             True if any base class name contains pattern
         """
+        logger.debug("Checking base class", class_name=node.name, pattern=pattern)
         for base in node.bases:
             if isinstance(base, ast.Name) and pattern in base.id:
+                logger.debug("Base class match found", base=base.id)
                 return True
             if isinstance(base, ast.Attribute) and pattern in base.attr:
+                logger.debug("Base class match found", base=base.attr)
                 return True
+        logger.debug("No base class match", class_name=node.name)
         return False

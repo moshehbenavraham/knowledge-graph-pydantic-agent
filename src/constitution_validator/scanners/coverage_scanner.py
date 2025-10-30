@@ -18,6 +18,7 @@ class CoverageScanner:
 
     def __init__(self):
         """Initialize coverage scanner."""
+        logger.debug("Initializing CoverageScanner")
         self.coverage_pattern = re.compile(r"TOTAL\s+\d+\s+\d+\s+(\d+(?:\.\d+)?)%")
 
     def get_coverage(self, project_root: Path) -> float:
@@ -33,8 +34,10 @@ class CoverageScanner:
         Raises:
             Exception: If pytest-cov is not available or coverage measurement fails
         """
+        logger.info("Getting coverage", project_root=str(project_root))
         try:
             # Run pytest with coverage
+            logger.debug("Running pytest with coverage")
             result = (
                 subprocess.run(  # nosec B603, B607 - pytest is a trusted tool with fixed arguments
                     [
@@ -54,6 +57,7 @@ class CoverageScanner:
             )
 
             # Parse coverage from output
+            logger.debug("Parsing coverage from pytest output")
             coverage = self._parse_coverage_output(result.stdout)
 
             if coverage is not None:
@@ -66,6 +70,7 @@ class CoverageScanner:
                 return coverage
 
             # If we couldn't parse coverage, raise error
+            logger.error("Could not parse coverage from pytest output")
             raise Exception("Could not parse coverage from pytest output")
 
         except FileNotFoundError:
@@ -88,13 +93,16 @@ class CoverageScanner:
         Returns:
             Coverage percentage, or None if not found
         """
+        logger.debug("Parsing coverage output", output_length=len(output))
         # Look for TOTAL line with coverage percentage
         # Format: TOTAL    1234    567    78%
         match = self.coverage_pattern.search(output)
 
         if match:
             coverage_str = match.group(1)
-            return float(coverage_str)
+            coverage = float(coverage_str)
+            logger.debug("Coverage parsed from TOTAL line", coverage=coverage)
+            return coverage
 
         # Also try to find percentage in other formats
         # Look for lines like "78% coverage" or "78.5% coverage"
@@ -102,8 +110,11 @@ class CoverageScanner:
         alt_match = alt_pattern.search(output)
 
         if alt_match:
-            return float(alt_match.group(1))
+            coverage = float(alt_match.group(1))
+            logger.debug("Coverage parsed from alternate format", coverage=coverage)
+            return coverage
 
+        logger.debug("No coverage found in output")
         return None
 
     def check_pytest_cov_installed(self) -> bool:
@@ -113,6 +124,7 @@ class CoverageScanner:
         Returns:
             True if pytest-cov is available
         """
+        logger.debug("Checking if pytest-cov is installed")
         try:
             result = subprocess.run(  # nosec B603, B607 - pytest version check with fixed arguments
                 ["pytest", "--version"],
@@ -121,7 +133,10 @@ class CoverageScanner:
                 text=True,
                 timeout=10,
             )
-            return "pytest" in result.stdout.lower()
+            is_installed = "pytest" in result.stdout.lower()
+            logger.debug("pytest-cov check complete", is_installed=is_installed)
+            return is_installed
 
-        except (FileNotFoundError, subprocess.TimeoutExpired):
+        except (FileNotFoundError, subprocess.TimeoutExpired) as e:
+            logger.debug("pytest-cov check failed", error=str(e))
             return False

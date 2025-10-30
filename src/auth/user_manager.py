@@ -5,9 +5,12 @@ This module provides utilities for managing users in the auth_config.yaml file.
 
 from pathlib import Path
 
+import structlog
 import yaml
 
 from src.auth.hash_password import hash_password
+
+logger = structlog.get_logger(__name__)
 
 
 class UserManager:
@@ -56,6 +59,14 @@ class UserManager:
         Raises:
             ValueError: If username already exists
         """
+        logger.info(
+            "Creating user",
+            username=username,
+            email=email,
+            name=name,
+            has_password=bool(password),
+            rounds=rounds,
+        )
         config = self._load_config()
 
         # Check if user already exists
@@ -87,6 +98,9 @@ class UserManager:
         Raises:
             ValueError: If user doesn't exist
         """
+        logger.info(
+            "Updating password", username=username, has_password=bool(new_password), rounds=rounds
+        )
         config = self._load_config()
 
         # Check if user exists
@@ -112,6 +126,7 @@ class UserManager:
         Raises:
             ValueError: If user doesn't exist
         """
+        logger.info("Deleting user", username=username)
         config = self._load_config()
 
         # Check if user exists
@@ -131,6 +146,7 @@ class UserManager:
         Returns:
             List of user dictionaries (username, email, name)
         """
+        logger.debug("Listing all users")
         config = self._load_config()
         users = []
 
@@ -150,6 +166,7 @@ class UserManager:
         Returns:
             User dictionary (username, email, name) or None if not found
         """
+        logger.debug("Getting user", username=username)
         config = self._load_config()
 
         if username not in config["credentials"]["usernames"]:
@@ -161,6 +178,7 @@ class UserManager:
 
 def main():
     """CLI interface for user management."""
+    logger.info("Starting user management CLI")
     import argparse
 
     parser = argparse.ArgumentParser(description="Manage authentication users")

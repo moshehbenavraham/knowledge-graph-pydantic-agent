@@ -23,6 +23,7 @@ def hash_password(password: str, rounds: int = 12) -> str:
         >>> hash_password("mypassword")
         '$2b$12$...'
     """
+    logger.debug("Hashing password", rounds=rounds, has_password=bool(password))
     password_bytes = password.encode("utf-8")
     salt = bcrypt.gensalt(rounds=rounds)
     hashed = bcrypt.hashpw(password_bytes, salt)

@@ -12,6 +12,8 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
+import structlog
+
 from src.agentic_rag.config import get_config
 from src.agentic_rag.storage.connection_manager import ConnectionManager
 from src.config import SearchStrategy
@@ -22,6 +24,7 @@ from .ranker import ResultRanker
 from .vector_search import ChunkResult, VectorSearch
 
 logger = logging.getLogger(__name__)
+structlog_logger = structlog.get_logger(__name__)
 
 
 @dataclass
@@ -71,6 +74,8 @@ class HybridSearch:
         Raises:
             ValueError: If connection_manager is None
         """
+        structlog_logger.info("HybridSearch initializing")
+
         if connection_manager is None:
             raise ValueError(
                 "HybridSearch requires an initialized ConnectionManager. "
@@ -94,6 +99,12 @@ class HybridSearch:
             "entity_boosts": 0,
         }
 
+        structlog_logger.info(
+            "HybridSearch initialized",
+            graph_enabled=self.config.performance.enable_graph,
+            parallel_enabled=self.config.performance.enable_parallel_search,
+        )
+
     async def search(
         self, query: str, limit: int = 10, strategy: SearchStrategy | None = None
     ) -> HybridSearchResult:
@@ -114,6 +125,7 @@ class HybridSearch:
         Returns:
             Hybrid search result
         """
+        structlog_logger.info("search called", query_preview=query[:100], limit=limit)
         start_time = datetime.now()
         self._stats["searches"] += 1
 
@@ -166,6 +178,14 @@ class HybridSearch:
             f"{len(result.chunks)} chunks, {len(result.facts)} facts"
         )
 
+        structlog_logger.info(
+            "search completed",
+            query_time=result.query_time,
+            num_chunks=len(result.chunks),
+            num_facts=len(result.facts),
+            strategy=strategy.value,
+        )
+
         # Log analytics event (async, non-blocking)
         await self._log_search_analytics(
             query, strategy, intent, result, start_time, datetime.now()
@@ -183,6 +203,7 @@ class HybridSearch:
         Returns:
             Selected search strategy
         """
+        structlog_logger.info("_select_strategy called", intent=intent_result.primary_intent.value)
         intent = intent_result.primary_intent
 
         # Map intent to strategy
@@ -223,6 +244,9 @@ class HybridSearch:
             f"  Temporal markers: {len(intent_result.temporal_markers)}"
         )
 
+        structlog_logger.info(
+            "_select_strategy completed", strategy=selected.value, intent=intent.value
+        )
         return selected
 
     async def _vector_only_search(self, query: str, limit: int) -> HybridSearchResult:

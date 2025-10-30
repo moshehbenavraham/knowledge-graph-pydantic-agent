@@ -25,6 +25,7 @@ class GitScanner:
 
     def __init__(self):
         """Initialize git scanner."""
+        logger.debug("Initializing GitScanner", git_available=GIT_AVAILABLE)
         if not GIT_AVAILABLE:
             logger.warning(
                 "gitpython_not_available",
@@ -44,6 +45,7 @@ class GitScanner:
         Raises:
             Exception: If not a git repository or git operations fail
         """
+        logger.info("Getting unpushed commits", repo_path=str(repo_path))
         if not GIT_AVAILABLE:
             logger.warning("git_check_skipped", reason="GitPython not installed")
             return []
@@ -104,7 +106,10 @@ class GitScanner:
         Returns:
             True if commit has multiple parents (is a merge)
         """
-        return len(commit.parents) > 1
+        logger.debug("Checking if commit is merge", commit_sha=commit.hexsha[:7])
+        is_merge = len(commit.parents) > 1
+        logger.debug("Merge check complete", is_merge=is_merge)
+        return is_merge
 
     def get_commit_message(self, commit: Commit) -> str:
         """
@@ -116,4 +121,7 @@ class GitScanner:
         Returns:
             Full commit message including body
         """
-        return commit.message
+        logger.debug("Getting commit message", commit_sha=commit.hexsha[:7])
+        message = commit.message
+        logger.debug("Commit message retrieved", length=len(message))
+        return message

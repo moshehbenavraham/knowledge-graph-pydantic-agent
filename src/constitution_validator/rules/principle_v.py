@@ -7,11 +7,15 @@ Detects functions that lack logging instrumentation.
 import ast
 from pathlib import Path
 
+import structlog
+
 from src.constitution_validator.models import (
     ConfidenceLevel,
     ViolationRecord,
 )
 from src.constitution_validator.rules.base import BaseValidationRule
+
+logger = structlog.get_logger(__name__)
 
 
 class ObservabilityRule(BaseValidationRule):
@@ -41,6 +45,7 @@ class ObservabilityRule(BaseValidationRule):
         Returns:
             List of violations detected
         """
+        logger.info("Executing Principle V rule", rule_id=self.rule_id, file=str(file_path))
         # Prepare instance state
         self._prepare_execution(file_path, tree, source_code)
 
@@ -74,12 +79,17 @@ class ObservabilityRule(BaseValidationRule):
                         metadata={"function_name": node.name, "line_count": len(node.body)},
                     )
 
+        logger.info(
+            "Principle V rule completed", rule_id=self.rule_id, violations=len(self.violations)
+        )
         return self.violations
 
     def _should_skip_function(self, node: ast.FunctionDef) -> bool:
         """Check if function should be skipped from logging checks."""
+        logger.debug("Checking if function should be skipped", function_name=node.name)
         # Skip private functions
         if node.name.startswith("_"):
+            logger.debug("Skipping private function", function_name=node.name)
             return True
 
         # Skip property getters
@@ -95,6 +105,37 @@ class ObservabilityRule(BaseValidationRule):
         ]
         for pattern in pydantic_patterns:
             if self.find_decorator(node, pattern):
+                return True
+
+        # Skip Click command groups and commands with only pass/docstring
+        # Check for @click.group(), @click.command(), @group, @command decorators
+        has_click_decorator = False
+        for decorator in node.decorator_list:
+            # Handle @click.group() or @click.command()
+            if isinstance(decorator, ast.Call) and isinstance(decorator.func, ast.Attribute):
+                if isinstance(decorator.func.value, ast.Name):
+                    if decorator.func.value.id == "click" and decorator.func.attr in [
+                        "group",
+                        "command",
+                    ]:
+                        has_click_decorator = True
+                        break
+            # Handle @group or @command (simple decorators)
+            if self.find_decorator(node, "group") or self.find_decorator(node, "command"):
+                has_click_decorator = True
+                break
+
+        if has_click_decorator:
+            # Check if function body is trivial (only pass statement + optional docstring)
+            executable_stmts = [
+                stmt
+                for stmt in node.body
+                if not isinstance(stmt, ast.Expr) or not isinstance(stmt.value, ast.Constant)
+            ]
+            if len(executable_stmts) == 1 and isinstance(executable_stmts[0], ast.Pass):
+                logger.debug(
+                    "Skipping Click decorator function with only pass", function_name=node.name
+                )
                 return True
 
         # Skip common utility/accessor patterns
@@ -134,14 +175,52 @@ class ObservabilityRule(BaseValidationRule):
         return False
 
     def _has_logging(self, node: ast.FunctionDef) -> bool:
-        """Check if function contains logging calls."""
+        """Check if function contains logging calls.
+
+        Detects common logger patterns including:
+        - Standard: logger, log
+        - Structlog: structlog_logger, struct_logger, slog
+        - Domain-specific: analytics_logger, audit_logger
+        - Direct structlog calls: structlog.get_logger().info()
+        """
+        logger.debug("Checking for logging calls", function_name=node.name)
+
+        # Extended list of recognized logger variable names
+        logger_names = [
+            "logger",
+            "log",
+            "structlog_logger",
+            "struct_logger",
+            "slog",
+            "analytics_logger",
+            "audit_logger",
+        ]
+
         for child in ast.walk(node):
             if isinstance(child, ast.Call):
-                # Check for logger.info/debug/warning/error calls
+                # Pattern 1: logger.info() / structlog_logger.info()
                 if isinstance(child.func, ast.Attribute):
                     if isinstance(child.func.value, ast.Name):
-                        if child.func.value.id in ["logger", "analytics_logger", "log"]:
+                        if child.func.value.id in logger_names:
+                            logger.debug(
+                                "Logging found via named logger",
+                                function_name=node.name,
+                                logger_var=child.func.value.id,
+                            )
                             return True
+
+                    # Pattern 2: structlog.get_logger().info()
+                    if isinstance(child.func.value, ast.Call):
+                        if isinstance(child.func.value.func, ast.Attribute):
+                            if isinstance(child.func.value.func.value, ast.Name):
+                                if child.func.value.func.value.id == "structlog":
+                                    logger.debug(
+                                        "Logging found via structlog.get_logger()",
+                                        function_name=node.name,
+                                    )
+                                    return True
+
+        logger.debug("No logging found", function_name=node.name)
         return False
 
 

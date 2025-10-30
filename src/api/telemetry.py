@@ -240,6 +240,7 @@ def record_llm_request(
 
 def record_vector_search(search_type: str, duration: float):
     """Record vector search metrics."""
+    struct_logger.info("Recording vector search", search_type=search_type, duration=duration)
     vector_search_total.labels(search_type=search_type).inc()
     vector_search_duration_seconds.labels(search_type=search_type).observe(duration)
 

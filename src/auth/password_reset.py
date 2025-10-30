@@ -277,6 +277,7 @@ def is_password_strong(password: str) -> tuple[bool, str]:
     Returns:
         Tuple of (is_strong, message)
     """
+    logger.debug("Validating password strength", has_password=bool(password))
     if len(password) < 8:
         return (False, "Password must be at least 8 characters long.")
 

@@ -13,16 +13,17 @@ Architecture:
 """
 
 import asyncio
-import logging
 import warnings
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
+
+import structlog
+from supabase.client import Client
 
 from src.agentic_rag.config import get_config
 from src.agentic_rag.search.hybrid_search import HybridSearch, HybridSearchResult
 from src.agentic_rag.search.intent_analyzer import IntentAnalyzer
 from src.config import SearchStrategy
-from supabase.client import Client
 
 if TYPE_CHECKING:
     from src.agentic_rag.storage.connection_manager import ConnectionManager
@@ -41,7 +42,7 @@ warnings.filterwarnings(
     message=".*verify.*parameter is deprecated.*",
 )
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 # Global instances (initialized once per application lifecycle)
 
@@ -119,6 +120,13 @@ async def retrieve_relevant_documents_tool(
     Returns:
         Formatted string with relevant document chunks and metadata
     """
+    logger.info(
+        "retrieve_relevant_documents_tool called",
+        query_length=len(user_query),
+        limit=limit,
+        strategy=strategy,
+    )
+
     try:
         # Get HybridSearch instance
         hybrid_search = await get_hybrid_search()
@@ -127,10 +135,16 @@ async def retrieve_relevant_documents_tool(
         result = await hybrid_search.search(query=user_query, limit=limit, strategy=strategy)
 
         # Format results for LLM consumption
-        return _format_search_results(result)
+        formatted = _format_search_results(result)
+        logger.info(
+            "Document retrieval completed",
+            chunks_returned=len(result.chunks),
+            strategy_used=result.search_strategy.value,
+        )
+        return formatted
 
     except Exception as e:
-        logger.exception(f"Document retrieval failed: {e}")
+        logger.exception("Document retrieval failed", query=user_query, error=str(e))
         return f"Error retrieving documents: {e}"
 
 
@@ -155,6 +169,13 @@ async def smart_search_tool(
     Returns:
         Dictionary with search results and metadata
     """
+    logger.info(
+        "smart_search_tool called",
+        query_length=len(user_query),
+        analyze_intent=analyze_intent,
+        limit=limit,
+    )
+
     try:
         hybrid_search = await get_hybrid_search()
 
@@ -166,13 +187,14 @@ async def smart_search_tool(
             analyzer = get_intent_analyzer()
             intent_result = analyzer.analyze(user_query)
             intent = intent_result.primary_intent
+            logger.debug("Intent analyzed", intent=intent.value)
             # Let HybridSearch select strategy based on intent
 
         # Perform search
         result = await hybrid_search.search(query=user_query, limit=limit, strategy=strategy)
 
         # Return rich structured data
-        return {
+        result_dict = {
             "query": user_query,
             "chunks": [
                 {
@@ -213,8 +235,17 @@ async def smart_search_tool(
             "total_results": len(result.chunks),
         }
 
+        logger.info(
+            "Smart search completed",
+            chunks=len(result.chunks),
+            entities=len(result.entities or []),
+            facts=len(result.facts or []),
+            strategy=result.search_strategy.value,
+        )
+        return result_dict
+
     except Exception as e:
-        logger.exception(f"Smart search failed: {e}")
+        logger.exception("Smart search failed", query=user_query, error=str(e))
         return {
             "query": user_query,
             "error": str(e),
@@ -243,11 +274,16 @@ async def graph_query_tool(
     Returns:
         Dictionary with graph query results
     """
+    logger.info(
+        "graph_query_tool called", entity_name=entity_name, query_type=query_type, limit=limit
+    )
+
     try:
         config = get_config()
 
         # Check if graph is enabled
         if not config.performance.enable_graph:
+            logger.warning("Graph query attempted but graph is disabled")
             return {
                 "error": "Knowledge graph is not enabled. Set ENABLE_GRAPH=true in .env",
                 "query_type": query_type,
@@ -262,7 +298,7 @@ async def graph_query_tool(
             query=entity_name or "", limit=limit, strategy=SearchStrategy.GRAPH_ONLY
         )
 
-        return {
+        result_dict = {
             "query_type": query_type,
             "entity": entity_name,
             "facts": [
@@ -293,8 +329,18 @@ async def graph_query_tool(
             ),
         }
 
+        logger.info(
+            "Graph query completed",
+            facts=len(result.facts),
+            entities=len(result.entities),
+            relationships=len(result.relationships or []),
+        )
+        return result_dict
+
     except Exception as e:
-        logger.exception(f"Graph query failed: {e}")
+        logger.exception(
+            "Graph query failed", entity_name=entity_name, query_type=query_type, error=str(e)
+        )
         return {
             "query_type": query_type,
             "entity": entity_name,
@@ -312,11 +358,14 @@ async def list_documents_tool(supabase: Client) -> list[str]:
     Returns:
         List of document descriptions with metadata
     """
+    logger.info("list_documents_tool called")
+
     try:
         # Query Supabase for unique documents
         result = supabase.from_("documents").select("id, title, source, created_at").execute()
 
         if not result.data:
+            logger.info("No documents found in database")
             return []
 
         # Format the data
@@ -330,10 +379,11 @@ async def list_documents_tool(supabase: Client) -> list[str]:
             )
             documents.append(doc_str)
 
+        logger.info("Documents listed successfully", document_count=len(documents))
         return documents
 
     except Exception as e:
-        logger.exception(f"Error listing documents: {e}")
+        logger.exception("Error listing documents", error=str(e))
         return []
 
 
@@ -348,10 +398,13 @@ async def get_document_content_tool(supabase: Client, document_id: str) -> str:
     Returns:
         Complete document content
     """
+    logger.info("get_document_content_tool called", document_id=document_id)
+
     try:
         # Try to parse as UUID
         try:
             doc_uuid = UUID(document_id)
+            logger.debug("Document ID is valid UUID", document_id=document_id)
             result = (
                 supabase.from_("documents")
                 .select("id, title, content, source")
@@ -360,6 +413,9 @@ async def get_document_content_tool(supabase: Client, document_id: str) -> str:
             )
         except ValueError:
             # Not a UUID, try matching by title or source
+            logger.debug(
+                "Document ID is not UUID, searching by title/source", document_id=document_id
+            )
             result = (
                 supabase.from_("documents")
                 .select("id, title, content, source")
@@ -369,6 +425,7 @@ async def get_document_content_tool(supabase: Client, document_id: str) -> str:
             )
 
         if not result.data:
+            logger.warning("Document not found", document_id=document_id)
             return f"No document found with ID: {document_id}"
 
         doc = result.data[0]
@@ -384,10 +441,15 @@ async def get_document_content_tool(supabase: Client, document_id: str) -> str:
 {doc.get('content', 'No content available')[:20000]}
 """
 
+        logger.info(
+            "Document retrieved successfully",
+            document_id=document_id,
+            content_length=len(doc.get("content", "")),
+        )
         return formatted
 
     except Exception as e:
-        logger.exception(f"Error retrieving document: {e}")
+        logger.exception("Error retrieving document", document_id=document_id, error=str(e))
         return f"Error retrieving document: {e}"
 
 

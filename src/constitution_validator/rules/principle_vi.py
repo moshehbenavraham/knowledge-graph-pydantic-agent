@@ -7,11 +7,15 @@ Detects AI attribution in git commit messages.
 import ast
 from pathlib import Path
 
+import structlog
+
 from src.constitution_validator.models import (
     ConfidenceLevel,
     ViolationRecord,
 )
 from src.constitution_validator.rules.base import BaseValidationRule
+
+logger = structlog.get_logger(__name__)
 
 
 class GitAttributionRule(BaseValidationRule):
@@ -38,6 +42,7 @@ class GitAttributionRule(BaseValidationRule):
         Returns:
             List of violations detected
         """
+        logger.info("Executing Principle VI rule", rule_id=self.rule_id, file=str(file_path))
         # Prepare instance state
         self._prepare_execution(file_path, tree, source_code)
 
@@ -93,6 +98,9 @@ class GitAttributionRule(BaseValidationRule):
             # Git operations failed - this is okay, not all files are in git
             pass
 
+        logger.info(
+            "Principle VI rule completed", rule_id=self.rule_id, violations=len(self.violations)
+        )
         return self.violations
 
     def execute_git_check(self, repo_path: Path) -> list[ViolationRecord]:
@@ -105,6 +113,7 @@ class GitAttributionRule(BaseValidationRule):
         Returns:
             List of violations detected
         """
+        logger.info("Executing git attribution check", repo_path=str(repo_path))
         import re
 
         from src.constitution_validator.scanners.git_scanner import GitScanner
@@ -115,6 +124,7 @@ class GitAttributionRule(BaseValidationRule):
         try:
             scanner = GitScanner()
             commits = scanner.get_unpushed_commits(repo_path)
+            logger.info("Commits retrieved", count=len(commits))
 
             # Prohibited attribution patterns
             prohibited_patterns = [

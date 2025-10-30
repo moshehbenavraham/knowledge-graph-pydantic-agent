@@ -12,12 +12,15 @@ from datetime import datetime, timedelta
 from typing import Any
 from uuid import UUID
 
+import structlog
+
 from src.agentic_rag.config import get_config
 from src.agentic_rag.ingestion.embedder import EmbeddingGenerator
 from src.agentic_rag.storage.connection_manager import ConnectionManager
 from src.agentic_rag.storage.postgres_store import PostgresStore
 
 logger = logging.getLogger(__name__)
+structlog_logger = structlog.get_logger(__name__)
 
 
 @dataclass
@@ -65,7 +68,9 @@ class SearchCache:
         self.ttl = timedelta(seconds=ttl_seconds)
         self._cache: dict[str, tuple[datetime, list[ChunkResult]]] = {}
 
-    def get(self, key: str) -> list[ChunkResult] | None:
+    def get(
+        self, key: str
+    ) -> list[ChunkResult] | None:  # noqa: CONST-V-001 - Simple cache accessor
         """
         Get cached results.
 
@@ -82,7 +87,9 @@ class SearchCache:
             del self._cache[key]
         return None
 
-    def set(self, key: str, results: list[ChunkResult]):
+    def set(
+        self, key: str, results: list[ChunkResult]
+    ):  # noqa: CONST-V-001 - Simple cache accessor
         """
         Cache results.
 
@@ -177,17 +184,24 @@ class VectorSearch:
         start_time = datetime.now()
         self._stats["searches"] += 1
 
-        logger.info(
-            f"┌─ VECTOR SEARCH STARTING\n"
-            f"│  Query: {query[:80]}{'...' if len(query) > 80 else ''}\n"
-            f"│  Limit: {limit}, Threshold: {similarity_threshold}, Filters: {filters or 'None'}"
+        structlog_logger.info(
+            "Vector search starting",
+            query_preview=query[:80],
+            query_truncated=len(query) > 80,
+            limit=limit,
+            similarity_threshold=similarity_threshold,
+            has_filters=bool(filters),
         )
 
         # Generate query embedding
         embed_start = datetime.now()
         query_embedding = await self.embedder.embed(query)
         embed_time = (datetime.now() - embed_start).total_seconds()
-        logger.info(f"│  → Embedding generated: {len(query_embedding)}d in {embed_time:.3f}s")
+        structlog_logger.info(
+            "Embedding generated",
+            embedding_dim=len(query_embedding),
+            embed_time_s=round(embed_time, 3),
+        )
 
         # Check cache
         if self.cache:
@@ -196,13 +210,14 @@ class VectorSearch:
             if cached:
                 self._stats["cache_hits"] += 1
                 latency = (datetime.now() - start_time).total_seconds()
-                logger.info(
-                    f"│  ✓ CACHE HIT! Returning {len(cached[:limit])} cached results\n"
-                    f"└─ Vector search completed in {latency:.3f}s (cached)"
+                structlog_logger.info(
+                    "Cache hit - returning cached results",
+                    cached_results=len(cached[:limit]),
+                    total_latency_s=round(latency, 3),
                 )
                 return cached[:limit]
             self._stats["cache_misses"] += 1
-            logger.info("│  → Cache miss, executing database search...")
+            structlog_logger.info("Cache miss - executing database search")
 
         # Perform search
         search_start = datetime.now()
@@ -214,7 +229,7 @@ class VectorSearch:
         # Cache results
         if self.cache and results:
             self.cache.set(cache_key, results)
-            logger.info("│  → Results cached for future queries")
+            structlog_logger.info("Results cached for future queries")
 
         # Update stats
         latency = (datetime.now() - start_time).total_seconds()
@@ -224,16 +239,20 @@ class VectorSearch:
         if results:
             avg_similarity = sum(r.similarity for r in results) / len(results)
             top_similarity = results[0].similarity if results else 0
-            logger.info(
-                f"│  ✓ Database search: {len(results)} results in {search_time:.3f}s\n"
-                f"│  Similarity scores: top={top_similarity:.3f}, avg={avg_similarity:.3f}\n"
-                f"│  Returning: {len(results[:limit])} chunks (after limit)\n"
-                f"└─ Vector search completed in {latency:.3f}s (total)"
+            structlog_logger.info(
+                "Vector search completed",
+                total_results=len(results),
+                search_time_s=round(search_time, 3),
+                top_similarity=round(top_similarity, 3),
+                avg_similarity=round(avg_similarity, 3),
+                returning=len(results[:limit]),
+                total_latency_s=round(latency, 3),
             )
         else:
-            logger.info(
-                f"│  ⚠ No results found matching threshold {similarity_threshold}\n"
-                f"└─ Vector search completed in {latency:.3f}s (no results)"
+            structlog_logger.info(
+                "Vector search completed - no results",
+                similarity_threshold=similarity_threshold,
+                total_latency_s=round(latency, 3),
             )
 
         return results[:limit]
@@ -258,9 +277,12 @@ class VectorSearch:
             List of chunk results
         """
         embedding_dim = len(query_embedding)
-        logger.debug(
-            f"│  → Executing pgvector query: embedding_{embedding_dim}, "
-            f"limit={limit}, threshold={similarity_threshold}"
+        structlog_logger.debug(
+            "Executing pgvector query",
+            embedding_column=f"embedding_{embedding_dim}",
+            limit=limit,
+            similarity_threshold=similarity_threshold,
+            has_filters=bool(filters),
         )
 
         async with self.connection_manager.get_pg_connection() as conn:
@@ -342,6 +364,8 @@ class VectorSearch:
         Returns:
             List of similar chunks
         """
+        structlog_logger.info("search_similar_chunks called", chunk_id=str(chunk_id), limit=limit)
+
         # Get the reference chunk's embedding
         async with self.connection_manager.get_pg_connection() as conn:
             row = await conn.fetchrow(
@@ -354,20 +378,29 @@ class VectorSearch:
             )
 
             if not row:
+                structlog_logger.info(
+                    "search_similar_chunks - chunk not found", chunk_id=str(chunk_id)
+                )
                 return []
 
             # Use whichever embedding is available
             embedding = row["embedding_1536"] or row["embedding_768"]
             if not embedding:
+                structlog_logger.info(
+                    "search_similar_chunks - no embedding found", chunk_id=str(chunk_id)
+                )
                 return []
 
             # Search for similar chunks
-            return await self._search_vectors(
+            results = await self._search_vectors(
                 embedding,
                 limit + 1,  # +1 to exclude self
                 None,
                 0.7,  # Higher threshold for similarity search
             )
+
+            structlog_logger.info("search_similar_chunks completed", num_results=len(results))
+            return results
 
     async def get_chunks_by_ids(self, chunk_ids: list[UUID]) -> list[ChunkResult]:
         """
@@ -379,7 +412,10 @@ class VectorSearch:
         Returns:
             List of chunk results
         """
+        structlog_logger.info("get_chunks_by_ids called", num_chunk_ids=len(chunk_ids))
+
         if not chunk_ids:
+            structlog_logger.info("get_chunks_by_ids - empty chunk_ids list")
             return []
 
         async with self.connection_manager.get_pg_connection() as conn:
@@ -421,6 +457,7 @@ class VectorSearch:
                     )
                 )
 
+            structlog_logger.info("get_chunks_by_ids completed", num_results=len(results))
             return results
 
     def get_stats(self) -> dict[str, Any]:
@@ -442,10 +479,16 @@ class VectorSearch:
             else:
                 stats["cache_hit_rate"] = 0.0
 
+        structlog_logger.debug(
+            "get_stats called",
+            searches=stats.get("searches", 0),
+            avg_latency=round(stats.get("avg_latency", 0), 3),
+            cache_hit_rate=round(stats.get("cache_hit_rate", 0), 3),
+        )
         return stats
 
     def clear_cache(self):
         """Clear the search cache."""
         if self.cache:
             self.cache.clear()
-            logger.info("Search cache cleared")
+            structlog_logger.info("Search cache cleared")

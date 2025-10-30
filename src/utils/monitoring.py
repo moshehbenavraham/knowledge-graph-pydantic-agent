@@ -28,8 +28,13 @@ except ImportError:
 # Configure structured logging
 def configure_logging():
     """Configure structured logging with JSON output."""
+    # Note: We use basic print here since logger is not yet initialized
+    print("Configuring structured logging...")
+
     settings = get_settings()
     log_level = settings.log_level.upper()
+
+    print(f"Setting log level to: {log_level}")
 
     structlog.configure(
         processors=[
@@ -52,7 +57,10 @@ def configure_logging():
     # Set log level
     logging.basicConfig(level=getattr(logging, log_level))
 
-    return structlog.get_logger()
+    logger = structlog.get_logger()
+    logger.info("Structured logging configured successfully", log_level=log_level)
+
+    return logger
 
 
 # Initialize logger
@@ -328,24 +336,52 @@ class PerformanceMonitor:
 
     def get_system_stats(self) -> dict[str, Any]:
         """Get current system statistics."""
+        logger.debug("Getting system statistics...")
+
         stats = {
             "uptime": time.time() - self.start_time,
             "active_requests": len(self.active_requests),
             "active_sessions": self.session_count,
         }
 
+        logger.debug(
+            "Basic stats collected",
+            uptime=stats["uptime"],
+            active_requests=stats["active_requests"],
+            active_sessions=stats["active_sessions"],
+        )
+
         if psutil:
-            stats.update(
-                {
-                    "memory_usage": psutil.virtual_memory().used,
-                    "cpu_percent": psutil.cpu_percent(),
-                    "disk_usage": psutil.disk_usage("/").percent,
-                }
-            )
+            logger.debug("Collecting psutil system metrics...")
+            try:
+                stats.update(
+                    {
+                        "memory_usage": psutil.virtual_memory().used,
+                        "cpu_percent": psutil.cpu_percent(),
+                        "disk_usage": psutil.disk_usage("/").percent,
+                    }
+                )
+                logger.debug(
+                    "psutil metrics collected",
+                    memory_usage=stats["memory_usage"],
+                    cpu_percent=stats["cpu_percent"],
+                    disk_usage=stats["disk_usage"],
+                )
+            except Exception as e:
+                logger.exception("Failed to collect psutil metrics", error=str(e))
+        else:
+            logger.debug("psutil not available, skipping system metrics")
 
         # Update Prometheus gauge if available
         if "memory_usage" in stats:
+            logger.debug("Updating Prometheus memory gauge", memory_usage=stats["memory_usage"])
             MEMORY_USAGE.set(stats["memory_usage"])
+
+        logger.info(
+            "System statistics retrieved",
+            stat_count=len(stats),
+            has_psutil_metrics=psutil is not None,
+        )
 
         return stats
 
@@ -356,36 +392,102 @@ monitor = PerformanceMonitor()
 
 def track_performance(tool_name: str | None = None, endpoint: str | None = None):
     """Decorator to track function performance."""
+    logger.debug("Creating performance tracking decorator", tool_name=tool_name, endpoint=endpoint)
 
     def decorator(func: Callable) -> Callable:
+        func_name = func.__name__
+        is_async = asyncio.iscoroutinefunction(func)
+
+        logger.debug(
+            "Decorating function for performance tracking",
+            function=func_name,
+            is_async=is_async,
+            tool_name=tool_name,
+            endpoint=endpoint,
+        )
+
         @functools.wraps(func)
         async def async_wrapper(*args, **kwargs):
             name = tool_name or func.__name__
             user_id = kwargs.get("user_id", "anonymous")
 
+            logger.debug(
+                "Starting async function execution tracking",
+                function=func.__name__,
+                tracked_name=name,
+                user_id=user_id,
+                has_endpoint=endpoint is not None,
+                arg_count=len(args),
+                kwarg_count=len(kwargs),
+            )
+
             if endpoint:
+                logger.debug(
+                    "Tracking with request context", endpoint=endpoint, function=func.__name__
+                )
                 with monitor.track_request("CALL", endpoint, user_id):
                     async with monitor.track_tool_execution(name, user_id):
-                        return await func(*args, **kwargs)
+                        result = await func(*args, **kwargs)
+                        logger.debug(
+                            "Async function execution completed with request tracking",
+                            function=func.__name__,
+                            user_id=user_id,
+                        )
+                        return result
             else:
+                logger.debug("Tracking without request context", function=func.__name__)
                 async with monitor.track_tool_execution(name, user_id):
-                    return await func(*args, **kwargs)
+                    result = await func(*args, **kwargs)
+                    logger.debug(
+                        "Async function execution completed",
+                        function=func.__name__,
+                        user_id=user_id,
+                    )
+                    return result
 
         @functools.wraps(func)
         def sync_wrapper(*args, **kwargs):
             name = tool_name or func.__name__
             user_id = kwargs.get("user_id", "anonymous")
 
+            logger.debug(
+                "Starting sync function execution tracking",
+                function=func.__name__,
+                tracked_name=name,
+                user_id=user_id,
+                has_endpoint=endpoint is not None,
+                arg_count=len(args),
+                kwarg_count=len(kwargs),
+            )
+
             if endpoint:
+                logger.debug(
+                    "Tracking sync function with request context",
+                    endpoint=endpoint,
+                    function=func.__name__,
+                )
                 with monitor.track_request("CALL", endpoint, user_id):
                     # For sync functions, we can't use async context manager
                     start_time = time.time()
                     try:
+                        logger.debug("Executing sync function...", function=func.__name__)
                         result = func(*args, **kwargs)
                         status = "success"
+                        logger.debug(
+                            "Sync function executed successfully",
+                            function=func.__name__,
+                            duration=time.time() - start_time,
+                        )
                         return result
                     except Exception as e:
                         status = "error"
+                        logger.exception(
+                            "Sync function execution failed",
+                            function=func.__name__,
+                            error=str(e),
+                            error_type=type(e).__name__,
+                            duration=time.time() - start_time,
+                        )
                         ERROR_COUNT.labels(
                             error_type=type(e).__name__, component="tool", severity="error"
                         ).inc()
@@ -398,14 +500,37 @@ def track_performance(tool_name: str | None = None, endpoint: str | None = None)
                         TOOL_EXECUTION_DURATION.labels(tool_name=name, user_id=user_id).observe(
                             duration
                         )
+                        logger.info(
+                            "Sync function tracking completed",
+                            function=func.__name__,
+                            status=status,
+                            duration=duration,
+                            user_id=user_id,
+                        )
             else:
+                logger.debug(
+                    "Tracking sync function without request context", function=func.__name__
+                )
                 start_time = time.time()
                 try:
+                    logger.debug("Executing sync function...", function=func.__name__)
                     result = func(*args, **kwargs)
                     status = "success"
+                    logger.debug(
+                        "Sync function executed successfully",
+                        function=func.__name__,
+                        duration=time.time() - start_time,
+                    )
                     return result
                 except Exception as e:
                     status = "error"
+                    logger.exception(
+                        "Sync function execution failed",
+                        function=func.__name__,
+                        error=str(e),
+                        error_type=type(e).__name__,
+                        duration=time.time() - start_time,
+                    )
                     ERROR_COUNT.labels(
                         error_type=type(e).__name__, component="tool", severity="error"
                     ).inc()
@@ -418,7 +543,20 @@ def track_performance(tool_name: str | None = None, endpoint: str | None = None)
                     TOOL_EXECUTION_DURATION.labels(tool_name=name, user_id=user_id).observe(
                         duration
                     )
+                    logger.info(
+                        "Sync function tracking completed",
+                        function=func.__name__,
+                        status=status,
+                        duration=duration,
+                        user_id=user_id,
+                    )
 
-        return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
+        wrapper = async_wrapper if is_async else sync_wrapper
+        logger.debug(
+            "Performance tracking decorator created",
+            function=func_name,
+            wrapper_type="async" if is_async else "sync",
+        )
+        return wrapper
 
     return decorator

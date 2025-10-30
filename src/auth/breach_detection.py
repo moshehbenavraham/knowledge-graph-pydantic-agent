@@ -17,9 +17,12 @@ import hashlib
 from datetime import datetime
 
 import httpx
+import structlog
 
 from src.clients.database import get_supabase_client
 from supabase import Client
+
+logger = structlog.get_logger(__name__)
 
 
 class BreachDetectionManager:
@@ -80,8 +83,10 @@ class BreachDetectionManager:
         hash_suffix = password_hash[5:]
 
         try:
-            # Query haveibeenpwned.com API
-            async with httpx.AsyncClient(  # CONST-III-001 - HTTP client for external API
+            # Query haveibeenpwned.com API using centralized HTTP client factory
+            from src.config.clients import clients_config
+
+            async with clients_config.create_http_client(  # CONST-III-001 - Use centralized HTTP client factory
                 timeout=self.TIMEOUT
             ) as client:
                 response = await client.get(
@@ -278,6 +283,7 @@ def get_breach_detection_manager() -> BreachDetectionManager:
     Returns:
         BreachDetectionManager instance
     """
+    logger.debug("Getting breach detection manager singleton instance")
     global _breach_detection_manager
 
     if _breach_detection_manager is None:

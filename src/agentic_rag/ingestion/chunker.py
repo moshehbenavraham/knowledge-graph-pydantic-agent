@@ -43,6 +43,7 @@ class ChunkingConfig:
 
 def get_chunking_config():
     """Get chunking configuration from global settings."""
+    structlog_logger.info("get_chunking_config called")
     config = get_config().ingestion
 
     chunk_config = {
@@ -63,6 +64,12 @@ def get_chunking_config():
     if chunk_config["max_chunk_size"] < chunk_config["chunk_size"]:
         chunk_config["max_chunk_size"] = chunk_config["chunk_size"] * 2
 
+    structlog_logger.info(
+        "get_chunking_config completed",
+        chunk_size=chunk_config["chunk_size"],
+        chunk_overlap=chunk_config["chunk_overlap"],
+        use_semantic=chunk_config["use_semantic_splitting"],
+    )
     return chunk_config
 
 
@@ -108,8 +115,12 @@ class SemanticChunker:
         Args:
             config: Chunking configuration
         """
+        structlog_logger.info("SemanticChunker initializing")
         self.config = config or get_chunking_config()
         self._llm_client = None
+        structlog_logger.info(
+            "SemanticChunker initialized", chunk_size=self.config.get("chunk_size")
+        )
 
     @property
     def llm_client(self):
@@ -135,12 +146,16 @@ class SemanticChunker:
         Returns:
             List of document chunks
         """
+        structlog_logger.info("SemanticChunker.chunk called", content_length=len(content))
+
         if not content.strip():
+            structlog_logger.info("SemanticChunker.chunk - empty content, returning empty list")
             return []
 
         # Check if semantic chunking is appropriate
         if len(content) <= self.config.chunk_size:
             # Single chunk for small documents
+            structlog_logger.info("SemanticChunker.chunk - content fits in single chunk")
             return [
                 DocumentChunk(
                     content=content.strip(),
@@ -159,7 +174,9 @@ class SemanticChunker:
             chunks = await self._semantic_chunk_sections(sections)
 
             # Create chunk objects
-            return self._create_chunk_objects(chunks, content, metadata)
+            result = self._create_chunk_objects(chunks, content, metadata)
+            structlog_logger.info("SemanticChunker.chunk completed", num_chunks=len(result))
+            return result
 
         except Exception as e:
             logger.warning(f"Semantic chunking failed, falling back to simple: {e}")
@@ -177,6 +194,8 @@ class SemanticChunker:
         Returns:
             List of sections
         """
+        structlog_logger.info("_identify_sections called", content_length=len(content))
+
         # Patterns for structural elements
         patterns = [
             (r"^#{1,6}\s+.+$", "header"),  # Markdown headers
@@ -211,7 +230,9 @@ class SemanticChunker:
         if current_section:
             sections.append("\n".join(current_section))
 
-        return [s for s in sections if s.strip()]
+        result = [s for s in sections if s.strip()]
+        structlog_logger.info("_identify_sections completed", num_sections=len(result))
+        return result
 
     async def _semantic_chunk_sections(self, sections: list[str]) -> list[str]:
         """
@@ -223,6 +244,8 @@ class SemanticChunker:
         Returns:
             List of semantic chunks
         """
+        structlog_logger.info("_semantic_chunk_sections called", num_sections=len(sections))
+
         chunks = []
         current_chunk = ""
 
@@ -251,7 +274,9 @@ class SemanticChunker:
             chunks.append(current_chunk.strip())
 
         # Filter by minimum size
-        return [c for c in chunks if len(c) >= self.config.min_chunk_size]
+        result = [c for c in chunks if len(c) >= self.config.min_chunk_size]
+        structlog_logger.info("_semantic_chunk_sections completed", num_chunks=len(result))
+        return result
 
     async def _llm_split_section(self, section: str) -> list[str]:
         """
@@ -263,6 +288,8 @@ class SemanticChunker:
         Returns:
             List of sub-chunks
         """
+        structlog_logger.info("_llm_split_section called", section_length=len(section))
+
         try:
             prompt = f"""
             Split the following text into semantically coherent chunks.
@@ -288,10 +315,13 @@ class SemanticChunker:
                 if self.config.min_chunk_size <= len(chunk) <= self.config.max_chunk_size
             ]
 
-            return valid_chunks if valid_chunks else self._simple_split(section)
+            result = valid_chunks if valid_chunks else self._simple_split(section)
+            structlog_logger.info("_llm_split_section completed", num_chunks=len(result))
+            return result
 
         except Exception as e:
             logger.error(f"LLM splitting failed: {e}")
+            structlog_logger.warning("_llm_split_section failed, using simple split", error=str(e))
             return self._simple_split(section)
 
     def _simple_split(self, text: str) -> list[str]:
@@ -304,6 +334,8 @@ class SemanticChunker:
         Returns:
             List of chunks
         """
+        structlog_logger.info("_simple_split called", text_length=len(text))
+
         chunks = []
         start = 0
 
@@ -323,6 +355,7 @@ class SemanticChunker:
             chunks.append(text[start:end])
             start = end - self.config.chunk_overlap
 
+        structlog_logger.info("_simple_split completed", num_chunks=len(chunks))
         return chunks
 
     def _create_chunk_objects(
@@ -339,6 +372,8 @@ class SemanticChunker:
         Returns:
             List of DocumentChunk objects
         """
+        structlog_logger.info("_create_chunk_objects called", num_chunks=len(chunks))
+
         chunk_objects = []
         current_pos = 0
 
@@ -370,6 +405,7 @@ class SemanticChunker:
 
             current_pos = end_pos - self.config.chunk_overlap
 
+        structlog_logger.info("_create_chunk_objects completed", num_objects=len(chunk_objects))
         return chunk_objects
 
 
@@ -388,7 +424,9 @@ class SimpleChunker:
         Args:
             config: Chunking configuration
         """
+        structlog_logger.info("SimpleChunker initializing")
         self.config = config or get_chunking_config()
+        structlog_logger.info("SimpleChunker initialized", chunk_size=self.config.get("chunk_size"))
 
     def chunk(self, content: str, metadata: dict[str, Any] | None = None) -> list[DocumentChunk]:
         """
@@ -493,6 +531,8 @@ class SimpleChunker:
         Returns:
             List of paragraph chunks
         """
+        structlog_logger.info("_split_paragraph called", paragraph_length=len(paragraph))
+
         # Split on sentence boundaries
         sentences = re.split(r"(?<=[.!?])\s+", paragraph)
 
@@ -512,6 +552,7 @@ class SimpleChunker:
         if current_chunk:
             chunks.append(current_chunk.strip())
 
+        structlog_logger.info("_split_paragraph completed", num_chunks=len(chunks))
         return chunks
 
     def _create_chunk(
@@ -561,6 +602,13 @@ def semantic_chunk(
     Returns:
         List of dictionaries with 'content' key
     """
+    structlog_logger.info(
+        "semantic_chunk called",
+        content_length=len(content),
+        chunk_size=chunk_size,
+        overlap=overlap,
+    )
+
     config = {
         "chunk_size": chunk_size,
         "chunk_overlap": overlap,
@@ -572,4 +620,7 @@ def semantic_chunk(
     }
     chunker = SimpleChunker(config)
     chunks = chunker.chunk(content, metadata)
-    return [{"content": chunk.content} for chunk in chunks]
+    result = [{"content": chunk.content} for chunk in chunks]
+
+    structlog_logger.info("semantic_chunk completed", num_chunks=len(result))
+    return result

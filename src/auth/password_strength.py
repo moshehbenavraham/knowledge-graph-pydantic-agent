@@ -8,6 +8,10 @@ import re
 from dataclasses import dataclass
 from enum import Enum
 
+import structlog
+
+logger = structlog.get_logger(__name__)
+
 
 class PasswordStrength(Enum):
     """Password strength levels."""
@@ -40,6 +44,11 @@ def calculate_password_strength(password: str) -> PasswordScore:
     Returns:
         PasswordScore with strength level, score, and feedback
     """
+    logger.debug(
+        "Calculating password strength",
+        has_password=bool(password),
+        length=len(password) if password else 0,
+    )
     if not password:
         return PasswordScore(
             strength=PasswordStrength.VERY_WEAK,
@@ -171,6 +180,7 @@ def render_password_strength_meter(password: str) -> str:
     Returns:
         HTML string with styled password strength meter
     """
+    logger.debug("Rendering password strength meter", has_password=bool(password))
     score_data = calculate_password_strength(password)
 
     # Generate feedback list HTML
@@ -237,6 +247,7 @@ def is_password_strong(password: str) -> tuple[bool, str]:
     Returns:
         Tuple of (is_strong, message)
     """
+    logger.debug("Checking password strength requirements", has_password=bool(password))
     score_data = calculate_password_strength(password)
 
     if not score_data.meets_requirements:

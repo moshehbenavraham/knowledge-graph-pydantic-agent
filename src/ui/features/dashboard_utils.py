@@ -11,7 +11,10 @@ from datetime import timedelta
 from typing import Any
 
 import pandas as pd
+import structlog
 from pyvis.network import Network
+
+logger = structlog.get_logger(__name__)
 
 
 def generate_entity_cypher(filters: dict[str, Any] | None = None, limit: int = 50) -> str:
@@ -25,6 +28,13 @@ def generate_entity_cypher(filters: dict[str, Any] | None = None, limit: int = 5
     Returns:
         Cypher query string
     """
+    logger.info(
+        "Generating entity Cypher query",
+        filters=filters,
+        limit=limit,
+        has_filters=filters is not None,
+    )
+
     filters = filters or {}
     entity_types = filters.get("entity_types", [])
     min_relationships = filters.get("min_relationships", 0)
@@ -65,6 +75,14 @@ ORDER BY rel_count DESC
 LIMIT {limit}
 """
 
+    logger.info(
+        "Entity Cypher query generated",
+        query_length=len(query),
+        has_type_filter=bool(entity_types),
+        has_search_filter=bool(search_term),
+        min_relationships=min_relationships,
+    )
+
     return query
 
 
@@ -79,6 +97,13 @@ def generate_relationship_cypher(entity_ids: list[str] | None = None, limit: int
     Returns:
         Cypher query string
     """
+    logger.info(
+        "Generating relationship Cypher query",
+        entity_ids_count=len(entity_ids) if entity_ids else 0,
+        limit=limit,
+        has_entity_filter=entity_ids is not None,
+    )
+
     if entity_ids:
         ids_str = ", ".join(f"'{entity_id}'" for entity_id in entity_ids)
         query = f"""
@@ -100,6 +125,12 @@ RETURN source.id as source_id,
 LIMIT {limit}
 """
 
+    logger.info(
+        "Relationship Cypher query generated",
+        query_length=len(query),
+        filtered=entity_ids is not None,
+    )
+
     return query
 
 
@@ -113,7 +144,9 @@ def generate_top_entities_cypher(limit: int = 20) -> str:
     Returns:
         Cypher query string
     """
-    return f"""
+    logger.info("Generating top entities Cypher query", limit=limit)
+
+    query = f"""
 MATCH (e:Entity)
 WITH e,
      COUNT {{ (e)-[]->(other) }} + COUNT {{ (e)<-[]-(other) }} as relationship_count
@@ -126,6 +159,10 @@ RETURN e.id as id,
 ORDER BY relationship_count DESC
 LIMIT {limit}
 """
+
+    logger.info("Top entities Cypher query generated", query_length=len(query))
+
+    return query
 
 
 def generate_entity_timeline_cypher(entity_id: str) -> str:
@@ -141,7 +178,9 @@ def generate_entity_timeline_cypher(entity_id: str) -> str:
     Returns:
         Cypher query string
     """
-    return f"""
+    logger.info("Generating entity timeline Cypher query", entity_id=entity_id)
+
+    query = f"""
 MATCH (e:Entity {{id: '{entity_id}'}})-[r]-(f:Entity)
 WHERE type(r) IN ['RELATED_TO', 'MENTIONS', 'HAS_RELATIONSHIP']
 WITH e, f, r,
@@ -153,6 +192,10 @@ RETURN description, valid_from, valid_to, created_at
 ORDER BY created_at DESC
 LIMIT 50
 """
+
+    logger.info("Entity timeline Cypher query generated", query_length=len(query))
+
+    return query
 
 
 def format_graph_for_plotly(
@@ -168,6 +211,12 @@ def format_graph_for_plotly(
     Returns:
         Dictionary with formatted nodes and edges for plotly
     """
+    logger.info(
+        "Formatting graph data for plotly",
+        entity_count=len(entities),
+        relationship_count=len(relationships),
+    )
+
     # Create node mapping
     node_map = {entity["id"]: i for i, entity in enumerate(entities)}
 
@@ -200,6 +249,13 @@ def format_graph_for_plotly(
                 }
             )
 
+    logger.info(
+        "Graph data formatted for plotly",
+        nodes_created=len(nodes),
+        edges_created=len(edges),
+        edges_skipped=len(relationships) - len(edges),
+    )
+
     return {"nodes": nodes, "edges": edges}
 
 
@@ -214,7 +270,14 @@ def aggregate_time_series(stats: list[dict[str, Any]], time_window: str = "7d") 
     Returns:
         DataFrame with aggregated time series data
     """
+    logger.info(
+        "Aggregating time series data",
+        stats_count=len(stats),
+        time_window=time_window,
+    )
+
     if not stats:
+        logger.info("No stats provided, returning empty DataFrame")
         # Return empty DataFrame with expected structure
         return pd.DataFrame(columns=["timestamp", "search_count", "avg_latency_ms"])
 
@@ -260,6 +323,13 @@ def aggregate_time_series(stats: list[dict[str, Any]], time_window: str = "7d") 
 
     aggregated.rename(columns={"period": "timestamp"}, inplace=True)
 
+    logger.info(
+        "Time series data aggregated",
+        aggregated_rows=len(aggregated),
+        time_window=time_window,
+        cutoff=cutoff.isoformat(),
+    )
+
     return aggregated
 
 
@@ -271,19 +341,42 @@ def export_metrics_to_csv(metrics: dict[str, Any], filename: str) -> None:
         metrics: Dictionary of metrics to export
         filename: Output CSV filename
     """
-    with open(filename, "w", newline="") as csvfile:
-        writer = csv.writer(csvfile)
+    logger.info(
+        "Exporting metrics to CSV",
+        filename=filename,
+        metrics_count=len(metrics),
+    )
 
-        # Write header
-        writer.writerow(["Metric", "Value"])
+    try:
+        rows_written = 0
+        with open(filename, "w", newline="") as csvfile:
+            writer = csv.writer(csvfile)
 
-        # Write metrics
-        for key, value in metrics.items():
-            if isinstance(value, (dict, list)):
-                # For complex types, convert to JSON string
-                writer.writerow([key, json.dumps(value)])
-            else:
-                writer.writerow([key, value])
+            # Write header
+            writer.writerow(["Metric", "Value"])
+            rows_written += 1
+
+            # Write metrics
+            for key, value in metrics.items():
+                if isinstance(value, dict | list):
+                    # For complex types, convert to JSON string
+                    writer.writerow([key, json.dumps(value)])
+                else:
+                    writer.writerow([key, value])
+                rows_written += 1
+
+        logger.info(
+            "Metrics exported to CSV successfully",
+            filename=filename,
+            rows_written=rows_written,
+        )
+    except Exception as e:
+        logger.exception(
+            "Error exporting metrics to CSV",
+            filename=filename,
+            error=str(e),
+        )
+        raise
 
 
 def export_metrics_to_json(metrics: dict[str, Any], filename: str) -> None:
@@ -294,8 +387,27 @@ def export_metrics_to_json(metrics: dict[str, Any], filename: str) -> None:
         metrics: Dictionary of metrics to export
         filename: Output JSON filename
     """
-    with open(filename, "w") as jsonfile:
-        json.dump(metrics, jsonfile, indent=2, default=str)
+    logger.info(
+        "Exporting metrics to JSON",
+        filename=filename,
+        metrics_count=len(metrics),
+    )
+
+    try:
+        with open(filename, "w") as jsonfile:
+            json.dump(metrics, jsonfile, indent=2, default=str)
+
+        logger.info(
+            "Metrics exported to JSON successfully",
+            filename=filename,
+        )
+    except Exception as e:
+        logger.exception(
+            "Error exporting metrics to JSON",
+            filename=filename,
+            error=str(e),
+        )
+        raise
 
 
 def format_entity_for_display(entity: dict[str, Any]) -> dict[str, Any]:
@@ -308,13 +420,27 @@ def format_entity_for_display(entity: dict[str, Any]) -> dict[str, Any]:
     Returns:
         Formatted entity dictionary
     """
-    return {
+    logger.debug(
+        "Formatting entity for display",
+        entity_id=entity.get("id"),
+        entity_name=entity.get("name"),
+    )
+
+    formatted = {
         "name": entity.get("name", "Unknown"),
         "type": entity.get("type", "Unknown"),
         "relationship_count": entity.get("relationship_count", 0),
         "chunk_count": entity.get("chunk_count", 0),
         "confidence": entity.get("confidence", 0.0),
     }
+
+    logger.debug(
+        "Entity formatted for display",
+        formatted_name=formatted["name"],
+        formatted_type=formatted["type"],
+    )
+
+    return formatted
 
 
 def calculate_graph_statistics(
@@ -330,6 +456,12 @@ def calculate_graph_statistics(
     Returns:
         Dictionary with graph statistics
     """
+    logger.info(
+        "Calculating graph statistics",
+        entity_count=len(entities),
+        relationship_count=len(relationships),
+    )
+
     entity_types = {}
     for entity in entities:
         entity_type = entity.get("type", "Unknown")
@@ -340,13 +472,24 @@ def calculate_graph_statistics(
         rel_type = rel.get("relationship_type", "RELATED_TO")
         relationship_types[rel_type] = relationship_types.get(rel_type, 0) + 1
 
-    return {
+    stats = {
         "total_entities": len(entities),
         "total_relationships": len(relationships),
         "entity_types": entity_types,
         "relationship_types": relationship_types,
         "avg_relationships_per_entity": (len(relationships) / len(entities) if entities else 0),
     }
+
+    logger.info(
+        "Graph statistics calculated",
+        total_entities=stats["total_entities"],
+        total_relationships=stats["total_relationships"],
+        unique_entity_types=len(entity_types),
+        unique_relationship_types=len(relationship_types),
+        avg_relationships_per_entity=stats["avg_relationships_per_entity"],
+    )
+
+    return stats
 
 
 def create_pyvis_graph(

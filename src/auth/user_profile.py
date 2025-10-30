@@ -311,6 +311,7 @@ def render_user_profile_simple(username: str, full_name: str, email: str | None 
         full_name: User's full name
         email: User's email (optional)
     """
+    logger.info("Rendering simple user profile", username=username, has_email=bool(email))
     st.sidebar.markdown("---")
     st.sidebar.markdown("### 👤 User Profile")
 

@@ -9,7 +9,10 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Literal
 
+import structlog
 from pydantic import BaseModel, Field, computed_field, field_validator
+
+logger = structlog.get_logger(__name__)
 
 # =============================================================================
 # Enumerations
@@ -98,14 +101,17 @@ class Constitution(BaseModel):
         cls, principles: list[ConstitutionalPrinciple]
     ) -> list[ConstitutionalPrinciple]:
         """Ensure all six principles are present with correct IDs."""
+        logger.debug("Validating principle IDs", count=len(principles))
         expected_ids = {"I", "II", "III", "IV", "V", "VI"}
         actual_ids = {p.principle_id for p in principles}
 
         if actual_ids != expected_ids:
             missing = expected_ids - actual_ids
             extra = actual_ids - expected_ids
+            logger.error("Invalid principle IDs", missing=missing, extra=extra)
             raise ValueError(f"Invalid principle IDs. Missing: {missing}, Extra: {extra}")
 
+        logger.debug("Principle IDs validated successfully")
         return principles
 
 
@@ -173,15 +179,24 @@ class RuleRegistry(BaseModel):
 
     def get_by_principle(self, principle_id: str) -> list[ValidationRule]:
         """Get all rules for a specific principle."""
-        return [r for r in self.rules if r.principle_id == principle_id]
+        logger.debug("Getting rules by principle", principle_id=principle_id)
+        rules = [r for r in self.rules if r.principle_id == principle_id]
+        logger.debug("Rules retrieved", principle_id=principle_id, count=len(rules))
+        return rules
 
     def get_enabled_rules(self) -> list[ValidationRule]:
         """Get only enabled rules."""
-        return [r for r in self.rules if r.enabled]
+        logger.debug("Getting enabled rules")
+        rules = [r for r in self.rules if r.enabled]
+        logger.debug("Enabled rules retrieved", count=len(rules), total=len(self.rules))
+        return rules
 
     def get_by_id(self, rule_id: str) -> ValidationRule | None:
         """Get specific rule by ID."""
-        return next((r for r in self.rules if r.rule_id == rule_id), None)
+        logger.debug("Getting rule by ID", rule_id=rule_id)
+        rule = next((r for r in self.rules if r.rule_id == rule_id), None)
+        logger.debug("Rule lookup complete", rule_id=rule_id, found=rule is not None)
+        return rule
 
 
 # =============================================================================
@@ -283,9 +298,12 @@ class ViolationGroup(BaseModel):
     @classmethod
     def validate_count_matches_locations(cls, count: int, info) -> int:
         """Ensure count matches number of locations."""
+        logger.debug("Validating violation count", count=count)
         locations = info.data.get("locations", [])
         if count != len(locations):
+            logger.error("Count mismatch", count=count, locations_len=len(locations))
             raise ValueError(f"Count {count} != len(locations) {len(locations)}")
+        logger.debug("Count validation successful")
         return count
 
 
@@ -373,12 +391,15 @@ class ComplianceReport(BaseModel):
     @classmethod
     def validate_passed_status(cls, passed: bool, info) -> bool:
         """Ensure passed status matches error count."""
+        logger.debug("Validating passed status", passed=passed)
         error_count = info.data.get("error_count", 0)
         if passed and error_count > 0:
+            logger.error("Inconsistent passed status", passed=passed, error_count=error_count)
             raise ValueError(f"Report marked as passed but has {error_count} errors")
+        logger.debug("Passed status validated")
         return passed
 
-    def to_json_dict(self) -> dict[str, Any]:
+    def to_json_dict(self) -> dict[str, Any]:  # noqa: CONST-V-001 - Simple serialization helper
         """Convert to JSON-serializable dictionary."""
         return {
             "report_id": self.report_id,
@@ -428,7 +449,7 @@ class ComplianceReport(BaseModel):
             "all_violations": [v.to_dict() for v in self.violations],
         }
 
-    def print_summary(self) -> str:
+    def print_summary(self) -> str:  # noqa: CONST-V-001 - Simple output formatter
         """Generate human-readable text summary."""
         status = "PASSED" if self.passed else "FAILED"
         lines = [
@@ -475,11 +496,15 @@ class IgnorePattern(BaseModel):
     @classmethod
     def validate_rule_specific_scope(cls, rule_ids: list[str] | None, info) -> list[str] | None:
         """Ensure rule_ids is set only for rule-specific scope."""
+        logger.debug("Validating rule-specific scope", has_rule_ids=rule_ids is not None)
         scope = info.data.get("scope")
         if scope == "rule-specific" and not rule_ids:
+            logger.error("Rule-specific scope without rule_ids", scope=scope)
             raise ValueError("rule_ids must be set for rule-specific scope")
         if scope == "global" and rule_ids:
+            logger.error("Global scope with rule_ids", scope=scope, rule_ids=rule_ids)
             raise ValueError("rule_ids should not be set for global scope")
+        logger.debug("Scope validation successful", scope=scope)
         return rule_ids
 
 
@@ -503,7 +528,7 @@ class IgnoreConfiguration(BaseModel):
         description="Built-in patterns always applied",
     )
 
-    def compile_pathspec(self) -> Any:
+    def compile_pathspec(self) -> Any:  # noqa: CONST-V-001 - Simple pathspec compilation utility
         """Compile all patterns into a PathSpec for matching."""
         import pathspec
 
@@ -512,9 +537,11 @@ class IgnoreConfiguration(BaseModel):
 
     def should_ignore(self, file_path: Path, rule_id: str | None = None) -> bool:
         """Check if a file should be ignored."""
+        logger.debug("Checking if file should be ignored", file=str(file_path), rule_id=rule_id)
         # Check global patterns
         spec = self.compile_pathspec()
         if spec.match_file(str(file_path)):
+            logger.debug("File matched global ignore pattern", file=str(file_path))
             return True
 
         # Check rule-specific patterns
@@ -530,14 +557,22 @@ class IgnoreConfiguration(BaseModel):
                 rule_spec = pathspec.PathSpec.from_lines(
                     "gitwildmatch", [p.pattern for p in rule_specific]
                 )
-                return rule_spec.match_file(str(file_path))
+                if rule_spec.match_file(str(file_path)):
+                    logger.debug(
+                        "File matched rule-specific ignore pattern",
+                        file=str(file_path),
+                        rule_id=rule_id,
+                    )
+                    return True
 
         return False
 
     @classmethod
     def from_file(cls, file_path: Path = Path(".constitution-ignore")) -> "IgnoreConfiguration":
         """Load ignore configuration from .constitution-ignore file."""
+        logger.info("Loading ignore configuration", file=str(file_path), exists=file_path.exists())
         if not file_path.exists():
+            logger.debug("Ignore file does not exist, using defaults")
             return cls()
 
         patterns = []
@@ -560,4 +595,5 @@ class IgnoreConfiguration(BaseModel):
                     )
                 )
 
+        logger.info("Ignore configuration loaded", pattern_count=len(patterns))
         return cls(patterns=patterns)

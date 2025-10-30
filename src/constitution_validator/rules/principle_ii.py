@@ -7,11 +7,15 @@ Detects direct os.getenv() usage instead of centralized configuration.
 import ast
 from pathlib import Path
 
+import structlog
+
 from src.constitution_validator.models import (
     ConfidenceLevel,
     ViolationRecord,
 )
 from src.constitution_validator.rules.base import BaseValidationRule
+
+logger = structlog.get_logger(__name__)
 
 
 class PrincipleIIRule(BaseValidationRule):
@@ -41,6 +45,7 @@ class PrincipleIIRule(BaseValidationRule):
         Returns:
             List of violations detected
         """
+        logger.info("Executing Principle II rule", rule_id=self.rule_id, file=str(file_path))
         # Prepare instance state
         self._prepare_execution(file_path, tree, source_code)
 
@@ -121,18 +126,29 @@ class PrincipleIIRule(BaseValidationRule):
                                 metadata={"pattern": "os.environ[]", "variable": var_name},
                             )
 
+        logger.info(
+            "Principle II rule completed", rule_id=self.rule_id, violations=len(self.violations)
+        )
         return self.violations
 
     def _extract_var_name_from_call(self, node: ast.Call) -> str:
         """Extract variable name from os.getenv(var_name) call."""
+        logger.debug("Extracting variable name from call")
         if node.args and isinstance(node.args[0], ast.Constant):
-            return node.args[0].value
+            var_name = node.args[0].value
+            logger.debug("Variable name extracted", var_name=var_name)
+            return var_name
+        logger.debug("Variable name unknown")
         return "UNKNOWN"
 
     def _extract_var_name_from_subscript(self, node: ast.Subscript) -> str:
         """Extract variable name from os.environ[var_name] subscript."""
+        logger.debug("Extracting variable name from subscript")
         if isinstance(node.slice, ast.Constant):
-            return node.slice.value
+            var_name = node.slice.value
+            logger.debug("Variable name extracted", var_name=var_name)
+            return var_name
+        logger.debug("Variable name unknown")
         return "UNKNOWN"
 
 

@@ -12,10 +12,12 @@ from dataclasses import dataclass
 from typing import Any
 
 import openai
+import structlog
 
 from src.agentic_rag.config import get_config
 
 logger = logging.getLogger(__name__)
+structlog_logger = structlog.get_logger(__name__)
 
 
 @dataclass
@@ -33,10 +35,11 @@ class EmbeddingConfig:
 
 def get_embedding_config():
     """Get embedding configuration from global settings."""
+    structlog_logger.info("get_embedding_config called")
     config = get_config().embedding
     perf_config = get_config().performance
 
-    return {
+    result = {
         "provider": config.provider,
         "model": config.model,
         "dimension": config.dimension,
@@ -45,6 +48,14 @@ def get_embedding_config():
         "max_retries": 3,
         "retry_delay": 1.0,
     }
+
+    structlog_logger.info(
+        "get_embedding_config completed",
+        provider=result["provider"],
+        model=result["model"],
+        dimension=result["dimension"],
+    )
+    return result
 
 
 class EmbeddingCache:
@@ -57,9 +68,11 @@ class EmbeddingCache:
         Args:
             max_size: Maximum number of cached embeddings
         """
+        structlog_logger.info("EmbeddingCache initializing", max_size=max_size)
         self.max_size = max_size
         self._cache: dict[str, list[float]] = {}
         self._access_order: list[str] = []
+        structlog_logger.info("EmbeddingCache initialized")
 
     def get(self, text: str) -> list[float] | None:
         """
@@ -76,7 +89,9 @@ class EmbeddingCache:
             # Move to end (most recently used)
             self._access_order.remove(key)
             self._access_order.append(key)
+            structlog_logger.debug("EmbeddingCache.get - cache hit", text_preview=text[:50])
             return self._cache[key]
+        structlog_logger.debug("EmbeddingCache.get - cache miss", text_preview=text[:50])
         return None
 
     def set(self, text: str, embedding: list[float]):
@@ -96,9 +111,11 @@ class EmbeddingCache:
             # Evict least recently used
             lru_key = self._access_order.pop(0)
             del self._cache[lru_key]
+            structlog_logger.debug("EmbeddingCache.set - evicted LRU entry")
 
         self._cache[key] = embedding
         self._access_order.append(key)
+        structlog_logger.debug("EmbeddingCache.set - cached embedding", cache_size=len(self._cache))
 
     def clear(self):
         """Clear the cache."""
@@ -134,10 +151,17 @@ class EmbeddingGenerator:
         Args:
             config: Embedding configuration dictionary or EmbeddingConfig object
         """
+        structlog_logger.info("EmbeddingGenerator initializing")
         self.config = config or get_embedding_config()
         self.cache = EmbeddingCache() if self._get_config_value("enable_cache", True) else None
         self._client = None
         self._stats = {"cache_hits": 0, "cache_misses": 0, "api_calls": 0, "total_embeddings": 0}
+        structlog_logger.info(
+            "EmbeddingGenerator initialized",
+            provider=self._get_config_value("provider"),
+            model=self._get_config_value("model"),
+            cache_enabled=self.cache is not None,
+        )
 
     def _get_config_value(self, key: str, default=None):
         """Get config value supporting both dict and dataclass."""
@@ -154,9 +178,11 @@ class EmbeddingGenerator:
 
     def _create_client(self):
         """Create embedding client based on provider."""
+        structlog_logger.info("_create_client called", provider=self._get_config_value("provider"))
         config = get_config()
 
         if self._get_config_value("provider") == "openai":
+            structlog_logger.info("_create_client - creating OpenAI client")
             return openai.AsyncOpenAI(
                 api_key=config.embedding.api_key, base_url=config.embedding.base_url
             )
@@ -167,6 +193,7 @@ class EmbeddingGenerator:
             base_url = config.embedding.base_url or "http://localhost:11434/v1"
             # Ollama doesn't require a real API key
             api_key = config.embedding.api_key or "ollama"
+            structlog_logger.info("_create_client - creating Ollama client", base_url=base_url)
             return openai.AsyncOpenAI(api_key=api_key, base_url=base_url)
 
         if self._get_config_value("provider") == "nomic":
@@ -188,8 +215,11 @@ class EmbeddingGenerator:
         is_single = isinstance(text, str)
         texts = [text] if is_single else text
 
+        structlog_logger.info("embed called", num_texts=len(texts), is_single=is_single)
+
         embeddings = await self.embed_batch(texts)
 
+        structlog_logger.info("embed completed", num_embeddings=len(embeddings))
         return embeddings[0] if is_single else embeddings
 
     async def embed_batch(self, texts: list[str]) -> list[list[float]]:
@@ -202,7 +232,10 @@ class EmbeddingGenerator:
         Returns:
             List of embeddings
         """
+        structlog_logger.info("embed_batch called", num_texts=len(texts))
+
         if not texts:
+            structlog_logger.info("embed_batch - empty texts, returning empty list")
             return []
 
         embeddings = []
@@ -223,6 +256,12 @@ class EmbeddingGenerator:
             else:
                 uncached_texts.append(text)
                 uncached_indices.append(i)
+
+        structlog_logger.info(
+            "embed_batch - cache check complete",
+            cache_hits=len(embeddings),
+            cache_misses=len(uncached_texts),
+        )
 
         # Generate embeddings for uncached texts
         if uncached_texts:
@@ -253,6 +292,7 @@ class EmbeddingGenerator:
 
         self._stats["total_embeddings"] += len(texts)
 
+        structlog_logger.info("embed_batch completed", num_embeddings=len(embeddings))
         return embeddings
 
     async def _generate_embeddings(self, texts: list[str]) -> list[list[float]]:
@@ -265,14 +305,27 @@ class EmbeddingGenerator:
         Returns:
             List of embeddings
         """
+        structlog_logger.info("_generate_embeddings called", num_texts=len(texts))
+
         embeddings = []
 
         # Process in batches
-        for i in range(0, len(texts), self._get_config_value("batch_size")):
-            batch = texts[i : i + self._get_config_value("batch_size")]
+        batch_size = self._get_config_value("batch_size")
+        num_batches = (len(texts) + batch_size - 1) // batch_size
+
+        for i in range(0, len(texts), batch_size):
+            batch = texts[i : i + batch_size]
+            batch_num = i // batch_size + 1
+            structlog_logger.info(
+                "_generate_embeddings - processing batch",
+                batch_num=batch_num,
+                total_batches=num_batches,
+                batch_size=len(batch),
+            )
             batch_embeddings = await self._generate_batch_with_retry(batch)
             embeddings.extend(batch_embeddings)
 
+        structlog_logger.info("_generate_embeddings completed", num_embeddings=len(embeddings))
         return embeddings
 
     async def _generate_batch_with_retry(self, batch: list[str]) -> list[list[float]]:
@@ -285,16 +338,27 @@ class EmbeddingGenerator:
         Returns:
             List of embeddings
         """
+        structlog_logger.info("_generate_batch_with_retry called", batch_size=len(batch))
+
         for attempt in range(self._get_config_value("max_retries")):
             try:
                 if self._get_config_value("provider") == "openai":
-                    return await self._generate_openai_embeddings(batch)
+                    result = await self._generate_openai_embeddings(batch)
+                    structlog_logger.info(
+                        "_generate_batch_with_retry completed", attempt=attempt + 1
+                    )
+                    return result
                 raise NotImplementedError(
                     f"Provider {self._get_config_value('provider')} not implemented"
                 )
 
             except Exception as e:
                 logger.warning(f"Embedding generation attempt {attempt + 1} failed: {e}")
+                structlog_logger.warning(
+                    "_generate_batch_with_retry - attempt failed",
+                    attempt=attempt + 1,
+                    error=str(e),
+                )
 
                 if attempt < self._get_config_value("max_retries") - 1:
                     await asyncio.sleep(self._get_config_value("retry_delay") * (2**attempt))
@@ -313,13 +377,21 @@ class EmbeddingGenerator:
         Returns:
             List of embeddings
         """
+        structlog_logger.info(
+            "_generate_openai_embeddings called",
+            num_texts=len(texts),
+            model=self._get_config_value("model"),
+        )
+
         self._stats["api_calls"] += 1
 
         response = await self.client.embeddings.create(
             model=self._get_config_value("model"), input=texts
         )
 
-        return [data.embedding for data in response.data]
+        result = [data.embedding for data in response.data]
+        structlog_logger.info("_generate_openai_embeddings completed", num_embeddings=len(result))
+        return result
 
     async def embed_chunks(self, chunks: list[Any]) -> list[Any]:
         """
@@ -331,6 +403,8 @@ class EmbeddingGenerator:
         Returns:
             Chunks with embeddings added
         """
+        structlog_logger.info("embed_chunks called", num_chunks=len(chunks))
+
         # Extract texts
         texts = [chunk.content for chunk in chunks]
 
@@ -341,6 +415,7 @@ class EmbeddingGenerator:
         for chunk, embedding in zip(chunks, embeddings, strict=False):
             chunk.embedding = embedding
 
+        structlog_logger.info("embed_chunks completed", num_chunks_embedded=len(chunks))
         return chunks
 
     def get_stats(self) -> dict[str, Any]:
@@ -378,6 +453,7 @@ class MultiDimensionEmbedder:
 
     def __init__(self):
         """Initialize multi-dimension embedder."""
+        structlog_logger.info("MultiDimensionEmbedder initializing")
         config = get_config()
 
         # Primary embedder (1536-dim)
@@ -407,8 +483,12 @@ class MultiDimensionEmbedder:
             # Only initialize if Nomic is available
             try:
                 self.secondary_embedder = EmbeddingGenerator(self.secondary_config)
+                structlog_logger.info("MultiDimensionEmbedder - secondary embedder initialized")
             except Exception:
                 logger.info("Secondary embedder (768-dim) not available")
+                structlog_logger.info("MultiDimensionEmbedder - secondary embedder not available")
+
+        structlog_logger.info("MultiDimensionEmbedder initialized")
 
     async def embed_multi(
         self, text: str | list[str]
@@ -422,6 +502,10 @@ class MultiDimensionEmbedder:
         Returns:
             Dictionary with embeddings of different dimensions
         """
+        is_single = isinstance(text, str)
+        num_texts = 1 if is_single else len(text)
+        structlog_logger.info("embed_multi called", num_texts=num_texts)
+
         result = {}
 
         # Primary embedding
@@ -433,10 +517,12 @@ class MultiDimensionEmbedder:
                 result["embedding_768"] = await self.secondary_embedder.embed(text)
             except Exception as e:
                 logger.warning(f"Secondary embedding failed: {e}")
+                structlog_logger.warning("embed_multi - secondary embedding failed", error=str(e))
                 result["embedding_768"] = None
         else:
             result["embedding_768"] = None
 
+        structlog_logger.info("embed_multi completed")
         return result
 
 
@@ -451,10 +537,16 @@ async def generate_embeddings(texts: list[str], client: Any) -> list[list[float]
     Returns:
         List of embedding vectors
     """
+    structlog_logger.info("generate_embeddings called", num_texts=len(texts))
+
     # Use the client if it's already an EmbeddingGenerator
     if hasattr(client, "embed_batch"):
-        return await client.embed_batch(texts)
+        result = await client.embed_batch(texts)
+        structlog_logger.info("generate_embeddings completed", num_embeddings=len(result))
+        return result
 
     # Otherwise, create a new generator with default config
     generator = EmbeddingGenerator()
-    return await generator.embed_batch(texts)
+    result = await generator.embed_batch(texts)
+    structlog_logger.info("generate_embeddings completed", num_embeddings=len(result))
+    return result

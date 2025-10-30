@@ -24,6 +24,7 @@ class ASTScanner:
         Args:
             cache_size: Number of parsed ASTs to cache (default 1024)
         """
+        logger.debug("Initializing ASTScanner", cache_size=cache_size)
         self.cache_size = cache_size
         self._parse_cache: dict[str, ast.AST] = {}
 
@@ -37,6 +38,7 @@ class ASTScanner:
         Returns:
             Parsed AST tree, or None if parsing fails
         """
+        logger.debug("Parsing file", file=str(file_path))
         try:
             # Read file content
             with open(file_path, encoding="utf-8") as f:
@@ -59,6 +61,7 @@ class ASTScanner:
                 # Remove oldest entry
                 oldest_key = next(iter(self._parse_cache))
                 del self._parse_cache[oldest_key]
+                logger.debug("Cache eviction", evicted_key=oldest_key)
 
             self._parse_cache[cache_key] = tree
 
@@ -94,7 +97,7 @@ class ASTScanner:
         self._parse_cache.clear()
         logger.info("ast_cache_cleared")
 
-    def get_cache_stats(self) -> dict[str, Any]:
+    def get_cache_stats(self) -> dict[str, Any]:  # noqa: CONST-V-001 - Simple stats accessor
         """
         Get cache statistics.
 

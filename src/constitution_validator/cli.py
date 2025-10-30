@@ -60,10 +60,13 @@ def _check_bypass() -> bool:
     Returns:
         True if bypass is requested, False otherwise
     """
+    logger.debug("Checking for bypass environment variable")
     bypass_value = os.environ.get(  # noqa: CONST-II-001 - Meta-validation bypass check
         "SKIP_CONSTITUTION_CHECK", ""
     ).lower()
-    return bypass_value in ("1", "true", "yes", "on")
+    is_bypassed = bypass_value in ("1", "true", "yes", "on")
+    logger.debug("Bypass check complete", bypassed=is_bypassed, value=bypass_value)
+    return is_bypassed
 
 
 def _discover_files(
@@ -82,6 +85,12 @@ def _discover_files(
     Returns:
         List of Python file paths to scan
     """
+    logger.debug(
+        "Discovering files",
+        project_root=str(project_root),
+        target_paths_count=len(target_paths),
+        has_targets=bool(target_paths),
+    )
 
     files = []
 
@@ -102,7 +111,9 @@ def _discover_files(
             if not ignore_config.should_ignore(py_file):
                 files.append(py_file)
 
-    return sorted(set(files))  # Remove duplicates and sort
+    unique_files = sorted(set(files))
+    logger.debug("File discovery complete", file_count=len(unique_files))
+    return unique_files
 
 
 class DependencyCheckError(Exception):

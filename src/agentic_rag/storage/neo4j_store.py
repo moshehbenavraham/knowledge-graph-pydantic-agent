@@ -7,7 +7,10 @@ from datetime import datetime
 from typing import Any
 from uuid import uuid4
 
+import structlog
+
 logger = logging.getLogger(__name__)
+structlog_logger = structlog.get_logger(__name__)
 
 
 class Neo4jStore:
@@ -15,10 +18,16 @@ class Neo4jStore:
 
     def __init__(self, connection_manager):
         """Initialize with connection manager."""
+        structlog_logger.info("Neo4jStore initializing")
         self.connection_manager = connection_manager
+        structlog_logger.info("Neo4jStore initialized")
 
     async def add_entities(self, entities: list[dict[str, Any]], source_chunk_id: str) -> list[str]:
         """Add entities to Neo4j (only names and types, no content)."""
+        structlog_logger.info(
+            "add_entities called", num_entities=len(entities), source_chunk_id=source_chunk_id
+        )
+
         entity_ids = []
 
         async with self.connection_manager.get_neo4j_session() as session:
@@ -57,9 +66,13 @@ class Neo4jStore:
                 record = await result.single()
                 entity_ids.append(record["entity_id"])
 
-                logger.debug(f"Added/updated entity: {entity['name']} ({entity['type']})")
+                structlog_logger.debug(
+                    "Entity added/updated", name=entity["name"], type=entity["type"]
+                )
 
-        logger.info(f"Added {len(entity_ids)} entities from chunk {source_chunk_id}")
+        structlog_logger.info(
+            "add_entities completed", num_added=len(entity_ids), source_chunk_id=source_chunk_id
+        )
         return entity_ids
 
     async def add_relationships(
@@ -69,6 +82,12 @@ class Neo4jStore:
 
         Accepts entity names (source/target) and looks up entity IDs internally.
         """
+        structlog_logger.info(
+            "add_relationships called",
+            num_relationships=len(relationships),
+            source_chunk_id=source_chunk_id,
+        )
+
         relationship_count = 0
 
         async with self.connection_manager.get_neo4j_session() as session:
@@ -78,7 +97,9 @@ class Neo4jStore:
                 entity2_name = rel.get("target") or rel.get("entity2_id")
 
                 if not entity1_name or not entity2_name:
-                    logger.warning(f"Skipping relationship with missing entity names: {rel}")
+                    structlog_logger.warning(
+                        "Skipping relationship with missing entity names", relationship=rel
+                    )
                     continue
 
                 # Create relationship using entity names (Neo4j will lookup by name)
@@ -137,7 +158,11 @@ class Neo4jStore:
                     entity2_name=entity2_name,
                 )
 
-        logger.info(f"Added {relationship_count} relationships from chunk {source_chunk_id}")
+        structlog_logger.info(
+            "add_relationships completed",
+            relationships_added=relationship_count,
+            source_chunk_id=source_chunk_id,
+        )
         return relationship_count
 
     async def add_episodes(
@@ -155,6 +180,13 @@ class Neo4jStore:
             source_chunk_id: ID of the chunk containing these facts
             source_document_id: ID of the source document
         """
+        structlog_logger.info(
+            "add_episodes called",
+            num_facts=len(facts),
+            num_entities=len(entity_names),
+            source_chunk_id=source_chunk_id,
+        )
+
         episode_ids = []
 
         async with self.connection_manager.get_neo4j_session() as session:
@@ -205,7 +237,11 @@ class Neo4jStore:
                             entity_names=entity_names,
                         )
 
-        logger.info(f"Added {len(episode_ids)} episodes from chunk {source_chunk_id}")
+        structlog_logger.info(
+            "add_episodes completed",
+            episodes_added=len(episode_ids),
+            source_chunk_id=source_chunk_id,
+        )
         return episode_ids
 
     async def execute_query(
@@ -233,6 +269,8 @@ class Neo4jStore:
 
     async def search_entities(self, query: str, limit: int = 10) -> list[dict[str, Any]]:
         """Search for entities by name or type."""
+        structlog_logger.info("search_entities called", query=query, limit=limit)
+
         async with self.connection_manager.get_neo4j_session() as session:
             # Try exact match first
             result = await session.run(
@@ -270,6 +308,7 @@ class Neo4jStore:
                     entity["search_score"] = record["score"]
                     entities.append(entity)
 
+            structlog_logger.info("search_entities completed", num_results=len(entities))
             return entities
 
     async def get_entity_relationships(self, entity_id: str, depth: int = 1) -> dict[str, Any]:
@@ -417,6 +456,8 @@ class Neo4jStore:
 
     async def get_graph_statistics(self) -> dict[str, Any]:
         """Get graph database statistics."""
+        structlog_logger.info("get_graph_statistics called")
+
         async with self.connection_manager.get_neo4j_session() as session:
             stats = {}
 
@@ -467,6 +508,11 @@ class Neo4jStore:
             else:
                 stats["graph_density"] = 0
 
+            structlog_logger.info(
+                "get_graph_statistics completed",
+                entity_count=stats.get("entity_count"),
+                relationship_count=stats.get("relationship_count"),
+            )
             return stats
 
     async def cleanup_orphaned_entities(self):
@@ -485,4 +531,6 @@ class Neo4jStore:
 
             record = await result.single()
             if record and record["deleted_count"] > 0:
-                logger.info(f"Cleaned up {record['deleted_count']} orphaned entities")
+                structlog_logger.info(
+                    "Orphaned entities cleaned up", deleted_count=record["deleted_count"]
+                )

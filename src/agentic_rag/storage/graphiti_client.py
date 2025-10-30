@@ -6,7 +6,10 @@ import logging
 from datetime import UTC, datetime
 from typing import Any
 
+import structlog
+
 logger = logging.getLogger(__name__)
+structlog_logger = structlog.get_logger(__name__)
 
 
 class GraphitiClient:
@@ -23,8 +26,10 @@ class GraphitiClient:
             neo4j_store: Neo4j store instance for graph operations
             llm_client: Optional LLM client for entity extraction
         """
+        structlog_logger.info("GraphitiClient initializing", has_llm_client=llm_client is not None)
         self.neo4j_store = neo4j_store
         self.llm_client = llm_client
+        structlog_logger.info("GraphitiClient initialized")
 
     async def extract_and_store_knowledge(
         self, text: str, chunk_id: str, document_id: str
@@ -34,6 +39,13 @@ class GraphitiClient:
 
         This is the main entry point for knowledge extraction.
         """
+        structlog_logger.info(
+            "extract_and_store_knowledge called",
+            chunk_id=chunk_id,
+            document_id=document_id,
+            text_length=len(text),
+        )
+
         # Extract entities
         entities = await self.extract_entities(text)
         entity_ids = await self.neo4j_store.add_entities(entities, chunk_id)
@@ -50,7 +62,7 @@ class GraphitiClient:
         for entity_id in entity_ids:
             await self.neo4j_store.update_entity_importance(entity_id)
 
-        return {
+        result = {
             "entities_extracted": len(entities),
             "entity_ids": entity_ids,
             "relationships_extracted": rel_count,
@@ -58,11 +70,26 @@ class GraphitiClient:
             "episode_ids": episode_ids,
         }
 
+        structlog_logger.info(
+            "extract_and_store_knowledge completed",
+            entities_extracted=result["entities_extracted"],
+            relationships_extracted=result["relationships_extracted"],
+            facts_extracted=result["facts_extracted"],
+        )
+
+        return result
+
     async def extract_entities(self, text: str) -> list[dict[str, Any]]:
         """
         Extract entities from text using LLM or NER.
         Returns only entity names and types, no content.
         """
+        structlog_logger.info(
+            "extract_entities called",
+            text_length=len(text),
+            has_llm_client=self.llm_client is not None,
+        )
+
         if not self.llm_client:
             # Fallback to simple NER or pattern matching
             return await self._extract_entities_simple(text)
@@ -100,7 +127,7 @@ class GraphitiClient:
             return entities[:20]  # Limit number of entities per chunk
 
         except Exception as e:
-            logger.error(f"Entity extraction failed: {e}")
+            structlog_logger.error("Entity extraction failed", error=str(e))
             return await self._extract_entities_simple(text)
 
     async def _extract_entities_simple(self, text: str) -> list[dict[str, Any]]:
@@ -157,7 +184,7 @@ class GraphitiClient:
                         }
                     )
             except Exception as e:
-                logger.error(f"Relationship extraction failed: {e}")
+                structlog_logger.error("Relationship extraction failed", error=str(e))
 
         return relationships
 
@@ -193,7 +220,7 @@ class GraphitiClient:
                         facts.append(fact[:497] + "...")
 
             except Exception as e:
-                logger.error(f"Fact extraction failed: {e}")
+                structlog_logger.error("Fact extraction failed", error=str(e))
                 facts = await self._extract_facts_simple(text)
         else:
             facts = await self._extract_facts_simple(text)

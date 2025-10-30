@@ -10,7 +10,10 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 
+import structlog
+
 logger = logging.getLogger(__name__)
+structlog_logger = structlog.get_logger(__name__)
 
 
 class SearchIntent(Enum):
@@ -135,7 +138,9 @@ class IntentAnalyzer:
 
     def __init__(self):
         """Initialize intent analyzer."""
+        structlog_logger.info("IntentAnalyzer initializing")
         self._stats = {"analyses": 0, "intents": {intent.value: 0 for intent in SearchIntent}}
+        structlog_logger.info("IntentAnalyzer initialized")
 
     def analyze(self, query: str) -> IntentAnalysisResult:
         """
@@ -147,6 +152,7 @@ class IntentAnalyzer:
         Returns:
             Intent analysis result
         """
+        structlog_logger.info("analyze called", query_preview=query[:100])
         self._stats["analyses"] += 1
         query_lower = query.lower()
 
@@ -195,6 +201,15 @@ class IntentAnalyzer:
             f"=" * 80
         )
 
+        structlog_logger.info(
+            "analyze completed",
+            primary_intent=primary_intent.value,
+            confidence=confidence,
+            num_entities=len(entities),
+            num_temporal_markers=len(temporal_markers),
+            num_relationship_indicators=len(relationship_indicators),
+        )
+
         return IntentAnalysisResult(
             primary_intent=primary_intent,
             confidence=confidence,
@@ -213,6 +228,7 @@ class IntentAnalyzer:
         Returns:
             List of entity names
         """
+        structlog_logger.debug("_extract_entities called")
         entities = []
 
         for pattern in self.ENTITY_PATTERNS:
@@ -227,6 +243,7 @@ class IntentAnalyzer:
                 seen.add(entity)
                 unique_entities.append(entity)
 
+        structlog_logger.debug("_extract_entities completed", num_entities=len(unique_entities))
         return unique_entities
 
     def _find_temporal_markers(self, query_lower: str) -> list[str]:
@@ -239,6 +256,7 @@ class IntentAnalyzer:
         Returns:
             List of temporal markers found
         """
+        structlog_logger.debug("_find_temporal_markers called")
         markers = []
 
         for keyword in self.TEMPORAL_KEYWORDS:
@@ -257,6 +275,7 @@ class IntentAnalyzer:
                 markers.append("date_reference")
                 break
 
+        structlog_logger.debug("_find_temporal_markers completed", num_markers=len(markers))
         return markers
 
     def _find_relationship_indicators(self, query_lower: str) -> list[str]:
@@ -269,12 +288,16 @@ class IntentAnalyzer:
         Returns:
             List of relationship indicators
         """
+        structlog_logger.debug("_find_relationship_indicators called")
         indicators = []
 
         for keyword in self.RELATIONSHIP_KEYWORDS:
             if keyword in query_lower:
                 indicators.append(keyword)
 
+        structlog_logger.debug(
+            "_find_relationship_indicators completed", num_indicators=len(indicators)
+        )
         return indicators
 
     def _find_fact_indicators(self, query_lower: str) -> list[str]:
@@ -287,12 +310,14 @@ class IntentAnalyzer:
         Returns:
             List of fact indicators
         """
+        structlog_logger.debug("_find_fact_indicators called")
         indicators = []
 
         for keyword in self.FACT_KEYWORDS:
             if keyword in query_lower:
                 indicators.append(keyword)
 
+        structlog_logger.debug("_find_fact_indicators completed", num_indicators=len(indicators))
         return indicators
 
     def _score_graph_intent(

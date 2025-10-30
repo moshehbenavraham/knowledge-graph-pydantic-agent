@@ -11,10 +11,13 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 
+import structlog
 import yaml
 
 from src.auth.db import assign_role
 from src.clients.database import get_supabase_client
+
+logger = structlog.get_logger(__name__)
 
 
 def load_yaml_config(config_path: Path) -> dict:
@@ -25,6 +28,7 @@ def load_yaml_config(config_path: Path) -> dict:
 
 def backup_yaml_config(config_path: Path) -> Path:
     """Create backup of YAML config."""
+    logger.info("Creating YAML config backup", config_path=str(config_path))
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     backup_path = config_path.parent / f"{config_path.stem}_backup_{timestamp}.yaml"
     shutil.copy2(config_path, backup_path)

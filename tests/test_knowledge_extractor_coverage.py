@@ -671,7 +671,7 @@ class TestFactExtraction:
         facts = await extractor.extract_facts("Investment news...")
 
         # Timestamp should be extracted (placeholder in current impl)
-        assert isinstance(facts[0].timestamp, (datetime, type(None)))
+        assert isinstance(facts[0].timestamp, datetime | type(None))
 
     @pytest.mark.asyncio
     async def test_extract_facts_max_5_limit(self):
@@ -897,7 +897,7 @@ class TestHelperMethods:
         timestamp = extractor._extract_timestamp(text)
 
         # Currently returns placeholder
-        assert isinstance(timestamp, (datetime, type(None)))
+        assert isinstance(timestamp, datetime | type(None))
 
     def test_extract_timestamp_mm_dd_yyyy(self):
         """Test _extract_timestamp with MM/DD/YYYY format."""
@@ -906,7 +906,7 @@ class TestHelperMethods:
         text = "Event on 03/15/2023."
         timestamp = extractor._extract_timestamp(text)
 
-        assert isinstance(timestamp, (datetime, type(None)))
+        assert isinstance(timestamp, datetime | type(None))
 
     def test_extract_timestamp_month_name(self):
         """Test _extract_timestamp with month name."""
@@ -915,7 +915,7 @@ class TestHelperMethods:
         text = "Released in January 15, 2023."
         timestamp = extractor._extract_timestamp(text)
 
-        assert isinstance(timestamp, (datetime, type(None)))
+        assert isinstance(timestamp, datetime | type(None))
 
     def test_extract_timestamp_no_date(self):
         """Test _extract_timestamp with no date returns None."""

@@ -24,11 +24,14 @@ from datetime import datetime, timedelta
 import bcrypt
 import pyotp
 import qrcode
+import structlog
 from cryptography.fernet import Fernet
 
 from src.clients.database import get_supabase_client
 from src.config import get_settings
 from supabase import Client
+
+logger = structlog.get_logger(__name__)
 
 settings = get_settings()
 
@@ -65,6 +68,7 @@ class TOTPManager:
         Returns:
             Base32-encoded secret string
         """
+        logger.debug("generate_secret called")
         return pyotp.random_base32()
 
     def encrypt_secret(self, secret: str) -> str:
@@ -77,6 +81,7 @@ class TOTPManager:
         Returns:
             Encrypted secret (base64-encoded)
         """
+        logger.debug("encrypt_secret called", has_secret=bool(secret))
         encrypted_bytes = self.cipher.encrypt(secret.encode())
         return base64.b64encode(encrypted_bytes).decode()
 
@@ -90,6 +95,7 @@ class TOTPManager:
         Returns:
             Decrypted base32-encoded TOTP secret
         """
+        logger.debug("decrypt_secret called", has_encrypted_secret=bool(encrypted_secret))
         encrypted_bytes = base64.b64decode(encrypted_secret.encode())
         decrypted_bytes = self.cipher.decrypt(encrypted_bytes)
         return decrypted_bytes.decode()
@@ -106,6 +112,9 @@ class TOTPManager:
         Returns:
             Base64-encoded PNG image of QR code
         """
+        logger.info(
+            "generate_qr_code called", username=username, issuer=issuer, has_secret=bool(secret)
+        )
         # Generate provisioning URI for authenticator apps
         totp = pyotp.TOTP(secret)
         provisioning_uri = totp.provisioning_uri(name=username, issuer_name=issuer)
@@ -137,6 +146,9 @@ class TOTPManager:
         Returns:
             True if code is valid, False otherwise
         """
+        logger.debug(
+            "verify_code called", has_secret=bool(secret), has_code=bool(code), window=window
+        )
         totp = pyotp.TOTP(secret)
         return totp.verify(code, valid_window=window)
 
@@ -157,6 +169,7 @@ class TOTPManager:
         Returns:
             Dictionary with 'secret' and 'qr_code' (base64-encoded PNG)
         """
+        logger.info("setup_2fa called", user_id=user_id, username=username, ip_address=ip_address)
         client = self._get_client()
 
         # Generate new TOTP secret
@@ -191,6 +204,12 @@ class TOTPManager:
         Returns:
             True if code verified and 2FA enabled, False otherwise
         """
+        logger.info(
+            "verify_and_enable_2fa called",
+            user_id=user_id,
+            has_code=bool(code),
+            ip_address=ip_address,
+        )
         client = self._get_client()
 
         # Get user's TOTP secret
@@ -233,6 +252,7 @@ class TOTPManager:
         Returns:
             True if 2FA was disabled, False if user didn't have 2FA
         """
+        logger.info("disable_2fa called", user_id=user_id)
         client = self._get_client()
 
         result = (
@@ -256,6 +276,9 @@ class TOTPManager:
         Returns:
             True if code is valid, False otherwise
         """
+        logger.info(
+            "verify_login_code called", user_id=user_id, has_code=bool(code), ip_address=ip_address
+        )
         client = self._get_client()
 
         # Check rate limiting (max 5 failures per hour)
@@ -295,6 +318,7 @@ class TOTPManager:
         Returns:
             True if 2FA is enabled, False otherwise
         """
+        logger.debug("is_2fa_enabled called", user_id=user_id)
         client = self._get_client()
 
         result = (
@@ -316,6 +340,7 @@ class TOTPManager:
         Returns:
             True if 2FA is required for this user, False otherwise
         """
+        logger.debug("requires_2fa called", user_id=user_id)
         client = self._get_client()
 
         result = client.table("auth_users").select("requires_2fa").eq("id", user_id).execute()
@@ -395,6 +420,7 @@ class BackupCodeManager:
         Returns:
             List of backup codes (e.g., ['A1B2C3D4', ...])
         """
+        logger.info("generate_codes called", count=count)
         codes = []
         alphabet = string.ascii_uppercase + string.digits
 
@@ -416,6 +442,7 @@ class BackupCodeManager:
         Returns:
             Bcrypt hash
         """
+        logger.debug("hash_code called", has_code=bool(code))
         # Remove dash for hashing
         code_normalized = code.replace("-", "").upper()
         return bcrypt.hashpw(code_normalized.encode(), bcrypt.gensalt()).decode()
@@ -431,6 +458,7 @@ class BackupCodeManager:
         Returns:
             True if code matches hash, False otherwise
         """
+        logger.debug("verify_code called", has_code=bool(code), has_hash=bool(code_hash))
         # Remove dash and normalize
         code_normalized = code.replace("-", "").upper()
         return bcrypt.checkpw(code_normalized.encode(), code_hash.encode())
@@ -451,6 +479,9 @@ class BackupCodeManager:
         Returns:
             List of backup codes (plaintext, for user to save)
         """
+        logger.info(
+            "create_backup_codes called", user_id=user_id, count=count, expires_days=expires_days
+        )
         client = self._get_client()
 
         # Generate codes
@@ -495,6 +526,12 @@ class BackupCodeManager:
         Returns:
             True if code is valid and unused, False otherwise
         """
+        logger.info(
+            "verify_and_use_backup_code called",
+            user_id=user_id,
+            has_code=bool(code),
+            ip_address=ip_address,
+        )
         client = self._get_client()
 
         # Get all unused backup codes for user
@@ -542,6 +579,7 @@ class BackupCodeManager:
         Returns:
             Number of unused, non-expired backup codes
         """
+        logger.debug("get_unused_count called", user_id=user_id)
         client = self._get_client()
 
         result = client.rpc("get_unused_backup_codes_count", {"p_user_id": user_id}).execute()
@@ -586,6 +624,7 @@ def get_totp_manager(encryption_key: str | None = None) -> TOTPManager:
     Returns:
         TOTPManager instance
     """
+    logger.debug("get_totp_manager called", has_encryption_key=bool(encryption_key))
     global _totp_manager
 
     if _totp_manager is None:
@@ -603,6 +642,7 @@ def get_backup_code_manager() -> BackupCodeManager:
     Returns:
         BackupCodeManager instance
     """
+    logger.debug("get_backup_code_manager called")
     global _backup_code_manager
 
     if _backup_code_manager is None:

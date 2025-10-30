@@ -92,6 +92,7 @@ def render_oauth_analytics_dashboard() -> None:
     Shows provider statistics, trends, and adoption metrics.
     Requires admin privileges.
     """
+    logger.info("Rendering OAuth analytics dashboard")
     current_username = st.session_state.get("username")
     if not current_username:
         st.error("Not authenticated")
