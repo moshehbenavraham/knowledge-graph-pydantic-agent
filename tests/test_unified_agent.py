@@ -15,20 +15,8 @@ import pytest
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-# Mock imports to avoid missing dependencies
-with patch.dict(
-    "sys.modules",
-    {
-        "httpx": MagicMock(),
-        "openai": MagicMock(),
-        "supabase": MagicMock(),
-        "supabase.client": MagicMock(),
-    },
-):
-
-    # Import the unified agent
-
-    from src.agent import UnifiedAgentDeps, run_unified_agent, super_agent
+# Import the unified agent - no module mocking needed
+from src.agent import UnifiedAgentDeps, run_unified_agent, super_agent
 
 
 @pytest.fixture
@@ -105,8 +93,15 @@ class TestUnifiedAgent:
 
             # Test vector-focused query
             result = await smart_search(ctx, "Find similar documents about machine learning")
-            assert "results" in result
-            assert result["strategy"] in ["vector_first", "hybrid"]
+            assert "query" in result
+            assert "chunks" in result
+            assert result["intent"] in [
+                "hybrid",
+                "vector_heavy",
+                "graph_heavy",
+                "temporal",
+                "entity_focused",
+            ]
 
     @pytest.mark.asyncio
     async def test_retrieve_documents_tool(self, unified_deps):
@@ -205,11 +200,12 @@ class TestUnifiedAgent:
     async def test_run_unified_agent(self, mock_supabase, mock_embedding_client, mock_http_client):
         """Test the main run function."""
         with patch("src.agent.unified_agent.super_agent.run") as mock_run:
-            mock_run.return_value = MagicMock(
-                data="The answer is 42",
-                model_used="gpt-4",
-                tools_used=["smart_search", "retrieve_documents"],
-            )
+            # Mock the result with proper output attribute
+            mock_result = MagicMock()
+            mock_result.output = "The answer is 42"
+            mock_result.model_used = "gpt-4"
+            mock_result.tools_used = ["smart_search", "retrieve_documents"]
+            mock_run.return_value = mock_result
 
             result = await run_unified_agent(
                 query="What is the meaning of life?",
@@ -260,7 +256,7 @@ class TestUnifiedAgent:
             ctx = MagicMock()
             ctx.deps = unified_deps
 
-            result = await iterative_search(ctx, "complex query about AI ethics", max_iterations=2)
+            result = await iterative_search(ctx, "complex query about AI ethics", _max_iterations=2)
 
             assert result["query"] == "complex query about AI ethics"
             assert "iterations" in result

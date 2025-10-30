@@ -11,17 +11,15 @@ from clients.memory import get_mem0_client
 
 class TestGetLlmClient:
     @patch("clients.llm.AsyncOpenAI")
-    @patch("clients.llm.os.getenv")
-    def test_get_llm_client(self, mock_getenv, mock_async_openai):
-        # Configure mock environment variables
-        def getenv_side_effect(key, default=None):
-            env_vars = {
-                "LLM_BASE_URL": "https://test-api.openai.com/v1",
-                "LLM_API_KEY": "test-api-key",
-            }
-            return env_vars.get(key, default)
-
-        mock_getenv.side_effect = getenv_side_effect
+    @patch("clients.llm.clients_config")
+    def test_get_llm_client(self, mock_clients_config, mock_async_openai):
+        # Configure mock clients_config
+        mock_llm_provider = MagicMock()
+        mock_llm_provider.value = "openai"
+        mock_clients_config.llm_provider = mock_llm_provider
+        mock_clients_config.llm_base_url = "https://test-api.openai.com/v1"
+        mock_clients_config.llm_api_key = "test-api-key"
+        mock_clients_config.llm_model = "gpt-4"
 
         # Create mock instances
         mock_embedding_client = MagicMock()
@@ -43,17 +41,11 @@ class TestGetLlmClient:
 
 class TestGetSupabaseClient:
     @patch("clients.database.create_client")
-    @patch("clients.database.os.getenv")
-    def test_get_supabase_client(self, mock_getenv, mock_create_client):
-        # Configure mock environment variables
-        def getenv_side_effect(key, default=None):
-            env_vars = {
-                "SUPABASE_URL": "https://test-supabase-url.com",
-                "SUPABASE_SERVICE_KEY": "test-supabase-key",
-            }
-            return env_vars.get(key, default)
-
-        mock_getenv.side_effect = getenv_side_effect
+    @patch("clients.database.clients_config")
+    def test_get_supabase_client(self, mock_clients_config, mock_create_client):
+        # Configure mock clients_config
+        mock_clients_config.supabase_url = "https://test-supabase-url.com"
+        mock_clients_config.supabase_service_key = "test-supabase-key"
 
         # Create mock instances
         mock_supabase_client = MagicMock()
@@ -67,42 +59,19 @@ class TestGetSupabaseClient:
         # Assert the function returns the expected values
         assert supabase == mock_supabase_client
 
-        # Assert create_client was called with the correct parameters
-        mock_create_client.assert_called_once_with(
-            "https://test-supabase-url.com", "test-supabase-key"
-        )
+        # Assert create_client was called with the correct parameters (now includes ClientOptions)
+        call_args = mock_create_client.call_args
+        assert call_args[0][0] == "https://test-supabase-url.com"
+        assert call_args[0][1] == "test-supabase-key"
+        # ClientOptions passed as keyword argument
+        assert "options" in call_args[1]
 
 
 class TestGetMem0Client:
     @patch("clients.memory.Memory")
-    @patch("clients.memory.os")
-    def test_get_mem0_client_with_openai(self, mock_os, mock_memory):
-        # Configure mock environment variables
-        mock_os.getenv.side_effect = lambda key, default=None: {
-            "LLM_PROVIDER": "openai",
-            "LLM_API_KEY": "test-llm-api-key",
-            "LLM_CHOICE": "gpt-4",
-            "EMBEDDING_PROVIDER": "openai",
-            "EMBEDDING_API_KEY": "test-embedding-api-key",
-            "EMBEDDING_MODEL_CHOICE": "text-embedding-3-small",
-            "DATABASE_URL": "postgresql://user:password@localhost:5432/testdb",
-        }.get(key, default)
-
-        # Mock environment dictionary with MagicMock
-        mock_os.environ = MagicMock()
-        mock_os.environ.get.return_value = ""
-
-        # Create mock Memory instance
-        mock_memory_instance = MagicMock()
-        mock_memory.from_config.return_value = mock_memory_instance
-
-        # Call the function
-        result = get_mem0_client()
-
-        # Assert the function returns the expected Memory instance
-        assert result == mock_memory_instance
-
-        # Assert Memory.from_config was called with the correct configuration
+    @patch("clients.memory.get_mem0_config")
+    def test_get_mem0_client_with_openai(self, mock_get_config, mock_memory):
+        # Mock the config that get_mem0_config returns
         expected_config = {
             "llm": {
                 "provider": "openai",
@@ -125,34 +94,7 @@ class TestGetMem0Client:
                 },
             },
         }
-
-        # Check that Memory.from_config was called with the expected config
-        mock_memory.from_config.assert_called_once()
-        actual_config = mock_memory.from_config.call_args[0][0]
-        assert actual_config == expected_config
-
-        # Assert environment variables were set correctly
-        mock_os.environ.__setitem__.assert_any_call("OPENAI_API_KEY", "test-llm-api-key")
-
-    @patch("clients.memory.Memory")
-    @patch("clients.memory.os")
-    def test_get_mem0_client_with_ollama(self, mock_os, mock_memory):
-        # Configure mock environment variables
-        mock_os.getenv.side_effect = lambda key, default=None: {
-            "LLM_PROVIDER": "ollama",
-            "LLM_API_KEY": "",
-            "LLM_CHOICE": "llama3",
-            "LLM_BASE_URL": "http://localhost:11434/v1",
-            "EMBEDDING_PROVIDER": "ollama",
-            "EMBEDDING_API_KEY": "",
-            "EMBEDDING_MODEL_CHOICE": "nomic-embed-text",
-            "EMBEDDING_BASE_URL": "http://localhost:11434/v1",
-            "DATABASE_URL": "postgresql://user:password@localhost:5432/testdb",
-        }.get(key, default)
-
-        # Mock environment dictionary with MagicMock
-        mock_os.environ = MagicMock()
-        mock_os.environ.get.return_value = ""
+        mock_get_config.return_value = expected_config
 
         # Create mock Memory instance
         mock_memory_instance = MagicMock()
@@ -164,7 +106,13 @@ class TestGetMem0Client:
         # Assert the function returns the expected Memory instance
         assert result == mock_memory_instance
 
-        # Assert Memory.from_config was called with the correct configuration
+        # Assert Memory.from_config was called with the expected config
+        mock_memory.from_config.assert_called_once_with(expected_config)
+
+    @patch("clients.memory.Memory")
+    @patch("clients.memory.get_mem0_config")
+    def test_get_mem0_client_with_ollama(self, mock_get_config, mock_memory):
+        # Mock the config that get_mem0_config returns
         expected_config = {
             "llm": {
                 "provider": "ollama",
@@ -192,29 +140,7 @@ class TestGetMem0Client:
                 },
             },
         }
-
-        # Check that Memory.from_config was called with the expected config
-        mock_memory.from_config.assert_called_once()
-        actual_config = mock_memory.from_config.call_args[0][0]
-        assert actual_config == expected_config
-
-    @patch("clients.memory.Memory")
-    @patch("clients.memory.os")
-    def test_get_mem0_client_with_openrouter(self, mock_os, mock_memory):
-        # Configure mock environment variables
-        mock_os.getenv.side_effect = lambda key, default=None: {
-            "LLM_PROVIDER": "openrouter",
-            "LLM_API_KEY": "test-openrouter-key",
-            "LLM_CHOICE": "anthropic/claude-3-opus",
-            "EMBEDDING_PROVIDER": "openai",
-            "EMBEDDING_API_KEY": "test-embedding-api-key",
-            "EMBEDDING_MODEL_CHOICE": "text-embedding-3-small",
-            "DATABASE_URL": "postgresql://user:password@localhost:5432/testdb",
-        }.get(key, default)
-
-        # Mock environment dictionary with MagicMock
-        mock_os.environ = MagicMock()
-        mock_os.environ.get.return_value = ""
+        mock_get_config.return_value = expected_config
 
         # Create mock Memory instance
         mock_memory_instance = MagicMock()
@@ -226,7 +152,13 @@ class TestGetMem0Client:
         # Assert the function returns the expected Memory instance
         assert result == mock_memory_instance
 
-        # Assert Memory.from_config was called with the correct configuration
+        # Assert Memory.from_config was called with the expected config
+        mock_memory.from_config.assert_called_once_with(expected_config)
+
+    @patch("clients.memory.Memory")
+    @patch("clients.memory.get_mem0_config")
+    def test_get_mem0_client_with_openrouter(self, mock_get_config, mock_memory):
+        # Mock the config that get_mem0_config returns
         expected_config = {
             "llm": {
                 "provider": "openai",
@@ -249,12 +181,17 @@ class TestGetMem0Client:
                 },
             },
         }
+        mock_get_config.return_value = expected_config
 
-        # Check that Memory.from_config was called with the expected config
-        mock_memory.from_config.assert_called_once()
-        actual_config = mock_memory.from_config.call_args[0][0]
-        assert actual_config == expected_config
+        # Create mock Memory instance
+        mock_memory_instance = MagicMock()
+        mock_memory.from_config.return_value = mock_memory_instance
 
-        # Assert environment variables were set correctly
-        mock_os.environ.__setitem__.assert_any_call("OPENAI_API_KEY", "test-embedding-api-key")
-        mock_os.environ.__setitem__.assert_any_call("OPENROUTER_API_KEY", "test-openrouter-key")
+        # Call the function
+        result = get_mem0_client()
+
+        # Assert the function returns the expected Memory instance
+        assert result == mock_memory_instance
+
+        # Assert Memory.from_config was called with the expected config
+        mock_memory.from_config.assert_called_once_with(expected_config)

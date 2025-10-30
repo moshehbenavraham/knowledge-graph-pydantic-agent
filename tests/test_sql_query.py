@@ -36,8 +36,10 @@ class TestSqlQueryTool:
         query = "SELECT * FROM test_table WHERE id = '123';"
         result = await execute_sql_query_tool(mock_supabase, query)
 
-        # Verify Supabase RPC was called correctly
-        mock_supabase.rpc.assert_called_once_with("execute_custom_sql", {"sql_query": query})
+        # Verify Supabase RPC was called correctly (semicolon is stripped by the tool)
+        mock_supabase.rpc.assert_called_once_with(
+            "execute_sql", {"query": query.rstrip(";").strip()}
+        )
 
         # Verify the result is correctly formatted JSON
         assert json.loads(result) == [{"column1": "value1", "column2": 123}]

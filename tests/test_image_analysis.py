@@ -27,19 +27,20 @@ with patch.dict(
 
 class TestImageAnalysisTool:
     @pytest.mark.asyncio
-    @patch("tools.image_analysis.OpenAIModel")
+    @patch("tools.image_analysis.OpenAIChatModel")
     @patch("tools.image_analysis.OpenAIProvider")
     @patch("tools.image_analysis.Agent")
-    @patch("tools.image_analysis.os.getenv")
+    @patch("tools.image_analysis.get_settings")
     async def test_image_analysis_tool_success(
-        self, mock_getenv, mock_agent_class, mock_provider_class, mock_model_class
+        self, mock_get_settings, mock_agent_class, mock_provider_class, mock_model_class
     ):
-        # Mock environment variables
-        mock_getenv.side_effect = lambda key, default=None: {
-            "VISION_LLM_CHOICE": "gpt-4o-mini",
-            "LLM_BASE_URL": "https://api.openai.com/v1",
-            "LLM_API_KEY": "test-api-key",
-        }.get(key, default)
+        # Mock settings
+        mock_settings = MagicMock()
+        mock_settings.llm_provider = "openai"
+        mock_settings.vision_llm_choice = "gpt-4o-mini"
+        mock_settings.llm_base_url = "https://api.openai.com/v1"
+        mock_settings.llm_api_key = "test-api-key"
+        mock_get_settings.return_value = mock_settings
 
         # Mock OpenAI provider, model and agent
         mock_provider = MagicMock()
@@ -59,7 +60,7 @@ class TestImageAnalysisTool:
             run_called = True
             run_args = args
             mock_result = MagicMock()
-            mock_result.data = "Image analysis result"
+            mock_result.output = "Image analysis result"
             return mock_result
 
         mock_agent.run = mock_run
@@ -95,8 +96,9 @@ class TestImageAnalysisTool:
 
         # Verify Supabase query was called correctly
         mock_supabase.from_.assert_called_once_with("documents")
-        mock_from.select.assert_called_once_with("metadata")
-        mock_select.eq.assert_called_once_with("metadata->>file_id", "img1")
+        mock_from.select.assert_called_with("metadata, source")
+        # The tool first tries by source, then by id if not found
+        mock_select.eq.assert_any_call("source", "img1")
         mock_eq.limit.assert_called_once_with(1)
 
         # Verify agent setup and run
