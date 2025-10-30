@@ -313,7 +313,7 @@ class OAuthHandler:
         """
         headers = {"Authorization": f"Bearer {access_token}"}
 
-        async with httpx.AsyncClient() as client:  # noqa: CONST-III-001 - HTTP client for external API  # fmt: skip
+        async with httpx.AsyncClient() as client:  # noqa: CONST-III-001  # fmt: skip
             try:
                 response = await client.get(self.userinfo_url, headers=headers)
                 response.raise_for_status()
@@ -467,7 +467,7 @@ class OAuthHandler:
                 elif token.get("expires_in"):
                     token_expires_at = datetime.now() + timedelta(seconds=token["expires_in"])
 
-                oauth_account = await update_oauth_tokens(
+                oauth_account = update_oauth_tokens(
                     oauth_account_id=oauth_account["id"],
                     access_token=encrypted_access_token,
                     refresh_token=encrypted_refresh_token,

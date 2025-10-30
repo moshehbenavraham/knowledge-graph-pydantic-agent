@@ -44,18 +44,30 @@ def temp_auth_config():
 
 def test_load_auth_config_success(temp_auth_config):
     """Test successful loading of auth config."""
-    config = load_auth_config(temp_auth_config)
+    from unittest.mock import MagicMock
 
-    assert "credentials" in config
-    assert "cookie" in config
-    assert "preauthorized" in config
-    assert "testuser" in config["credentials"]["usernames"]
+    mock_settings = MagicMock()
+    mock_settings.use_database_auth = False
+
+    with patch("src.auth.streamlit_auth.get_settings", return_value=mock_settings):
+        config = load_auth_config(temp_auth_config)
+
+        assert "credentials" in config
+        assert "cookie" in config
+        assert "preauthorized" in config
+        assert "testuser" in config["credentials"]["usernames"]
 
 
 def test_load_auth_config_missing_file():
     """Test loading non-existent config file raises error."""
-    with pytest.raises(FileNotFoundError):
-        load_auth_config("nonexistent_config.yaml")
+    from unittest.mock import MagicMock
+
+    mock_settings = MagicMock()
+    mock_settings.use_database_auth = False
+
+    with patch("src.auth.streamlit_auth.get_settings", return_value=mock_settings):
+        with pytest.raises(FileNotFoundError):
+            load_auth_config("nonexistent_config.yaml")
 
 
 def test_get_authenticator_with_config(temp_auth_config):
@@ -161,11 +173,17 @@ def test_multiple_users_in_config():
         temp_path = f.name
 
     try:
-        loaded_config = load_auth_config(temp_path)
-        assert len(loaded_config["credentials"]["usernames"]) == 3
-        assert "user1" in loaded_config["credentials"]["usernames"]
-        assert "user2" in loaded_config["credentials"]["usernames"]
-        assert "user3" in loaded_config["credentials"]["usernames"]
+        from unittest.mock import MagicMock
+
+        mock_settings = MagicMock()
+        mock_settings.use_database_auth = False
+
+        with patch("src.auth.streamlit_auth.get_settings", return_value=mock_settings):
+            loaded_config = load_auth_config(temp_path)
+            assert len(loaded_config["credentials"]["usernames"]) == 3
+            assert "user1" in loaded_config["credentials"]["usernames"]
+            assert "user2" in loaded_config["credentials"]["usernames"]
+            assert "user3" in loaded_config["credentials"]["usernames"]
     finally:
         Path(temp_path).unlink(missing_ok=True)
 
@@ -182,9 +200,15 @@ def test_config_with_empty_users():
         temp_path = f.name
 
     try:
-        loaded_config = load_auth_config(temp_path)
-        assert len(loaded_config["credentials"]["usernames"]) == 0
-        authenticator = get_authenticator(loaded_config)
-        assert isinstance(authenticator, stauth.Authenticate)
+        from unittest.mock import MagicMock
+
+        mock_settings = MagicMock()
+        mock_settings.use_database_auth = False
+
+        with patch("src.auth.streamlit_auth.get_settings", return_value=mock_settings):
+            loaded_config = load_auth_config(temp_path)
+            assert len(loaded_config["credentials"]["usernames"]) == 0
+            authenticator = get_authenticator(loaded_config)
+            assert isinstance(authenticator, stauth.Authenticate)
     finally:
         Path(temp_path).unlink(missing_ok=True)

@@ -175,59 +175,71 @@ class TestMemoryConfiguration:
 class TestMemoryClientInitialization:
     """Test memory client initialization and basic operations."""
 
-    @patch("clients.memory.Memory")
+    @patch("src.clients.memory.Memory")
     def test_sync_memory_client_creation(self, mock_memory_class):
         """Test synchronous memory client creation."""
         mock_client = MagicMock()
-        mock_memory_class.return_value = mock_client
+        mock_memory_class.from_config.return_value = mock_client
 
         client = get_mem0_client()
 
         assert client is not None
-        mock_memory_class.assert_called_once()
+        mock_memory_class.from_config.assert_called_once()
 
-    @patch("clients.memory.AsyncMemory")
-    def test_async_memory_client_creation(self, mock_async_memory_class):
+    @pytest.mark.asyncio
+    @patch("src.clients.memory.AsyncMemory")
+    async def test_async_memory_client_creation(self, mock_async_memory_class):
         """Test asynchronous memory client creation."""
-        mock_client = MagicMock()
-        mock_async_memory_class.return_value = mock_client
+        from unittest.mock import AsyncMock
 
-        client = get_mem0_client_async()
+        mock_client = MagicMock()
+        mock_async_memory_class.from_config = AsyncMock(return_value=mock_client)
+
+        client = await get_mem0_client_async()
 
         assert client is not None
-        mock_async_memory_class.assert_called_once()
+        mock_async_memory_class.from_config.assert_called_once()
 
-    @patch("clients.memory.Memory")
-    def test_memory_client_with_custom_config(self, mock_memory_class):
+    @patch("src.clients.memory.Memory")
+    @patch("src.clients.memory.get_mem0_config")
+    def test_memory_client_with_custom_config(self, mock_get_config, mock_memory_class):
         """Test memory client creation with custom configuration."""
         mock_client = MagicMock()
-        mock_memory_class.return_value = mock_client
+        mock_memory_class.from_config.return_value = mock_client
 
-        # Test with custom configuration
-        with patch.dict(
-            os.environ,
-            {
-                "LLM_PROVIDER": "ollama",
-                "LLM_MODEL": "custom-model",
-                "LLM_CHOICE": "custom-model",
-                "EMBEDDING_PROVIDER": "ollama",
-                "EMBEDDING_MODEL": "custom-embed-model",
-                "EMBEDDING_MODEL_CHOICE": "custom-embed-model",
+        # Mock the config to return custom values
+        custom_config = {
+            "llm": {
+                "provider": "ollama",
+                "config": {
+                    "model": "custom-model",
+                    "temperature": 0.7,
+                    "max_tokens": 2000,
+                    "ollama_base_url": "http://localhost:11434",
+                },
             },
-        ):
-            reload_config()  # Clear cache and recreate singletons with patched env
-            client = get_mem0_client()
+            "embedder": {
+                "provider": "ollama",
+                "config": {
+                    "model": "custom-embed-model",
+                    "ollama_base_url": "http://localhost:11434",
+                },
+            },
+        }
+        mock_get_config.return_value = custom_config
 
-            # Verify client was created
-            assert client is not None
-            mock_memory_class.assert_called_once()
+        client = get_mem0_client()
 
-            # Verify configuration was passed
-            call_args = mock_memory_class.call_args
-            config = call_args[0][0] if call_args[0] else call_args[1].get("config")
+        # Verify client was created
+        assert client is not None
+        mock_memory_class.from_config.assert_called_once()
 
-            if config:
-                assert config["llm"]["config"]["model"] == "custom-model"
+        # Verify configuration was passed
+        call_args = mock_memory_class.from_config.call_args
+        config = call_args[0][0] if call_args[0] else call_args[1].get("config")
+
+        assert config is not None
+        assert config["llm"]["config"]["model"] == "custom-model"
 
 
 class TestMemoryOperations:
@@ -290,29 +302,31 @@ class TestMemoryOperations:
 class TestMemoryErrorHandling:
     """Test memory system error handling and edge cases."""
 
-    @patch("clients.memory.Memory")
+    @patch("src.clients.memory.Memory")
     def test_memory_client_initialization_failure(self, mock_memory_class):
         """Test handling of memory client initialization failures."""
-        mock_memory_class.side_effect = Exception("Failed to initialize memory client")
+        mock_memory_class.from_config.side_effect = Exception("Failed to initialize memory client")
 
         with pytest.raises(Exception, match="Failed to initialize memory client"):
             get_mem0_client()
 
-    def test_invalid_provider_configuration(self):
+    @patch("src.clients.memory.clients.clients_config")
+    def test_invalid_provider_configuration(self, mock_clients_config):
         """Test handling of invalid provider configurations."""
-        with patch.dict(
-            os.environ,
-            {
-                "LLM_PROVIDER": "invalid_provider",
-                "EMBEDDING_PROVIDER": "invalid_embedding_provider",
-            },
-        ):
-            reload_config()  # Clear cache and recreate singletons with patched env
-            config = get_mem0_config()
+        # Mock invalid provider values
+        mock_llm_provider = MagicMock()
+        mock_llm_provider.value = "invalid_provider"
+        mock_embedding_provider = MagicMock()
+        mock_embedding_provider.value = "invalid_embedding_provider"
 
-            # Should not have LLM or embedder config for invalid providers
-            assert "llm" not in config or config.get("llm") is None
-            assert "embedder" not in config or config.get("embedder") is None
+        mock_clients_config.llm_provider = mock_llm_provider
+        mock_clients_config.embedding_provider = mock_embedding_provider
+
+        config = get_mem0_config()
+
+        # Should not have LLM or embedder config for invalid providers
+        assert "llm" not in config or config.get("llm") is None
+        assert "embedder" not in config or config.get("embedder") is None
 
     def test_missing_required_environment_variables(self):
         """Test behavior when required environment variables are missing."""
@@ -324,13 +338,13 @@ class TestMemoryErrorHandling:
             assert "vector_store" in config
             assert config["vector_store"]["provider"] == "supabase"
 
-    @patch("clients.memory.Memory")
+    @patch("src.clients.memory.Memory")
     def test_memory_operation_failures(self, mock_memory_class):
         """Test handling of memory operation failures."""
         mock_client = MagicMock()
         mock_client.add.side_effect = Exception("Memory add failed")
         mock_client.search.side_effect = Exception("Memory search failed")
-        mock_memory_class.return_value = mock_client
+        mock_memory_class.from_config.return_value = mock_client
 
         client = get_mem0_client()
 

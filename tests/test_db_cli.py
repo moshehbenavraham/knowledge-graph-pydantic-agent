@@ -12,7 +12,7 @@ Tests all 8 CLI commands:
 - sessions: View/revoke sessions
 """
 
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
@@ -462,7 +462,7 @@ async def test_cmd_role_assign(sample_user):
 async def test_cmd_role_revoke(sample_user):
     """Test revoking role from user."""
     with patch("src.auth.db_cli.get_user_by_username", return_value=sample_user):
-        with patch("src.auth.db_cli.revoke_role", return_value=True):
+        with patch("src.auth.db_cli.revoke_role", new=AsyncMock(return_value=True)):
             result = await db_cli.cmd_role("testuser", action="revoke", role_name="admin")
 
             assert result == 0

@@ -132,12 +132,18 @@ class EmbeddingGenerator:
         Initialize embedding generator.
 
         Args:
-            config: Embedding configuration dictionary
+            config: Embedding configuration dictionary or EmbeddingConfig object
         """
         self.config = config or get_embedding_config()
-        self.cache = EmbeddingCache() if self.config.get("enable_cache", True) else None
+        self.cache = EmbeddingCache() if self._get_config_value("enable_cache", True) else None
         self._client = None
         self._stats = {"cache_hits": 0, "cache_misses": 0, "api_calls": 0, "total_embeddings": 0}
+
+    def _get_config_value(self, key: str, default=None):
+        """Get config value supporting both dict and dataclass."""
+        if isinstance(self.config, dict):
+            return self.config.get(key, default)
+        return getattr(self.config, key, default)
 
     @property
     def client(self):
@@ -150,12 +156,12 @@ class EmbeddingGenerator:
         """Create embedding client based on provider."""
         config = get_config()
 
-        if self.config["provider"] == "openai":
+        if self._get_config_value("provider") == "openai":
             return openai.AsyncOpenAI(
                 api_key=config.embedding.api_key, base_url=config.embedding.base_url
             )
 
-        if self.config["provider"] == "ollama":
+        if self._get_config_value("provider") == "ollama":
             # Ollama uses OpenAI-compatible API
             # Default Ollama base URL is http://localhost:11434/v1
             base_url = config.embedding.base_url or "http://localhost:11434/v1"
@@ -163,11 +169,11 @@ class EmbeddingGenerator:
             api_key = config.embedding.api_key or "ollama"
             return openai.AsyncOpenAI(api_key=api_key, base_url=base_url)
 
-        if self.config["provider"] == "nomic":
+        if self._get_config_value("provider") == "nomic":
             # Nomic implementation
             raise NotImplementedError("Nomic provider not yet implemented")
 
-        raise ValueError(f"Unknown embedding provider: {self.config['provider']}")
+        raise ValueError(f"Unknown embedding provider: {self._get_config_value('provider')}")
 
     async def embed(self, text: str | list[str]) -> list[float] | list[list[float]]:
         """
@@ -262,8 +268,8 @@ class EmbeddingGenerator:
         embeddings = []
 
         # Process in batches
-        for i in range(0, len(texts), self.config["batch_size"]):
-            batch = texts[i : i + self.config["batch_size"]]
+        for i in range(0, len(texts), self._get_config_value("batch_size")):
+            batch = texts[i : i + self._get_config_value("batch_size")]
             batch_embeddings = await self._generate_batch_with_retry(batch)
             embeddings.extend(batch_embeddings)
 
@@ -279,17 +285,19 @@ class EmbeddingGenerator:
         Returns:
             List of embeddings
         """
-        for attempt in range(self.config["max_retries"]):
+        for attempt in range(self._get_config_value("max_retries")):
             try:
-                if self.config["provider"] == "openai":
+                if self._get_config_value("provider") == "openai":
                     return await self._generate_openai_embeddings(batch)
-                raise NotImplementedError(f"Provider {self.config['provider']} not implemented")
+                raise NotImplementedError(
+                    f"Provider {self._get_config_value('provider')} not implemented"
+                )
 
             except Exception as e:
                 logger.warning(f"Embedding generation attempt {attempt + 1} failed: {e}")
 
-                if attempt < self.config["max_retries"] - 1:
-                    await asyncio.sleep(self.config["retry_delay"] * (2**attempt))
+                if attempt < self._get_config_value("max_retries") - 1:
+                    await asyncio.sleep(self._get_config_value("retry_delay") * (2**attempt))
                 else:
                     raise
 
@@ -307,7 +315,9 @@ class EmbeddingGenerator:
         """
         self._stats["api_calls"] += 1
 
-        response = await self.client.embeddings.create(model=self.config["model"], input=texts)
+        response = await self.client.embeddings.create(
+            model=self._get_config_value("model"), input=texts
+        )
 
         return [data.embedding for data in response.data]
 

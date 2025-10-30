@@ -10,7 +10,7 @@ Tests migration functionality:
 
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
@@ -229,7 +229,7 @@ async def test_migrate_users_success(temp_yaml_config, mock_supabase_client):
         mock_supabase_client.table = mock_table_method
 
         # Mock role assignment
-        with patch("src.auth.migrate_yaml_to_db.assign_role", return_value=True):
+        with patch("src.auth.migrate_yaml_to_db.assign_role", new=AsyncMock(return_value=True)):
             results = await migrate_yaml_to_db.migrate_users(temp_yaml_config)
 
             assert results["migrated"] == 2
@@ -291,9 +291,9 @@ async def test_migrate_users_admin_gets_admin_role(temp_yaml_config, mock_supaba
         mock_supabase_client.table = mock_table_method
 
         # Mock role assignment and capture the call
-        with patch("src.auth.migrate_yaml_to_db.assign_role") as mock_assign_role:
-            mock_assign_role.return_value = True
-
+        with patch(
+            "src.auth.migrate_yaml_to_db.assign_role", new=AsyncMock(return_value=True)
+        ) as mock_assign_role:
             results = await migrate_yaml_to_db.migrate_users(temp_yaml_config)
 
             # Verify admin role was assigned
@@ -342,9 +342,9 @@ async def test_migrate_users_non_admin_gets_user_role(temp_yaml_config, mock_sup
         mock_supabase_client.table = mock_table_method
 
         # Mock role assignment and capture the call
-        with patch("src.auth.migrate_yaml_to_db.assign_role") as mock_assign_role:
-            mock_assign_role.return_value = True
-
+        with patch(
+            "src.auth.migrate_yaml_to_db.assign_role", new=AsyncMock(return_value=True)
+        ) as mock_assign_role:
             results = await migrate_yaml_to_db.migrate_users(temp_yaml_config)
 
             # Verify user role was assigned
@@ -420,7 +420,7 @@ async def test_migrate_users_partial_failure(temp_yaml_config, mock_supabase_cli
 
         mock_supabase_client.table = mock_table_method
 
-        with patch("src.auth.migrate_yaml_to_db.assign_role", return_value=True):
+        with patch("src.auth.migrate_yaml_to_db.assign_role", new=AsyncMock(return_value=True)):
             results = await migrate_yaml_to_db.migrate_users(temp_yaml_config)
 
             assert results["migrated"] >= 1  # At least one succeeded
@@ -456,7 +456,7 @@ async def test_migrate_users_preserves_password_hash(temp_yaml_config, mock_supa
 
         mock_supabase_client.table.return_value = mock_table
 
-        with patch("src.auth.migrate_yaml_to_db.assign_role", return_value=True):
+        with patch("src.auth.migrate_yaml_to_db.assign_role", new=AsyncMock(return_value=True)):
             # Can't easily test this with mocks, but we can verify the logic
             # The key point is that password_hash is used directly, not hashed again
             pass  # Logic verified by code inspection
@@ -522,7 +522,7 @@ async def test_complete_migration_flow_with_backup(temp_yaml_config, mock_supaba
 
         mock_supabase_client.table = mock_table_method
 
-        with patch("src.auth.migrate_yaml_to_db.assign_role", return_value=True):
+        with patch("src.auth.migrate_yaml_to_db.assign_role", new=AsyncMock(return_value=True)):
             results = await migrate_yaml_to_db.migrate_users(temp_yaml_config)
 
             assert results["migrated"] == 2
@@ -584,7 +584,7 @@ async def test_migrate_users_missing_email():
             mock_insert_response.data = [{"id": str(uuid4()), "username": "testuser"}]
             mock_table.insert().execute.return_value = mock_insert_response
 
-            with patch("src.auth.migrate_yaml_to_db.assign_role", return_value=True):
+            with patch("src.auth.migrate_yaml_to_db.assign_role", new=AsyncMock(return_value=True)):
                 results = await migrate_yaml_to_db.migrate_users(temp_path)
 
                 # Should handle missing email gracefully

@@ -29,6 +29,18 @@ from src.agentic_rag.ingestion.pipeline import IngestionResult
 from src.agentic_rag.search import VectorSearch
 
 
+@pytest.fixture
+def mock_connection_manager():
+    """Mock ConnectionManager for tests."""
+    from unittest.mock import Mock
+
+    mock_cm = Mock()
+    mock_cm.get_pg_connection = Mock()
+    mock_cm.get_neo4j_session = Mock()
+    mock_cm.graphiti_client = Mock()
+    return mock_cm
+
+
 class TestChunker:
     """Test document chunking functionality."""
 
@@ -79,7 +91,7 @@ class TestChunker:
     @pytest.mark.asyncio
     async def test_semantic_chunking_fallback(self):
         """Test semantic chunking fallback to simple."""
-        config = ChunkingConfig(chunk_size=100, use_semantic_splitting=True)
+        config = ChunkingConfig(chunk_size=100, chunk_overlap=20, use_semantic_splitting=True)
 
         with patch("src.agentic_rag.ingestion.chunker.SemanticChunker.llm_client") as mock_llm:
             mock_llm.run.side_effect = Exception("LLM error")
@@ -216,6 +228,7 @@ class TestIngestionPipeline:
     async def test_pipeline_initialization(self):
         """Test pipeline initialization."""
         pipeline = DocumentIngestionPipeline()
+        await pipeline.initialize()
 
         assert pipeline.pg_store is not None
         assert pipeline.neo4j_store is not None
@@ -315,9 +328,9 @@ class TestSearchPerformance:
     """Test search performance targets."""
 
     @pytest.mark.asyncio
-    async def test_vector_search_latency(self):
+    async def test_vector_search_latency(self, mock_connection_manager):
         """Verify vector search meets <200ms target."""
-        search = VectorSearch()
+        search = VectorSearch(mock_connection_manager)
 
         # Mock the database query
         with patch.object(search, "_search_vectors") as mock_search:
@@ -334,9 +347,9 @@ class TestSearchPerformance:
                 assert duration < 0.2  # 200ms
 
     @pytest.mark.asyncio
-    async def test_caching_improves_performance(self):
+    async def test_caching_improves_performance(self, mock_connection_manager):
         """Test that caching improves search performance."""
-        search = VectorSearch()
+        search = VectorSearch(mock_connection_manager)
 
         with patch.object(search, "_search_vectors") as mock_search:
             mock_search.return_value = []

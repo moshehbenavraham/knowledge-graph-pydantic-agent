@@ -42,6 +42,7 @@ class TestStrategySelection:
 
         mock_intent = Mock(
             primary_intent=SearchIntent.VECTOR_HEAVY,
+            confidence=0.9,
             entities_mentioned=[],
             temporal_markers=[],
             relationship_indicators=[],
@@ -57,6 +58,7 @@ class TestStrategySelection:
 
         mock_intent = Mock(
             primary_intent=SearchIntent.GRAPH_HEAVY,
+            confidence=0.9,
             entities_mentioned=["Entity1"],
             temporal_markers=[],
             relationship_indicators=["related", "connected"],
@@ -73,6 +75,7 @@ class TestStrategySelection:
 
         mock_intent = Mock(
             primary_intent=SearchIntent.GRAPH_HEAVY,
+            confidence=0.9,
             entities_mentioned=["Entity1"],
             temporal_markers=[],
             relationship_indicators=["related"],
@@ -89,6 +92,7 @@ class TestStrategySelection:
 
         mock_intent = Mock(
             primary_intent=SearchIntent.TEMPORAL,
+            confidence=0.9,
             entities_mentioned=["OpenAI"],
             temporal_markers=["when", "2023"],
             relationship_indicators=[],
@@ -105,6 +109,7 @@ class TestStrategySelection:
 
         mock_intent = Mock(
             primary_intent=SearchIntent.ENTITY_FOCUSED,
+            confidence=0.9,
             entities_mentioned=["Microsoft", "OpenAI"],
             temporal_markers=[],
             relationship_indicators=[],
@@ -121,6 +126,7 @@ class TestStrategySelection:
 
         mock_intent = Mock(
             primary_intent=SearchIntent.HYBRID,
+            confidence=0.9,
             entities_mentioned=[],
             temporal_markers=[],
             relationship_indicators=[],

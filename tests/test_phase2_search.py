@@ -24,16 +24,27 @@ from src.agentic_rag.search import (
     VectorSearch,
 )
 from src.agentic_rag.search.graph_search import GraphEntity, GraphFact, GraphRelationship
+from src.agentic_rag.search.intent_analyzer import IntentAnalysisResult
 from src.agentic_rag.search.vector_search import SearchCache
+
+
+@pytest.fixture
+def mock_connection_manager():
+    """Mock ConnectionManager for search tests."""
+    mock_cm = Mock()
+    mock_cm.get_pg_connection = Mock()
+    mock_cm.get_neo4j_session = Mock()
+    mock_cm.graphiti_client = Mock()
+    return mock_cm
 
 
 class TestVectorSearch:
     """Test vector search functionality."""
 
     @pytest.mark.asyncio
-    async def test_vector_search_basic(self):
+    async def test_vector_search_basic(self, mock_connection_manager):
         """Test basic vector search."""
-        search = VectorSearch()
+        search = VectorSearch(mock_connection_manager)
 
         # Mock components
         with patch.object(search.embedder, "embed") as mock_embed:
@@ -86,9 +97,9 @@ class TestVectorSearch:
         assert cache.get(key) is None  # Should be expired
 
     @pytest.mark.asyncio
-    async def test_similarity_search(self):
+    async def test_similarity_search(self, mock_connection_manager):
         """Test finding similar chunks."""
-        search = VectorSearch()
+        search = VectorSearch(mock_connection_manager)
 
         chunk_id = UUID("12345678-1234-5678-1234-567812345678")
 
@@ -118,9 +129,9 @@ class TestGraphSearch:
     """Test graph search functionality."""
 
     @pytest.mark.asyncio
-    async def test_graph_search_facts(self):
+    async def test_graph_search_facts(self, mock_connection_manager):
         """Test searching for facts."""
-        search = GraphSearch()
+        search = GraphSearch(mock_connection_manager)
 
         with patch.object(search.graphiti_client, "search") as mock_search:
             mock_search.return_value = [
@@ -146,9 +157,9 @@ class TestGraphSearch:
                     assert result.facts[0].confidence == 0.9
 
     @pytest.mark.asyncio
-    async def test_entity_timeline(self):
+    async def test_entity_timeline(self, mock_connection_manager):
         """Test entity timeline retrieval."""
-        search = GraphSearch()
+        search = GraphSearch(mock_connection_manager)
 
         with patch.object(search.neo4j_store, "execute_query") as mock_query:
             mock_query.return_value = [{"entity_id": "entity-123"}]
@@ -175,9 +186,9 @@ class TestGraphSearch:
                 assert timeline[0].fact == "Founded in 2015"
                 assert timeline[1].fact == "Raised $1B in 2019"
 
-    def test_chunk_ref_extraction(self):
+    def test_chunk_ref_extraction(self, mock_connection_manager):
         """Test extraction of chunk references."""
-        search = GraphSearch()
+        search = GraphSearch(mock_connection_manager)
 
         facts = [
             GraphFact(fact="Test fact", timestamp=None, confidence=0.8, source_chunk="chunk-1")
@@ -276,14 +287,15 @@ class TestHybridSearch:
     """Test hybrid search orchestration."""
 
     @pytest.mark.asyncio
-    async def test_strategy_selection(self):
+    async def test_strategy_selection(self, mock_connection_manager):
         """Test search strategy selection based on intent."""
-        search = HybridSearch()
+        search = HybridSearch(mock_connection_manager)
 
         with patch.object(search.intent_analyzer, "analyze") as mock_analyze:
             # Test vector-heavy intent
-            mock_analyze.return_value = Mock(
+            mock_analyze.return_value = IntentAnalysisResult(
                 primary_intent=SearchIntent.VECTOR_HEAVY,
+                confidence=0.9,
                 entities_mentioned=[],
                 temporal_markers=[],
                 relationship_indicators=[],
@@ -298,9 +310,9 @@ class TestHybridSearch:
                 mock_vector.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_parallel_search_execution(self):
+    async def test_parallel_search_execution(self, mock_connection_manager):
         """Test parallel execution of vector and graph search."""
-        search = HybridSearch()
+        search = HybridSearch(mock_connection_manager)
 
         with patch.object(search.vector_search, "search") as mock_vector:
             mock_vector.return_value = []
@@ -323,9 +335,9 @@ class TestHybridSearch:
                     mock_graph.assert_called()
 
     @pytest.mark.asyncio
-    async def test_result_boosting(self):
+    async def test_result_boosting(self, mock_connection_manager):
         """Test boosting of results based on graph context."""
-        search = HybridSearch()
+        search = HybridSearch(mock_connection_manager)
 
         # Create test chunks
         chunks = [
@@ -533,10 +545,10 @@ class TestIntegration:
     """Integration tests for search components."""
 
     @pytest.mark.asyncio
-    async def test_end_to_end_search_flow(self):
+    async def test_end_to_end_search_flow(self, mock_connection_manager):
         """Test complete search flow from query to ranked results."""
         # Initialize hybrid search
-        search = HybridSearch()
+        search = HybridSearch(mock_connection_manager)
 
         # Mock all external dependencies
         with patch.object(search.vector_search, "search") as mock_vector:
