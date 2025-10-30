@@ -116,7 +116,7 @@ def mock_hybrid_search():
 
 
 @pytest.mark.asyncio
-@patch("src.tools.rag.get_connection_manager")
+@patch("src.agentic_rag.storage.connection_manager.get_connection_manager")
 @patch("src.tools.rag.HybridSearch")
 async def test_get_hybrid_search_first_call(mock_hs_class, mock_get_cm):
     """Test first call to get_hybrid_search initializes everything."""
@@ -139,7 +139,7 @@ async def test_get_hybrid_search_first_call(mock_hs_class, mock_get_cm):
 
 
 @pytest.mark.asyncio
-@patch("src.tools.rag.get_connection_manager")
+@patch("src.agentic_rag.storage.connection_manager.get_connection_manager")
 @patch("src.tools.rag.HybridSearch")
 async def test_get_hybrid_search_cached(mock_hs_class, mock_get_cm):
     """Test subsequent calls return cached instance."""
@@ -165,7 +165,7 @@ async def test_get_hybrid_search_cached(mock_hs_class, mock_get_cm):
 
 
 @pytest.mark.asyncio
-@patch("src.tools.rag.get_connection_manager")
+@patch("src.agentic_rag.storage.connection_manager.get_connection_manager")
 @patch("src.tools.rag.HybridSearch")
 async def test_get_hybrid_search_event_loop_change(mock_hs_class, mock_get_cm):
     """Test that changing event loop resets instances."""
@@ -248,7 +248,7 @@ async def test_retrieve_documents_success(mock_get_hs, mock_search_result):
     assert "Test Document 1" in result
     assert "Test Document 2" in result
     assert "test_source_1.txt" in result
-    assert "COMPREHENSIVE" in result  # search strategy
+    assert "hybrid" in result  # search strategy
     mock_hs.search.assert_called_once_with(query="test query", limit=10, strategy=None)
 
 
@@ -264,12 +264,12 @@ async def test_retrieve_documents_with_strategy(mock_get_hs, mock_search_result)
         supabase=None,
         embedding_client=None,
         user_query="test query",
-        strategy=SearchStrategy.VECTOR_HEAVY,
+        strategy=SearchStrategy.VECTOR_ONLY,
         limit=5,
     )
 
     mock_hs.search.assert_called_once_with(
-        query="test query", limit=5, strategy=SearchStrategy.VECTOR_HEAVY
+        query="test query", limit=5, strategy=SearchStrategy.VECTOR_ONLY
     )
 
 
@@ -281,7 +281,7 @@ async def test_retrieve_documents_no_results(mock_get_hs):
     empty_result.chunks = []
     empty_result.entities = []
     empty_result.facts = []
-    empty_result.search_strategy = SearchStrategy.VECTOR_HEAVY
+    empty_result.search_strategy = SearchStrategy.VECTOR_ONLY
     empty_result.query_time = 0.05
 
     mock_hs = AsyncMock()
@@ -336,8 +336,8 @@ async def test_smart_search_with_intent_analysis(mock_get_ia, mock_get_hs, mock_
     result = await smart_search_tool("test query", analyze_intent=True, limit=10)
 
     assert result["query"] == "test query"
-    assert result["intent"] == "COMPREHENSIVE"
-    assert result["strategy_used"] == "COMPREHENSIVE"
+    assert result["intent"] == "hybrid"
+    assert result["strategy_used"] == "hybrid"
     assert len(result["chunks"]) == 2
     assert len(result["entities"]) == 2
     assert len(result["facts"]) == 2
@@ -477,7 +477,7 @@ async def test_smart_search_no_entities_or_facts(mock_get_hs):
     mock_result.entities = None  # No entities
     mock_result.facts = None  # No facts
     mock_result.relationships = None
-    mock_result.search_strategy = SearchStrategy.VECTOR_HEAVY
+    mock_result.search_strategy = SearchStrategy.VECTOR_ONLY
     mock_result.query_time = 0.1
 
     mock_hs = AsyncMock()
@@ -839,7 +839,7 @@ def test_format_search_results_with_chunks(mock_search_result):
     assert "test_source_1.txt" in result
     assert "0.95" in result  # similarity score
     assert "Entity1, Entity2" in result
-    assert "COMPREHENSIVE" in result
+    assert "hybrid" in result
 
 
 def test_format_search_results_no_chunks():
@@ -876,7 +876,7 @@ def test_format_search_results_no_entities():
 
     result.chunks = [MockChunk()]
     result.entities = []
-    result.search_strategy = SearchStrategy.VECTOR_HEAVY
+    result.search_strategy = SearchStrategy.VECTOR_ONLY
     result.query_time = 0.1
 
     formatted = _format_search_results(result)
@@ -1013,7 +1013,7 @@ async def test_large_result_set_handling(mock_get_hs):
     large_result.chunks = [MockChunk(i) for i in range(1000)]
     large_result.entities = []
     large_result.facts = []
-    large_result.search_strategy = SearchStrategy.VECTOR_HEAVY
+    large_result.search_strategy = SearchStrategy.VECTOR_ONLY
     large_result.query_time = 2.5
 
     mock_hs = AsyncMock()

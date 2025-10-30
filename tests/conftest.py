@@ -183,3 +183,19 @@ def mock_memory():
     memory = MagicMock()
     memory.from_config = MagicMock()
     return memory
+
+
+@pytest.fixture(autouse=True)
+def disable_rate_limiting(request, monkeypatch):
+    """Automatically disable rate limiting for all tests except rate limiting tests."""
+    # Skip this fixture for rate limiting tests
+    if "test_rate_limiting" in request.node.fspath.basename:
+        return
+
+
+    async def mock_enforce_limits(*args, **kwargs):
+        """Mock rate limiter that always allows requests."""
+        pass
+
+    # Patch the rate limiter's enforce_limits method
+    monkeypatch.setattr("src.utils.rate_limiting.rate_limiter.enforce_limits", mock_enforce_limits)
