@@ -262,11 +262,13 @@ class TestCoverageScanner:
             assert result is False
 
     def test_check_pytest_cov_installed_timeout(self):
+        import subprocess
+
         from src.constitution_validator.scanners.coverage_scanner import CoverageScanner
 
         scanner = CoverageScanner()
 
-        with patch("subprocess.run", side_effect=Exception("Timeout")):
+        with patch("subprocess.run", side_effect=subprocess.TimeoutExpired("pytest", 10)):
             result = scanner.check_pytest_cov_installed()
 
             assert result is False

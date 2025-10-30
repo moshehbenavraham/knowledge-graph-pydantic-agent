@@ -162,7 +162,7 @@ nav:
     - Ingestion: architecture/ingestion.md
   - Development:
     - Setup: development/setup.md
-    - Testing: TESTING.md
+    - Testing: 8-development/testing-guide.md
     - Performance: PERFORMANCE.md
     - Contributing: contributing.md
   - Deployment:

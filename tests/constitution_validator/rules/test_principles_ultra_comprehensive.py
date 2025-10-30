@@ -47,7 +47,7 @@ class TestPrincipleIV:
         # Should not report violations when coverage data is missing
         assert len(violations) == 0
 
-    @patch("src.constitution_validator.rules.principle_iv.Coverage")
+    @patch("coverage.Coverage")
     def test_test_coverage_rule_below_minimum(self, mock_coverage_class):
         from src.constitution_validator.rules.principle_iv import TestCoverageRule
 
@@ -56,9 +56,11 @@ class TestPrincipleIV:
         # Mock coverage data
         mock_cov = Mock()
         mock_coverage_class.return_value = mock_cov
+        mock_cov.load.return_value = None  # load() doesn't raise
 
-        # Mock analysis: 100 executable lines, 40 missing = 60% coverage
-        mock_cov.analysis2.return_value = ([], 100, [], 40, [])
+        # Mock analysis: 100 executable lines, 40 missing lines = 60% coverage
+        # Format: (executed, executable, excluded, missing, missing_formatted)
+        mock_cov.analysis2.return_value = ([], 100, [], list(range(1, 41)), [])
 
         source_file = Path("/project/src/module.py")
         tree = ast.parse("def func():\n    pass\n")
@@ -70,7 +72,7 @@ class TestPrincipleIV:
         assert "60.0%" in violations[0].message
         assert violations[0].severity == "error"
 
-    @patch("src.constitution_validator.rules.principle_iv.Coverage")
+    @patch("coverage.Coverage")
     def test_test_coverage_rule_above_minimum(self, mock_coverage_class):
         from src.constitution_validator.rules.principle_iv import TestCoverageRule
 
@@ -96,7 +98,9 @@ class TestPrincipleIV:
 
         rule = TestCoverageRule()
 
-        with patch("src.constitution_validator.rules.principle_iv.CoverageScanner") as MockScanner:
+        with patch(
+            "src.constitution_validator.scanners.coverage_scanner.CoverageScanner"
+        ) as MockScanner:
             mock_scanner = Mock()
             mock_scanner.get_coverage.return_value = 80.0
             MockScanner.return_value = mock_scanner
@@ -112,7 +116,9 @@ class TestPrincipleIV:
 
         rule = TestCoverageRule()
 
-        with patch("src.constitution_validator.rules.principle_iv.CoverageScanner") as MockScanner:
+        with patch(
+            "src.constitution_validator.scanners.coverage_scanner.CoverageScanner"
+        ) as MockScanner:
             mock_scanner = Mock()
             mock_scanner.get_coverage.return_value = 65.0
             MockScanner.return_value = mock_scanner
@@ -130,7 +136,9 @@ class TestPrincipleIV:
 
         rule = TestCoverageRule()
 
-        with patch("src.constitution_validator.rules.principle_iv.CoverageScanner") as MockScanner:
+        with patch(
+            "src.constitution_validator.scanners.coverage_scanner.CoverageScanner"
+        ) as MockScanner:
             mock_scanner = Mock()
             mock_scanner.get_coverage.side_effect = Exception("pytest-cov not installed")
             MockScanner.return_value = mock_scanner
@@ -170,7 +178,7 @@ class TestPrincipleVI:
             # Should not report violations when not a git repo
             assert len(violations) == 0
 
-    @patch("src.constitution_validator.rules.principle_vi.Repo")
+    @patch("git.Repo")
     def test_git_attribution_rule_detect_claude_attribution(self, mock_repo_class):
         from src.constitution_validator.rules.principle_vi import GitAttributionRule
 
@@ -198,7 +206,7 @@ class TestPrincipleVI:
             assert "attribution detected" in violations[0].message.lower()
             assert violations[0].severity == "error"
 
-    @patch("src.constitution_validator.rules.principle_vi.Repo")
+    @patch("git.Repo")
     def test_git_attribution_rule_detect_generated_with_claude(self, mock_repo_class):
         from src.constitution_validator.rules.principle_vi import GitAttributionRule
 
@@ -225,7 +233,7 @@ class TestPrincipleVI:
             assert len(violations) == 1
             assert "attribution detected" in violations[0].message.lower()
 
-    @patch("src.constitution_validator.rules.principle_vi.Repo")
+    @patch("git.Repo")
     def test_git_attribution_rule_skip_merge_commits(self, mock_repo_class):
         from src.constitution_validator.rules.principle_vi import GitAttributionRule
 
@@ -251,7 +259,7 @@ class TestPrincipleVI:
             # Should skip merge commits
             assert len(violations) == 0
 
-    @patch("src.constitution_validator.rules.principle_vi.Repo")
+    @patch("git.Repo")
     def test_git_attribution_rule_clean_commits(self, mock_repo_class):
         from src.constitution_validator.rules.principle_vi import GitAttributionRule
 
@@ -282,7 +290,7 @@ class TestPrincipleVI:
 
         rule = GitAttributionRule()
 
-        with patch("src.constitution_validator.rules.principle_vi.GitScanner") as MockScanner:
+        with patch("src.constitution_validator.scanners.git_scanner.GitScanner") as MockScanner:
             mock_scanner = Mock()
 
             # Mock commit with AI attribution
@@ -290,6 +298,7 @@ class TestPrincipleVI:
             mock_commit.message = "Fix bug\n\nCo-Authored-By: Claude <noreply@anthropic.com>"
             mock_commit.hexsha = "abc123456"
             mock_commit.parents = [Mock()]
+            del mock_commit.is_merge  # Remove is_merge attr so getattr returns default
 
             mock_scanner.get_unpushed_commits.return_value = [mock_commit]
             MockScanner.return_value = mock_scanner
@@ -306,7 +315,7 @@ class TestPrincipleVI:
 
         rule = GitAttributionRule()
 
-        with patch("src.constitution_validator.rules.principle_vi.GitScanner") as MockScanner:
+        with patch("src.constitution_validator.scanners.git_scanner.GitScanner") as MockScanner:
             mock_scanner = Mock()
 
             # Mock merge commit with AI attribution
@@ -330,7 +339,7 @@ class TestPrincipleVI:
 
         rule = GitAttributionRule()
 
-        with patch("src.constitution_validator.rules.principle_vi.GitScanner") as MockScanner:
+        with patch("src.constitution_validator.scanners.git_scanner.GitScanner") as MockScanner:
             mock_scanner = Mock()
             mock_scanner.get_unpushed_commits.return_value = []
             MockScanner.return_value = mock_scanner
@@ -346,7 +355,7 @@ class TestPrincipleVI:
 
         rule = GitAttributionRule()
 
-        with patch("src.constitution_validator.rules.principle_vi.GitScanner") as MockScanner:
+        with patch("src.constitution_validator.scanners.git_scanner.GitScanner") as MockScanner:
             mock_scanner = Mock()
             mock_scanner.get_unpushed_commits.side_effect = Exception("Git error")
             MockScanner.return_value = mock_scanner
@@ -362,7 +371,7 @@ class TestPrincipleVI:
 
         rule = GitAttributionRule()
 
-        with patch("src.constitution_validator.rules.principle_vi.GitScanner") as MockScanner:
+        with patch("src.constitution_validator.scanners.git_scanner.GitScanner") as MockScanner:
             mock_scanner = Mock()
 
             # Mock commit with "Anthropic" mention
@@ -370,6 +379,7 @@ class TestPrincipleVI:
             mock_commit.message = "Update docs\n\nThanks to Anthropic for the API"
             mock_commit.hexsha = "anthropic123"
             mock_commit.parents = [Mock()]
+            del mock_commit.is_merge  # Remove is_merge attr so getattr returns default
 
             mock_scanner.get_unpushed_commits.return_value = [mock_commit]
             MockScanner.return_value = mock_scanner

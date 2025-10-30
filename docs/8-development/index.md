@@ -4,8 +4,7 @@ Documentation for contributors and developers working on Luminari Agent.
 
 ## Development Documentation
 
-- **[Testing Guide](testing.md)** - Comprehensive testing documentation
-- **[Testing Quick Guide](testing-guide.md)** - Quick reference for running tests
+- **[Testing Guide](testing-guide.md)** - Comprehensive testing documentation
 - **[Development Tooling](dev-tooling.md)** - Development environment and tools
 - **[Product Requirements (PRD)](prd.md)** - Product vision and requirements
 
@@ -51,4 +50,4 @@ Documentation for contributors and developers working on Luminari Agent.
 
 - [Back to Documentation Home](../README.md)
 - [Architecture](../3-architecture/index.md)
-- [Testing](testing.md)
+- [Testing](testing-guide.md)

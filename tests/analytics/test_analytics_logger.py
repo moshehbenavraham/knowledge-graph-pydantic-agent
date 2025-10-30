@@ -364,16 +364,20 @@ class TestAnalyticsLogger:
     @pytest.mark.asyncio
     async def test_get_stats(self, analytics_logger):
         """Test getting logger statistics."""
-        stats = analytics_logger.get_stats()
+        await analytics_logger.start()
+        try:
+            stats = analytics_logger.get_stats()
 
-        assert "events_logged" in stats
-        assert "events_failed" in stats
-        assert "queue_sizes" in stats
-        assert "last_flush" in stats
-        assert "running" in stats
+            assert "events_logged" in stats
+            assert "events_failed" in stats
+            assert "queue_sizes" in stats
+            assert "last_flush" in stats
+            assert "running" in stats
 
-        assert stats["running"] is True
-        assert stats["queue_sizes"]["search"] == 0
+            assert stats["running"] is True
+            assert stats["queue_sizes"]["search"] == 0
+        finally:
+            await analytics_logger.stop()
 
     @pytest.mark.asyncio
     async def test_error_handling_in_flush(self, mock_connection_manager):

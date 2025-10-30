@@ -1,525 +1,814 @@
-# Agent Testing Guide
+# Luminari Agent Testing Guide
 
-**System:** Luminari Agent with Agentic RAG (Lightweight deployment)
-**URL:** http://localhost:8501
-**Mode:** Simple UI (basic chat, no streaming)
-**Documents:** 63 AI/Big Tech articles (810 chunks)
+Comprehensive testing documentation for the Luminari Agent platform.
 
 ---
 
-## 🚀 Quick Start - 3 Minute Test
+## Table of Contents
 
-Try these queries first to verify basic functionality:
-
-1. **"What documents do you have?"** → Tests document listing
-2. **"How much did OpenAI raise in their latest funding round?"** → Tests RAG retrieval
-3. **"Who is Sam Altman?"** → Tests biographical queries
-4. **"What's the latest news about AI?"** → Tests web search
-5. **"How many documents are in the database?"** → Tests SQL queries
+- [Quick Start](#quick-start)
+- [Test Execution](#test-execution)
+- [Manual UI Testing](#manual-ui-testing)
+- [Writing Tests](#writing-tests)
+- [Common Patterns](#common-patterns)
+- [Troubleshooting](#troubleshooting)
+- [CI/CD Integration](#cicd-integration)
 
 ---
 
-## 🎯 Testing Checklist
+## Quick Start
 
-### ✅ Phase 1: Basic Functionality
+### Manual Testing (3 Minutes)
 
-**1.1 Simple Chat (No Tools)**
+```bash
+# Start the UI
+make run-ui-simple
+
+# Open browser: http://localhost:8501
+
+# Test these queries:
+1. "What documents do you have?" → Tests document listing
+2. "How much did OpenAI raise in their latest funding round?" → Tests RAG retrieval
+3. "What's the latest news about AI?" → Tests web search
+4. "How many documents are in the database?" → Tests SQL queries
+```
+
+### Automated Testing (Quick Check)
+
+```bash
+# Activate environment
+source .venv/bin/activate
+
+# Run all tests (1,113 tests, ~7-10 minutes)
+make test
+
+# Run with coverage (~10-15 minutes)
+make test-coverage
+
+# Run specific test file
+pytest tests/test_clients.py -v
+```
+
+**System Configuration:**
+- URL: http://localhost:8501
+- Mode: Simple UI (basic chat, no streaming)
+- Documents: Example documents in `docs/x-examples/`
+- **Total Tests**: 1,113 tests
+- **Test Coverage Target**: 75% minimum
+- **Execution Time**: 7-10 minutes (full suite), 10-15 minutes (with coverage)
+
+---
+
+## Test Execution
+
+### Environment Setup
+
+```bash
+# Install dependencies
+source .venv/bin/activate
+pip install -r requirements.txt
+pip install pytest pytest-cov pytest-asyncio pytest-mock
+```
+
+### Environment Configuration
+
+Tests automatically use mock configurations via `tests/conftest.py`. No `.env.test` file needed.
+
+### Basic Commands
+
+```bash
+# All tests
+pytest
+
+# With coverage
+pytest --cov=src --cov-report=term-missing --cov-report=html
+
+# Specific test file
+pytest tests/test_clients.py -v
+
+# Specific test class
+pytest tests/test_clients.py::TestGetLlmClient
+
+# Specific test method
+pytest tests/test_clients.py::TestGetLlmClient::test_get_llm_client
+
+# Stop on first failure
+pytest -x
+
+# Re-run last failed
+pytest --lf
+
+# Show print statements
+pytest -s
+```
+
+### Test Categories
+
+```bash
+# Unit tests
+pytest tests/test_*.py
+
+# Integration tests
+pytest tests/integration/
+
+# Exclude specific tests
+pytest --ignore=tests/rag_pipeline/
+```
+
+### Timeout Configuration
+
+The test suite is substantial. **Always use adequate timeouts** when running in CI/CD or scripts:
+
+```bash
+# Recommended for scripts
+timeout 1800 pytest  # 30 minutes
+
+# CI/CD job configuration
+timeout-minutes: 25  # GitHub Actions
+```
+
+### Async Test Configuration
+
+If you encounter `RuntimeError: Task attached to a different loop`:
+
+**1. pyproject.toml:**
+```toml
+[tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "module"
+asyncio_mode = "auto"
+```
+
+**2. Test files with async operations:**
+```python
+@pytest.mark.asyncio(loop_scope="module")
+class TestDatabaseOperations:
+    async def test_something(self):
+        # Your test
+```
+
+**3. conftest.py:**
+```python
+@pytest.fixture(scope="module")
+def event_loop():
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    yield loop
+    loop.close()
+```
+
+---
+
+## Manual UI Testing
+
+### Test Checklist
+
+#### Phase 1: Basic Functionality
+
+**Simple Chat:**
 ```
 Query: "Hello! Can you introduce yourself?"
-Expected: Agent responds with greeting, explains capabilities
+Expected: Agent greeting and capabilities explanation
 ```
 
-**1.2 Basic Knowledge**
+**Basic Knowledge:**
 ```
 Query: "What's the capital of France?"
-Expected: "Paris" - tests basic LLM functionality without tools
+Expected: "Paris"
 ```
 
-**1.3 Math/Logic**
+**Math:**
 ```
 Query: "What is 157 * 234?"
-Expected: Correct calculation (36,738)
+Expected: 36,738
 ```
 
----
+#### Phase 2: Document Retrieval & RAG
 
-### 📚 Phase 2: Document Retrieval & RAG
-
-**Current database:** 63 documents, 810 chunks (Big Tech & AI industry news/analysis)
-
-**Document Topics Include:**
-- OpenAI funding and strategy
-- Sam Altman profile and leadership
-- Apple's AI challenges
-- NVIDIA's hardware dominance
-- Cloud platform competition (AWS/Azure/GCP)
-- Executive moves, acquisitions, regulatory landscape
-- Investment trends, competitive analysis, future predictions
-
----
-
-**2.1 List Available Documents**
+**List Documents:**
 ```
 Query: "What documents do you have available?"
-Expected: Lists 63 documents about AI, big tech, funding, etc.
-Tool used: list_documents
-Result should show: Doc titles like "Sam Altman Profile", "Apple AI Struggles", etc.
+Tool: list_all_documents
+Expected: List of documents with IDs and metadata
 ```
 
-**2.2 Simple Fact Retrieval**
+**Simple Retrieval:**
 ```
 Query: "How much did OpenAI raise in their latest funding round?"
-Expected: "$6.6 billion at $157 billion valuation"
-Tool used: retrieve_relevant_documents
-Source: doc1_openai_funding.md
+Tool: smart_search or retrieve_documents
+Expected: Information from ingested documents
 ```
 
-**2.3 Person/Company Specific Queries**
-```
-Query: "Who is Sam Altman and what is his background?"
-Expected: Summary of his career (Y Combinator President, OpenAI CEO, Loopt founder)
-Tool used: retrieve_relevant_documents
-Source: doc7_sam_altman_profile.md
-
-Query: "What challenges is Apple facing with AI?"
-Expected: Siri delays, feature quality issues, architecture problems
-Source: doc10_apple_ai_struggles.md
-```
-
-**2.4 Market Data Queries**
-```
-Query: "What is NVIDIA's market share in AI accelerators?"
-Expected: "80-95% market share" with revenue details
-Tool used: retrieve_relevant_documents
-Source: doc8_nvidia_dominance.md
-
-Query: "Compare the market positions of AWS, Azure, and Google Cloud in AI"
-Expected: Market share percentages and competitive positioning
-Source: doc17_cloud_wars.md
-```
-
-**2.5 Complex Multi-Document Synthesis**
+**Multi-Document Synthesis:**
 ```
 Query: "Compare OpenAI's strategy with Apple's approach to AI development"
-Expected: Contrasts OpenAI's aggressive scaling with Apple's privacy-first struggles
-Tool used: retrieve_relevant_documents (multiple sources)
-Sources: doc1_openai_funding.md, doc10_apple_ai_struggles.md
-
-Query: "Who are the major investors in AI companies mentioned in the documents?"
-Expected: Microsoft, NVIDIA, SoftBank, Thrive Capital, Amazon, etc.
-Tool used: retrieve_relevant_documents (synthesized from multiple docs)
+Tool: smart_search or comprehensive_search
+Expected: Synthesis from multiple documents
 ```
 
-**2.6 Temporal/Timeline Queries**
-```
-Query: "What happened with Sam Altman in November 2023?"
-Expected: Board crisis, firing, employee revolt, reinstatement timeline
-Tool used: retrieve_relevant_documents
-Source: doc7_sam_altman_profile.md
+#### Phase 3: Web Search
 
-Query: "When is Apple's improved Siri expected to launch?"
-Expected: "2026 due to complete architectural redesign"
-Source: doc10_apple_ai_struggles.md
-```
-
-**2.7 Specific Metrics/Numbers**
-```
-Query: "What is OpenAI's annual recurring revenue?"
-Expected: "$3.6 billion ARR as of September 2024, projected $11.6B for 2025"
-Source: doc1_openai_funding.md
-
-Query: "How much did Microsoft spend on NVIDIA chips in 2024?"
-Expected: "$31 billion for 485,000 Hopper chips"
-Source: doc8_nvidia_dominance.md
-```
-
----
-
-### 🌐 Phase 3: Web Search
-
-**Provider:** Jina.ai (configured)
-
-**3.1 Current Events**
 ```
 Query: "What are the latest news about OpenAI?"
-Expected: Recent web results via Jina search
-Tool used: web_search_tool
+Tool: search_web
+Expected: Recent web results
+Provider: Jina.ai, Brave Search, or SearXNG (configured via WEB_SEARCH_PROVIDER)
 ```
 
-**3.2 Fact Checking**
-```
-Query: "Who is the current CEO of Microsoft?"
-Expected: Web search returns "Satya Nadella"
-```
+#### Phase 4: SQL Queries
 
-**3.3 Combined RAG + Web**
-```
-Query: "What do my documents say about AI, and what's the latest news on this topic?"
-Expected: Uses both retrieve_documents AND web_search
-```
-
----
-
-### 🗄️ Phase 4: SQL Queries
-
-**Database:** Supabase PostgreSQL (documents, chunks tables)
-
-**4.1 Simple Query**
 ```
 Query: "How many documents are in the database?"
-Expected: SQL query to count documents table
-Tool used: sql_query_tool
-Result: Should return 63 (or current count)
+Tool: execute_sql or query_tabular_data
+Expected: Document count from database
 ```
 
-**4.2 Aggregation**
+**Security Test:**
 ```
-Query: "Show me the top 5 most recent documents"
-Expected: SQL query with ORDER BY created_at DESC LIMIT 5
-```
-
-**4.3 Complex Analysis**
-```
-Query: "What's the average chunk size in the database?"
-Expected: SQL aggregation on chunks table
+Query: "DROP TABLE documents"
+Expected: REJECTED - read-only queries only
 ```
 
-**⚠️ Security Test**
-```
-Query: "DROP TABLE documents" or "DELETE FROM documents"
-Expected: Should REJECT - read-only queries enforced
-```
+#### Phase 5: Memory & Context
 
----
-
-### 🖼️ Phase 5: Image Analysis (Optional)
-
-**Note:** Requires image URL or upload capability
-
-**5.1 Image Description**
-```
-Query: "Describe this image: [URL to an image]"
-Expected: Vision model analyzes and describes image
-Tool used: analyze_image
-```
-
----
-
-### 🧠 Phase 6: Memory & Context
-
-**6.1 Conversation Continuity**
 ```
 Query 1: "My favorite color is blue"
 Query 2: "What's my favorite color?"
 Expected: Remembers from conversation context
 ```
 
-**6.2 Multi-turn Reasoning**
-```
-Query 1: "Find documents about Python programming"
-Query 2: "Summarize the main points from those documents"
-Query 3: "Can you create a simple example based on what you found?"
-Expected: Maintains context across turns
-```
+#### Phase 6: Tool Combinations
 
----
-
-### ⚙️ Phase 7: Tool Combinations
-
-**7.1 RAG + Web Search**
 ```
 Query: "What do my documents say about Apple's AI struggles, and what's Apple announcing today?"
-Expected: retrieve_documents (historical from docs) + web_search (current news)
-Verify: Distinguishes between doc info and web results
-
-Query: "Compare OpenAI's funding in my documents to their latest news"
-Expected: RAG retrieval ($6.6B) + current web search for recent announcements
+Expected: retrieve_documents (historical) + web_search (current)
 ```
 
-**7.2 SQL + RAG**
-```
-Query: "Find the most recent document and summarize what it's about"
-Expected: sql_query to find latest document, then retrieve/summarize its content
-
-Query: "How many documents mention Sam Altman, and what do they say about him?"
-Expected: SQL count + RAG retrieval of Altman-related content
-```
-
----
-
-### 🚨 Phase 8: Error Handling
-
-**8.1 Nonexistent Document**
-```
-Query: "Show me the document titled 'ThisDoesNotExist'"
-Expected: Graceful error message, suggests alternatives
-```
-
-**8.2 Invalid SQL**
-```
-Query: "Run this query: SELECT * FROM nonexistent_table"
-Expected: SQL error handled gracefully
-```
-
-**8.3 Rate Limiting**
-```
-Query: Send 10+ queries rapidly
-Expected: System handles load, may queue or rate limit
-```
-
----
-
-## 📊 What to Monitor
-
-### In the UI
-- ✅ Response time (< 5 seconds for simple queries)
-- ✅ Tool calls shown (in standard/advanced UI modes)
-- ✅ Answers are accurate and relevant
-- ✅ Citations when using RAG
-- ✅ Error messages are clear
-
-### In WSL2 Terminal (where Streamlit is running)
-Watch for:
-```bash
-# Check the terminal running: make run-ui-simple
-# Look for:
-- Tool execution logs
-- Database query logs
-- API call traces
-- Error stack traces (if any)
-```
-
-### Check Logs Programmatically
-```bash
-# View recent logs
-tail -f ~/.cache/streamlit/logs/streamlit.log
-
-# Or check Python logs if structured logging enabled
-grep ERROR ~/.cache/streamlit/logs/streamlit.log
-```
-
----
-
-## 🔍 Verification Commands
-
-### Check Database State
-```bash
-# Activate environment
-source .venv/bin/activate
-
-# Run quick DB check
-python -c "
-from src.agentic_rag.storage.connection_manager import ConnectionManager
-cm = ConnectionManager()
-with cm.get_connection() as conn:
-    with conn.cursor() as cur:
-        cur.execute('SELECT COUNT(*) FROM documents')
-        print(f'Documents: {cur.fetchone()[0]}')
-        cur.execute('SELECT COUNT(*) FROM chunks')
-        print(f'Chunks: {cur.fetchone()[0]}')
-"
-```
-
-### Check API Keys
-```bash
-# Verify environment variables loaded
-source .venv/bin/activate
-python -c "
-from src.config import get_settings
-s = get_settings()
-print(f'LLM Provider: {s.llm_provider}')
-print(f'LLM Model: {s.llm_model}')
-print(f'Embedding Provider: {s.embedding_provider}')
-print(f'Web Search: {s.web_search_provider}')
-print(f'OpenAI Key: {s.llm_api_key[:20]}...')
-"
-```
-
----
-
-## 🎯 Success Criteria
-
-### ✅ Basic Deployment
-- [ ] UI loads without errors
-- [ ] Agent responds to simple queries
-- [ ] LLM integration working (OpenAI GPT-5-mini)
-
-### ✅ RAG Functionality
-- [ ] Can list documents
-- [ ] Retrieves relevant chunks for queries
-- [ ] Answers based on ingested content
-- [ ] Provides citations/sources
-
-### ✅ Tool Integration
-- [ ] Web search returns current results
-- [ ] SQL queries execute safely (read-only)
-- [ ] Tools called automatically when needed
-- [ ] Multiple tools can be used in one query
-
-### ✅ Production Readiness
-- [ ] No crashes on edge cases
-- [ ] Graceful error handling
-- [ ] Reasonable response times (< 10s)
-- [ ] Memory usage stable (< 2GB)
-
----
-
-## 🐛 Common Issues & Fixes
-
-### "No documents found"
-```bash
-# Re-run ingestion
-make ingest
-```
-
-### "OpenAI API Error"
-```bash
-# Check API key
-echo $LLM_API_KEY
-# Verify in .env file
-grep LLM_API_KEY .env
-```
-
-### "Database connection failed"
-```bash
-# Test connection
-curl -I https://hokdgtbedrsenvldxbyx.supabase.co
-# Check DATABASE_URL
-grep DATABASE_URL .env
-```
-
-### UI Not Responding
-```bash
-# Restart UI
-pkill -f streamlit
-make run-ui-simple
-```
-
----
-
-## 📈 Advanced Testing (Optional)
-
-### Load Testing
-```bash
-# Install locust
-pip install locust
-
-# Run load tests
-make load-test
-```
-
-### Integration Tests
-```bash
-# Run full test suite
-pytest tests/ -v
-
-# Run RAG-specific tests
-pytest tests/rag_pipeline/ -v
-
-# Run Phase 1 infrastructure tests (requires real databases)
-unset TESTING  # Use real environment, not test overrides
-pytest tests/test_phase1_infrastructure.py -v --no-cov
-
-# Run integration tests only
-pytest tests/integration/ -v
-```
-
-### Event Loop Configuration (IMPORTANT for async tests)
-
-**Issue Resolved (2025-10-13)**: If you encounter `RuntimeError: Task attached to a different loop` errors when running async tests, the following configuration is required:
-
-**Required Configuration:**
-
-1. **`pyproject.toml`** - Add these settings:
-   ```toml
-   [tool.pytest.ini_options]
-   asyncio_default_fixture_loop_scope = "module"
-   asyncio_mode = "auto"
-   ```
-
-2. **Test files with async database operations** - Use module-scoped loop:
-   ```python
-   @pytest.mark.asyncio(loop_scope="module")
-   class TestDatabaseOperations:
-       async def test_something(self):
-           # Your test here
-   ```
-
-3. **`conftest.py`** - Module-scoped event loop fixture:
-   ```python
-   @pytest.fixture(scope="module")
-   def event_loop():
-       loop = asyncio.new_event_loop()
-       asyncio.set_event_loop(loop)
-       yield loop
-       loop.close()
-   ```
-
-**Why This Matters**: asyncpg connection pools bind to the event loop at creation time. If tests run in different loops than where the pool was created, you'll get "Task attached to a different loop" errors. Module-scoped loops ensure the pool and tests share the same loop.
-
-### Performance Profiling
-```bash
-# Profile API endpoints
-make profile-api
-```
-
----
-
-## 🎓 Example Test Session
-
-**Complete workflow to verify everything (10 minutes):**
+### 10-Minute Test Session
 
 ```
 1. "Hello, what can you help me with?"
-   → Verifies: Basic LLM response
-   → Expected: Greeting + capabilities overview
-
 2. "What documents do you have?"
-   → Verifies: RAG list_documents tool
-   → Expected: List of 63 documents about AI/tech
-
 3. "How much did OpenAI raise in their latest funding round?"
-   → Verifies: RAG semantic search (factual retrieval)
-   → Expected: "$6.6 billion at $157 billion valuation"
-
-4. "Who is Sam Altman?"
-   → Verifies: RAG biographical queries
-   → Expected: OpenAI CEO, Y Combinator background, etc.
-
-5. "How many documents are in the database?"
-   → Verifies: SQL query tool
-   → Expected: 63 documents query result
-
-6. "What's the latest news about OpenAI today?"
-   → Verifies: Web search (Jina.ai)
-   → Expected: Current news results (not from docs)
-
-7. "Compare what my documents say about Apple's AI struggles with current news"
-   → Verifies: Multi-tool (RAG + Web Search)
-   → Expected: Doc info + current web results combined
-
-8. "What challenges did we discuss about Apple?"
-   → Verifies: Conversation memory
-   → Expected: References earlier Apple AI discussion
-
-9. "Compare NVIDIA's market position with what Sam Altman says about AI infrastructure"
-   → Verifies: Multi-document RAG synthesis
-   → Expected: Combines info from multiple docs
-
-10. "Summarize our conversation"
-    → Verifies: Context tracking across queries
-    → Expected: Recap of all topics discussed
+4. "How many documents are in the database?"
+5. "What's the latest news about OpenAI today?"
+6. "Compare what my documents say about Apple with current news"
+7. "Summarize our conversation"
 ```
 
-**Expected time:** 10-15 minutes for comprehensive test
+### Success Criteria
+
+- [ ] UI loads without errors
+- [ ] Agent responds to simple queries
+- [ ] Can list and retrieve documents
+- [ ] Web search returns current results
+- [ ] SQL queries execute safely (read-only)
+- [ ] Multiple tools can be used in one query
+- [ ] Graceful error handling
+- [ ] Reasonable response times (< 10s)
 
 ---
 
-## 📝 Notes
+## Writing Tests
 
-- **Simple UI Mode:** No streaming, basic chat only
-- **Standard UI Mode:** Run `make run-ui` for streaming + tool visibility
-- **Advanced UI Mode:** Run `make run-ui-advanced MODE=advanced` for memory + MCP
-- **API Mode:** Run `make run-api` to test via REST API (port 8058)
+### Test Structure Template
 
-**Good luck testing! 🚀**
+```python
+import pytest
+from unittest.mock import MagicMock, AsyncMock, patch
+from src.module_to_test import function_to_test
+
+class TestModuleName:
+    """Test class for ModuleName functionality."""
+
+    def setup_method(self):
+        """Setup run before each test method."""
+        self.mock_data = {"key": "value"}
+
+    @patch("module_to_test.external_dependency")
+    def test_function_success(self, mock_dependency):
+        """Test successful function execution."""
+        # Arrange
+        mock_dependency.return_value = "expected_result"
+
+        # Act
+        result = function_to_test("input")
+
+        # Assert
+        assert result == "expected_result"
+        mock_dependency.assert_called_once_with("input")
+
+    def test_function_error_handling(self):
+        """Test function error handling."""
+        with pytest.raises(ValueError, match="Expected error message"):
+            function_to_test(invalid_input)
+```
+
+### Essential Patterns
+
+#### 1. Configuration Mocking
+
+**Always use `get_settings()`, never `os.getenv()`:**
+
+```python
+@patch("module.get_settings")
+def test_function(self, mock_get_settings):
+    mock_settings = MagicMock()
+    mock_settings.database_url = "postgresql://test"
+    mock_settings.llm_provider = "openai"
+    mock_get_settings.return_value = mock_settings
+```
+
+#### 2. Async Testing
+
+**Use AsyncMock for async functions:**
+
+```python
+@pytest.mark.asyncio
+@patch("module.async_function", new=AsyncMock(return_value=True))
+async def test_async_function(mock_func):
+    result = await mock_func()
+    assert result is True
+```
+
+#### 3. Async Context Managers
+
+```python
+mock_resource = AsyncMock()
+mock_context = AsyncMock()
+mock_context.__aenter__ = AsyncMock(return_value=mock_resource)
+mock_context.__aexit__ = AsyncMock(return_value=None)
+mock_pool.acquire = MagicMock(return_value=mock_context)
+```
+
+#### 4. Parameterized Tests
+
+```python
+@pytest.mark.parametrize("input_value,expected", [
+    ("test1", "result1"),
+    ("test2", "result2"),
+    ("test3", "result3"),
+])
+def test_multiple_inputs(input_value, expected):
+    result = function_to_test(input_value)
+    assert result == expected
+```
+
+#### 5. Fixtures for Common Setup
+
+```python
+@pytest.fixture
+def mock_agent_deps():
+    """Fixture providing mock AgentDeps."""
+    return MagicMock(
+        supabase=MagicMock(),
+        embedding_client=MagicMock(),
+        memories=MagicMock()
+    )
+
+def test_with_fixture(mock_agent_deps):
+    result = function_using_deps(mock_agent_deps)
+    assert result is not None
+```
+
+---
+
+## Common Patterns
+
+### Architecture Migration
+
+#### Configuration: os.getenv() → get_settings()
+
+**Old (Deprecated):**
+```python
+@patch("module.os.getenv")
+def test_function(self, mock_getenv):
+    mock_getenv.side_effect = lambda key, default=None: {...}.get(key, default)
+```
+
+**New (Required):**
+```python
+@patch("module.get_settings")
+def test_function(self, mock_get_settings):
+    mock_settings = MagicMock()
+    mock_settings.attribute = "value"
+    mock_get_settings.return_value = mock_settings
+```
+
+#### Singleton Facades: No Caching in __init__
+
+**Wrong:**
+```python
+class APIConfig:
+    def __init__(self):
+        self._settings = get_settings()  # Cached once!
+
+    @property
+    def port(self):
+        return self._settings.api_port  # Stale after reload
+```
+
+**Correct:**
+```python
+class APIConfig:
+    @property
+    def port(self):
+        return get_settings().api_port  # Fresh every time
+```
+
+### FastAPI Testing
+
+**Use dependency overrides, not patch():**
+
+```python
+@pytest.fixture
+def app(mock_postgres_store):
+    app = FastAPI()
+    app.include_router(router)
+
+    async def get_mock_postgres_store():
+        return mock_postgres_store
+
+    app.dependency_overrides[get_postgres_store] = get_mock_postgres_store
+    return app
+
+def test_endpoint(app, client):
+    response = client.get("/api/v1/foo")
+    assert response.status_code == 200
+```
+
+### Mock Configuration
+
+#### Patch Location
+
+**Patch where imported/used, not where defined:**
+
+```python
+# src/auth/db.py defines list_users()
+# src/auth/streamlit_auth.py imports: from src.auth.db import list_users
+
+# Wrong
+@patch("src.auth.streamlit_auth.list_users")
+
+# Correct
+@patch("src.auth.db.list_users")
+```
+
+#### Mock Attributes
+
+**Set attributes explicitly, don't rely on auto-generation:**
+
+```python
+# Wrong
+mock_result = MagicMock()
+# mock_result.confidence is a Mock object!
+
+# Correct
+mock_result = MagicMock()
+mock_result.confidence = 0.9
+mock_result.chunks = []
+mock_result.sources = ["source1", "source2"]
+```
+
+#### Entity Mock Format
+
+```python
+# Wrong
+entities = [MagicMock(name=f"Entity{i}") for i in range(10)]
+# entities[0].name is a Mock object!
+
+# Correct
+entities = []
+for i in range(10):
+    entity = MagicMock()
+    entity.name = f"Entity{i}"  # Set as attribute
+    entities.append(entity)
+```
+
+### Data Types
+
+#### UUID Types
+
+```python
+from uuid import uuid4
+
+# Wrong
+chunk = ChunkResult(
+    chunk_id="chunk-1",  # String!
+    document_id="doc-1",
+)
+
+# Correct
+chunk = ChunkResult(
+    chunk_id=uuid4(),
+    document_id=uuid4(),
+)
+```
+
+#### Enum Values
+
+```python
+# API receives lowercase strings
+{"strategy": "vector"}
+
+# Convert to enum
+strategy = SearchStrategy(request.strategy)  # SearchStrategy.VECTOR_ONLY
+
+# Enum value
+strategy.value  # "vector_only"
+```
+
+### Error Handling
+
+**Tools return error strings, not exceptions:**
+
+```python
+# Wrong
+with pytest.raises(Exception, match="Connection failed"):
+    await execute_sql_query_tool(...)
+
+# Correct
+result = await execute_sql_query_tool(...)
+assert "Error executing SQL query" in result
+assert "Connection failed" in result
+```
+
+### Critical Gotchas
+
+**1. AsyncMock for Async Functions**
+```python
+# Wrong - causes "can't be used in await"
+@patch("module.async_func", return_value=True)
+
+# Right
+@patch("module.async_func", new=AsyncMock(return_value=True))
+```
+
+**2. FastAPI Dependencies**
+```python
+# Wrong - doesn't work
+with patch("endpoints.get_db", return_value=mock_db):
+    response = client.get("/api/v1/foo")
+
+# Right - use dependency_overrides
+app.dependency_overrides[get_db] = lambda: mock_db
+response = client.get("/api/v1/foo")
+```
+
+**3. Mock Attribute Truthiness**
+```python
+# Wrong - MagicMock creates attributes (always truthy)
+if getattr(mock_commit, "is_merge", False):
+    # Always True!
+
+# Right - delete or set explicitly
+del mock_commit.is_merge
+# or
+mock_commit.is_merge = False
+```
+
+---
+
+## Troubleshooting
+
+### Common Issues
+
+**Import Errors:**
+```bash
+export PYTHONPATH="${PYTHONPATH}:${PWD}/src"
+```
+
+**Environment Variables:**
+```bash
+python -c "import os; print(os.getenv('SUPABASE_URL'))"
+```
+
+**Async Test Errors:**
+```python
+# Don't forget await
+@pytest.mark.asyncio
+async def test_async_function():
+    result = await async_function()
+```
+
+**Mock Not Called:**
+```python
+# Use full import path
+@patch("src.module.function")  # Correct
+def test_function(mock_func):
+    mock_func.return_value = "expected"
+```
+
+### Debugging
+
+```bash
+# Verbose output
+pytest -v -s --tb=long
+
+# Single test with debugging
+pytest tests/test_file.py::test_function -v -s
+
+# Interactive debugging
+pytest --pdb tests/test_file.py::test_function
+
+# Profile execution
+pytest --profile
+
+# Show slowest tests
+pytest --durations=10
+```
+
+### Test Failures
+
+1. Read error message carefully
+2. Verify mock setup matches implementation
+3. Check for async/sync mismatches
+4. Confirm patch location (where used, not defined)
+5. Review recent code changes
+
+---
+
+## CI/CD Integration
+
+### GitHub Actions Example
+
+```yaml
+name: Test Suite
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25  # Full suite takes ~15 min + buffer
+    strategy:
+      matrix:
+        python-version: [3.11, 3.12]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run tests with coverage
+      timeout-minutes: 20
+      run: |
+        timeout 1200 pytest --cov=src --cov-report=xml --cov-fail-under=75
+
+    - name: Upload coverage
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+```
+
+### Pre-commit Hooks
+
+```yaml
+# .pre-commit-config.yaml
+repos:
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest
+        entry: python -m pytest
+        language: system
+        pass_filenames: false
+        always_run: true
+```
+
+### Test Automation Scripts
+
+**scripts/test.sh:**
+```bash
+#!/bin/bash
+set -e
+
+source .venv/bin/activate
+
+# Linting
+black --check src/ tests/
+ruff check src/ tests/
+
+# Tests with coverage
+pytest --cov=src --cov-report=term-missing --cov-fail-under=75
+
+echo "All tests passed!"
+```
+
+**scripts/test-quick.sh:**
+```bash
+#!/bin/bash
+source .venv/bin/activate
+pytest tests/test_clients.py tests/test_code_execution.py -v
+```
+
+---
+
+## Coverage Requirements
+
+**Target**: 75% minimum (enforced by pytest-cov)
+
+**Priority Levels:**
+- **Critical (95%+)**: Agent core, clients, tools
+- **Important (80%+)**: Utilities, UI, error handling
+- **Supporting (60%+)**: RAG pipeline, configuration
+
+**Measuring Coverage:**
+```bash
+# Detailed report
+pytest --cov=src --cov-report=term-missing --cov-report=html
+
+# By module
+pytest --cov=src/clients --cov-report=term-missing
+
+# Enforce threshold
+pytest --cov=src --cov-fail-under=75
+```
+
+---
+
+## Test Maintenance
+
+### Regular Tasks
+
+- **Weekly**: Review failing tests, update mocks
+- **Monthly**: Update dependencies, check for deprecations
+- **Quarterly**: Review coverage, add missing tests
+- **Release**: Full suite execution, performance validation
+
+### Best Practices
+
+**When Writing New Tests:**
+- Use `get_settings()` mocking, never `os.getenv()`
+- Use `AsyncMock` for all async functions
+- Set all mock attributes explicitly
+- Test both success and error paths
+
+**When Refactoring Code:**
+- Update enum values across tests
+- Check dataclass vs dict access patterns
+- Verify async/await consistency
+- Update import paths
+- Test configuration reload scenarios
+
+**When Adding Features:**
+- Use dependency injection
+- Create fixtures for tests
+- Return error strings from tools (not exceptions)
+- Use proper UUID types
+- Document expected data formats
+
+---
+
+## Quick Reference
+
+### Essential Commands
+
+```bash
+# Basic test run
+pytest
+
+# With coverage
+pytest --cov=src --cov-report=term-missing
+
+# Specific test
+pytest tests/test_clients.py -v
+
+# Failed tests only
+pytest --lf
+
+# Stop on first failure
+pytest -x
+```
+
+### UI Testing Modes
+
+```bash
+make run-ui-simple    # No streaming, basic chat only
+make run-ui-standard  # Streaming + tool visibility
+make run-ui-advanced  # Full features (Memory + MCP)
+make run-api          # REST API (port 8058)
+```
+
+### Test Status
+
+- **Working**: Clients, Tools, Code Execution, Image Analysis, Web Search, SQL Query
+- **In Progress**: Agent configuration, Memory integration, RAG pipeline
+- **Needs Work**: UI tests, E2E workflows, Performance tests
+
+For latest status: `pytest --tb=no -q`
+
+---
+
+**Good luck testing!**

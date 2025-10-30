@@ -98,8 +98,7 @@ Version 1.1.0 | Last Updated: October 2025
 **Contributing and developing** Luminari Agent features.
 
 - [Development Guide](8-development/index.md) - Development workflow overview
-- [Testing Guide](8-development/testing.md) - Comprehensive testing documentation
-- [Testing Quick Reference](8-development/testing-guide.md) - Quick testing guide
+- [Testing Guide](8-development/testing-guide.md) - Comprehensive testing documentation
 - [Development Tooling](8-development/dev-tooling.md) - Dev environment setup
 - [Product Requirements](8-development/prd.md) - Product vision and roadmap
 
@@ -144,7 +143,7 @@ Sample documents for testing and demonstration.
 1. [Overview](1-overview/index.md) → [Getting Started](2-getting-started/index.md) → [Quick Start](2-getting-started/quick-start.md)
 
 ### Developers
-1. [Architecture](3-architecture/index.md) → [Development](8-development/index.md) → [Testing](8-development/testing.md)
+1. [Architecture](3-architecture/index.md) → [Development](8-development/index.md) → [Testing](8-development/testing-guide.md)
 
 ### DevOps/SRE
 1. [Deployment](6-deployment/index.md) → [Operations](7-operations/index.md) → [Security](9-security/index.md)

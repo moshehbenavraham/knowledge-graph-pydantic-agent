@@ -96,7 +96,7 @@ grep -r "Field(" src/config/settings.py | wc -l
 - [ ] **CLAUDE.md** - Tool system documentation
 - [ ] **docs/5-guides/usage.md** - Tool usage examples
 - [ ] **docs/5-guides/tool-usage-patterns.md** - Tool patterns
-- [ ] **docs/8-development/testing.md** - Tool naming convention section
+- [ ] **docs/8-development/testing-guide.md** - Tool naming convention section
 
 **Validation Command:**
 ```bash
