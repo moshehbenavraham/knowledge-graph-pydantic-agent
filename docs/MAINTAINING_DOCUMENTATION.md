@@ -141,10 +141,10 @@ grep "@super_agent.tool" src/agent/unified_agent.py -A 2
 **Example Deprecation Notice:**
 ```
 > **⚠️ DEPRECATED:** This feature is deprecated as of v1.2.0 and will be removed in v2.0.0.
-> Use \[new-feature\](path/to/new-feature.md) instead. See \[migration guide\](path/to/migration.md) for details.
+> Use [new-feature](2-getting-started/installation-reference.md) instead. See [migration guide](2-getting-started/installation-reference.md) for details.
 ```
 
-*Note: Remove the backslashes and replace the placeholder paths with actual file paths when using this template.*
+*Note: Replace the example links with actual paths to your new feature and migration documentation.*
 
 ---
 
@@ -179,20 +179,12 @@ docs/
 
 **Relative Links:**
 
-Example syntax (replace placeholder paths with actual paths):
-```
-<!-- From docs/5-guides/usage.md to docs/4-configuration/environment.md -->
-\[Link Text\](../4-configuration/target-file.md)
+Syntax: `&#91;Link Text&#93;(relative/path/to/file.md)`
 
-<!-- From docs/5-guides/ to src/ (2 levels up) -->
-\[Link Text\](../../src/path/to/file.py)
-```
-
-*Note: Remove the backslashes from the square brackets when using these examples.*
-
-Actual working examples:
+Working examples from this file (docs/MAINTAINING_DOCUMENTATION.md):
 - Configuration: [environment.md](4-configuration/environment.md)
 - Installation: [installation-reference.md](2-getting-started/installation-reference.md)
+- Agent source: [unified_agent.py](../src/agent/unified_agent.py)
 
 **Internal Links:**
 - Always use relative paths
