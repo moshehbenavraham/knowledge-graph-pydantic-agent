@@ -4,7 +4,7 @@ Comprehensive integration tests for utils/health.py.
 Tests health checking system for all components.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -354,19 +354,19 @@ class TestRunAllChecks:
         from src.utils.health import ComponentHealth
 
         mock_db.return_value = ComponentHealth(
-            name="database", status="healthy", last_check=datetime.utcnow()
+            name="database", status="healthy", last_check=datetime.now(UTC)
         )
         mock_llm.return_value = ComponentHealth(
-            name="llm", status="healthy", last_check=datetime.utcnow()
+            name="llm", status="healthy", last_check=datetime.now(UTC)
         )
         mock_embedding.return_value = ComponentHealth(
-            name="embedding", status="healthy", last_check=datetime.utcnow()
+            name="embedding", status="healthy", last_check=datetime.now(UTC)
         )
         mock_memory.return_value = ComponentHealth(
-            name="memory", status="healthy", last_check=datetime.utcnow()
+            name="memory", status="healthy", last_check=datetime.now(UTC)
         )
         mock_web.return_value = ComponentHealth(
-            name="web_search", status="healthy", last_check=datetime.utcnow()
+            name="web_search", status="healthy", last_check=datetime.now(UTC)
         )
 
         checks = await health_checker.run_all_checks()
@@ -387,16 +387,16 @@ class TestRunAllChecks:
 
         mock_db.side_effect = Exception("Database exception")
         mock_llm.return_value = ComponentHealth(
-            name="llm", status="healthy", last_check=datetime.utcnow()
+            name="llm", status="healthy", last_check=datetime.now(UTC)
         )
         mock_embedding.return_value = ComponentHealth(
-            name="embedding", status="healthy", last_check=datetime.utcnow()
+            name="embedding", status="healthy", last_check=datetime.now(UTC)
         )
         mock_memory.return_value = ComponentHealth(
-            name="memory", status="healthy", last_check=datetime.utcnow()
+            name="memory", status="healthy", last_check=datetime.now(UTC)
         )
         mock_web.return_value = ComponentHealth(
-            name="web_search", status="healthy", last_check=datetime.utcnow()
+            name="web_search", status="healthy", last_check=datetime.now(UTC)
         )
 
         checks = await health_checker.run_all_checks()
@@ -415,8 +415,8 @@ class TestGetHealthStatus:
         from src.utils.health import ComponentHealth
 
         mock_run_checks.return_value = [
-            ComponentHealth(name="db", status="healthy", last_check=datetime.utcnow()),
-            ComponentHealth(name="llm", status="healthy", last_check=datetime.utcnow()),
+            ComponentHealth(name="db", status="healthy", last_check=datetime.now(UTC)),
+            ComponentHealth(name="llm", status="healthy", last_check=datetime.now(UTC)),
         ]
 
         mock_monitor.get_system_stats.return_value = {
@@ -440,8 +440,8 @@ class TestGetHealthStatus:
         from src.utils.health import ComponentHealth
 
         mock_run_checks.return_value = [
-            ComponentHealth(name="db", status="healthy", last_check=datetime.utcnow()),
-            ComponentHealth(name="llm", status="degraded", last_check=datetime.utcnow()),
+            ComponentHealth(name="db", status="healthy", last_check=datetime.now(UTC)),
+            ComponentHealth(name="llm", status="degraded", last_check=datetime.now(UTC)),
         ]
 
         mock_monitor.get_system_stats.return_value = {
@@ -464,8 +464,8 @@ class TestGetHealthStatus:
         from src.utils.health import ComponentHealth
 
         mock_run_checks.return_value = [
-            ComponentHealth(name="db", status="unhealthy", last_check=datetime.utcnow()),
-            ComponentHealth(name="llm", status="healthy", last_check=datetime.utcnow()),
+            ComponentHealth(name="db", status="unhealthy", last_check=datetime.now(UTC)),
+            ComponentHealth(name="llm", status="healthy", last_check=datetime.now(UTC)),
         ]
 
         mock_monitor.get_system_stats.return_value = {
@@ -490,7 +490,7 @@ class TestGetHealthStatus:
         from src.utils.health import ComponentHealth
 
         mock_run_checks.return_value = [
-            ComponentHealth(name="db", status="healthy", last_check=datetime.utcnow()),
+            ComponentHealth(name="db", status="healthy", last_check=datetime.now(UTC)),
         ]
 
         mock_monitor.get_system_stats.return_value = {
@@ -517,7 +517,7 @@ class TestGetHealthStatus:
         from src.utils.health import ComponentHealth
 
         mock_run_checks.return_value = [
-            ComponentHealth(name="db", status="healthy", last_check=datetime.utcnow()),
+            ComponentHealth(name="db", status="healthy", last_check=datetime.now(UTC)),
         ]
 
         mock_monitor.get_system_stats.return_value = {
@@ -545,7 +545,7 @@ class TestComponentHealthModel:
             name="test_component",
             status="healthy",
             response_time=0.123,
-            last_check=datetime.utcnow(),
+            last_check=datetime.now(UTC),
             details={"key": "value"},
         )
 
@@ -561,7 +561,7 @@ class TestComponentHealthModel:
         health = ComponentHealth(
             name="test",
             status="unhealthy",
-            last_check=datetime.utcnow(),
+            last_check=datetime.now(UTC),
             error="Test error",
         )
 
@@ -579,7 +579,7 @@ class TestHealthStatusModel:
 
         status = HealthStatus(
             status="healthy",
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(UTC),
             uptime=3600.5,
             version="1.0.0",
             checks={"db": {"status": "healthy"}},

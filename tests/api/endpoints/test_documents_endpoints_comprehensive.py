@@ -11,7 +11,7 @@ Tests cover:
 - Document statistics
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -160,7 +160,7 @@ class TestDocumentListing:
 
     def test_list_documents_with_data(self, client, mock_postgres_store):
         """Test listing with documents."""
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(UTC).isoformat()
 
         mock_documents = [
             {
@@ -196,7 +196,7 @@ class TestDocumentListing:
 
     def test_list_documents_pagination(self, client, mock_postgres_store):
         """Test document listing with pagination."""
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(UTC).isoformat()
 
         mock_documents = [
             {
@@ -224,7 +224,7 @@ class TestDocumentListing:
 
     def test_list_documents_with_source_filter(self, client, mock_postgres_store):
         """Test document listing with source filter."""
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(UTC).isoformat()
 
         mock_documents = [
             {
@@ -272,7 +272,7 @@ class TestGetDocument:
 
     def test_get_document_success(self, client, mock_postgres_store):
         """Test successful document retrieval."""
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(UTC).isoformat()
 
         mock_document = {
             "id": "doc1",
@@ -299,7 +299,7 @@ class TestGetDocument:
 
     def test_get_document_with_chunks(self, client, mock_postgres_store):
         """Test document retrieval with chunks."""
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(UTC).isoformat()
 
         mock_document = {
             "id": "doc1",
@@ -357,7 +357,7 @@ class TestDeleteDocument:
 
     def test_delete_document_success(self, client, mock_postgres_store, mock_graphiti_client):
         """Test successful document deletion."""
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(UTC).isoformat()
 
         mock_document = {
             "id": "doc1",
@@ -391,7 +391,7 @@ class TestDeleteDocument:
 
     def test_delete_document_failure(self, client, mock_postgres_store, mock_graphiti_client):
         """Test document deletion failure."""
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(UTC).isoformat()
 
         mock_document = {"id": "doc1", "created_at": now}
         mock_postgres_store.get_document.return_value = mock_document
@@ -413,7 +413,7 @@ class TestUpdateDocument:
 
     def test_update_document_title(self, client, mock_postgres_store):
         """Test updating document title."""
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(UTC).isoformat()
 
         mock_document = {
             "id": "doc1",
@@ -443,7 +443,7 @@ class TestUpdateDocument:
 
     def test_update_document_no_updates(self, client, mock_postgres_store):
         """Test update with no fields provided."""
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(UTC).isoformat()
 
         mock_document = {"id": "doc1", "created_at": now}
         mock_postgres_store.get_document.return_value = mock_document
@@ -464,7 +464,7 @@ class TestReindexDocument:
 
     def test_reindex_document_success(self, client, mock_postgres_store, mock_graphiti_client):
         """Test successful document reindexing."""
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(UTC).isoformat()
 
         mock_document = {"id": "doc1", "created_at": now}
         mock_postgres_store.get_document.return_value = mock_document
@@ -496,7 +496,7 @@ class TestDocumentStats:
 
     def test_get_document_stats_success(self, client, mock_postgres_store, mock_graphiti_client):
         """Test successful document stats retrieval."""
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(UTC).isoformat()
 
         mock_document = {"id": "doc1", "created_at": now}
         mock_postgres_store.get_document.return_value = mock_document

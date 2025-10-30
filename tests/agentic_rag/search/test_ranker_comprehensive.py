@@ -12,7 +12,7 @@ Tests cover:
 """
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from unittest.mock import Mock
 
 from src.agentic_rag.search.ranker import RankedResults, ResultRanker
@@ -279,7 +279,7 @@ class TestResultRanking:
         """Test ranking with temporal context."""
         ranker = ResultRanker()
 
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         yesterday = now - timedelta(days=1)
         last_month = now - timedelta(days=30)
 
@@ -362,7 +362,7 @@ class TestFactorScoring:
         """Test temporal relevance scoring for recent content."""
         ranker = ResultRanker()
 
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         chunk = MockChunk("1", "test", 0.8, metadata={"created_at": now.isoformat()})
 
         score = ranker._temporal_relevance_score(chunk, now)
@@ -372,7 +372,7 @@ class TestFactorScoring:
         """Test temporal relevance scoring for old content."""
         ranker = ResultRanker()
 
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         old_date = now - timedelta(days=500)
         chunk = MockChunk("1", "test", 0.8, metadata={"created_at": old_date.isoformat()})
 
@@ -655,7 +655,7 @@ class TestRankingIntegration:
         """Test complete ranking workflow with all features."""
         ranker = ResultRanker()
 
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
 
         chunks = [
             MockChunk(

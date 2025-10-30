@@ -4,7 +4,7 @@ Clients configuration facade.
 Provides convenient access to database and API client settings.
 """
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import structlog
 
@@ -122,7 +122,7 @@ class ClientsConfig:
         """Check if Redis cache is enabled."""
         return get_settings().enable_redis_cache
 
-    def get_llm_config(self) -> dict[str, any]:
+    def get_llm_config(self) -> dict[str, Any]:
         """Get LLM client configuration."""
         logger.info(
             "Getting LLM configuration", provider=self.llm_provider.value, model=self.llm_model
@@ -137,7 +137,7 @@ class ClientsConfig:
             "max_tokens": settings.llm_max_tokens,
         }
 
-    def get_embedding_config(self) -> dict[str, any]:
+    def get_embedding_config(self) -> dict[str, Any]:
         """Get embedding client configuration."""
         logger.info(
             "Getting embedding configuration",
@@ -154,7 +154,7 @@ class ClientsConfig:
             "batch_size": settings.embedding_batch_size,
         }
 
-    def get_postgres_config(self) -> dict[str, any]:
+    def get_postgres_config(self) -> dict[str, Any]:
         """Get PostgreSQL configuration."""
         logger.info("Getting PostgreSQL configuration", has_database_url=bool(self.database_url))
         settings = get_settings()
@@ -167,7 +167,7 @@ class ClientsConfig:
             "command_timeout": settings.pg_command_timeout,
         }
 
-    def get_neo4j_config(self) -> dict[str, any]:
+    def get_neo4j_config(self) -> dict[str, Any]:
         """Get Neo4j configuration."""
         logger.info("Getting Neo4j configuration", database=self.neo4j_database)
         settings = get_settings()
@@ -181,7 +181,7 @@ class ClientsConfig:
             "connection_timeout": settings.neo4j_connection_timeout,
         }
 
-    def get_redis_config(self) -> dict[str, any]:
+    def get_redis_config(self) -> dict[str, Any]:
         """Get Redis configuration."""
         logger.info("Getting Redis configuration", enabled=self.enable_redis_cache)
         settings = get_settings()

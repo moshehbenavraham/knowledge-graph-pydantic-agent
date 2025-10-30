@@ -243,7 +243,7 @@ async def cmd_role(username: str, action: str, role_name: str):
             assign_role(user["id"], role_name)
             print(f"\n✅ Role '{role_name}' assigned to user: {username}\n")
         elif action == "revoke":
-            await revoke_role(user["id"], role_name)
+            revoke_role(user["id"], role_name)
             print(f"\n✅ Role '{role_name}' revoked from user: {username}\n")
         else:
             print(f"\n❌ Invalid action: {action} (use 'assign' or 'revoke')\n")

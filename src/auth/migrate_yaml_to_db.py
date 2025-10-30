@@ -112,7 +112,7 @@ async def migrate_users(config_path: Path, dry_run: bool = False) -> dict:
 
             # Assign default role (admin for 'admin' username, user for others)
             default_role = "admin" if username == "admin" else "user"
-            await assign_role(user_id, default_role)
+            assign_role(user_id, default_role)
 
             print(f"   ✅ Created user with role '{default_role}'")
             results["migrated"] += 1

@@ -4,7 +4,7 @@ Additional coverage tests targeting specific modules and functions.
 These tests focus on covering code paths that may have been missed.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -155,7 +155,7 @@ class TestHealthModelsEdgeCases:
         health = ComponentHealth(
             name="database",
             status="unhealthy",
-            last_check=datetime.utcnow(),
+            last_check=datetime.now(UTC),
             error="Connection failed",
             response_time=5.0,
         )
@@ -170,7 +170,7 @@ class TestHealthModelsEdgeCases:
         health = ComponentHealth(
             name="llm",
             status="healthy",
-            last_check=datetime.utcnow(),
+            last_check=datetime.now(UTC),
             response_time=0.5,
             details={"model": "gpt-4", "tokens": 100},
         )
@@ -184,7 +184,7 @@ class TestHealthModelsEdgeCases:
 
         status = HealthStatus(
             status="degraded",
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(UTC),
             uptime=3600.0,
             version="1.0.0",
             checks={
@@ -326,19 +326,19 @@ class TestHealthCheckerMethods:
                             checker, "check_web_search_health", new_callable=AsyncMock
                         ) as mock_web:
                             mock_db.return_value = ComponentHealth(
-                                name="db", status="healthy", last_check=datetime.utcnow()
+                                name="db", status="healthy", last_check=datetime.now(UTC)
                             )
                             mock_llm.return_value = ComponentHealth(
-                                name="llm", status="healthy", last_check=datetime.utcnow()
+                                name="llm", status="healthy", last_check=datetime.now(UTC)
                             )
                             mock_emb.return_value = ComponentHealth(
-                                name="emb", status="healthy", last_check=datetime.utcnow()
+                                name="emb", status="healthy", last_check=datetime.now(UTC)
                             )
                             mock_mem.return_value = ComponentHealth(
-                                name="mem", status="healthy", last_check=datetime.utcnow()
+                                name="mem", status="healthy", last_check=datetime.now(UTC)
                             )
                             mock_web.return_value = ComponentHealth(
-                                name="web", status="healthy", last_check=datetime.utcnow()
+                                name="web", status="healthy", last_check=datetime.now(UTC)
                             )
 
                             checks = await checker.run_all_checks()

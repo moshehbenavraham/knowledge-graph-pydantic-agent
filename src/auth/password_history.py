@@ -11,7 +11,7 @@ Features:
 - IP tracking for audit trail
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 import bcrypt
 import structlog
@@ -31,10 +31,10 @@ class PasswordHistoryManager:
         """Initialize Password History Manager."""
         self.client: Client | None = None
 
-    async def _get_client(self) -> Client:
+    def _get_client(self) -> Client:
         """Get Supabase client (cached)."""
         if not self.client:
-            self.client = await get_supabase_client()
+            self.client = get_supabase_client()
         return self.client
 
     async def add_password_to_history(
@@ -50,7 +50,7 @@ class PasswordHistoryManager:
             password_hash: Bcrypt hash of the password
             ip_address: IP address where password was changed
         """
-        client = await self._get_client()
+        client = self._get_client()
 
         # Add new password to history
         data = {
@@ -66,7 +66,7 @@ class PasswordHistoryManager:
 
         # Update password_changed_at timestamp in auth_users
         client.table("auth_users").update(
-            {"password_changed_at": datetime.utcnow().isoformat()}
+            {"password_changed_at": datetime.now(UTC).isoformat()}
         ).eq("id", user_id).execute()
 
     async def is_password_reused(self, user_id: str, new_password: str) -> bool:
@@ -80,7 +80,7 @@ class PasswordHistoryManager:
         Returns:
             True if password was used recently, False if it's a new password
         """
-        client = await self._get_client()
+        client = self._get_client()
 
         # Get last 5 password hashes
         result = (
@@ -115,7 +115,7 @@ class PasswordHistoryManager:
         Returns:
             Number of passwords in history (max 5)
         """
-        client = await self._get_client()
+        client = self._get_client()
 
         result = (
             client.table("auth_password_history")
@@ -136,7 +136,7 @@ class PasswordHistoryManager:
         Returns:
             List of datetime objects when passwords were changed
         """
-        client = await self._get_client()
+        client = self._get_client()
 
         result = (
             client.table("auth_password_history")
@@ -162,7 +162,7 @@ class PasswordHistoryManager:
         Args:
             user_id: User's UUID
         """
-        client = await self._get_client()
+        client = self._get_client()
 
         # Get all passwords for user, ordered by date
         result = (
@@ -195,7 +195,7 @@ class PasswordHistoryManager:
         Returns:
             Number of records deleted
         """
-        client = await self._get_client()
+        client = self._get_client()
 
         result = client.table("auth_password_history").delete().eq("user_id", user_id).execute()
 

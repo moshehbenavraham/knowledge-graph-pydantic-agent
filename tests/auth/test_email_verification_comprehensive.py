@@ -4,7 +4,7 @@ Comprehensive tests for src/auth/email_verification.py.
 Tests email verification flow for user registration.
 """
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -116,7 +116,7 @@ class TestVerifyVerificationToken:
         mock_table = MagicMock()
         mock_client.table.return_value = mock_table
 
-        future_time = (datetime.utcnow() + timedelta(hours=1)).isoformat()
+        future_time = (datetime.now(UTC) + timedelta(hours=1)).isoformat()
         mock_table.select.return_value.is_.return_value.gt.return_value.execute.return_value = (
             MagicMock(data=[{"id": "token-123", "token_hash": "hashed", "expires_at": future_time}])
         )
@@ -155,7 +155,7 @@ class TestVerifyVerificationToken:
         mock_table = MagicMock()
         mock_client.table.return_value = mock_table
 
-        future_time = (datetime.utcnow() + timedelta(hours=1)).isoformat()
+        future_time = (datetime.now(UTC) + timedelta(hours=1)).isoformat()
         mock_table.select.return_value.is_.return_value.gt.return_value.execute.return_value = (
             MagicMock(
                 data=[

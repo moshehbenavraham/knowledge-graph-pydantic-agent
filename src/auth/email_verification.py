@@ -4,7 +4,7 @@ Provides secure email verification functionality for new user registrations.
 """
 
 import secrets
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import structlog
 
@@ -39,7 +39,7 @@ async def create_verification_token(
     token_hash = hash_password(token)  # Hash for storage
 
     # Calculate expiration
-    expires_at = (datetime.utcnow() + timedelta(hours=expires_in_hours)).isoformat()
+    expires_at = (datetime.now(UTC) + timedelta(hours=expires_in_hours)).isoformat()
 
     # Store token
     token_data = {
@@ -78,7 +78,7 @@ async def verify_verification_token(token: str) -> dict | None:
             client.table("auth_email_verification_tokens")
             .select("*")
             .is_("verified_at", "null")
-            .gt("expires_at", datetime.utcnow().isoformat())
+            .gt("expires_at", datetime.now(UTC).isoformat())
             .execute()
         )
 
@@ -123,7 +123,7 @@ async def use_verification_token(token: str, verified_ip: str | None = None) -> 
 
     try:
         # Mark token as used
-        verified_at = datetime.utcnow().isoformat()
+        verified_at = datetime.now(UTC).isoformat()
         client.table("auth_email_verification_tokens").update(
             {"verified_at": verified_at, "verified_ip": verified_ip}
         ).eq("id", token_record["id"]).execute()

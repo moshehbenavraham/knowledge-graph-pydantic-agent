@@ -76,21 +76,25 @@ class GitAttributionRule(BaseValidationRule):
                 if len(commit.parents) > 1:
                     continue
 
+                # Ensure hexsha and summary are strings (decode if bytes)
+                hexsha_str = commit.hexsha.decode() if isinstance(commit.hexsha, bytes) else commit.hexsha
+                summary_str = commit.summary.decode() if isinstance(commit.summary, bytes) else commit.summary
+
                 for pattern in prohibited_patterns:
                     if re.search(pattern, message, re.IGNORECASE):
                         self.add_violation(
                             line_number=1,  # Git commits don't have line numbers
-                            message=f"AI attribution detected in commit {commit.hexsha[:7]}: {commit.summary[:50]}",
+                            message=f"AI attribution detected in commit {hexsha_str[:7]}: {summary_str[:50]}",
                             remediation=(
                                 "Remove AI attribution from commit message.\n"
                                 "All work should be attributed to the repository owner.\n"
                                 "Use: git commit --amend to fix the message."
                             ),
-                            detected_code=commit.summary,
+                            detected_code=summary_str,
                             suggested_fix="# Remove Claude/Anthropic attribution",
                             confidence=ConfidenceLevel.HIGH,
                             severity="error",
-                            metadata={"commit_sha": commit.hexsha, "pattern": pattern},
+                            metadata={"commit_sha": hexsha_str, "pattern": pattern},
                         )
                         break  # Only report once per commit
 
@@ -146,22 +150,26 @@ class GitAttributionRule(BaseValidationRule):
                 message = commit.message if hasattr(commit, "message") else str(commit)
                 hexsha = commit.hexsha if hasattr(commit, "hexsha") else "unknown"
 
+                # Ensure hexsha and message are strings (decode if bytes)
+                hexsha_str = hexsha.decode() if isinstance(hexsha, bytes) else hexsha
+                message_str = message.decode() if isinstance(message, bytes) else message
+
                 # Check for prohibited patterns
                 for pattern in prohibited_patterns:
-                    if re.search(pattern, message, re.IGNORECASE):
+                    if re.search(pattern, message_str, re.IGNORECASE):
                         self.add_violation(
                             line_number=1,
-                            message=f"AI attribution detected in commit {hexsha[:7]}: {message[:50].strip()}",
+                            message=f"AI attribution detected in commit {hexsha_str[:7]}: {message_str[:50].strip()}",
                             remediation=(
                                 "Remove AI attribution from commit message.\n"
                                 "All work should be attributed to the repository owner.\n"
                                 "Use: git commit --amend to fix the message."
                             ),
-                            detected_code=message[:100],
+                            detected_code=message_str[:100],
                             suggested_fix="# Remove Claude/Anthropic attribution",
                             confidence=ConfidenceLevel.HIGH,
                             severity="error",
-                            metadata={"commit_sha": hexsha, "pattern": pattern},
+                            metadata={"commit_sha": hexsha_str, "pattern": pattern},
                         )
                         break  # Only report once per commit
 

@@ -1,6 +1,6 @@
 """Health check and monitoring API endpoints."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import JSONResponse
@@ -19,7 +19,7 @@ async def basic_health_check():
     settings = get_settings()
     return {
         "status": "healthy",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "service": "luminari-ai-agent",
         "version": settings.app_version,
     }
@@ -53,7 +53,7 @@ async def detailed_health_check():
         return JSONResponse(
             content={
                 "status": "unhealthy",
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "error": str(e),
             },
             status_code=503,
@@ -68,7 +68,7 @@ async def get_metrics():
         system_stats = monitor.get_system_stats()
 
         return {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "system": system_stats,
             "prometheus_endpoint": f"http://localhost:{settings.metrics_port}/metrics",
         }
@@ -91,11 +91,13 @@ async def get_rate_limit_status(user_id: str):
 
 
 @router.post("/rate-limits/{user_id}/tier")
-async def set_user_tier(user_id: str, tier: str = Query(..., regex="^(free|premium|enterprise)$")):
+async def set_user_tier(
+    user_id: str, tier: str = Query(..., pattern="^(free|premium|enterprise)$")
+):
     """Set user tier for rate limiting."""
     try:
         rate_limiter.user_limiter.set_user_tier(user_id, tier)
-        return {"user_id": user_id, "tier": tier, "updated_at": datetime.utcnow().isoformat()}
+        return {"user_id": user_id, "tier": tier, "updated_at": datetime.now(UTC).isoformat()}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to set user tier: {e!s}") from e
@@ -157,7 +159,7 @@ async def readiness_check():
             return JSONResponse(
                 content={
                     "ready": False,
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                     "critical_failures": [
                         comp.name for comp in [db_health, llm_health] if comp.status == "unhealthy"
                     ],
@@ -165,11 +167,11 @@ async def readiness_check():
                 status_code=503,
             )
 
-        return {"ready": True, "timestamp": datetime.utcnow().isoformat()}
+        return {"ready": True, "timestamp": datetime.now(UTC).isoformat()}
 
     except Exception as e:
         return JSONResponse(
-            content={"ready": False, "timestamp": datetime.utcnow().isoformat(), "error": str(e)},
+            content={"ready": False, "timestamp": datetime.now(UTC).isoformat(), "error": str(e)},
             status_code=503,
         )
 
@@ -181,11 +183,11 @@ async def liveness_check():
         # Simple check that the service is running
         uptime = monitor.get_system_stats()["uptime"]
 
-        return {"alive": True, "timestamp": datetime.utcnow().isoformat(), "uptime": uptime}
+        return {"alive": True, "timestamp": datetime.now(UTC).isoformat(), "uptime": uptime}
 
     except Exception as e:
         return JSONResponse(
-            content={"alive": False, "timestamp": datetime.utcnow().isoformat(), "error": str(e)},
+            content={"alive": False, "timestamp": datetime.now(UTC).isoformat(), "error": str(e)},
             status_code=503,
         )
 
@@ -208,7 +210,7 @@ async def startup_check():
             return JSONResponse(
                 content={
                     "started": False,
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                     "unhealthy_components": unhealthy_components,
                 },
                 status_code=503,
@@ -216,13 +218,13 @@ async def startup_check():
 
         return {
             "started": True,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "uptime": health_status.uptime,
         }
 
     except Exception as e:
         return JSONResponse(
-            content={"started": False, "timestamp": datetime.utcnow().isoformat(), "error": str(e)},
+            content={"started": False, "timestamp": datetime.now(UTC).isoformat(), "error": str(e)},
             status_code=503,
         )
 

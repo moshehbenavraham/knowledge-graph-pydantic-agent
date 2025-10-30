@@ -4,6 +4,8 @@ Agent-specific configuration facade.
 Provides convenient access to agent and search-related settings.
 """
 
+from typing import Any
+
 import structlog
 
 from .settings import SearchStrategy, WebSearchProvider, get_settings
@@ -84,7 +86,7 @@ class AgentConfig:
         """Get SearXNG base URL."""
         return get_settings().searxng_base_url
 
-    def get_search_config(self) -> dict[str, any]:
+    def get_search_config(self) -> dict[str, Any]:
         """Get search configuration dictionary."""
         logger.info(
             "Getting search configuration",

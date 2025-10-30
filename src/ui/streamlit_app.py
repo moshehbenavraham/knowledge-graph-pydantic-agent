@@ -4,6 +4,7 @@ import tempfile
 import time
 import warnings
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 import plotly.express as px
@@ -50,7 +51,7 @@ from src.ui.features.base_handler import SimpleHandler
 logger = structlog.get_logger(__name__)
 
 
-def make_json_safe(obj: any, max_depth: int = 10, _current_depth: int = 0) -> any:
+def make_json_safe(obj: Any, max_depth: int = 10, _current_depth: int = 0) -> Any:
     """
     Recursively convert an object to a JSON-serializable format.
 

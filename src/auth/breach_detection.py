@@ -14,7 +14,7 @@ API Documentation: https://haveibeenpwned.com/API/v3#PwnedPasswords
 """
 
 import hashlib
-from datetime import datetime
+from datetime import UTC, datetime
 
 import httpx
 import structlog
@@ -35,10 +35,10 @@ class BreachDetectionManager:
         """Initialize Breach Detection Manager."""
         self.client: Client | None = None
 
-    async def _get_client(self) -> Client:
+    def _get_client(self) -> Client:
         """Get Supabase client (cached)."""
         if not self.client:
-            self.client = await get_supabase_client()
+            self.client = get_supabase_client()
         return self.client
 
     def _hash_password(self, password: str) -> str:
@@ -200,7 +200,7 @@ class BreachDetectionManager:
         Returns:
             Datetime of last check, or None if never checked
         """
-        client = await self._get_client()
+        client = self._get_client()
 
         result = (
             client.table("auth_users").select("last_breach_check_at").eq("id", user_id).execute()
@@ -227,7 +227,7 @@ class BreachDetectionManager:
         if not last_check:
             return True
 
-        days_since_check = (datetime.utcnow() - last_check.replace(tzinfo=None)).days
+        days_since_check = (datetime.now(UTC) - last_check.replace(tzinfo=None)).days
         return days_since_check >= check_interval_days
 
     async def _log_breach_check(
@@ -250,7 +250,7 @@ class BreachDetectionManager:
             user_id: Optional user UUID
             ip_address: Optional IP address
         """
-        client = await self._get_client()
+        client = self._get_client()
 
         data = {
             "password_hash_prefix": hash_prefix,
@@ -268,7 +268,7 @@ class BreachDetectionManager:
         # Update last_breach_check_at in auth_users
         if user_id:
             client.table("auth_users").update(
-                {"last_breach_check_at": datetime.utcnow().isoformat()}
+                {"last_breach_check_at": datetime.now(UTC).isoformat()}
             ).eq("id", user_id).execute()
 
 

@@ -377,14 +377,14 @@ class TestBasicFunctionality:
 
     def test_component_health_model_creation(self):
         """Test ComponentHealth model can be created."""
-        from datetime import datetime
+        from datetime import UTC, datetime
 
         from src.utils.health import ComponentHealth
 
         health = ComponentHealth(
             name="test",
             status="healthy",
-            last_check=datetime.utcnow(),
+            last_check=datetime.now(UTC),
         )
 
         assert health.name == "test"
@@ -392,13 +392,13 @@ class TestBasicFunctionality:
 
     def test_health_status_model_creation(self):
         """Test HealthStatus model can be created."""
-        from datetime import datetime
+        from datetime import UTC, datetime
 
         from src.utils.health import HealthStatus
 
         status = HealthStatus(
             status="healthy",
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(UTC),
             uptime=100.0,
             version="1.0.0",
             checks={},

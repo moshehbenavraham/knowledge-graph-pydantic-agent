@@ -7,7 +7,7 @@ Analyzes Locust test results and generates performance reports.
 import argparse
 import json
 import sys
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -26,7 +26,7 @@ def analyze_performance_results(stats_file: str) -> dict[str, Any]:
         stats = json.load(f)
 
     report = {
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "summary": {
             "total_requests": stats.get("total_requests", 0),
             "failed_requests": stats.get("failed_requests", 0),

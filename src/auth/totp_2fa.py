@@ -19,7 +19,7 @@ import base64
 import io
 import secrets
 import string
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import bcrypt
 import pyotp
@@ -234,7 +234,7 @@ class TOTPManager:
 
         # Enable 2FA
         client.table("auth_totp_secrets").update(
-            {"is_enabled": True, "verified_at": datetime.utcnow().isoformat()}
+            {"is_enabled": True, "verified_at": datetime.now(UTC).isoformat()}
         ).eq("user_id", user_id).execute()
 
         # Log successful verification
@@ -491,7 +491,7 @@ class BackupCodeManager:
         client.table("auth_backup_codes").delete().eq("user_id", user_id).execute()
 
         # Store hashed codes
-        expires_at = datetime.utcnow() + timedelta(days=expires_days)
+        expires_at = datetime.now(UTC) + timedelta(days=expires_days)
 
         for code in codes:
             code_hash = self.hash_code(code)
@@ -505,7 +505,7 @@ class BackupCodeManager:
         # Update backup codes metadata in totp_secrets
         client.table("auth_totp_secrets").update(
             {
-                "backup_codes_generated_at": datetime.utcnow().isoformat(),
+                "backup_codes_generated_at": datetime.now(UTC).isoformat(),
                 "backup_codes_count": count,
             }
         ).eq("user_id", user_id).execute()
@@ -555,7 +555,7 @@ class BackupCodeManager:
                 client.table("auth_backup_codes").update(
                     {
                         "is_used": True,
-                        "used_at": datetime.utcnow().isoformat(),
+                        "used_at": datetime.now(UTC).isoformat(),
                         "used_ip": ip_address,
                     }
                 ).eq("id", backup_code["id"]).execute()

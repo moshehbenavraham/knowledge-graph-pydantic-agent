@@ -376,13 +376,11 @@ class ComplianceReport(BaseModel):
     )
 
     @computed_field
-    @property
     def total_violations(self) -> int:
         """Total number of violations (excluding suppressed)."""
         return len(self.violations)
 
     @computed_field
-    @property
     def scan_duration_seconds(self) -> float:
         """Scan duration in seconds."""
         return self.scan_duration_ms / 1000.0

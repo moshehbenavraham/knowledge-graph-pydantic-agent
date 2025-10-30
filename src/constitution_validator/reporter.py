@@ -6,7 +6,7 @@ Converts ComplianceReport objects to JSON and human-readable formats.
 
 import json
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -429,7 +429,7 @@ class ComplianceReporter:
         # Build report dictionary
         report_dict = {
             "report_id": str(uuid.uuid4()),
-            "generated_at": datetime.utcnow().isoformat() + "Z",
+            "generated_at": datetime.now(UTC).isoformat() + "Z",
             "validator_version": self.validator_version,
             "constitution_version": self.constitution_version,
             "scan_summary": {

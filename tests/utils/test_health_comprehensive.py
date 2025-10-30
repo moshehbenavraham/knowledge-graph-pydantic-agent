@@ -14,7 +14,7 @@ Tests:
 """
 
 import time
-from datetime import datetime
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -36,7 +36,7 @@ class TestHealthModels:
             name="test_component",
             status="healthy",
             response_time=0.123,
-            last_check=datetime.utcnow(),
+            last_check=datetime.now(UTC),
             details={"key": "value"},
         )
 
@@ -51,7 +51,7 @@ class TestHealthModels:
             name="test",
             status="unhealthy",
             response_time=0.5,
-            last_check=datetime.utcnow(),
+            last_check=datetime.now(UTC),
             error="Connection failed",
         )
 
@@ -62,7 +62,7 @@ class TestHealthModels:
         """Test creating HealthStatus instance."""
         status = HealthStatus(
             status="healthy",
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(UTC),
             uptime=3600.0,
             version="1.0.0",
             checks={"database": {"status": "healthy"}},
@@ -531,31 +531,31 @@ class TestRunAllChecks:
                                 name="database",
                                 status="healthy",
                                 response_time=0.1,
-                                last_check=datetime.utcnow(),
+                                last_check=datetime.now(UTC),
                             )
                             mock_llm.return_value = ComponentHealth(
                                 name="llm",
                                 status="healthy",
                                 response_time=0.2,
-                                last_check=datetime.utcnow(),
+                                last_check=datetime.now(UTC),
                             )
                             mock_emb.return_value = ComponentHealth(
                                 name="embedding",
                                 status="healthy",
                                 response_time=0.15,
-                                last_check=datetime.utcnow(),
+                                last_check=datetime.now(UTC),
                             )
                             mock_mem.return_value = ComponentHealth(
                                 name="memory",
                                 status="healthy",
                                 response_time=0.3,
-                                last_check=datetime.utcnow(),
+                                last_check=datetime.now(UTC),
                             )
                             mock_web.return_value = ComponentHealth(
                                 name="web_search",
                                 status="healthy",
                                 response_time=0.5,
-                                last_check=datetime.utcnow(),
+                                last_check=datetime.now(UTC),
                             )
 
                             results = await checker.run_all_checks()
@@ -579,25 +579,25 @@ class TestRunAllChecks:
                                 name="llm",
                                 status="healthy",
                                 response_time=0.2,
-                                last_check=datetime.utcnow(),
+                                last_check=datetime.now(UTC),
                             )
                             mock_emb.return_value = ComponentHealth(
                                 name="embedding",
                                 status="healthy",
                                 response_time=0.15,
-                                last_check=datetime.utcnow(),
+                                last_check=datetime.now(UTC),
                             )
                             mock_mem.return_value = ComponentHealth(
                                 name="memory",
                                 status="healthy",
                                 response_time=0.3,
-                                last_check=datetime.utcnow(),
+                                last_check=datetime.now(UTC),
                             )
                             mock_web.return_value = ComponentHealth(
                                 name="web_search",
                                 status="healthy",
                                 response_time=0.5,
-                                last_check=datetime.utcnow(),
+                                last_check=datetime.now(UTC),
                             )
 
                             results = await checker.run_all_checks()
@@ -624,13 +624,13 @@ class TestGetHealthStatus:
                         name="database",
                         status="healthy",
                         response_time=0.1,
-                        last_check=datetime.utcnow(),
+                        last_check=datetime.now(UTC),
                     ),
                     ComponentHealth(
                         name="llm",
                         status="healthy",
                         response_time=0.2,
-                        last_check=datetime.utcnow(),
+                        last_check=datetime.now(UTC),
                     ),
                 ]
 
@@ -662,13 +662,13 @@ class TestGetHealthStatus:
                         name="database",
                         status="healthy",
                         response_time=0.1,
-                        last_check=datetime.utcnow(),
+                        last_check=datetime.now(UTC),
                     ),
                     ComponentHealth(
                         name="llm",
                         status="degraded",
                         response_time=5.0,
-                        last_check=datetime.utcnow(),
+                        last_check=datetime.now(UTC),
                         error="Slow response",
                     ),
                 ]
@@ -697,14 +697,14 @@ class TestGetHealthStatus:
                         name="database",
                         status="unhealthy",
                         response_time=10.0,
-                        last_check=datetime.utcnow(),
+                        last_check=datetime.now(UTC),
                         error="Connection failed",
                     ),
                     ComponentHealth(
                         name="llm",
                         status="healthy",
                         response_time=0.2,
-                        last_check=datetime.utcnow(),
+                        last_check=datetime.now(UTC),
                     ),
                 ]
 
@@ -732,7 +732,7 @@ class TestGetHealthStatus:
                         name="database",
                         status="healthy",
                         response_time=0.1,
-                        last_check=datetime.utcnow(),
+                        last_check=datetime.now(UTC),
                     ),
                 ]
 

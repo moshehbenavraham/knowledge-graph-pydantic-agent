@@ -5,6 +5,8 @@ Tests end-to-end validation including all 6 principles, file discovery,
 report generation, and exit codes.
 """
 
+import uuid
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -63,13 +65,11 @@ class TestFullValidationFlow:
         """Test that generated reports match the contracts/report-schema.json."""
         # This will be fully testable once we have report generation working
         # For now, verify the report model can be instantiated
-        import uuid
-        from datetime import datetime
 
         # Create a minimal valid report
         report = ComplianceReport(
             report_id=str(uuid.uuid4()),
-            generated_at=datetime.utcnow(),
+            generated_at=datetime.now(UTC),
             validator_version="1.0.0",
             constitution_version="1.0.0",
             scanned_files=[Path("test.py")],
@@ -95,12 +95,10 @@ class TestFullValidationFlow:
         """Test that validator exits with non-zero code when violations found."""
         # This will be tested via CLI once implemented
         # For now, verify the logic in the models
-        import uuid
-        from datetime import datetime
 
         report_with_errors = ComplianceReport(
             report_id=str(uuid.uuid4()),
-            generated_at=datetime.utcnow(),
+            generated_at=datetime.now(UTC),
             validator_version="1.0.0",
             constitution_version="1.0.0",
             scanned_files=[],
@@ -119,12 +117,10 @@ class TestFullValidationFlow:
 
     def test_validation_exits_with_zero_on_clean_codebase(self, valid_codebase_dir: Path):
         """Test that validator exits with 0 when no violations found."""
-        import uuid
-        from datetime import datetime
 
         report_clean = ComplianceReport(
             report_id=str(uuid.uuid4()),
-            generated_at=datetime.utcnow(),
+            generated_at=datetime.now(UTC),
             validator_version="1.0.0",
             constitution_version="1.0.0",
             scanned_files=[valid_codebase_dir / "compliant_example.py"],
@@ -170,12 +166,10 @@ class TestFullValidationFlow:
 
     def test_report_generation_includes_all_required_fields(self):
         """Test that generated JSON reports have all required fields."""
-        import uuid
-        from datetime import datetime
 
         report = ComplianceReport(
             report_id=str(uuid.uuid4()),
-            generated_at=datetime.utcnow(),
+            generated_at=datetime.now(UTC),
             validator_version="1.0.0",
             constitution_version="1.0.0",
             scanned_files=[Path("file1.py"), Path("file2.py")],
@@ -219,12 +213,10 @@ class TestFullValidationFlow:
 
     def test_performance_metrics_tracked(self):
         """Test that validation tracks timing metrics."""
-        import uuid
-        from datetime import datetime
 
         report = ComplianceReport(
             report_id=str(uuid.uuid4()),
-            generated_at=datetime.utcnow(),
+            generated_at=datetime.now(UTC),
             validator_version="1.0.0",
             constitution_version="1.0.0",
             scanned_files=[Path("file.py")],
@@ -266,12 +258,10 @@ class TestFullValidationFlow:
 
     def test_report_includes_coverage_metrics(self):
         """Test that reports can include coverage percentage."""
-        import uuid
-        from datetime import datetime
 
         report = ComplianceReport(
             report_id=str(uuid.uuid4()),
-            generated_at=datetime.utcnow(),
+            generated_at=datetime.now(UTC),
             validator_version="1.0.0",
             constitution_version="1.0.0",
             scanned_files=[],
@@ -291,12 +281,10 @@ class TestFullValidationFlow:
 
     def test_report_includes_git_commit_count(self):
         """Test that reports include git commit check count."""
-        import uuid
-        from datetime import datetime
 
         report = ComplianceReport(
             report_id=str(uuid.uuid4()),
-            generated_at=datetime.utcnow(),
+            generated_at=datetime.now(UTC),
             validator_version="1.0.0",
             constitution_version="1.0.0",
             scanned_files=[],

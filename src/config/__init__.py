@@ -20,7 +20,7 @@ from .settings import (
 try:
     from src.agentic_rag.search.intent_analyzer import SearchIntent
 except ImportError:
-    SearchIntent = None
+    SearchIntent = None  # type: ignore[misc]
 
 __all__ = [
     "ChunkingStrategy",

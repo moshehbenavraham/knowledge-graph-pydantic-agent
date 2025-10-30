@@ -21,11 +21,12 @@ test-coverage:  ## Run tests with coverage (3,788 tests, ~10-15 minutes) - USE G
 lint:
 	bash -c "source .venv/bin/activate && ruff check src/ tests/"
 	bash -c "source .venv/bin/activate && black --check src/ tests/"
+	bash -c "source .venv/bin/activate && mypy src/ tests/"
 
 security:
 	bash -c "source .venv/bin/activate && pip install -e .[security]"
 	bash -c "source .venv/bin/activate && bandit -r src/"
-	bash -c "source .venv/bin/activate && safety check"
+	bash -c "source .venv/bin/activate && safety scan"
 	bash -c "source .venv/bin/activate && pip-audit"
 
 # Code Quality Analysis

@@ -7,6 +7,7 @@ Entry point: constitution-validate
 import os
 import subprocess  # nosec B404 - Required for git operations
 import sys
+from datetime import UTC
 from pathlib import Path
 from typing import Any
 
@@ -487,7 +488,7 @@ def validate(
         # Create compliance report
         report = ComplianceReport(
             report_id=str(uuid.uuid4()),
-            generated_at=datetime.utcnow(),
+            generated_at=datetime.now(UTC),
             validator_version=__version__,
             constitution_version=constitution.version,
             scanned_files=list(files_to_scan),

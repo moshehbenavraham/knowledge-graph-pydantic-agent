@@ -16,7 +16,7 @@ Features:
 - Logging of CAPTCHA challenges and results
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 import httpx
 import structlog
@@ -74,10 +74,10 @@ class CaptchaManager:
             return getattr(settings, "recaptcha_secret_key", "")
         return ""
 
-    async def _get_client(self) -> Client:
+    def _get_client(self) -> Client:
         """Get Supabase client (cached)."""
         if not self.client:
-            self.client = await get_supabase_client()
+            self.client = get_supabase_client()
         return self.client
 
     def is_configured(self) -> bool:
@@ -124,7 +124,7 @@ class CaptchaManager:
             )
             return (True, None)
 
-        start_time = datetime.utcnow()
+        start_time = datetime.now(UTC)
 
         try:
             # Choose verification URL based on provider
@@ -152,7 +152,7 @@ class CaptchaManager:
             ) as client:
                 response = await client.post(verify_url, data=data)
 
-            response_time_ms = int((datetime.utcnow() - start_time).total_seconds() * 1000)
+            response_time_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
 
             if response.status_code != 200:
                 error_msg = f"CAPTCHA API error: HTTP {response.status_code}"
@@ -203,7 +203,7 @@ class CaptchaManager:
             return (True, None)
 
         except httpx.TimeoutException:
-            response_time_ms = int((datetime.utcnow() - start_time).total_seconds() * 1000)
+            response_time_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
             await self._log_challenge(
                 username=username,
                 ip_address=ip_address,
@@ -213,7 +213,7 @@ class CaptchaManager:
             return (False, "CAPTCHA verification timeout")
 
         except Exception as e:
-            response_time_ms = int((datetime.utcnow() - start_time).total_seconds() * 1000)
+            response_time_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
             await self._log_challenge(
                 username=username,
                 ip_address=ip_address,
@@ -280,7 +280,7 @@ class CaptchaManager:
             username: Optional username
             ip_address: Optional IP address
         """
-        client = await self._get_client()
+        client = self._get_client()
 
         data = {
             "challenge_type": self.provider,

@@ -3,7 +3,7 @@
 import asyncio
 import contextlib
 import time
-from datetime import datetime
+from datetime import UTC, datetime
 
 import httpx
 from pydantic import BaseModel
@@ -85,14 +85,14 @@ class HealthChecker:
                     name="database",
                     status="healthy",
                     response_time=response_time,
-                    last_check=datetime.utcnow(),
+                    last_check=datetime.now(UTC),
                     details={"connection": "ok", "query_time": response_time},
                 )
             return ComponentHealth(
                 name="database",
                 status="degraded",
                 response_time=response_time,
-                last_check=datetime.utcnow(),
+                last_check=datetime.now(UTC),
                 error="Empty response from database",
             )
 
@@ -104,7 +104,7 @@ class HealthChecker:
                 name="database",
                 status="unhealthy",
                 response_time=response_time,
-                last_check=datetime.utcnow(),
+                last_check=datetime.now(UTC),
                 error=str(e),
             )
 
@@ -133,7 +133,7 @@ class HealthChecker:
                     name="llm",
                     status="healthy",
                     response_time=response_time,
-                    last_check=datetime.utcnow(),
+                    last_check=datetime.now(UTC),
                     details={
                         "model": response.model,
                         "tokens_used": response.usage.total_tokens if response.usage else 0,
@@ -143,7 +143,7 @@ class HealthChecker:
                 name="llm",
                 status="degraded",
                 response_time=response_time,
-                last_check=datetime.utcnow(),
+                last_check=datetime.now(UTC),
                 error="Empty response from LLM",
             )
 
@@ -155,7 +155,7 @@ class HealthChecker:
                 name="llm",
                 status="unhealthy",
                 response_time=response_time,
-                last_check=datetime.utcnow(),
+                last_check=datetime.now(UTC),
                 error=str(e),
             )
 
@@ -183,7 +183,7 @@ class HealthChecker:
                     name="embedding",
                     status="healthy",
                     response_time=response_time,
-                    last_check=datetime.utcnow(),
+                    last_check=datetime.now(UTC),
                     details={
                         "model": response.model,
                         "embedding_dim": len(response.data[0].embedding),
@@ -193,7 +193,7 @@ class HealthChecker:
                 name="embedding",
                 status="degraded",
                 response_time=response_time,
-                last_check=datetime.utcnow(),
+                last_check=datetime.now(UTC),
                 error="Empty response from embedding service",
             )
 
@@ -205,7 +205,7 @@ class HealthChecker:
                 name="embedding",
                 status="unhealthy",
                 response_time=response_time,
-                last_check=datetime.utcnow(),
+                last_check=datetime.now(UTC),
                 error=str(e),
             )
 
@@ -234,14 +234,14 @@ class HealthChecker:
                     name="memory",
                     status="healthy",
                     response_time=response_time,
-                    last_check=datetime.utcnow(),
+                    last_check=datetime.now(UTC),
                     details={"test_memory_id": result["id"]},
                 )
             return ComponentHealth(
                 name="memory",
                 status="degraded",
                 response_time=response_time,
-                last_check=datetime.utcnow(),
+                last_check=datetime.now(UTC),
                 error="Failed to create test memory",
             )
 
@@ -253,7 +253,7 @@ class HealthChecker:
                 name="memory",
                 status="unhealthy",
                 response_time=response_time,
-                last_check=datetime.utcnow(),
+                last_check=datetime.now(UTC),
                 error=str(e),
             )
 
@@ -283,14 +283,14 @@ class HealthChecker:
                             name="web_search",
                             status="healthy",
                             response_time=response_time,
-                            last_check=datetime.utcnow(),
+                            last_check=datetime.now(UTC),
                             details={"provider": "brave", "status_code": response.status_code},
                         )
                     return ComponentHealth(
                         name="web_search",
                         status="degraded",
                         response_time=response_time,
-                        last_check=datetime.utcnow(),
+                        last_check=datetime.now(UTC),
                         error=f"Brave API returned status {response.status_code}",
                     )
 
@@ -310,14 +310,14 @@ class HealthChecker:
                             name="web_search",
                             status="healthy",
                             response_time=response_time,
-                            last_check=datetime.utcnow(),
+                            last_check=datetime.now(UTC),
                             details={"provider": "searxng", "status_code": response.status_code},
                         )
                     return ComponentHealth(
                         name="web_search",
                         status="degraded",
                         response_time=response_time,
-                        last_check=datetime.utcnow(),
+                        last_check=datetime.now(UTC),
                         error=f"SearXNG returned status {response.status_code}",
                     )
             else:
@@ -325,7 +325,7 @@ class HealthChecker:
                     name="web_search",
                     status="unhealthy",
                     response_time=0,
-                    last_check=datetime.utcnow(),
+                    last_check=datetime.now(UTC),
                     error="No web search provider configured",
                 )
 
@@ -339,7 +339,7 @@ class HealthChecker:
                 name="web_search",
                 status="unhealthy",
                 response_time=response_time,
-                last_check=datetime.utcnow(),
+                last_check=datetime.now(UTC),
                 error=str(e),
             )
 
@@ -365,12 +365,12 @@ class HealthChecker:
                     ComponentHealth(
                         name="unknown",
                         status="unhealthy",
-                        last_check=datetime.utcnow(),
+                        last_check=datetime.now(UTC),
                         error=str(check),
                     )
                 )
 
-        self.last_full_check = datetime.utcnow()
+        self.last_full_check = datetime.now(UTC)
         return valid_checks
 
     async def get_health_status(self) -> HealthStatus:
@@ -417,7 +417,7 @@ class HealthChecker:
 
         return HealthStatus(
             status=overall_status,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(UTC),
             uptime=time.time() - self.start_time,
             version=self.version,
             checks=checks_dict,

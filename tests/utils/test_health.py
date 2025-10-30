@@ -4,7 +4,7 @@ Comprehensive tests for health check and monitoring utilities.
 Tests system health monitoring across all components.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -24,7 +24,7 @@ class TestHealthStatusModel:
         """Test creating a HealthStatus instance."""
         status = HealthStatus(
             status="healthy",
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(UTC),
             uptime=100.5,
             version="1.0.0",
             checks={
@@ -48,7 +48,7 @@ class TestComponentHealthModel:
         component = ComponentHealth(
             name="test_component",
             status="healthy",
-            last_check=datetime.utcnow(),
+            last_check=datetime.now(UTC),
         )
 
         assert component.name == "test_component"
@@ -59,7 +59,7 @@ class TestComponentHealthModel:
 
     def test_component_health_creation_full(self):
         """Test creating ComponentHealth with all fields."""
-        timestamp = datetime.utcnow()
+        timestamp = datetime.now(UTC)
         component = ComponentHealth(
             name="test_component",
             status="healthy",
@@ -509,25 +509,25 @@ class TestRunAllChecks:
         # Mock all check methods
         mock_db_check = AsyncMock(
             return_value=ComponentHealth(
-                name="database", status="healthy", last_check=datetime.utcnow()
+                name="database", status="healthy", last_check=datetime.now(UTC)
             )
         )
         mock_llm_check = AsyncMock(
-            return_value=ComponentHealth(name="llm", status="healthy", last_check=datetime.utcnow())
+            return_value=ComponentHealth(name="llm", status="healthy", last_check=datetime.now(UTC))
         )
         mock_embedding_check = AsyncMock(
             return_value=ComponentHealth(
-                name="embedding", status="degraded", last_check=datetime.utcnow()
+                name="embedding", status="degraded", last_check=datetime.now(UTC)
             )
         )
         mock_memory_check = AsyncMock(
             return_value=ComponentHealth(
-                name="memory", status="unhealthy", last_check=datetime.utcnow()
+                name="memory", status="unhealthy", last_check=datetime.now(UTC)
             )
         )
         mock_web_search_check = AsyncMock(
             return_value=ComponentHealth(
-                name="web_search", status="healthy", last_check=datetime.utcnow()
+                name="web_search", status="healthy", last_check=datetime.now(UTC)
             )
         )
 
@@ -555,17 +555,17 @@ class TestRunAllChecks:
         # Mock some checks to raise exceptions
         checker.check_database_health = AsyncMock(side_effect=Exception("DB error"))
         checker.check_llm_health = AsyncMock(
-            return_value=ComponentHealth(name="llm", status="healthy", last_check=datetime.utcnow())
+            return_value=ComponentHealth(name="llm", status="healthy", last_check=datetime.now(UTC))
         )
         checker.check_embedding_health = AsyncMock(side_effect=Exception("Embedding error"))
         checker.check_memory_health = AsyncMock(
             return_value=ComponentHealth(
-                name="memory", status="healthy", last_check=datetime.utcnow()
+                name="memory", status="healthy", last_check=datetime.now(UTC)
             )
         )
         checker.check_web_search_health = AsyncMock(
             return_value=ComponentHealth(
-                name="web_search", status="healthy", last_check=datetime.utcnow()
+                name="web_search", status="healthy", last_check=datetime.now(UTC)
             )
         )
 
@@ -602,14 +602,14 @@ class TestGetHealthStatus:
                     name="database",
                     status="healthy",
                     response_time=0.05,
-                    last_check=datetime.utcnow(),
+                    last_check=datetime.now(UTC),
                     details={"connection": "ok"},
                 ),
                 ComponentHealth(
                     name="llm",
                     status="healthy",
                     response_time=0.15,
-                    last_check=datetime.utcnow(),
+                    last_check=datetime.now(UTC),
                 ),
             ]
         )
@@ -644,13 +644,13 @@ class TestGetHealthStatus:
                     name="database",
                     status="healthy",
                     response_time=0.05,
-                    last_check=datetime.utcnow(),
+                    last_check=datetime.now(UTC),
                 ),
                 ComponentHealth(
                     name="llm",
                     status="degraded",
                     response_time=2.5,
-                    last_check=datetime.utcnow(),
+                    last_check=datetime.now(UTC),
                     error="Slow response",
                 ),
             ]
@@ -684,13 +684,13 @@ class TestGetHealthStatus:
                     name="database",
                     status="healthy",
                     response_time=0.05,
-                    last_check=datetime.utcnow(),
+                    last_check=datetime.now(UTC),
                 ),
                 ComponentHealth(
                     name="llm",
                     status="unhealthy",
                     response_time=None,
-                    last_check=datetime.utcnow(),
+                    last_check=datetime.now(UTC),
                     error="Connection failed",
                 ),
             ]
@@ -724,7 +724,7 @@ class TestGetHealthStatus:
                     name="database",
                     status="healthy",
                     response_time=0.05,
-                    last_check=datetime.utcnow(),
+                    last_check=datetime.now(UTC),
                 ),
             ]
         )

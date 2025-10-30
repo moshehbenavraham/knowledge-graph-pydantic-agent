@@ -5,7 +5,7 @@ Tests all health check endpoints including basic/detailed health, metrics,
 rate limits, component health, and Kubernetes probe endpoints.
 """
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -45,7 +45,7 @@ def mock_health_status():
     """Mock HealthStatus object."""
     status = MagicMock()
     status.status = "healthy"
-    status.timestamp = datetime.utcnow()
+    status.timestamp = datetime.now(UTC)
     status.uptime = 3600.0
     status.version = "1.3.0"
     status.checks = {
@@ -64,7 +64,7 @@ def mock_component_health():
     health.status = "healthy"
     health.response_time = 0.05
     health.error = None
-    health.last_check = datetime.utcnow()
+    health.last_check = datetime.now(UTC)
     health.details = {"connection_pool": "ok"}
     return health
 
@@ -137,7 +137,7 @@ async def test_detailed_health_check_degraded(mock_checker):
     """Test detailed health check when system is degraded."""
     degraded_status = MagicMock()
     degraded_status.status = "degraded"
-    degraded_status.timestamp = datetime.utcnow()
+    degraded_status.timestamp = datetime.now(UTC)
     degraded_status.uptime = 3600.0
     degraded_status.version = "1.3.0"
     degraded_status.checks = {"database": {"status": "degraded"}}
@@ -156,7 +156,7 @@ async def test_detailed_health_check_unhealthy(mock_checker):
     """Test detailed health check when system is unhealthy."""
     unhealthy_status = MagicMock()
     unhealthy_status.status = "unhealthy"
-    unhealthy_status.timestamp = datetime.utcnow()
+    unhealthy_status.timestamp = datetime.now(UTC)
     unhealthy_status.uptime = 3600.0
     unhealthy_status.version = "1.3.0"
     unhealthy_status.checks = {"database": {"status": "unhealthy"}}
@@ -248,7 +248,7 @@ async def test_get_rate_limit_status_success(mock_limiter):
         "user_id": "test_user",
         "tier": "premium",
         "requests_remaining": 850,
-        "reset_time": datetime.utcnow().isoformat(),
+        "reset_time": datetime.now(UTC).isoformat(),
     }
 
     result = await get_rate_limit_status("test_user")
@@ -417,7 +417,7 @@ async def test_get_component_health_degraded(mock_checker):
     degraded_health.status = "degraded"
     degraded_health.response_time = 2.5
     degraded_health.error = None
-    degraded_health.last_check = datetime.utcnow()
+    degraded_health.last_check = datetime.now(UTC)
     degraded_health.details = {}
 
     mock_checker.check_database_health = AsyncMock(return_value=degraded_health)
@@ -436,7 +436,7 @@ async def test_get_component_health_unhealthy(mock_checker):
     unhealthy_health.status = "unhealthy"
     unhealthy_health.response_time = None
     unhealthy_health.error = "Connection timeout"
-    unhealthy_health.last_check = datetime.utcnow()
+    unhealthy_health.last_check = datetime.now(UTC)
     unhealthy_health.details = {}
 
     mock_checker.check_database_health = AsyncMock(return_value=unhealthy_health)
@@ -755,7 +755,7 @@ async def test_basic_health_check_timestamp_recent(mock_get_settings, mock_setti
     result = await basic_health_check()
 
     timestamp = datetime.fromisoformat(result["timestamp"])
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
     time_diff = now - timestamp
 
     # Timestamp should be within last second
