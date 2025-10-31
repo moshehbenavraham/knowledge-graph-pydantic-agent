@@ -4,9 +4,12 @@ Neo4j initialization with Graphiti integration and custom indexes.
 
 import asyncio
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from neo4j import AsyncGraphDatabase
+
+if TYPE_CHECKING:
+    from neo4j._async.driver import AsyncDriver
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +21,7 @@ class Neo4jInitializer:
         self.uri = uri
         self.user = user
         self.password = password
-        self.driver: AsyncGraphDatabase.driver | None = None
+        self.driver: AsyncDriver | None = None
 
     async def initialize(self):
         """Initialize Neo4j with all required constraints and indexes."""

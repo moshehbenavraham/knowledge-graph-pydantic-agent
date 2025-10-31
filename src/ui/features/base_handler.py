@@ -79,7 +79,7 @@ class BaseHandler(ABC):
         message_history: list[ModelRequest | ModelResponse],
         http_client: AsyncClient,
         **kwargs,
-    ):
+    ) -> Any:  # Return type can be Any or AsyncIterator, depending on implementation
         pass
 
     def get_agent_deps(

@@ -8,12 +8,15 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import asyncpg
 import redis.asyncio as redis
 import structlog
 from neo4j import AsyncGraphDatabase
+
+if TYPE_CHECKING:
+    from neo4j._async.driver import AsyncDriver
 
 logger = logging.getLogger(__name__)
 structlog_logger = structlog.get_logger(__name__)
@@ -64,7 +67,7 @@ class ConnectionManager:
         else:
             self.config = config
         self.pg_pool: asyncpg.Pool | None = None
-        self.neo4j_driver: AsyncGraphDatabase.driver | None = None
+        self.neo4j_driver: AsyncDriver | None = None
         self.redis_client: redis.Redis | None = None
 
         # Metrics tracking

@@ -136,8 +136,12 @@ class PrincipleIIRule(BaseValidationRule):
         logger.debug("Extracting variable name from call")
         if node.args and isinstance(node.args[0], ast.Constant):
             var_name = node.args[0].value
-            logger.debug("Variable name extracted", var_name=var_name)
-            return var_name
+            # Ensure we return a string
+            if isinstance(var_name, str):
+                logger.debug("Variable name extracted", var_name=var_name)
+                return var_name
+            logger.debug("Variable name not a string", var_type=type(var_name).__name__)
+            return str(var_name) if var_name is not None else "UNKNOWN"
         logger.debug("Variable name unknown")
         return "UNKNOWN"
 
@@ -146,8 +150,12 @@ class PrincipleIIRule(BaseValidationRule):
         logger.debug("Extracting variable name from subscript")
         if isinstance(node.slice, ast.Constant):
             var_name = node.slice.value
-            logger.debug("Variable name extracted", var_name=var_name)
-            return var_name
+            # Ensure we return a string
+            if isinstance(var_name, str):
+                logger.debug("Variable name extracted", var_name=var_name)
+                return var_name
+            logger.debug("Variable name not a string", var_type=type(var_name).__name__)
+            return str(var_name) if var_name is not None else "UNKNOWN"
         logger.debug("Variable name unknown")
         return "UNKNOWN"
 

@@ -6,7 +6,7 @@ Handles token streaming, heartbeats, backpressure, and connection lifecycle.
 
 import asyncio
 import json
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Callable
 from typing import Any
 from uuid import uuid4
 
@@ -319,7 +319,7 @@ class WebSocketManager:
             logger.error("websocket_stream_error", connection_id=connection_id, error=str(e))
             await self.send_message(connection_id, {"type": "stream_error", "error": str(e)})
 
-    async def receive_loop(self, connection_id: str, message_handler: callable):
+    async def receive_loop(self, connection_id: str, message_handler: Callable[[str, dict], Any]):
         """
         Receive messages from WebSocket in loop.
 

@@ -72,7 +72,7 @@ dev = [
     "tox>=4.11.0",
     "vulture>=2.10",
     "radon>=6.0.1",
-    "interrogate>=1.5.0",
+    "interrogate>=1.5.0",  # Note: pulls in py==1.11.0 with CVE-2022-42969 (disputed, SVN-only, accepted risk)
 ]
 rag = [
     "watchdog>=3.0.0",

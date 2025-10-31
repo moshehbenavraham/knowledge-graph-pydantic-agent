@@ -8,21 +8,20 @@ logger = structlog.get_logger(__name__)
 try:
     from pydantic_ai.models.openai import OpenAIChatModel
 except ImportError:
-    OpenAIChatModel = None
+    OpenAIChatModel = None  # type: ignore
 
 try:
     from pydantic_ai.providers.openai import OpenAIProvider
 except ImportError:
-    OpenAIProvider = None
+    OpenAIProvider = None  # type: ignore
 
 try:
     from pydantic_ai.models.anthropic import AnthropicModel
 except ImportError:
-    AnthropicModel = None
-
-from supabase.client import Client
+    AnthropicModel = None  # type: ignore
 
 from src.config import get_settings
+from supabase.client import Client
 
 
 async def image_analysis_tool(supabase: Client, document_id: str, query: str) -> str:

@@ -77,8 +77,12 @@ class GitAttributionRule(BaseValidationRule):
                     continue
 
                 # Ensure hexsha and summary are strings (decode if bytes)
-                hexsha_str = commit.hexsha.decode() if isinstance(commit.hexsha, bytes) else commit.hexsha
-                summary_str = commit.summary.decode() if isinstance(commit.summary, bytes) else commit.summary
+                hexsha_str = (
+                    commit.hexsha.decode() if isinstance(commit.hexsha, bytes) else commit.hexsha
+                )
+                summary_str = (
+                    commit.summary.decode() if isinstance(commit.summary, bytes) else commit.summary
+                )
 
                 for pattern in prohibited_patterns:
                     if re.search(pattern, message, re.IGNORECASE):

@@ -123,5 +123,8 @@ class GitScanner:
         """
         logger.debug("Getting commit message", commit_sha=commit.hexsha[:7])
         message = commit.message
+        # Ensure we always return a string (message can be str or bytes)
+        if isinstance(message, bytes):
+            message = message.decode("utf-8", errors="replace")
         logger.debug("Commit message retrieved", length=len(message))
         return message

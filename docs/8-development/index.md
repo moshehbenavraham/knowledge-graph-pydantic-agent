@@ -4,6 +4,7 @@ Documentation for contributors and developers working on Luminari Agent.
 
 ## Development Documentation
 
+- **[Code Styling Guide](code-styling-guide.md)** - Coding standards and style conventions
 - **[Testing Guide](testing-guide.md)** - Comprehensive testing documentation
 - **[Development Tooling](dev-tooling.md)** - Development environment and tools
 - **[Product Requirements (PRD)](prd.md)** - Product vision and requirements

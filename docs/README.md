@@ -104,12 +104,10 @@ Version 1.1.0 | Last Updated: October 2025
 
 ---
 
-#### 9️⃣ [Security](9-security/index.md)
+#### 9️⃣ [Security](9-security/security.md)
 **Security hardening** and best practices.
 
-- [Security Overview](9-security/index.md) - Security strategy and principles
-- [Security Hardening](9-security/hardening.md) - Production hardening guide
-- [Supply Chain Security](9-security/supply-chain.md) - Dependency security
+- [Security Guide](9-security/security.md) - Comprehensive security strategy, hardening, and supply chain security
 
 ---
 
@@ -146,10 +144,10 @@ Sample documents for testing and demonstration.
 1. [Architecture](3-architecture/index.md) → [Development](8-development/index.md) → [Testing](8-development/testing-guide.md)
 
 ### DevOps/SRE
-1. [Deployment](6-deployment/index.md) → [Operations](7-operations/index.md) → [Security](9-security/index.md)
+1. [Deployment](6-deployment/index.md) → [Operations](7-operations/index.md) → [Security](9-security/security.md)
 
 ### Troubleshooters
-1. [Troubleshooting](10-troubleshooting/index.md) → [Operations](7-operations/index.md) → [Security](9-security/index.md)
+1. [Troubleshooting](10-troubleshooting/index.md) → [Operations](7-operations/index.md) → [Security](9-security/security.md)
 
 ---
 

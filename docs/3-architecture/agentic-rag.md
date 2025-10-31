@@ -757,8 +757,7 @@ Each question type automatically triggers the appropriate search strategy, ensur
 - [Incident Response](../7-operations/runbooks/incident_response.md)
 - [Scaling](../7-operations/runbooks/scaling.md)
 - [Go-Live Checklist](../7-operations/go-live-checklist.md)
-- [Security Hardening](../9-security/hardening.md)
-- [Supply Chain Security](../9-security/supply-chain.md)
+- [Security](../9-security/security.md)
 
 ---
 

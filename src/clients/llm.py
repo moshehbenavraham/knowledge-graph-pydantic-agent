@@ -7,22 +7,22 @@ logger = structlog.get_logger(__name__)
 try:
     from openai import AsyncOpenAI
 except ImportError:
-    AsyncOpenAI = None
+    AsyncOpenAI = None  # type: ignore
 
 try:
     from pydantic_ai.models.openai import OpenAIChatModel
 except ImportError:
-    OpenAIChatModel = None
+    OpenAIChatModel = None  # type: ignore
 
 try:
     from pydantic_ai.providers.openai import OpenAIProvider
 except ImportError:
-    OpenAIProvider = None
+    OpenAIProvider = None  # type: ignore
 
 try:
     from pydantic_ai.models.anthropic import AnthropicModel
 except ImportError:
-    AnthropicModel = None
+    AnthropicModel = None  # type: ignore
 
 
 def get_llm_client():

@@ -274,7 +274,7 @@ class EmbeddingGenerator:
 
             # Merge with cached embeddings in correct order
             if self.cache and embeddings:
-                result = [None] * len(texts)
+                result: list[list[float] | None] = [None] * len(texts)
                 cached_idx = 0
                 uncached_idx = 0
 
@@ -286,7 +286,8 @@ class EmbeddingGenerator:
                         result[i] = embeddings[cached_idx]
                         cached_idx += 1
 
-                embeddings = result
+                # Filter out any None values (should not happen, but for type safety)
+                embeddings = [e for e in result if e is not None]
             else:
                 embeddings = new_embeddings
 

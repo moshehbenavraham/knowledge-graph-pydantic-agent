@@ -27,7 +27,7 @@ logger = structlog.get_logger(__name__)
 
 
 class StreamingHandler(BaseHandler):
-    async def run_agent(
+    async def run_agent(  # type: ignore[override]
         self,
         user_input: str,
         message_history: list[ModelRequest | ModelResponse],

@@ -16,7 +16,7 @@ Before deploying to production:
 1. ✅ Review [Configuration Reference](../4-configuration/reference.md)
 2. ✅ Complete [Go-Live Checklist](../7-operations/go-live-checklist.md)
 3. ✅ Set up [Monitoring & Alerts](../7-operations/observability/alerts.md)
-4. ✅ Review [Security Hardening](../9-security/hardening.md)
+4. ✅ Review [Security](../9-security/security.md)
 5. ✅ Test [Performance](../7-operations/performance.md)
 
 ## Quick Links

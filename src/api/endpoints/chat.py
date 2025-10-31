@@ -68,15 +68,12 @@ async def chat(
             session_id=request.session_id,
         )
 
-        # Configure agent parameters
-        agent_params = {}
-        if request.max_tokens:
-            agent_params["max_tokens"] = request.max_tokens
-        if request.temperature:
-            agent_params["temperature"] = request.temperature
+        # Note: max_tokens and temperature should be configured at model creation time
+        # For now, we'll execute without these runtime parameters
+        # TODO: Add support for runtime model parameters via model_settings
 
         # Execute agent
-        result = await super_agent.run(request.message, deps=deps, **agent_params)
+        result = await super_agent.run(request.message, deps=deps)
 
         # Extract response data
         response_text = result.data if hasattr(result, "data") else str(result)

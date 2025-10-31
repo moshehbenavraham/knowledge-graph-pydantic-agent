@@ -203,7 +203,7 @@ class PostgreSQLMigration:
         finally:
             await conn.close()
 
-    async def status(self) -> list[dict]:
+    async def status(self) -> dict[str, object]:
         """Get migration status."""
         conn = await asyncpg.connect(  # noqa: CONST-III-001 - Migration script needs standalone connection
             self.database_url
