@@ -397,7 +397,9 @@ class ComplianceReport(BaseModel):
         logger.debug("Passed status validated")
         return passed
 
-    def to_json_dict(self) -> dict[str, Any]:  # noqa: CONST-V-001 - Simple serialization helper
+    def to_json_dict(
+        self,
+    ) -> dict[str, Any]:  # Constitution exception: CONST-V-001 - Simple serialization helper
         """Convert to JSON-serializable dictionary."""
         return {
             "report_id": self.report_id,
@@ -447,7 +449,7 @@ class ComplianceReport(BaseModel):
             "all_violations": [v.to_dict() for v in self.violations],
         }
 
-    def print_summary(self) -> str:  # noqa: CONST-V-001 - Simple output formatter
+    def print_summary(self) -> str:  # Constitution exception: CONST-V-001 - Simple output formatter
         """Generate human-readable text summary."""
         status = "PASSED" if self.passed else "FAILED"
         lines = [
@@ -526,7 +528,9 @@ class IgnoreConfiguration(BaseModel):
         description="Built-in patterns always applied",
     )
 
-    def compile_pathspec(self) -> Any:  # noqa: CONST-V-001 - Simple pathspec compilation utility
+    def compile_pathspec(
+        self,
+    ) -> Any:  # Constitution exception: CONST-V-001 - Simple pathspec compilation utility
         """Compile all patterns into a PathSpec for matching."""
         import pathspec
 

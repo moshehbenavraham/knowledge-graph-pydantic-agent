@@ -268,7 +268,7 @@ class HealthChecker:
 
             if brave_api_key:
                 # Test Brave API
-                async with httpx.AsyncClient() as client:  # noqa: CONST-III-001 - HTTP client for external API health check  # fmt: skip
+                async with httpx.AsyncClient() as client:  # Constitution exception: CONST-III-001 - HTTP client for external API health check  # fmt: skip
                     response = await client.get(
                         "https://api.search.brave.com/res/v1/web/search",
                         params={"q": "health check", "count": 1},
@@ -296,7 +296,7 @@ class HealthChecker:
 
             elif searxng_url:
                 # Test SearXNG
-                async with httpx.AsyncClient() as client:  # noqa: CONST-III-001 - HTTP client for external API health check  # fmt: skip
+                async with httpx.AsyncClient() as client:  # Constitution exception: CONST-III-001 - HTTP client for external API health check  # fmt: skip
                     response = await client.get(
                         f"{searxng_url}/search",
                         params={"q": "health check", "format": "json"},

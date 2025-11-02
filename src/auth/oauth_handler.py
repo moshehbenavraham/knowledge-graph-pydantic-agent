@@ -316,7 +316,7 @@ class OAuthHandler:
         """
         headers = {"Authorization": f"Bearer {access_token}"}
 
-        async with httpx.AsyncClient() as client:  # noqa: CONST-III-001  # fmt: skip
+        async with httpx.AsyncClient() as client:  # Constitution exception: CONST-III-001  # fmt: skip
             try:
                 response = await client.get(self.userinfo_url, headers=headers)
                 response.raise_for_status()

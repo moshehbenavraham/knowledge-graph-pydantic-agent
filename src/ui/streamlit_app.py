@@ -1279,7 +1279,7 @@ async def handle_user_input(user_input: str):
             logger.info("NON-STREAMING mode - executing SimpleHandler.run_agent()...")
 
             with st.spinner("Thinking..."):
-                async with AsyncClient() as http_client:  # noqa: CONST-III-001 - UI context manager for request lifecycle  # fmt: skip
+                async with AsyncClient() as http_client:  # Constitution exception: CONST-III-001 - UI context manager for request lifecycle  # fmt: skip
                     logger.debug("HTTP client created, calling handler.run_agent()...")
 
                     result = await handler.run_agent(
@@ -1324,7 +1324,7 @@ async def handle_user_input(user_input: str):
                 "total": 0,
             }
 
-            async with AsyncClient() as http_client:  # noqa: CONST-III-001 - UI context manager for request lifecycle  # fmt: skip
+            async with AsyncClient() as http_client:  # Constitution exception: CONST-III-001 - UI context manager for request lifecycle  # fmt: skip
                 logger.debug("HTTP client created, starting agent stream...")
 
                 # Show thinking indicator while waiting for first chunk

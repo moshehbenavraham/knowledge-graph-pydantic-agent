@@ -36,10 +36,10 @@ class SupabaseRestStore:
         """
         structlog_logger.info("SupabaseRestStore initializing", supabase_url=supabase_url)
         self.client: Client = (
-            create_client(  # noqa: CONST-III-001 - Storage layer using centralized config
+            create_client(  # Constitution exception: CONST-III-001 - Storage layer using centralized config
                 supabase_url, supabase_key
             )
-        )  # noqa: CONST-III-001 - Storage layer implementation
+        )  # Constitution exception: CONST-III-001 - Storage layer implementation
         structlog_logger.info("SupabaseRestStore initialized", supabase_url=supabase_url)
 
     async def store_document(

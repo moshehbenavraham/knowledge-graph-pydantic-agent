@@ -21,9 +21,9 @@ class PostgreSQLMigration:
 
     async def initialize_schema(self):
         """Initialize the database schema with all required extensions and tables."""
-        conn = await asyncpg.connect(  # noqa: CONST-III-001 - Migration script needs standalone connection
+        conn = await asyncpg.connect(  # Constitution exception: CONST-III-001 - Migration script needs standalone connection
             self.database_url
-        )  # noqa: CONST-III-001 - Migration manager requires direct connection
+        )  # Constitution exception: CONST-III-001 - Migration manager requires direct connection
 
         try:
             # Create migration tracking table
@@ -163,9 +163,9 @@ class PostgreSQLMigration:
 
     async def rollback(self, target_version: str | None = None):
         """Rollback migrations to a specific version."""
-        conn = await asyncpg.connect(  # noqa: CONST-III-001 - Migration script needs standalone connection
+        conn = await asyncpg.connect(  # Constitution exception: CONST-III-001 - Migration script needs standalone connection
             self.database_url
-        )  # noqa: CONST-III-001 - Migration manager requires direct connection
+        )  # Constitution exception: CONST-III-001 - Migration manager requires direct connection
 
         try:
             # Get current migrations
@@ -205,9 +205,9 @@ class PostgreSQLMigration:
 
     async def status(self) -> dict[str, object]:
         """Get migration status."""
-        conn = await asyncpg.connect(  # noqa: CONST-III-001 - Migration script needs standalone connection
+        conn = await asyncpg.connect(  # Constitution exception: CONST-III-001 - Migration script needs standalone connection
             self.database_url
-        )  # noqa: CONST-III-001 - Migration manager requires direct connection
+        )  # Constitution exception: CONST-III-001 - Migration manager requires direct connection
 
         try:
             # Get applied migrations

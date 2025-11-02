@@ -62,9 +62,11 @@ def _check_bypass() -> bool:
         True if bypass is requested, False otherwise
     """
     logger.debug("Checking for bypass environment variable")
-    bypass_value = os.environ.get(  # noqa: CONST-II-001 - Meta-validation bypass check
-        "SKIP_CONSTITUTION_CHECK", ""
-    ).lower()
+    bypass_value = (
+        os.environ.get(  # Constitution exception: CONST-II-001 - Meta-validation bypass check
+            "SKIP_CONSTITUTION_CHECK", ""
+        ).lower()
+    )
     is_bypassed = bypass_value in ("1", "true", "yes", "on")
     logger.debug("Bypass check complete", bypassed=is_bypassed, value=bypass_value)
     return is_bypassed

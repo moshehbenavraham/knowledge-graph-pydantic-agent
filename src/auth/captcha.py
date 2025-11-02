@@ -150,7 +150,7 @@ class CaptchaManager:
 
             # Send verification request
             # HTTP client for external API
-            async with httpx.AsyncClient(timeout=self.VERIFY_TIMEOUT) as client:
+            async with httpx.AsyncClient(timeout=self.VERIFY_TIMEOUT) as client:  # Constitution exception: CONST-III-001 - External CAPTCHA API client  # fmt: skip
                 response = await client.post(verify_url, data=data)
 
             response_time_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)

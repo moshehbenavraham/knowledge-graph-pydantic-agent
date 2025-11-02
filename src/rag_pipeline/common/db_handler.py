@@ -6,9 +6,9 @@ from pathlib import Path
 from typing import Any
 
 import structlog
-from supabase.client import Client
 
 from supabase import create_client  # type: ignore
+from supabase.client import Client
 
 structlog_logger = structlog.get_logger(__name__)
 
@@ -30,7 +30,7 @@ from src.config import get_settings
 # Initialize Supabase client using centralized configuration
 settings = get_settings()
 supabase: Client = (
-    create_client(  # noqa: CONST-III-001 - RAG pipeline module-level client using centralized config
+    create_client(  # Constitution exception: CONST-III-001 - RAG pipeline module-level client using centralized config
         settings.supabase_url, settings.supabase_service_key
     )
 )

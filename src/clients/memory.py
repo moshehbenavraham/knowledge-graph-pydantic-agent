@@ -37,11 +37,11 @@ def get_mem0_config():
 
         # Set API key in environment if not already set
         if llm_provider == "openai" and clients.clients_config.llm_api_key:
-            os.environ["OPENAI_API_KEY"] = clients.clients_config.llm_api_key  # noqa: CONST-II-001 - Mem0 library requires env vars  # fmt: skip
+            os.environ["OPENAI_API_KEY"] = clients.clients_config.llm_api_key  # Constitution exception: CONST-II-001 - Mem0 library requires env vars  # fmt: skip
 
         # For OpenRouter, set the specific API key
         if llm_provider == "openrouter" and clients.clients_config.llm_api_key:
-            os.environ["OPENROUTER_API_KEY"] = clients.clients_config.llm_api_key  # noqa: CONST-II-001 - Mem0 library requires env vars  # fmt: skip
+            os.environ["OPENROUTER_API_KEY"] = clients.clients_config.llm_api_key  # Constitution exception: CONST-II-001 - Mem0 library requires env vars  # fmt: skip
 
     elif llm_provider == "ollama":
         config["llm"] = {
@@ -72,7 +72,7 @@ def get_mem0_config():
 
         # Set API key in environment if not already set
         if clients.clients_config.embedding_api_key:
-            os.environ["OPENAI_API_KEY"] = clients.clients_config.embedding_api_key  # noqa: CONST-II-001 - Mem0 library requires env vars  # fmt: skip
+            os.environ["OPENAI_API_KEY"] = clients.clients_config.embedding_api_key  # Constitution exception: CONST-II-001 - Mem0 library requires env vars  # fmt: skip
 
     elif embedding_provider == "ollama":
         config["embedder"] = {

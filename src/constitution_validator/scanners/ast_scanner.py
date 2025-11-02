@@ -97,7 +97,9 @@ class ASTScanner:
         self._parse_cache.clear()
         logger.info("ast_cache_cleared")
 
-    def get_cache_stats(self) -> dict[str, Any]:  # noqa: CONST-V-001 - Simple stats accessor
+    def get_cache_stats(
+        self,
+    ) -> dict[str, Any]:  # Constitution exception: CONST-V-001 - Simple stats accessor
         """
         Get cache statistics.
 

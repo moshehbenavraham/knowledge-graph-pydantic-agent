@@ -18,12 +18,12 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 import structlog
-from supabase.client import Client
 
 from src.agentic_rag.config import get_config
 from src.agentic_rag.search.hybrid_search import HybridSearch, HybridSearchResult
 from src.agentic_rag.search.intent_analyzer import IntentAnalyzer
 from src.config import SearchStrategy
+from supabase.client import Client
 
 if TYPE_CHECKING:
     from src.agentic_rag.storage.connection_manager import ConnectionManager

@@ -70,7 +70,7 @@ class SearchCache:
 
     def get(
         self, key: str
-    ) -> list[ChunkResult] | None:  # noqa: CONST-V-001 - Simple cache accessor
+    ) -> list[ChunkResult] | None:  # Constitution exception: CONST-V-001 - Simple cache accessor
         """
         Get cached results.
 
@@ -89,7 +89,7 @@ class SearchCache:
 
     def set(
         self, key: str, results: list[ChunkResult]
-    ):  # noqa: CONST-V-001 - Simple cache accessor
+    ):  # Constitution exception: CONST-V-001 - Simple cache accessor
         """
         Cache results.
 

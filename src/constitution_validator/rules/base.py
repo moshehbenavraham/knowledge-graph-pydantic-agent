@@ -28,7 +28,7 @@ class BaseValidationRule(ABC):
     Provides:
     - Abstract execute() method for validation logic
     - Violation creation utilities
-    - Inline suppression support (# noqa: CONST-X-YYY)
+    - Inline suppression support (# Constitution exception: CONST-X-YYY)
 
     Usage:
         rule = SomeRule()
@@ -49,7 +49,7 @@ class BaseValidationRule(ABC):
         self.source_lines: list[str] = []
 
     @abstractmethod
-    def execute(  # noqa: CONST-V-001 - Abstract method stub
+    def execute(  # Constitution exception: CONST-V-001 - Abstract method stub
         self, tree: ast.AST, file_path: Path, source_code: str | None = None
     ) -> list[ViolationRecord]:
         """
@@ -118,7 +118,7 @@ class BaseValidationRule(ABC):
         """
         Add a violation with automatic suppression checking.
 
-        Checks for inline # noqa: CONST-X-YYY comments.
+        Checks for inline # Constitution exception: CONST-X-YYY comments.
 
         Args:
             line_number: Line where violation occurs
@@ -169,12 +169,12 @@ class BaseValidationRule(ABC):
 
     def _check_suppression(self, line_number: int) -> tuple[bool, str | None]:
         """
-        Check if violation on this line is suppressed via # noqa comment.
+        Check if violation on this line is suppressed via # Constitution exception comment.
 
         Supports formats:
-        - # noqa: CONST-II-001
-        - # noqa: CONST-II-001 - reason for suppression
-        - # noqa: CONSTITUTION-II (principle-level suppression)
+        - # Constitution exception: CONST-II-001
+        - # Constitution exception: CONST-II-001 - reason for suppression
+        - # Constitution exception: CONSTITUTION-II (principle-level suppression)
 
         Args:
             line_number: Line number to check (1-indexed)
@@ -188,8 +188,8 @@ class BaseValidationRule(ABC):
 
         line = self.source_lines[line_number - 1]  # Convert to 0-indexed
 
-        # Check for noqa comments: CONST-X-YYY or CONSTITUTION-X format
-        noqa_pattern = r"#\s*noqa:\s*(CONST|CONSTITUTION)-([IVX]+)(?:-(\d+))?\s*(?:-\s*(.+))?"
+        # Check for Constitution exception comments: CONST-X-YYY or CONSTITUTION-X format
+        noqa_pattern = r"#\s*Constitution exception:\s*(CONST|CONSTITUTION)-([IVX]+)(?:-(\d+))?\s*(?:-\s*(.+))?"
         match = re.search(noqa_pattern, line, re.IGNORECASE)
 
         if not match:
@@ -252,9 +252,9 @@ class BaseValidationRule(ABC):
             logger.debug("Failed to get source segment", error=str(e))
             return ""
 
-    def is_name_match(
+    def is_name_match(  # Constitution exception: CONST-V-001 - Simple AST utility
         self, node: ast.expr, name: str
-    ) -> bool:  # noqa: CONST-V-001 - Simple AST utility
+    ) -> bool:
         """
         Check if AST expression node matches a name.
 
@@ -294,9 +294,9 @@ class BaseValidationRule(ABC):
         logger.debug("Attribute call check", matches=matches)
         return matches
 
-    def find_decorator(
+    def find_decorator(  # Constitution exception: CONST-V-001 - Simple AST utility
         self, node: ast.ClassDef | ast.FunctionDef, name: str
-    ) -> bool:  # noqa: CONST-V-001 - Simple AST utility
+    ) -> bool:
         """
         Check if class/function has a specific decorator.
 

@@ -2,6 +2,7 @@ import json
 import re
 
 import structlog
+
 from supabase.client import Client
 
 logger = structlog.get_logger(__name__)
