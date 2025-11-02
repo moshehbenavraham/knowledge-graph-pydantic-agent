@@ -375,11 +375,13 @@ class TestGitScanner:
 
         # Mock commit with multiple parents
         mock_commit = Mock()
+        mock_commit.hexsha = "abcdef1234567890"
         mock_commit.parents = [Mock(), Mock()]
 
         assert scanner.is_merge_commit(mock_commit) is True
 
         # Mock commit with single parent
+        mock_commit.hexsha = "1234567890abcdef"
         mock_commit.parents = [Mock()]
 
         assert scanner.is_merge_commit(mock_commit) is False
@@ -390,6 +392,7 @@ class TestGitScanner:
         scanner = GitScanner()
 
         mock_commit = Mock()
+        mock_commit.hexsha = "abcdef1234567890"
         mock_commit.message = "Test commit message\n\nDetailed description"
 
         message = scanner.get_commit_message(mock_commit)

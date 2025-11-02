@@ -1,6 +1,6 @@
 # Testing TODO - Remaining Work Only
 
-**Current State**: 3,789 tests | ~3,754 passed (99.1%) | 0 failing | 106 skipped | ~77% coverage
+**Current State**: 3,789 tests | ~3,765 passed (99.4%) | 0 failing | 106 skipped | ~77% coverage
 **Target State**: 100% pass rate | <20 skipped | 80%+ coverage
 
 **Completed Work**: See `/docs/a-changelogs/changelog_current.md` for:
@@ -9,30 +9,8 @@
 - Phase 3: API Endpoint Test Suite (53 tests fixed) - v2.5.0
 - Phase 4: Authentication System Tests (10 tests fixed) - v2.6.0
 - Phase 5: Configuration and Small Test Groups (21 tests fixed) - v2.7.0
-- **Total Fixed**: 220 tests
-
----
-
-## PHASE 6: Miscellaneous Test Fixes (11 tests)
-**Priority**: LOW
-**Estimated Time**: 1-2 hours
-
-### Tasks:
-- [ ] Fix Phase 2 ingestion tests (3 tests)
-  - [ ] `test_simple_chunking`
-  - [ ] `test_semantic_chunking_fallback`
-  - [ ] `test_caching_improves_performance`
-- [ ] Fix code execution tests (2 tests)
-  - [ ] `test_class_definition`
-  - [ ] `test_exception_handling`
-- [ ] Fix constitution validator scanner tests (2 tests)
-  - [ ] `test_is_merge_commit`
-  - [ ] `test_get_commit_message`
-- [ ] Fix image analysis test (1 test)
-  - [ ] `test_image_analysis_tool_exception`
-- [ ] Remove incorrect asyncio decorators (3 tests in cache_comprehensive.py)
-
-**Success Criteria**: All 11 miscellaneous tests passing
+- Phase 6: Miscellaneous Test Fixes (11 tests fixed) - v2.8.0
+- **Total Fixed**: 231 tests
 
 ---
 
@@ -144,7 +122,6 @@
 - [ ] Target: <2 minute total execution time
 
 #### 10.2 Warning Cleanup
-- [ ] Remove incorrect `@pytest.mark.asyncio` decorators (10 occurrences)
 - [ ] Document datetime.utcnow() replacements needed (150+ occurrences)
 
 #### 10.3 CI/CD Setup
@@ -183,11 +160,6 @@
 ## Quick Commands Reference
 
 ```bash
-# Run specific phase tests
-pytest tests/ingestion/ -v                          # Phase 6 (Ingestion)
-pytest tests/tools/ -v                              # Phase 6 (Tools)
-pytest tests/constitution_validator/ -v             # Phase 6 (Validator)
-
 # Run all tests
 make test-coverage
 
@@ -210,7 +182,6 @@ pytest --collect-only -q -m skip
 
 | Phase | Description | Tests Remaining | Priority | Est. Time |
 |-------|-------------|-----------------|----------|-----------|
-| 6 | Miscellaneous | 11 | LOW | 1-2 hrs |
 | 7 | Add Tests for 0% Coverage | N/A | HIGH | 6-8 hrs |
 | 8 | Improve Low Coverage Files | N/A | MEDIUM | 8-10 hrs |
 | 9 | Enable Skipped Tests | 103 | LOW | 4-6 hrs |
@@ -218,8 +189,8 @@ pytest --collect-only -q -m skip
 | 11 | Final Verification | N/A | CRITICAL | 1 hr |
 
 **Progress**:
-- **Completed**: Phases 1-5 (220 tests fixed)
-- **Remaining in Current Phases**: 11 tests + 103 skipped
+- **Completed**: Phases 1-6 (231 tests fixed)
+- **Remaining in Current Phases**: 103 skipped tests
 - **Coverage Target**: 80%+ (currently ~77%)
 
-**Next Step**: Phase 6 (Miscellaneous Test Fixes) OR Phase 7 (Add Tests for 0% Coverage Files)
+**Next Step**: Phase 7 (Add Tests for 0% Coverage Files)

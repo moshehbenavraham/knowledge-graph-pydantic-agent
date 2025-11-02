@@ -469,10 +469,10 @@ class TestGlobalCacheInstance:
             assert result == existing_instance
 
 
-@pytest.mark.asyncio
 class TestCacheDecorator:
     """Test cache decorator."""
 
+    @pytest.mark.asyncio
     async def test_cache_decorator_async_cache_miss(self):
         """Test cache decorator with async function (cache miss)."""
         with patch("src.utils.cache.get_cache") as mock_get_cache:
@@ -492,6 +492,7 @@ class TestCacheDecorator:
             mock_cache.get.assert_called_once()
             mock_cache.set.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_cache_decorator_async_cache_hit(self):
         """Test cache decorator with async function (cache hit)."""
         with patch("src.utils.cache.get_cache") as mock_get_cache:

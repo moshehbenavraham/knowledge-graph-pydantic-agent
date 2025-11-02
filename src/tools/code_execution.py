@@ -104,6 +104,19 @@ def execute_safe_code_tool(code: str) -> str:
         "hash": hash,
         "isinstance": isinstance,
         "issubclass": issubclass,
+        # Class and exception support
+        "__build_class__": __build_class__,
+        # Exception types
+        "Exception": Exception,
+        "ValueError": ValueError,
+        "TypeError": TypeError,
+        "KeyError": KeyError,
+        "IndexError": IndexError,
+        "AttributeError": AttributeError,
+        "ZeroDivisionError": ZeroDivisionError,
+        "RuntimeError": RuntimeError,
+        "NotImplementedError": NotImplementedError,
+        "StopIteration": StopIteration,
         # Import handler
         "__import__": safe_import,
     }
@@ -117,7 +130,11 @@ def execute_safe_code_tool(code: str) -> str:
         output.append(sep.join(str(arg) for arg in args) + end)
 
     # Create restricted globals
-    restricted_globals = {"__builtins__": safe_builtins, "print": safe_print}
+    restricted_globals = {
+        "__builtins__": safe_builtins,
+        "__name__": "__main__",
+        "print": safe_print,
+    }
 
     try:
         # Execute the code with timeout

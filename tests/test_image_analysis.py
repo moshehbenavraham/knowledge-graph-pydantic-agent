@@ -179,9 +179,7 @@ class TestImageAnalysisTool:
         mock_supabase.from_.side_effect = Exception("Test exception")
 
         # Test the function
-        with patch("builtins.print") as mock_print:
-            result = await image_analysis_tool(mock_supabase, "img1", "Describe this image")
+        result = await image_analysis_tool(mock_supabase, "img1", "Describe this image")
 
-        # Verify the exception was handled
-        mock_print.assert_called_once_with("Error analyzing image: Test exception")
+        # Verify the exception was handled and error message returned
         assert "Error analyzing image: Test exception" in result

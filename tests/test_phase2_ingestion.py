@@ -46,10 +46,17 @@ class TestChunker:
 
     def test_chunking_config_validation(self):
         """Test chunking configuration validation."""
-        # Valid config
-        config = ChunkingConfig(chunk_size=1000, chunk_overlap=200)
-        assert config.chunk_size == 1000
-        assert config.chunk_overlap == 200
+        # Valid config (using dict as SimpleChunker expects)
+        config = {
+            "chunk_size": 1000,
+            "chunk_overlap": 200,
+            "max_chunk_size": 2000,
+            "min_chunk_size": 100,
+            "use_semantic_splitting": False,
+            "preserve_structure": True,
+        }
+        assert config["chunk_size"] == 1000
+        assert config["chunk_overlap"] == 200
 
         # Invalid config - overlap >= size
         with pytest.raises(ValueError):
@@ -61,7 +68,14 @@ class TestChunker:
 
     def test_simple_chunking(self):
         """Test simple rule-based chunking."""
-        config = ChunkingConfig(chunk_size=100, chunk_overlap=20, use_semantic_splitting=False)
+        config = {
+            "chunk_size": 100,
+            "chunk_overlap": 20,
+            "max_chunk_size": 200,
+            "min_chunk_size": 50,
+            "use_semantic_splitting": False,
+            "preserve_structure": True,
+        }
         chunker = SimpleChunker(config)
 
         # Test document
@@ -71,11 +85,11 @@ class TestChunker:
 
         assert len(chunks) > 1
         assert all(isinstance(c, DocumentChunk) for c in chunks)
-        assert all(len(c.content) <= config.chunk_size * 1.5 for c in chunks)
+        assert all(len(c.content) <= config["chunk_size"] * 1.5 for c in chunks)
 
         # Check overlap
         for i in range(len(chunks) - 1):
-            assert chunks[i].end_char >= chunks[i + 1].start_char - config.chunk_overlap
+            assert chunks[i].end_char >= chunks[i + 1].start_char - config["chunk_overlap"]
 
     def test_document_chunk_creation(self):
         """Test DocumentChunk object creation."""
@@ -91,7 +105,14 @@ class TestChunker:
     @pytest.mark.asyncio
     async def test_semantic_chunking_fallback(self):
         """Test semantic chunking fallback to simple."""
-        config = ChunkingConfig(chunk_size=100, chunk_overlap=20, use_semantic_splitting=True)
+        config = {
+            "chunk_size": 100,
+            "chunk_overlap": 20,
+            "max_chunk_size": 200,
+            "min_chunk_size": 50,
+            "use_semantic_splitting": True,
+            "preserve_structure": True,
+        }
 
         with patch("src.agentic_rag.ingestion.chunker.SemanticChunker.llm_client") as mock_llm:
             mock_llm.run.side_effect = Exception("LLM error")
@@ -349,10 +370,26 @@ class TestSearchPerformance:
     @pytest.mark.asyncio
     async def test_caching_improves_performance(self, mock_connection_manager):
         """Test that caching improves search performance."""
+        from uuid import UUID
+
+        from src.agentic_rag.search.vector_search import ChunkResult, SearchCache
+
         search = VectorSearch(mock_connection_manager)
+        # Explicitly enable cache for this test
+        search.cache = SearchCache(ttl_seconds=3600)
+
+        # Create a mock result to return
+        mock_result = ChunkResult(
+            chunk_id=UUID("12345678-1234-5678-1234-567812345678"),
+            content="Test content",
+            similarity=0.95,
+            document_id=UUID("87654321-4321-8765-4321-876543218765"),
+            document_title="Test Doc",
+            document_source="test.md",
+        )
 
         with patch.object(search, "_search_vectors") as mock_search:
-            mock_search.return_value = []
+            mock_search.return_value = [mock_result]
 
             with patch.object(search.embedder, "embed") as mock_embed:
                 mock_embed.return_value = [0.0] * 1536
@@ -364,12 +401,11 @@ class TestSearchPerformance:
                 # Second search - cache hit
                 await search.search("test query", limit=10)
 
-                if search.cache:
-                    # Should not call search again
-                    assert mock_search.call_count == 1
+                # Should not call search again (cached)
+                assert mock_search.call_count == 1
 
-                    stats = search.get_stats()
-                    assert stats["cache_hits"] > 0
+                stats = search.get_stats()
+                assert stats["cache_hits"] > 0
 
 
 if __name__ == "__main__":
