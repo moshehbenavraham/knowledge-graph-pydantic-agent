@@ -156,13 +156,19 @@ class SemanticChunker:
         if len(content) <= self.config["chunk_size"]:
             # Single chunk for small documents
             structlog_logger.info("SemanticChunker.chunk - content fits in single chunk")
+            chunk_metadata = {
+                **(metadata or {}),
+                "chunk_method": "semantic",
+                "chunk_index": 0,
+                "total_chunks": 1,
+            }
             return [
                 DocumentChunk(
                     content=content.strip(),
                     index=0,
                     start_char=0,
                     end_char=len(content),
-                    metadata=metadata or {},
+                    metadata=chunk_metadata,
                 )
             ]
 
@@ -273,8 +279,16 @@ class SemanticChunker:
         if current_chunk:
             chunks.append(current_chunk.strip())
 
-        # Filter by minimum size
+        # Filter by minimum size, but keep at least one chunk if all are small
         result = [c for c in chunks if len(c) >= self.config["min_chunk_size"]]
+
+        # If all chunks were filtered out but we had reasonable content, return the largest chunk
+        # Only keep small chunks if they're at least 20% of min_chunk_size
+        if not result and chunks:
+            largest = max(chunks, key=len)
+            if len(largest) >= self.config["min_chunk_size"] * 0.2:
+                result = [largest]
+
         structlog_logger.info("_semantic_chunk_sections completed", num_chunks=len(result))
         return result
 
@@ -315,7 +329,14 @@ class SemanticChunker:
                 if self.config["min_chunk_size"] <= len(chunk) <= self.config["max_chunk_size"]
             ]
 
-            result = valid_chunks if valid_chunks else self._simple_split(section)
+            # If all chunks were filtered but LLM provided multiple chunks, be more lenient
+            if not valid_chunks and len(chunks) > 1:
+                # Return all non-empty chunks, even if below min size
+                result = [chunk for chunk in chunks if chunk.strip()]
+            elif valid_chunks:
+                result = valid_chunks
+            else:
+                result = self._simple_split(section)
             structlog_logger.info("_llm_split_section completed", num_chunks=len(result))
             return result
 
@@ -535,6 +556,18 @@ class SimpleChunker:
 
         # Split on sentence boundaries
         sentences = re.split(r"(?<=[.!?])\s+", paragraph)
+
+        # If no sentence boundaries found and paragraph is too long, force split
+        if len(sentences) == 1 and len(paragraph) > self.config["chunk_size"]:
+            # Force split into chunk_size pieces
+            chunks = []
+            for i in range(
+                0, len(paragraph), self.config["chunk_size"] - self.config["chunk_overlap"]
+            ):
+                end = min(i + self.config["chunk_size"], len(paragraph))
+                chunks.append(paragraph[i:end])
+            structlog_logger.info("_split_paragraph force split", num_chunks=len(chunks))
+            return chunks
 
         chunks = []
         current_chunk = ""

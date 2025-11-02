@@ -313,7 +313,10 @@ class TestSemanticChunker:
         assert chunks[0].index == 0
         assert chunks[0].start_char == 0
         assert chunks[0].end_char == len(content)
-        assert chunks[0].metadata == metadata
+        # Check that original metadata is preserved and chunk metadata is added
+        assert chunks[0].metadata["source"] == "test.txt"
+        assert "chunk_method" in chunks[0].metadata
+        assert chunks[0].metadata["chunk_method"] == "semantic"
 
     @pytest.mark.asyncio
     async def test_semantic_chunk_with_sections_fallback(self):
