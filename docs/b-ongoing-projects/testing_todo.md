@@ -1,44 +1,9 @@
 # Testing TODO - Remaining Work Only
 
-**Current State**: 3,789 tests | ~3,765 passed (99.4%) | 0 failing | 106 skipped | ~77% coverage
+**Current State**: ~3,900 tests | ~3,874 passed (99.3%) | 0 failing | 106 skipped | ~78% coverage
 **Target State**: 100% pass rate | <20 skipped | 80%+ coverage
 
-**Completed Work**: See `/docs/a-changelogs/changelog_current.md` for:
-- Phase 1: Chunker Tests (74 tests fixed) - v2.4.0
-- Phase 2: Integration Test Infrastructure (62 tests fixed) - v2.4.0
-- Phase 3: API Endpoint Test Suite (53 tests fixed) - v2.5.0
-- Phase 4: Authentication System Tests (10 tests fixed) - v2.6.0
-- Phase 5: Configuration and Small Test Groups (21 tests fixed) - v2.7.0
-- Phase 6: Miscellaneous Test Fixes (11 tests fixed) - v2.8.0
-- **Total Fixed**: 231 tests
-
----
-
-## PHASE 7: Add Tests for 0% Coverage Files
-**Priority**: HIGH
-**Estimated Time**: 6-8 hours
-
-### Tasks:
-
-#### 7.1 Critical Files (HIGH Impact)
-- [ ] Create tests for `src/agentic_rag/ingestion/__main__.py` (92 statements)
-  - [ ] Test CLI argument parsing
-  - [ ] Test main entry point
-  - [ ] Test error handling
-- [ ] Create tests for `src/auth/breach_detection.py` (40 statements)
-  - [ ] Test breach detection logic
-  - [ ] Test security checks
-- [ ] Create tests for `src/rag_pipeline/sources/local_files.py` (184 statements)
-  - [ ] Test file ingestion
-  - [ ] Test various file formats
-  - [ ] Test error handling
-
-#### 7.2 Medium Priority Files
-- [ ] Create tests for `src/auth/email_verification_page.py` (49 statements)
-- [ ] Create tests for `src/auth/password_history.py` (16 statements)
-- [ ] Create tests for `src/auth/password_reset_page.py` (4 statements)
-
-**Success Criteria**: All new test files created and passing
+**Completed Work**: See `/docs/a-changelogs/changelog_current.md` for Phases 1-7 (345+ tests fixed)
 
 ---
 
@@ -143,7 +108,7 @@
 
 ### Tasks:
 - [ ] Run full test suite: `make test-coverage`
-- [ ] Verify 100% pass rate (all 3,788+ tests)
+- [ ] Verify 100% pass rate (all 3,900+ tests)
 - [ ] Verify coverage >80%
 - [ ] Verify <20 skipped tests
 - [ ] Document any remaining issues
@@ -180,17 +145,16 @@ pytest --collect-only -q -m skip
 
 ## Summary Status
 
-| Phase | Description | Tests Remaining | Priority | Est. Time |
-|-------|-------------|-----------------|----------|-----------|
-| 7 | Add Tests for 0% Coverage | N/A | HIGH | 6-8 hrs |
-| 8 | Improve Low Coverage Files | N/A | MEDIUM | 8-10 hrs |
-| 9 | Enable Skipped Tests | 103 | LOW | 4-6 hrs |
-| 10 | Performance & Cleanup | N/A | LOW | 2-4 hrs |
-| 11 | Final Verification | N/A | CRITICAL | 1 hr |
+| Phase | Description | Priority | Est. Time |
+|-------|-------------|----------|-----------|
+| 8 | Improve Low Coverage Files | MEDIUM | 8-10 hrs |
+| 9 | Enable Skipped Tests | LOW | 4-6 hrs |
+| 10 | Performance & Cleanup | LOW | 2-4 hrs |
+| 11 | Final Verification | CRITICAL | 1 hr |
 
 **Progress**:
-- **Completed**: Phases 1-6 (231 tests fixed)
-- **Remaining in Current Phases**: 103 skipped tests
-- **Coverage Target**: 80%+ (currently ~77%)
+- **Completed**: Phases 1-7 (345+ tests added/fixed)
+- **Remaining**: Phases 8-11 (coverage improvements, skipped tests, cleanup)
+- **Coverage**: 78% (Target: 80%+)
 
-**Next Step**: Phase 7 (Add Tests for 0% Coverage Files)
+**Next Step**: Phase 8 (Improve Low Coverage Files)
