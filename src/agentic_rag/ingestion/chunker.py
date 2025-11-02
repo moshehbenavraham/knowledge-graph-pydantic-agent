@@ -153,7 +153,7 @@ class SemanticChunker:
             return []
 
         # Check if semantic chunking is appropriate
-        if len(content) <= self.config.chunk_size:
+        if len(content) <= self.config["chunk_size"]:
             # Single chunk for small documents
             structlog_logger.info("SemanticChunker.chunk - content fits in single chunk")
             return [
@@ -253,7 +253,7 @@ class SemanticChunker:
             # Check if adding section exceeds size limit
             potential_chunk = f"{current_chunk}\n\n{section}" if current_chunk else section
 
-            if len(potential_chunk) <= self.config.chunk_size:
+            if len(potential_chunk) <= self.config["chunk_size"]:
                 current_chunk = potential_chunk
             else:
                 # Save current chunk if exists
@@ -261,7 +261,7 @@ class SemanticChunker:
                     chunks.append(current_chunk.strip())
 
                 # Handle oversized sections
-                if len(section) > self.config.max_chunk_size:
+                if len(section) > self.config["max_chunk_size"]:
                     # Split using LLM
                     sub_chunks = await self._llm_split_section(section)
                     chunks.extend(sub_chunks)
@@ -274,7 +274,7 @@ class SemanticChunker:
             chunks.append(current_chunk.strip())
 
         # Filter by minimum size
-        result = [c for c in chunks if len(c) >= self.config.min_chunk_size]
+        result = [c for c in chunks if len(c) >= self.config["min_chunk_size"]]
         structlog_logger.info("_semantic_chunk_sections completed", num_chunks=len(result))
         return result
 
@@ -294,10 +294,10 @@ class SemanticChunker:
             prompt = f"""
             Split the following text into semantically coherent chunks.
             Each chunk should:
-            1. Be roughly {self.config.chunk_size} characters
+            1. Be roughly {self.config["chunk_size"]} characters
             2. End at natural semantic boundaries
             3. Maintain context and readability
-            4. Not exceed {self.config.max_chunk_size} characters
+            4. Not exceed {self.config["max_chunk_size"]} characters
 
             Return ONLY the split text with "---CHUNK---" between chunks.
 
@@ -312,7 +312,7 @@ class SemanticChunker:
             valid_chunks = [
                 chunk
                 for chunk in chunks
-                if self.config.min_chunk_size <= len(chunk) <= self.config.max_chunk_size
+                if self.config["min_chunk_size"] <= len(chunk) <= self.config["max_chunk_size"]
             ]
 
             result = valid_chunks if valid_chunks else self._simple_split(section)
@@ -340,20 +340,20 @@ class SemanticChunker:
         start = 0
 
         while start < len(text):
-            end = min(start + self.config.chunk_size, len(text))
+            end = min(start + self.config["chunk_size"], len(text))
 
             if end >= len(text):
                 chunks.append(text[start:])
                 break
 
             # Find sentence boundary
-            for i in range(end, max(start + self.config.min_chunk_size, end - 200), -1):
+            for i in range(end, max(start + self.config["min_chunk_size"], end - 200), -1):
                 if text[i] in ".!?\n":
                     end = i + 1
                     break
 
             chunks.append(text[start:end])
-            start = end - self.config.chunk_overlap
+            start = end - self.config["chunk_overlap"]
 
         structlog_logger.info("_simple_split completed", num_chunks=len(chunks))
         return chunks
@@ -403,7 +403,7 @@ class SemanticChunker:
                 )
             )
 
-            current_pos = end_pos - self.config.chunk_overlap
+            current_pos = end_pos - self.config["chunk_overlap"]
 
         structlog_logger.info("_create_chunk_objects completed", num_objects=len(chunk_objects))
         return chunk_objects
@@ -442,8 +442,8 @@ class SimpleChunker:
         structlog_logger.info(
             "Chunking document",
             content_length=len(content),
-            chunk_size=self.config.chunk_size,
-            chunk_overlap=self.config.chunk_overlap,
+            chunk_size=self.config["chunk_size"],
+            chunk_overlap=self.config["chunk_overlap"],
         )
         if not content.strip():
             return []
@@ -464,7 +464,7 @@ class SimpleChunker:
             # Check if adding paragraph exceeds size
             potential_chunk = f"{current_chunk}\n\n{paragraph}" if current_chunk else paragraph
 
-            if len(potential_chunk) <= self.config.chunk_size:
+            if len(potential_chunk) <= self.config["chunk_size"]:
                 current_chunk = potential_chunk
             else:
                 # Save current chunk
@@ -480,12 +480,12 @@ class SimpleChunker:
                     )
 
                     # Update position with overlap
-                    overlap_start = max(0, len(current_chunk) - self.config.chunk_overlap)
+                    overlap_start = max(0, len(current_chunk) - self.config["chunk_overlap"])
                     current_pos += overlap_start
                     chunk_index += 1
 
                 # Handle oversized paragraphs
-                if len(paragraph) > self.config.chunk_size:
+                if len(paragraph) > self.config["chunk_size"]:
                     # Split paragraph
                     para_chunks = self._split_paragraph(paragraph)
                     for pc in para_chunks:
@@ -494,7 +494,7 @@ class SimpleChunker:
                                 pc, chunk_index, current_pos, current_pos + len(pc), metadata
                             )
                         )
-                        current_pos += max(0, len(pc) - self.config.chunk_overlap)
+                        current_pos += max(0, len(pc) - self.config["chunk_overlap"])
                         chunk_index += 1
                     current_chunk = ""
                 else:
@@ -542,7 +542,7 @@ class SimpleChunker:
         for sentence in sentences:
             potential_chunk = f"{current_chunk} {sentence}" if current_chunk else sentence
 
-            if len(potential_chunk) <= self.config.chunk_size:
+            if len(potential_chunk) <= self.config["chunk_size"]:
                 current_chunk = potential_chunk
             else:
                 if current_chunk:
