@@ -305,16 +305,47 @@ def test_setup_tracing_with_jaeger():
         mock_config.jaeger_host = "localhost"
         mock_config.jaeger_port = 6831
 
-        # Mock the imports
+        # Create proper mock modules with __path__ attribute
+        mock_otlp_module = Mock()
+        mock_otlp_module.__path__ = []
+
+        # Create mocked constructors that return proper mocks
+        mock_tracer_provider = Mock()
+        mock_batch_processor = Mock()
+        mock_jaeger_exporter = Mock()
+        mock_resource = Mock()
+
+        def mock_tracer_provider_init(**kwargs):
+            return mock_tracer_provider
+
+        def mock_batch_processor_init(exporter):
+            return mock_batch_processor
+
+        def mock_jaeger_exporter_init(**kwargs):
+            return mock_jaeger_exporter
+
+        # Mock the imports with proper structure
         with patch.dict(
             "sys.modules",
             {
-                "opentelemetry": Mock(),
-                "opentelemetry.trace": Mock(),
-                "opentelemetry.sdk.trace": Mock(),
-                "opentelemetry.sdk.trace.export": Mock(),
-                "opentelemetry.sdk.resources": Mock(),
-                "opentelemetry.exporter.jaeger.thrift": Mock(),
+                "opentelemetry": Mock(__path__=[]),
+                "opentelemetry.trace": Mock(set_tracer_provider=Mock()),
+                "opentelemetry.sdk.trace": Mock(TracerProvider=mock_tracer_provider_init),
+                "opentelemetry.sdk.trace.export": Mock(
+                    BatchSpanProcessor=mock_batch_processor_init
+                ),
+                "opentelemetry.sdk.resources": Mock(
+                    Resource=Mock(create=Mock(return_value=mock_resource))
+                ),
+                "opentelemetry.exporter.jaeger.thrift": Mock(
+                    JaegerExporter=mock_jaeger_exporter_init
+                ),
+                "opentelemetry.exporter.otlp": mock_otlp_module,
+                "opentelemetry.exporter.otlp.proto": Mock(__path__=[]),
+                "opentelemetry.exporter.otlp.proto.grpc": Mock(__path__=[]),
+                "opentelemetry.exporter.otlp.proto.grpc.trace_exporter": Mock(
+                    OTLPSpanExporter=Mock
+                ),
                 "opentelemetry.instrumentation.fastapi": Mock(
                     FastAPIInstrumentor=mock_instrumentor
                 ),
@@ -339,15 +370,43 @@ def test_setup_tracing_with_otlp():
         mock_config._settings.jaeger_host = None
         mock_config.jaeger_host = None
 
+        # Create proper mock modules with __path__ attribute
+        mock_otlp_module = Mock()
+        mock_otlp_module.__path__ = []
+
+        # Create mocked constructors that return proper mocks
+        mock_tracer_provider = Mock()
+        mock_batch_processor = Mock()
+        mock_otlp_exporter = Mock()
+        mock_resource = Mock()
+
+        def mock_tracer_provider_init(**kwargs):
+            return mock_tracer_provider
+
+        def mock_batch_processor_init(exporter):
+            return mock_batch_processor
+
+        def mock_otlp_exporter_init(**kwargs):
+            return mock_otlp_exporter
+
         with patch.dict(
             "sys.modules",
             {
-                "opentelemetry": Mock(),
-                "opentelemetry.trace": Mock(),
-                "opentelemetry.sdk.trace": Mock(),
-                "opentelemetry.sdk.trace.export": Mock(),
-                "opentelemetry.sdk.resources": Mock(),
-                "opentelemetry.exporter.otlp.proto.grpc.trace_exporter": Mock(),
+                "opentelemetry": Mock(__path__=[]),
+                "opentelemetry.trace": Mock(set_tracer_provider=Mock()),
+                "opentelemetry.sdk.trace": Mock(TracerProvider=mock_tracer_provider_init),
+                "opentelemetry.sdk.trace.export": Mock(
+                    BatchSpanProcessor=mock_batch_processor_init
+                ),
+                "opentelemetry.sdk.resources": Mock(
+                    Resource=Mock(create=Mock(return_value=mock_resource))
+                ),
+                "opentelemetry.exporter.otlp": mock_otlp_module,
+                "opentelemetry.exporter.otlp.proto": Mock(__path__=[]),
+                "opentelemetry.exporter.otlp.proto.grpc": Mock(__path__=[]),
+                "opentelemetry.exporter.otlp.proto.grpc.trace_exporter": Mock(
+                    OTLPSpanExporter=mock_otlp_exporter_init
+                ),
                 "opentelemetry.instrumentation.fastapi": Mock(
                     FastAPIInstrumentor=mock_instrumentor
                 ),
@@ -507,7 +566,7 @@ def test_documents_router_included(client):
 
 def test_analytics_router_included(client):
     """Test that analytics router is included."""
-    response = client.get("/api/v1/analytics/searches")
+    response = client.get("/api/v1/analytics/search-metrics?window=7d")
 
     # Should not be 404 (router is mounted)
     assert response.status_code != 404
@@ -547,20 +606,40 @@ def test_openapi_schema(client):
 @pytest.mark.asyncio
 async def test_full_lifecycle():
     """Test full application lifecycle (startup -> request -> shutdown)."""
-    from src.api.main import app
-
     with (
         patch("src.api.main.init_dependencies", new_callable=AsyncMock) as mock_init,
-        patch("src.api.main.cleanup_dependencies", new_callable=AsyncMock),
+        patch("src.api.main.cleanup_dependencies", new_callable=AsyncMock) as mock_cleanup,
+        patch("src.api.main.api_config") as mock_config,
     ):
-        client = TestClient(app)
+        # Configure mock_config
+        mock_config._settings.app_env = "test"
+        mock_config.enable_tracing = False
+        mock_config.log_level = "INFO"
+        mock_config.get_cors_config.return_value = {
+            "allow_origins": ["*"],
+            "allow_methods": ["*"],
+            "allow_headers": ["*"],
+        }
+        mock_config.get_uvicorn_config.return_value = {
+            "host": "0.0.0.0",
+            "port": 8000,
+            "reload": False,
+        }
 
-        # Make a request
-        response = client.get("/")
-        assert response.status_code == 200
+        # Import app after patching
+        from src.api.main import app
 
-        # Verify initialization happened
-        assert mock_init.called
+        # Create TestClient with the patched app
+        with TestClient(app) as client:
+            # Make a request
+            response = client.get("/")
+            assert response.status_code == 200
+
+            # Verify initialization happened
+            assert mock_init.called
+
+        # Verify cleanup happened after context exit
+        assert mock_cleanup.called
 
 
 def test_concurrent_requests(client):

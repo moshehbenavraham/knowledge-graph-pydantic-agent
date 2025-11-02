@@ -14,8 +14,99 @@ from src.api.main import app
 
 @pytest.fixture
 def client():
-    """Create test client."""
-    return TestClient(app)
+    """Create test client with mocked dependencies."""
+    from src.api.dependencies import (
+        get_agent_deps,
+        get_cache_manager,
+        get_connection_manager,
+        get_hybrid_search,
+        get_intent_analyzer,
+        get_neo4j_store,
+        get_postgres_store,
+        get_vector_search,
+    )
+
+    # Create mock dependencies
+    mock_deps = MagicMock()
+    mock_deps.postgres_store = AsyncMock()
+    mock_deps.neo4j_store = AsyncMock()
+    mock_deps.cache_manager = MagicMock()
+    mock_deps.cache_manager.get.return_value = None
+    mock_deps.cache_manager.set.return_value = None
+    mock_deps.cache_manager.flush.return_value = None
+
+    mock_cache = MagicMock()
+    mock_cache.get.return_value = None
+    mock_cache.set.return_value = None
+    mock_cache.flush.return_value = None
+
+    mock_postgres = AsyncMock()
+    mock_postgres.search_similar = AsyncMock(return_value=[])
+    mock_postgres.get_document = AsyncMock(
+        return_value={
+            "id": "test-doc-id",
+            "title": "Test Document",
+            "source": "test",
+            "content": "Test content",
+            "created_at": "2024-01-01T00:00:00",
+            "updated_at": "2024-01-01T00:00:00",
+            "chunk_count": 1,
+            "metadata": {},
+        }
+    )
+    mock_postgres.get_document_chunks = AsyncMock(return_value=[])
+    mock_postgres.list_documents = AsyncMock(return_value=[])
+    mock_postgres.delete_document = AsyncMock(return_value=True)
+    mock_postgres.count_documents = AsyncMock(return_value=0)
+    mock_postgres.store_document = AsyncMock(return_value="doc-id-123")
+    mock_postgres.store_chunks = AsyncMock(return_value=5)
+
+    mock_neo4j = AsyncMock()
+    mock_conn_manager = AsyncMock()
+
+    # Create mock search instances
+    mock_hybrid_search = MagicMock()
+    mock_hybrid_search.comprehensive_search = AsyncMock(
+        return_value={"chunks": [], "facts": [], "entities": [], "relationships": []}
+    )
+
+    mock_vector_search = MagicMock()
+    mock_vector_search.search = AsyncMock(return_value=[])
+
+    mock_intent_analyzer = MagicMock()
+    mock_intent_analyzer.analyze = AsyncMock(return_value="HYBRID")
+
+    # Override dependencies
+    app.dependency_overrides[get_agent_deps] = lambda: mock_deps
+    app.dependency_overrides[get_cache_manager] = lambda: mock_cache
+    app.dependency_overrides[get_postgres_store] = lambda: mock_postgres
+    app.dependency_overrides[get_neo4j_store] = lambda: mock_neo4j
+    app.dependency_overrides[get_connection_manager] = lambda: mock_conn_manager
+    app.dependency_overrides[get_hybrid_search] = lambda: mock_hybrid_search
+    app.dependency_overrides[get_vector_search] = lambda: mock_vector_search
+    app.dependency_overrides[get_intent_analyzer] = lambda: mock_intent_analyzer
+
+    # Mock the lifespan init/cleanup
+    with patch("src.api.main.init_dependencies", new_callable=AsyncMock):
+        with patch("src.api.main.cleanup_dependencies", new_callable=AsyncMock):
+            with patch("src.api.main.api_config") as mock_config:
+                # Configure mock_config
+                mock_config._settings.app_env = "test"
+                mock_config.enable_tracing = False
+                mock_config.log_level = "INFO"
+                mock_config.get_cors_config.return_value = {
+                    "allow_origins": ["*"],
+                    "allow_methods": ["*"],
+                    "allow_headers": ["*"],
+                }
+
+                # Create client
+                client = TestClient(app)
+
+                yield client
+
+    # Clean up overrides
+    app.dependency_overrides.clear()
 
 
 @pytest.fixture
@@ -163,18 +254,40 @@ class TestDocumentEndpoints:
     @pytest.mark.asyncio
     async def test_ingest_document(self, client, mock_postgres_store):
         """Test document ingestion."""
-        response = client.post(
-            "/api/v1/documents",
-            json={
-                "content": "This is test content for ingestion.",
-                "title": "Test Document",
-                "source": "test",
-                "metadata": {"category": "test"},
-            },
-        )
+        from uuid import uuid4
 
-        # Should return 201 or 503
-        assert response.status_code in [201, 503]
+        from src.agentic_rag.ingestion.pipeline import IngestionResult
+
+        # Mock the ingestion pipeline
+        with patch("src.api.endpoints.documents.IngestionPipeline") as MockPipeline:
+            mock_pipeline = MagicMock()
+            mock_result = IngestionResult(
+                document_id=uuid4(),
+                title="Test Document",
+                source="test",
+                chunks_created=5,
+                entities_extracted=3,
+                relationships_extracted=2,
+                facts_extracted=1,
+                processing_time=1.5,
+                errors=[],
+                metadata={"category": "test"},
+            )
+            mock_pipeline.ingest_document = AsyncMock(return_value=mock_result)
+            MockPipeline.return_value = mock_pipeline
+
+            response = client.post(
+                "/api/v1/documents",
+                json={
+                    "content": "This is test content for ingestion.",
+                    "title": "Test Document",
+                    "source": "test",
+                    "metadata": {"category": "test"},
+                },
+            )
+
+            # Should return 201 or 503
+            assert response.status_code in [201, 503]
 
     def test_ingest_document_validation_error(self, client):
         """Test document ingestion with invalid data."""

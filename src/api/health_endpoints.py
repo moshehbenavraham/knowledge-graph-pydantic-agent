@@ -10,7 +10,7 @@ from src.utils.health import health_checker
 from src.utils.monitoring import logger, monitor
 from src.utils.rate_limiting import rate_limiter
 
-router = APIRouter(prefix="/health", tags=["health"])
+router = APIRouter(tags=["health"])
 
 
 @router.get("/")

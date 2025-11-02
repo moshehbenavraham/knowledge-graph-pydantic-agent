@@ -69,10 +69,10 @@ async def ingest_document(
         processing_time_ms = (time.perf_counter() - start_time) * 1000
 
         response = IngestResponse(
-            document_id=result.document_id,
+            document_id=str(result.document_id),
             chunks_created=result.chunks_created,
             entities_extracted=result.entities_extracted,
-            relationships_extracted=result.get("relationships_extracted", 0),
+            relationships_extracted=result.relationships_extracted,
             processing_time_ms=processing_time_ms,
             status="completed",
         )

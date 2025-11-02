@@ -13,7 +13,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
-from src.api.dependencies import cleanup_dependencies, init_dependencies
+from src.api.dependencies import (
+    check_database_health,
+    cleanup_dependencies,
+    get_api_settings,
+    get_cache_manager,
+    init_dependencies,
+)
 from src.api.endpoints import analytics, chat, documents, search
 from src.api.health_endpoints import router as health_router
 from src.api.middleware import (
@@ -29,6 +35,12 @@ from src.api.models import StatusResponse
 from src.config.api import api_config
 
 logger = structlog.get_logger()
+
+# Conditional import for tracing (for test mocking)
+try:
+    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+except ImportError:
+    FastAPIInstrumentor = None  # type: ignore
 
 
 # ===== Application Lifespan =====
@@ -168,8 +180,6 @@ async def status():
 
     Returns comprehensive status of all components.
     """
-    from src.api.dependencies import check_database_health, get_api_settings
-
     health = await check_database_health()
     settings = await get_api_settings()
 
@@ -222,8 +232,6 @@ async def clear_cache(pattern: str = "*"):
     Supports wildcard patterns for selective clearing.
     """
     try:
-        from src.api.dependencies import get_cache_manager
-
         cache = await get_cache_manager()
 
         if pattern == "*":
@@ -291,10 +299,19 @@ def _setup_tracing(app: FastAPI):
         from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
             OTLPSpanExporter,
         )
-        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
         from opentelemetry.sdk.resources import Resource
         from opentelemetry.sdk.trace import TracerProvider
         from opentelemetry.sdk.trace.export import BatchSpanProcessor
+
+        # Use module-level import if available (for testing), otherwise import locally
+        if FastAPIInstrumentor is None:
+            from opentelemetry.instrumentation.fastapi import (
+                FastAPIInstrumentor as LocalFastAPIInstrumentor,
+            )
+
+            instrumentor = LocalFastAPIInstrumentor
+        else:
+            instrumentor = FastAPIInstrumentor
 
         # Create resource
         resource = Resource.create(
@@ -324,7 +341,7 @@ def _setup_tracing(app: FastAPI):
         provider.add_span_processor(BatchSpanProcessor(exporter))
 
         # Instrument FastAPI
-        FastAPIInstrumentor.instrument_app(app)
+        instrumentor.instrument_app(app)
 
         logger.info(
             "tracing_enabled",

@@ -23,6 +23,14 @@ correlation_id_ctx: ContextVar[str] = ContextVar("correlation_id", default="")
 logger = structlog.get_logger()
 
 
+# Create a namespace for request_logging (for test mocking)
+class RequestLoggingNamespace:
+    logger = logger
+
+
+request_logging = RequestLoggingNamespace()
+
+
 def get_correlation_id() -> str:
     """Get current correlation ID from context."""
     return correlation_id_ctx.get()

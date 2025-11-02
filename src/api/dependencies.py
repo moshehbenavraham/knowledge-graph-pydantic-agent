@@ -138,16 +138,10 @@ async def get_vector_search(
 
 
 async def get_hybrid_search(
-    postgres_store: PostgresStore = Depends(get_postgres_store),
-    neo4j_store: Neo4jStore | None = Depends(get_neo4j_store),
-    graphiti_client: GraphitiClient | None = Depends(get_graphiti_client),
+    connection_manager: ConnectionManager = Depends(get_connection_manager),
 ) -> HybridSearch:
     """Get hybrid search instance."""
-    return HybridSearch(
-        postgres_store=postgres_store,
-        neo4j_store=neo4j_store,
-        graphiti_client=graphiti_client,
-    )
+    return HybridSearch(connection_manager)
 
 
 async def get_intent_analyzer() -> IntentAnalyzer:
