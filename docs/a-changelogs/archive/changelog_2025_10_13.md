@@ -4,7 +4,7 @@ All notable changes to the Luminari Agent project are documented in this file.
 
 Previous changelogs can be found in /docs/changelogs_previous/
 
-## [Unreleased] - 2025-10-14
+## [0.9.0] - 2025-10-14
 
 ### Fixed
 
@@ -87,7 +87,7 @@ Previous changelogs can be found in /docs/changelogs_previous/
 
 ---
 
-## [Previous] - 2025-10-13
+## [0.3.0 - 0.8.0] - 2025-10-13
 
 ### Fixed
 
@@ -469,7 +469,7 @@ Previous changelogs can be found in /docs/changelogs_previous/
 
 ---
 
-## [Unreleased] - 2025-01-08
+## [0.8.0] - 2025-01-08
 
 ### Phase 4.5 Complete - API Completion & Validation
 
@@ -710,7 +710,7 @@ See: `docs/projects_ongoing/AGENTIC_RAG_PHASE_04_5.md`
 
 ---
 
-## [Unreleased] - 2024-12-26
+## [0.7.0] - 2024-12-26
 
 ### Tier 2 Development Tools Implementation
 

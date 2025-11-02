@@ -16,7 +16,8 @@ class TestGetUserInfo:
             "full_name": "Test User",
         }
 
-        with patch("src.auth.db.get_user_by_username") as mock_get_user:
+        # Patch where the function is used, not where it's defined
+        with patch("src.auth.user_profile.get_user_by_username") as mock_get_user:
             mock_get_user.return_value = mock_user
 
             result = get_user_info("test_user")
@@ -51,18 +52,25 @@ class TestChangeUserPassword:
     def test_change_user_password_success(self):
         from src.auth.user_profile import change_user_password
 
-        mock_user = {"id": 123, "username": "test_user"}
+        # Use a valid UUID string
+        mock_user = {"id": "550e8400-e29b-41d4-a716-446655440000", "username": "test_user"}
 
+        # verify_user_password is imported inside the function, so patch at source
         with patch("src.auth.db.verify_user_password") as mock_verify:
             mock_verify.return_value = mock_user
 
-            with patch("src.auth.db.update_user_password") as mock_update:
+            # update_user_password is imported at module level
+            with patch("src.auth.user_profile.update_user_password") as mock_update:
+                mock_update.return_value = None  # update_user_password doesn't return anything
+
                 success, message = change_user_password("test_user", "old_password", "new_password")
 
                 assert success is True
                 assert "successfully" in message
                 mock_verify.assert_called_once_with("test_user", "old_password")
-                mock_update.assert_called_once_with(123, "new_password")
+                mock_update.assert_called_once_with(
+                    "550e8400-e29b-41d4-a716-446655440000", "new_password"
+                )
 
     def test_change_user_password_wrong_current_password(self):
         from src.auth.user_profile import change_user_password
@@ -294,7 +302,8 @@ class TestRenderUserProfile:
         with patch("src.auth.user_profile.get_user_info") as mock_get_user:
             mock_get_user.return_value = mock_user
 
-            with patch("src.auth.db.get_user_sessions") as mock_get_sessions:
+            # Patch where function is used (imported at module level)
+            with patch("src.auth.user_profile.get_user_sessions") as mock_get_sessions:
                 mock_get_sessions.return_value = mock_sessions
 
                 with patch("streamlit.sidebar.markdown"):
@@ -339,7 +348,8 @@ class TestRenderUserProfile:
         with patch("src.auth.user_profile.get_user_info") as mock_get_user:
             mock_get_user.return_value = mock_user
 
-            with patch("src.auth.db.get_user_sessions") as mock_get_sessions:
+            # Patch where functions are used (imported at module level)
+            with patch("src.auth.user_profile.get_user_sessions") as mock_get_sessions:
                 mock_get_sessions.return_value = mock_sessions
 
                 with patch("streamlit.sidebar.markdown"):
@@ -352,7 +362,9 @@ class TestRenderUserProfile:
                                 with patch("streamlit.button") as mock_button:
                                     mock_button.return_value = True
 
-                                    with patch("src.auth.db.revoke_session") as mock_revoke:
+                                    with patch(
+                                        "src.auth.user_profile.revoke_session"
+                                    ) as mock_revoke:
                                         mock_revoke.return_value = True
 
                                         with patch("streamlit.success"):
@@ -367,7 +379,7 @@ class TestRenderUserProfile:
         from src.auth.user_profile import render_user_profile
 
         mock_user = {
-            "id": 123,
+            "id": "550e8400-e29b-41d4-a716-446655440000",  # Use valid UUID
             "username": "test_user",
             "email": "test@example.com",
             "full_name": "Test User",
@@ -394,15 +406,17 @@ class TestRenderUserProfile:
             },
         ]
 
-        session_dict = {"confirm_revoke_all": True}
-        mock_session_state.__contains__ = lambda self, key: key in session_dict
-        mock_session_state.__delitem__ = lambda self, key: session_dict.pop(key, None)
-        mock_session_state.clear = lambda: session_dict.clear()
+        # Set up session_state mock to simulate confirm_revoke_all being set
+        mock_session_state.confirm_revoke_all = True
+        mock_session_state.clear = MagicMock()
+        # Mock __contains__ to support "key in session_state" checks
+        mock_session_state.__contains__ = lambda key: key == "confirm_revoke_all"
 
         with patch("src.auth.user_profile.get_user_info") as mock_get_user:
             mock_get_user.return_value = mock_user
 
-            with patch("src.auth.db.get_user_sessions") as mock_get_sessions:
+            # Patch where functions are used (imported at module level)
+            with patch("src.auth.user_profile.get_user_sessions") as mock_get_sessions:
                 mock_get_sessions.return_value = mock_sessions
 
                 with patch("streamlit.sidebar.markdown"):
@@ -418,7 +432,7 @@ class TestRenderUserProfile:
                                     mock_button.side_effect = [False, False, True]
 
                                     with patch(
-                                        "src.auth.db.revoke_all_user_sessions"
+                                        "src.auth.user_profile.revoke_all_user_sessions"
                                     ) as mock_revoke_all:
                                         mock_revoke_all.return_value = 2
 

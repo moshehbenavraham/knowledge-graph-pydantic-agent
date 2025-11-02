@@ -313,7 +313,7 @@ class TestRenderOAuthAnalyticsDashboard:
 
         render_oauth_analytics_dashboard()
 
-        mock_st.error.assert_called_with("Access denied. Admin privileges required.")
+        mock_st.error.assert_called_with("⛔ Access denied. Admin privileges required.")
 
     @patch("src.auth.oauth_analytics_dashboard.st")
     @patch("src.auth.oauth_analytics_dashboard.asyncio")
@@ -323,7 +323,7 @@ class TestRenderOAuthAnalyticsDashboard:
     @patch("src.auth.oauth_analytics_dashboard.get_login_activity")
     @patch("src.auth.oauth_analytics_dashboard.get_account_growth")
     @patch("src.auth.oauth_analytics_dashboard.get_multi_provider_users")
-    async def test_render_dashboard_admin_with_data(
+    def test_render_dashboard_admin_with_data(
         self,
         mock_get_multi,
         mock_get_growth,
@@ -335,17 +335,35 @@ class TestRenderOAuthAnalyticsDashboard:
         mock_st,
     ):
         """Test rendering dashboard for admin with data."""
-        mock_st.session_state.get.return_value = "admin"
-        mock_asyncio.run.side_effect = lambda x: x  # Pass through for async functions
+        import asyncio
+        import inspect
+        from unittest.mock import MagicMock
 
-        # Mock is_admin call
-        def async_run_side_effect(coro):
-            if hasattr(coro, "__name__") and "is_admin" in str(coro):
-                return True
+        mock_st.session_state.get.return_value = "admin"
+
+        # Mock asyncio.run to handle async mock calls properly
+        def sync_await(coro):
+            if inspect.iscoroutine(coro):
+                # Create a new event loop for this operation
+                new_loop = asyncio.new_event_loop()
+                try:
+                    return new_loop.run_until_complete(coro)
+                finally:
+                    new_loop.close()
             return coro
 
-        mock_asyncio.run.side_effect = async_run_side_effect
+        mock_asyncio.run.side_effect = sync_await
 
+        # Mock st.columns to return the correct number of mocks based on argument
+        def columns_side_effect(spec):
+            # Handle both int and list arguments
+            num_cols = spec if isinstance(spec, int) else len(spec)
+            return [MagicMock() for _ in range(num_cols)]
+
+        mock_st.columns.side_effect = columns_side_effect
+
+        # Set up return values for the async mocks
+        mock_is_admin.return_value = True
         mock_get_summary.return_value = [
             {
                 "provider": "google",
@@ -356,6 +374,10 @@ class TestRenderOAuthAnalyticsDashboard:
                 "avg_age_days": 45,
             }
         ]
+        mock_get_adoption.return_value = []
+        mock_get_login.return_value = []
+        mock_get_growth.return_value = []
+        mock_get_multi.return_value = []
 
         render_oauth_analytics_dashboard()
 
@@ -366,18 +388,39 @@ class TestRenderOAuthAnalyticsDashboard:
     @patch("src.auth.oauth_analytics_dashboard.asyncio")
     @patch("src.auth.admin_2fa_management.is_admin")
     @patch("src.auth.oauth_analytics_dashboard.get_provider_summary")
-    async def test_render_dashboard_no_oauth_data(
+    def test_render_dashboard_no_oauth_data(
         self, mock_get_summary, mock_is_admin, mock_asyncio, mock_st
     ):
         """Test rendering dashboard when no OAuth data available."""
+        import asyncio
+        import inspect
+        from unittest.mock import MagicMock
+
         mock_st.session_state.get.return_value = "admin"
 
-        def async_run_side_effect(coro):
-            if hasattr(coro, "__name__") and "is_admin" in str(coro):
-                return True
-            return []
+        # Mock asyncio.run to handle async functions properly
+        def sync_await(coro):
+            if inspect.iscoroutine(coro):
+                # Create a new event loop for this operation
+                new_loop = asyncio.new_event_loop()
+                try:
+                    return new_loop.run_until_complete(coro)
+                finally:
+                    new_loop.close()
+            return coro
 
-        mock_asyncio.run.side_effect = async_run_side_effect
+        mock_asyncio.run.side_effect = sync_await
+
+        # Mock st.columns to return the correct number of mocks based on argument
+        def columns_side_effect(spec):
+            # Handle both int and list arguments
+            num_cols = spec if isinstance(spec, int) else len(spec)
+            return [MagicMock() for _ in range(num_cols)]
+
+        mock_st.columns.side_effect = columns_side_effect
+
+        # Set up return values for the async mocks
+        mock_is_admin.return_value = True
         mock_get_summary.return_value = []
 
         render_oauth_analytics_dashboard()

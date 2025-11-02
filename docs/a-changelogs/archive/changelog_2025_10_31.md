@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ---
 
-## [Unreleased] - 2025-11-02
+## [2.4.0] - 2025-11-02
 
 ### Fixed - Testing: Phase 2 Integration Test Infrastructure (100% Complete)
 
@@ -146,7 +146,7 @@ Systematically fixed critical AttributeErrors in the document chunking system th
 
 ---
 
-## [Unreleased] - 2025-10-31
+## [2.3.0] - 2025-10-31
 
 ### Fixed - Development Tooling: MyPy Priority Type Errors Resolution
 

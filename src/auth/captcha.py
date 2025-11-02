@@ -60,18 +60,20 @@ class CaptchaManager:
 
     def _get_site_key(self) -> str:
         """Get site key from environment based on provider."""
+        current_settings = get_settings()
         if self.provider == "hcaptcha":
-            return getattr(settings, "hcaptcha_site_key", "")
+            return getattr(current_settings, "hcaptcha_site_key", "")
         if self.provider.startswith("recaptcha"):
-            return getattr(settings, "recaptcha_site_key", "")
+            return getattr(current_settings, "recaptcha_site_key", "")
         return ""
 
     def _get_secret_key(self) -> str:
         """Get secret key from environment based on provider."""
+        current_settings = get_settings()
         if self.provider == "hcaptcha":
-            return getattr(settings, "hcaptcha_secret_key", "")
+            return getattr(current_settings, "hcaptcha_secret_key", "")
         if self.provider.startswith("recaptcha"):
-            return getattr(settings, "recaptcha_secret_key", "")
+            return getattr(current_settings, "recaptcha_secret_key", "")
         return ""
 
     def _get_client(self) -> Client:
@@ -147,9 +149,8 @@ class CaptchaManager:
                     data["remoteip"] = ip_address
 
             # Send verification request
-            async with httpx.AsyncClient(  # noqa: CONST-III-001 - HTTP client for external API
-                timeout=self.VERIFY_TIMEOUT
-            ) as client:
+            # HTTP client for external API
+            async with httpx.AsyncClient(timeout=self.VERIFY_TIMEOUT) as client:
                 response = await client.post(verify_url, data=data)
 
             response_time_ms = int((datetime.now(UTC) - start_time).total_seconds() * 1000)
