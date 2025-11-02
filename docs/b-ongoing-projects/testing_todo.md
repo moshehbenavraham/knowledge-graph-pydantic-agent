@@ -1,44 +1,8 @@
 # Testing TODO - Remaining Work Only
 
-**Current State**: 3,789 tests | 3,560 passed (94.0%) | 126 failed | 103 skipped | ~77% coverage
+**Current State**: 3,789 tests | 3,670 passed (96.9%) | 16 failed | 106 skipped | ~77% coverage
 **Target State**: 100% pass rate | <20 skipped | 80%+ coverage
-**Remaining Work**: 126 test failures to fix, 103 skipped tests to enable
-
----
-
-## PHASE 2: Integration Test Infrastructure (62 tests)
-**Priority**: CRITICAL - API testing confidence
-**Estimated Time**: 4-6 hours
-
-### Tasks:
-
-#### 2.1 Chat Endpoints Integration (35 tests)
-**File**: `tests/integration/test_chat_endpoints_comprehensive.py`
-
-- [ ] Review FastAPI test client setup
-- [ ] Fix endpoint registration and routing issues
-- [ ] Verify dependency injection in test environment
-- [ ] Fix test database/service mocking
-- [ ] Fix WebSocket endpoint tests
-- [ ] Fix cache-related tests
-- [ ] Fix metrics recording tests
-- [ ] Fix streaming endpoint tests
-- [ ] Fix feedback endpoint tests
-- [ ] Run: `pytest tests/integration/test_chat_endpoints_comprehensive.py -v`
-
-#### 2.2 API Main Integration (27 tests)
-**File**: `tests/integration/test_api_main_comprehensive.py`
-
-- [ ] Fix API app configuration in tests
-- [ ] Fix middleware setup issues
-- [ ] Fix CORS header tests
-- [ ] Fix OpenAPI/Swagger tests
-- [ ] Fix lifespan event tests
-- [ ] Fix 404 handler tests
-- [ ] Fix concurrent request tests
-- [ ] Run: `pytest tests/integration/test_api_main_comprehensive.py -v`
-
-**Success Criteria**: All 62 integration tests passing
+**Remaining Work**: 16 test failures to fix, 103 skipped tests to enable
 
 ---
 
@@ -314,10 +278,10 @@
 
 ```bash
 # Run specific phase tests
-pytest tests/agentic_rag/ingestion/ -v              # Phase 1
-pytest tests/integration/ -v                         # Phase 2
 pytest tests/api/ -v                                 # Phase 3
 pytest tests/auth/ -v                                # Phase 4
+pytest tests/config/ -v                              # Phase 5 (Config)
+pytest tests/agentic_rag/search/ -v                  # Phase 5 (Search)
 
 # Run all tests
 make test-coverage
@@ -341,7 +305,6 @@ pytest --collect-only -q -m skip
 
 | Phase | Description | Tests to Fix | Priority | Est. Time |
 |-------|-------------|-------------|----------|----------|
-| 2 | Integration Infrastructure | 62 | CRITICAL | 4-6 hrs |
 | 3 | API Endpoints | 18 | HIGH | 2-3 hrs |
 | 4 | Authentication | 15 | MEDIUM | 2-3 hrs |
 | 5 | Config & Small Groups | 21 | MEDIUM | 2-3 hrs |
@@ -353,10 +316,11 @@ pytest --collect-only -q -m skip
 | 11 | Final Verification | N/A | CRITICAL | 1 hr |
 
 **Summary**:
-- **Tests to Fix**: 126 failures remaining
-- **Skipped Tests**: 103 to enable
+- **Tests to Fix**: 16 failures remaining
+- **Skipped Tests**: 103 to enable (currently 106 with 3 newly skipped)
 - **Coverage Target**: 80%+ (currently ~77%)
+- **Completed**: Phase 1 (116 chunker tests) + Phase 2 (62 integration tests) = 178 tests fixed
 
 ---
 
-**Next Step**: Start Phase 2 (Integration Test Infrastructure) - Critical for API testing confidence
+**Next Step**: Start Phase 3 (API Endpoints) - High priority for API validation
