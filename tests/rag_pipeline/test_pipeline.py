@@ -1,30 +1,14 @@
-import sys
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-# Add src directory to path to import the module
-sys.path.append(str(Path(__file__).parent.parent.parent.resolve() / "src"))
-
-# Try importing pipeline - skip tests if Google Drive dependencies not available
-try:
-    from rag_pipeline.pipeline import main
-
-    PIPELINE_AVAILABLE = True
-except ImportError:
-    PIPELINE_AVAILABLE = False
-    main = None
-
-pytestmark = pytest.mark.skipif(
-    not PIPELINE_AVAILABLE, reason="google-auth-oauthlib not installed (optional dependency)"
-)
+from src.rag_pipeline.pipeline import main
 
 
 class TestPipeline:
-    @patch("rag_pipeline.pipeline.argparse.ArgumentParser")
-    @patch("rag_pipeline.pipeline.LocalFileWatcher")
-    @patch("rag_pipeline.pipeline.GoogleDriveWatcher")
+    @patch("src.rag_pipeline.pipeline.argparse.ArgumentParser")
+    @patch("src.rag_pipeline.pipeline.LocalFileWatcher")
+    @patch("src.rag_pipeline.pipeline.GoogleDriveWatcher")
     def test_main_local_source(
         self, mock_google_drive_watcher, mock_local_file_watcher, mock_argument_parser
     ):
@@ -45,9 +29,9 @@ class TestPipeline:
         mock_local_watcher_instance.watch_for_changes.assert_called_once_with(30)
         mock_google_drive_watcher.assert_not_called()
 
-    @patch("rag_pipeline.pipeline.argparse.ArgumentParser")
-    @patch("rag_pipeline.pipeline.LocalFileWatcher")
-    @patch("rag_pipeline.pipeline.GoogleDriveWatcher")
+    @patch("src.rag_pipeline.pipeline.argparse.ArgumentParser")
+    @patch("src.rag_pipeline.pipeline.LocalFileWatcher")
+    @patch("src.rag_pipeline.pipeline.GoogleDriveWatcher")
     def test_main_google_drive_source(
         self, mock_google_drive_watcher, mock_local_file_watcher, mock_argument_parser
     ):
@@ -68,9 +52,9 @@ class TestPipeline:
         mock_google_watcher_instance.watch_for_changes.assert_called_once_with(90)
         mock_local_file_watcher.assert_not_called()
 
-    @patch("rag_pipeline.pipeline.argparse.ArgumentParser")
-    @patch("rag_pipeline.pipeline.LocalFileWatcher")
-    @patch("rag_pipeline.pipeline.GoogleDriveWatcher")
+    @patch("src.rag_pipeline.pipeline.argparse.ArgumentParser")
+    @patch("src.rag_pipeline.pipeline.LocalFileWatcher")
+    @patch("src.rag_pipeline.pipeline.GoogleDriveWatcher")
     def test_main_default_interval(
         self, mock_google_drive_watcher, mock_local_file_watcher, mock_argument_parser
     ):
@@ -87,8 +71,8 @@ class TestPipeline:
 
         mock_local_watcher_instance.watch_for_changes.assert_called_once_with(60)
 
-    @patch("rag_pipeline.pipeline.argparse.ArgumentParser")
-    @patch("rag_pipeline.pipeline.LocalFileWatcher")
+    @patch("src.rag_pipeline.pipeline.argparse.ArgumentParser")
+    @patch("src.rag_pipeline.pipeline.LocalFileWatcher")
     def test_main_local_source_edge_cases(self, mock_local_file_watcher, mock_argument_parser):
         """Test local source with edge case intervals."""
         # Test with very short interval
@@ -104,8 +88,8 @@ class TestPipeline:
 
         mock_local_watcher_instance.watch_for_changes.assert_called_once_with(1)
 
-    @patch("rag_pipeline.pipeline.argparse.ArgumentParser")
-    @patch("rag_pipeline.pipeline.GoogleDriveWatcher")
+    @patch("src.rag_pipeline.pipeline.argparse.ArgumentParser")
+    @patch("src.rag_pipeline.pipeline.GoogleDriveWatcher")
     def test_main_google_drive_edge_cases(self, mock_google_drive_watcher, mock_argument_parser):
         """Test Google Drive source with edge case intervals."""
         # Test with very long interval
@@ -121,8 +105,8 @@ class TestPipeline:
 
         mock_google_watcher_instance.watch_for_changes.assert_called_once_with(3600)
 
-    @patch("rag_pipeline.pipeline.argparse.ArgumentParser")
-    @patch("rag_pipeline.pipeline.LocalFileWatcher")
+    @patch("src.rag_pipeline.pipeline.argparse.ArgumentParser")
+    @patch("src.rag_pipeline.pipeline.LocalFileWatcher")
     def test_main_local_watcher_initialization(self, mock_local_file_watcher, mock_argument_parser):
         """Test that LocalFileWatcher is properly initialized."""
         mock_args = MagicMock()
@@ -138,10 +122,11 @@ class TestPipeline:
         # Verify watcher was initialized without arguments
         mock_local_file_watcher.assert_called_once_with()
 
-    @patch("rag_pipeline.pipeline.argparse.ArgumentParser")
-    @patch("rag_pipeline.pipeline.GoogleDriveWatcher")
+    @patch("src.rag_pipeline.pipeline.argparse.ArgumentParser")
+    @patch("src.rag_pipeline.pipeline.GoogleDriveWatcher")
+    @patch("src.rag_pipeline.pipeline.settings")
     def test_main_google_drive_watcher_initialization(
-        self, mock_google_drive_watcher, mock_argument_parser
+        self, mock_settings, mock_google_drive_watcher, mock_argument_parser
     ):
         """Test that GoogleDriveWatcher is properly initialized."""
         mock_args = MagicMock()
@@ -149,16 +134,24 @@ class TestPipeline:
         mock_args.interval = 60
         mock_argument_parser.return_value.parse_args.return_value = mock_args
 
+        # Mock settings attributes
+        mock_settings.google_drive_credentials_path = "config/google_credentials.json"
+        mock_settings.google_drive_folder_id = "test_folder_id"
+
         mock_google_watcher_instance = MagicMock()
         mock_google_drive_watcher.return_value = mock_google_watcher_instance
 
         main()
 
-        # Verify watcher was initialized without arguments
-        mock_google_drive_watcher.assert_called_once_with()
+        # Verify watcher was initialized with correct arguments
+        mock_google_drive_watcher.assert_called_once_with(
+            credentials_path="config/google_credentials.json",
+            token_path="config/google_token.json",
+            folder_id="test_folder_id",
+        )
 
     @patch("sys.argv", ["pipeline.py", "--source", "local", "--interval", "120"])
-    @patch("rag_pipeline.pipeline.LocalFileWatcher")
+    @patch("src.rag_pipeline.pipeline.LocalFileWatcher")
     def test_main_with_sys_argv(self, mock_local_file_watcher):
         """Test main function with actual sys.argv parsing."""
         mock_local_watcher_instance = MagicMock()
@@ -169,7 +162,7 @@ class TestPipeline:
         mock_local_watcher_instance.watch_for_changes.assert_called_once_with(120)
 
     @patch("sys.argv", ["pipeline.py", "--source", "google_drive"])
-    @patch("rag_pipeline.pipeline.GoogleDriveWatcher")
+    @patch("src.rag_pipeline.pipeline.GoogleDriveWatcher")
     def test_main_google_drive_default_interval_real_argv(self, mock_google_drive_watcher):
         """Test Google Drive with default interval using real argv."""
         mock_google_watcher_instance = MagicMock()
@@ -181,7 +174,7 @@ class TestPipeline:
         mock_google_watcher_instance.watch_for_changes.assert_called_once_with(60)
 
     @patch("sys.argv", ["pipeline.py", "--source", "local", "--interval", "0"])
-    @patch("rag_pipeline.pipeline.LocalFileWatcher")
+    @patch("src.rag_pipeline.pipeline.LocalFileWatcher")
     def test_main_with_zero_interval(self, mock_local_file_watcher):
         """Test with zero interval (edge case)."""
         mock_local_watcher_instance = MagicMock()
@@ -192,7 +185,7 @@ class TestPipeline:
         mock_local_watcher_instance.watch_for_changes.assert_called_once_with(0)
 
     @patch("sys.argv", ["pipeline.py", "--source", "local", "--interval", "-10"])
-    @patch("rag_pipeline.pipeline.LocalFileWatcher")
+    @patch("src.rag_pipeline.pipeline.LocalFileWatcher")
     def test_main_with_negative_interval(self, mock_local_file_watcher):
         """Test with negative interval (edge case)."""
         mock_local_watcher_instance = MagicMock()
@@ -203,7 +196,7 @@ class TestPipeline:
         mock_local_watcher_instance.watch_for_changes.assert_called_once_with(-10)
 
     @patch("sys.argv", ["pipeline.py", "--source", "local"])
-    @patch("rag_pipeline.pipeline.LocalFileWatcher")
+    @patch("src.rag_pipeline.pipeline.LocalFileWatcher")
     def test_main_local_watcher_exception(self, mock_local_file_watcher):
         """Test handling exception during watcher creation."""
         mock_local_file_watcher.side_effect = Exception("Watcher initialization failed")
@@ -212,7 +205,7 @@ class TestPipeline:
             main()
 
     @patch("sys.argv", ["pipeline.py", "--source", "google_drive"])
-    @patch("rag_pipeline.pipeline.GoogleDriveWatcher")
+    @patch("src.rag_pipeline.pipeline.GoogleDriveWatcher")
     def test_main_google_drive_watch_exception(self, mock_google_drive_watcher):
         """Test handling exception during watch_for_changes."""
         mock_google_watcher_instance = MagicMock()
@@ -223,7 +216,7 @@ class TestPipeline:
             main()
 
     @patch("sys.argv", ["pipeline.py", "--source", "local", "--interval", "999999"])
-    @patch("rag_pipeline.pipeline.LocalFileWatcher")
+    @patch("src.rag_pipeline.pipeline.LocalFileWatcher")
     def test_main_with_very_large_interval(self, mock_local_file_watcher):
         """Test with very large interval value."""
         mock_local_watcher_instance = MagicMock()

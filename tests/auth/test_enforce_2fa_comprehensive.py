@@ -400,3 +400,527 @@ class TestMultipleUsers:
         requires3, enabled3 = check_2fa_requirement("user3")
         assert requires3 is True
         assert enabled3 is False
+
+
+class TestRender2FASetupVerification:
+    """Test 2FA setup verification flow."""
+
+    @patch("src.auth.enforce_2fa.st")
+    @patch("src.auth.enforce_2fa.get_backup_code_manager")
+    @patch("src.auth.enforce_2fa.get_totp_manager")
+    @patch("src.auth.enforce_2fa.get_user_by_username")
+    def test_valid_verification_code(self, mock_get_user, mock_get_totp, mock_get_backup, mock_st):
+        """Test successful 2FA verification during setup."""
+        from src.auth.enforce_2fa import render_2fa_setup_required
+
+        mock_session_dict = {"username": "testuser", "2fa_setup_secret": "SECRET123"}
+        mock_session = MagicMock()
+        mock_session.get.side_effect = lambda key, default=None: mock_session_dict.get(key, default)
+        mock_session.__getitem__.side_effect = lambda key: mock_session_dict[key]
+        mock_session.__contains__.side_effect = lambda key: key in mock_session_dict
+        mock_session.pop = MagicMock()
+        mock_st.session_state = mock_session
+
+        mock_get_user.return_value = {
+            "id": "user-123",
+            "username": "testuser",
+        }
+
+        mock_totp = MagicMock()
+        mock_totp.verify_totp.return_value = True
+        mock_totp.enable_2fa.return_value = True
+        mock_get_totp.return_value = mock_totp
+
+        mock_backup = MagicMock()
+        mock_backup.generate_backup_codes.return_value = ["CODE1", "CODE2", "CODE3"]
+        mock_get_backup.return_value = mock_backup
+
+        # Mock text_input to return valid code
+        mock_st.text_input.return_value = "123456"
+        mock_st.button.side_effect = [True, False]  # Verify button clicked
+
+        # Mock columns
+        mock_st.columns.return_value = [MagicMock(), MagicMock()]
+
+        render_2fa_setup_required()
+
+        # Verify 2FA was enabled
+        mock_totp.verify_totp.assert_called_once()
+        mock_totp.enable_2fa.assert_called_once()
+        mock_backup.generate_backup_codes.assert_called_once()
+
+    @patch("src.auth.enforce_2fa.st")
+    @patch("src.auth.enforce_2fa.get_totp_manager")
+    @patch("src.auth.enforce_2fa.get_user_by_username")
+    def test_invalid_verification_code(self, mock_get_user, mock_get_totp, mock_st):
+        """Test invalid verification code during setup."""
+        from src.auth.enforce_2fa import render_2fa_setup_required
+
+        mock_session_dict = {"username": "testuser", "2fa_setup_secret": "SECRET123"}
+        mock_session = MagicMock()
+        mock_session.get.side_effect = lambda key, default=None: mock_session_dict.get(key, default)
+        mock_session.__getitem__.side_effect = lambda key: mock_session_dict[key]
+        mock_session.__contains__.side_effect = lambda key: key in mock_session_dict
+        mock_st.session_state = mock_session
+
+        mock_get_user.return_value = {
+            "id": "user-123",
+            "username": "testuser",
+        }
+
+        mock_totp = MagicMock()
+        mock_totp.verify_totp.return_value = False
+        mock_get_totp.return_value = mock_totp
+
+        mock_st.text_input.return_value = "999999"
+        mock_st.button.side_effect = [True]
+
+        # Mock columns
+        mock_st.columns.return_value = [MagicMock(), MagicMock()]
+
+        render_2fa_setup_required()
+
+        # Verify error was shown
+        mock_st.error.assert_called()
+
+    @patch("src.auth.enforce_2fa.st")
+    @patch("src.auth.enforce_2fa.get_totp_manager")
+    @patch("src.auth.enforce_2fa.get_user_by_username")
+    def test_empty_verification_code(self, mock_get_user, mock_get_totp, mock_st):
+        """Test empty verification code during setup."""
+        from src.auth.enforce_2fa import render_2fa_setup_required
+
+        mock_session_dict = {"username": "testuser", "2fa_setup_secret": "SECRET123"}
+        mock_session = MagicMock()
+        mock_session.get.side_effect = lambda key, default=None: mock_session_dict.get(key, default)
+        mock_session.__getitem__.side_effect = lambda key: key in mock_session_dict
+        mock_session.__contains__.side_effect = lambda key: key in mock_session_dict
+        mock_st.session_state = mock_session
+
+        mock_get_user.return_value = {"id": "user-123", "username": "testuser"}
+
+        mock_totp = MagicMock()
+        mock_get_totp.return_value = mock_totp
+
+        mock_st.text_input.return_value = ""
+        mock_st.button.side_effect = [True]
+        mock_st.columns.return_value = [MagicMock(), MagicMock()]
+
+        render_2fa_setup_required()
+
+        # Verify error for invalid code
+        assert mock_st.error.called
+
+    @patch("src.auth.enforce_2fa.st")
+    @patch("src.auth.enforce_2fa.get_totp_manager")
+    @patch("src.auth.enforce_2fa.get_user_by_username")
+    def test_enable_2fa_fails(self, mock_get_user, mock_get_totp, mock_st):
+        """Test when enable_2fa returns False."""
+        from src.auth.enforce_2fa import render_2fa_setup_required
+
+        mock_session_dict = {"username": "testuser", "2fa_setup_secret": "SECRET123"}
+        mock_session = MagicMock()
+        mock_session.get.side_effect = lambda key, default=None: mock_session_dict.get(key, default)
+        mock_session.__getitem__.side_effect = lambda key: mock_session_dict[key]
+        mock_session.__contains__.side_effect = lambda key: key in mock_session_dict
+        mock_st.session_state = mock_session
+
+        mock_get_user.return_value = {"id": "user-123", "username": "testuser"}
+
+        mock_totp = MagicMock()
+        mock_totp.verify_totp.return_value = True
+        mock_totp.enable_2fa.return_value = False
+        mock_get_totp.return_value = mock_totp
+
+        mock_st.text_input.return_value = "123456"
+        mock_st.button.side_effect = [True]
+        mock_st.columns.return_value = [MagicMock(), MagicMock()]
+
+        render_2fa_setup_required()
+
+        # Verify error shown
+        mock_st.error.assert_called()
+
+    @patch("src.auth.enforce_2fa.st")
+    @patch("src.auth.enforce_2fa.get_totp_manager")
+    @patch("src.auth.enforce_2fa.get_user_by_username")
+    def test_verification_exception(self, mock_get_user, mock_get_totp, mock_st):
+        """Test exception during verification."""
+        from src.auth.enforce_2fa import render_2fa_setup_required
+
+        mock_session_dict = {"username": "testuser", "2fa_setup_secret": "SECRET123"}
+        mock_session = MagicMock()
+        mock_session.get.side_effect = lambda key, default=None: mock_session_dict.get(key, default)
+        mock_session.__getitem__.side_effect = lambda key: mock_session_dict[key]
+        mock_session.__contains__.side_effect = lambda key: key in mock_session_dict
+        mock_st.session_state = mock_session
+
+        mock_get_user.return_value = {"id": "user-123", "username": "testuser"}
+
+        mock_totp = MagicMock()
+        mock_totp.verify_totp.side_effect = Exception("Verification error")
+        mock_get_totp.return_value = mock_totp
+
+        mock_st.text_input.return_value = "123456"
+        mock_st.button.side_effect = [True]
+        mock_st.columns.return_value = [MagicMock(), MagicMock()]
+
+        render_2fa_setup_required()
+
+        # Verify error shown
+        assert mock_st.error.called
+
+
+class TestRender2FAVerificationFlow:
+    """Test 2FA verification during login."""
+
+    @patch("src.auth.enforce_2fa.st")
+    def test_verification_no_username(self, mock_st):
+        """Test verification with no username in session."""
+        from src.auth.enforce_2fa import render_2fa_verification
+
+        mock_st.session_state = {}
+
+        result = render_2fa_verification()
+
+        assert result is False
+        mock_st.error.assert_called()
+
+    @patch("src.auth.enforce_2fa.st")
+    @patch("src.auth.enforce_2fa.get_user_by_username")
+    def test_verification_user_not_found(self, mock_get_user, mock_st):
+        """Test verification when user not found."""
+        from src.auth.enforce_2fa import render_2fa_verification
+
+        mock_st.session_state = {"username": "testuser"}
+        mock_get_user.return_value = None
+
+        result = render_2fa_verification()
+
+        assert result is False
+        mock_st.error.assert_called()
+
+    @patch("src.auth.enforce_2fa.st")
+    @patch("src.auth.enforce_2fa.get_totp_manager")
+    @patch("src.auth.enforce_2fa.get_backup_code_manager")
+    @patch("src.auth.enforce_2fa.get_user_by_username")
+    def test_verification_valid_totp_code(
+        self, mock_get_user, mock_get_backup, mock_get_totp, mock_st
+    ):
+        """Test successful TOTP verification."""
+        from src.auth.enforce_2fa import render_2fa_verification
+
+        mock_session_dict = {"username": "testuser"}
+        mock_session = MagicMock()
+        mock_session.get.side_effect = lambda key, default=None: mock_session_dict.get(key, default)
+        mock_st.session_state = mock_session
+
+        mock_get_user.return_value = {"id": "user-123", "username": "testuser"}
+
+        mock_totp = MagicMock()
+        mock_totp.verify_totp.return_value = True
+        mock_get_totp.return_value = mock_totp
+
+        mock_backup = MagicMock()
+        mock_get_backup.return_value = mock_backup
+
+        mock_st.text_input.return_value = "123456"
+        mock_st.button.side_effect = [True]
+        mock_st.columns.return_value = [MagicMock(), MagicMock()]
+
+        result = render_2fa_verification()
+
+        assert result is True
+        mock_totp.verify_totp.assert_called_once()
+
+    @patch("src.auth.enforce_2fa.st")
+    @patch("src.auth.enforce_2fa.get_totp_manager")
+    @patch("src.auth.enforce_2fa.get_backup_code_manager")
+    @patch("src.auth.enforce_2fa.get_user_by_username")
+    def test_verification_invalid_totp_code(
+        self, mock_get_user, mock_get_backup, mock_get_totp, mock_st
+    ):
+        """Test invalid TOTP verification."""
+        from src.auth.enforce_2fa import render_2fa_verification
+
+        mock_st.session_state = {"username": "testuser"}
+        mock_get_user.return_value = {"id": "user-123", "username": "testuser"}
+
+        mock_totp = MagicMock()
+        mock_totp.verify_totp.return_value = False
+        mock_get_totp.return_value = mock_totp
+
+        mock_backup = MagicMock()
+        mock_get_backup.return_value = mock_backup
+
+        mock_st.text_input.return_value = "999999"
+        mock_st.button.side_effect = [True]
+        mock_st.columns.return_value = [MagicMock(), MagicMock()]
+
+        result = render_2fa_verification()
+
+        assert result is False
+
+    @patch("src.auth.enforce_2fa.st")
+    @patch("src.auth.enforce_2fa.get_backup_code_manager")
+    @patch("src.auth.enforce_2fa.get_totp_manager")
+    @patch("src.auth.enforce_2fa.get_user_by_username")
+    def test_verification_valid_backup_code(
+        self, mock_get_user, mock_get_totp, mock_get_backup, mock_st
+    ):
+        """Test successful backup code verification."""
+        from src.auth.enforce_2fa import render_2fa_verification
+
+        mock_session_dict = {"username": "testuser"}
+        mock_session = MagicMock()
+        mock_session.get.side_effect = lambda key, default=None: mock_session_dict.get(key, default)
+        mock_st.session_state = mock_session
+
+        mock_get_user.return_value = {"id": "user-123", "username": "testuser"}
+
+        mock_totp = MagicMock()
+        mock_get_totp.return_value = mock_totp
+
+        mock_backup = MagicMock()
+        mock_backup.verify_backup_code.return_value = True
+        mock_get_backup.return_value = mock_backup
+
+        mock_st.text_input.return_value = "ABCD-EFGH"
+        mock_st.button.side_effect = [True]
+        mock_st.columns.return_value = [MagicMock(), MagicMock()]
+
+        result = render_2fa_verification()
+
+        assert result is True
+        mock_backup.verify_backup_code.assert_called_once()
+
+    @patch("src.auth.enforce_2fa.st")
+    @patch("src.auth.enforce_2fa.get_backup_code_manager")
+    @patch("src.auth.enforce_2fa.get_totp_manager")
+    @patch("src.auth.enforce_2fa.get_user_by_username")
+    def test_verification_invalid_backup_code(
+        self, mock_get_user, mock_get_totp, mock_get_backup, mock_st
+    ):
+        """Test invalid backup code verification."""
+        from src.auth.enforce_2fa import render_2fa_verification
+
+        mock_st.session_state = {"username": "testuser"}
+        mock_get_user.return_value = {"id": "user-123", "username": "testuser"}
+
+        mock_totp = MagicMock()
+        mock_get_totp.return_value = mock_totp
+
+        mock_backup = MagicMock()
+        mock_backup.verify_backup_code.return_value = False
+        mock_get_backup.return_value = mock_backup
+
+        mock_st.text_input.return_value = "XXXX-YYYY"
+        mock_st.button.side_effect = [True]
+        mock_st.columns.return_value = [MagicMock(), MagicMock()]
+
+        result = render_2fa_verification()
+
+        assert result is False
+
+    @patch("src.auth.enforce_2fa.st")
+    @patch("src.auth.enforce_2fa.get_totp_manager")
+    @patch("src.auth.enforce_2fa.get_backup_code_manager")
+    @patch("src.auth.enforce_2fa.get_user_by_username")
+    def test_verification_empty_code(self, mock_get_user, mock_get_backup, mock_get_totp, mock_st):
+        """Test empty verification code."""
+        from src.auth.enforce_2fa import render_2fa_verification
+
+        mock_st.session_state = {"username": "testuser"}
+        mock_get_user.return_value = {"id": "user-123", "username": "testuser"}
+
+        mock_totp = MagicMock()
+        mock_get_totp.return_value = mock_totp
+
+        mock_backup = MagicMock()
+        mock_get_backup.return_value = mock_backup
+
+        mock_st.text_input.return_value = ""
+        mock_st.button.side_effect = [True]
+        mock_st.columns.return_value = [MagicMock(), MagicMock()]
+
+        result = render_2fa_verification()
+
+        assert result is False
+
+    @patch("src.auth.enforce_2fa.st")
+    @patch("src.auth.enforce_2fa.get_totp_manager")
+    @patch("src.auth.enforce_2fa.get_backup_code_manager")
+    @patch("src.auth.enforce_2fa.get_user_by_username")
+    def test_verification_invalid_format(
+        self, mock_get_user, mock_get_backup, mock_get_totp, mock_st
+    ):
+        """Test invalid code format."""
+        from src.auth.enforce_2fa import render_2fa_verification
+
+        mock_st.session_state = {"username": "testuser"}
+        mock_get_user.return_value = {"id": "user-123", "username": "testuser"}
+
+        mock_totp = MagicMock()
+        mock_get_totp.return_value = mock_totp
+
+        mock_backup = MagicMock()
+        mock_get_backup.return_value = mock_backup
+
+        mock_st.text_input.return_value = "ABC"
+        mock_st.button.side_effect = [True]
+        mock_st.columns.return_value = [MagicMock(), MagicMock()]
+
+        result = render_2fa_verification()
+
+        assert result is False
+
+    @patch("src.auth.enforce_2fa.st")
+    @patch("src.auth.enforce_2fa.get_totp_manager")
+    @patch("src.auth.enforce_2fa.get_user_by_username")
+    def test_verification_exception(self, mock_get_user, mock_get_totp, mock_st):
+        """Test exception during verification."""
+        from src.auth.enforce_2fa import render_2fa_verification
+
+        mock_st.session_state = {"username": "testuser"}
+        mock_get_user.return_value = {"id": "user-123", "username": "testuser"}
+
+        mock_totp = MagicMock()
+        mock_totp.verify_totp.side_effect = Exception("Verification error")
+        mock_get_totp.return_value = mock_totp
+
+        mock_st.text_input.return_value = "123456"
+        mock_st.button.side_effect = [True]
+        mock_st.columns.return_value = [MagicMock(), MagicMock()]
+
+        result = render_2fa_verification()
+
+        assert result is False
+
+    @patch("src.auth.enforce_2fa.st")
+    @patch("src.auth.enforce_2fa.get_totp_manager")
+    @patch("src.auth.enforce_2fa.get_backup_code_manager")
+    @patch("src.auth.enforce_2fa.get_user_by_username")
+    def test_verification_no_button_click(
+        self, mock_get_user, mock_get_backup, mock_get_totp, mock_st
+    ):
+        """Test verification form display without button click."""
+        from src.auth.enforce_2fa import render_2fa_verification
+
+        mock_st.session_state = {"username": "testuser"}
+        mock_get_user.return_value = {"id": "user-123", "username": "testuser"}
+
+        mock_totp = MagicMock()
+        mock_get_totp.return_value = mock_totp
+
+        mock_backup = MagicMock()
+        mock_get_backup.return_value = mock_backup
+
+        mock_st.text_input.return_value = "123456"
+        mock_st.button.return_value = False
+        mock_st.columns.return_value = [MagicMock(), MagicMock()]
+
+        result = render_2fa_verification()
+
+        assert result is False
+
+    @patch("src.auth.enforce_2fa.st")
+    @patch("src.auth.enforce_2fa.get_user_by_username")
+    def test_verification_exception_in_outer_try(self, mock_get_user, mock_st):
+        """Test exception in outer try block."""
+        from src.auth.enforce_2fa import render_2fa_verification
+
+        mock_st.session_state = {"username": "testuser"}
+        mock_get_user.side_effect = Exception("Database error")
+
+        result = render_2fa_verification()
+
+        assert result is False
+
+
+class TestEnforce2FAIfRequired:
+    """Test enforce_2fa_if_required function."""
+
+    @patch("src.auth.enforce_2fa.check_2fa_requirement")
+    def test_enforce_no_2fa_required(self, mock_check):
+        """Test when user doesn't require 2FA."""
+        from src.auth.enforce_2fa import enforce_2fa_if_required
+
+        mock_check.return_value = (False, False)
+
+        result = enforce_2fa_if_required("testuser")
+
+        assert result is True
+
+    @patch("src.auth.enforce_2fa.st")
+    @patch("src.auth.enforce_2fa.render_2fa_setup_required")
+    @patch("src.auth.enforce_2fa.check_2fa_requirement")
+    def test_enforce_2fa_required_not_enabled(self, mock_check, mock_render_setup, mock_st):
+        """Test when 2FA required but not enabled."""
+        from src.auth.enforce_2fa import enforce_2fa_if_required
+
+        mock_check.return_value = (True, False)
+        mock_st.session_state = {}
+
+        result = enforce_2fa_if_required("testuser")
+
+        assert result is False
+        mock_render_setup.assert_called_once()
+
+    @patch("src.auth.enforce_2fa.st")
+    @patch("src.auth.enforce_2fa.check_2fa_requirement")
+    def test_enforce_2fa_already_verified(self, mock_check, mock_st):
+        """Test when 2FA already verified in session."""
+        from src.auth.enforce_2fa import enforce_2fa_if_required
+
+        mock_check.return_value = (True, True)
+        mock_st.session_state = {"2fa_verified": True}
+
+        result = enforce_2fa_if_required("testuser")
+
+        assert result is True
+
+    @patch("src.auth.enforce_2fa.st")
+    @patch("src.auth.enforce_2fa.render_2fa_verification")
+    @patch("src.auth.enforce_2fa.check_2fa_requirement")
+    def test_enforce_2fa_verification_needed(self, mock_check, mock_render_verify, mock_st):
+        """Test when 2FA verification needed."""
+        from src.auth.enforce_2fa import enforce_2fa_if_required
+
+        mock_check.return_value = (True, True)
+        mock_st.session_state = {}
+        mock_render_verify.return_value = False
+
+        result = enforce_2fa_if_required("testuser")
+
+        assert result is False
+        mock_render_verify.assert_called_once()
+
+    @patch("src.auth.enforce_2fa.st")
+    @patch("src.auth.enforce_2fa.render_2fa_verification")
+    @patch("src.auth.enforce_2fa.check_2fa_requirement")
+    def test_enforce_2fa_verification_successful(self, mock_check, mock_render_verify, mock_st):
+        """Test successful 2FA verification triggers rerun."""
+        from src.auth.enforce_2fa import enforce_2fa_if_required
+
+        mock_check.return_value = (True, True)
+        mock_st.session_state = {}
+        mock_render_verify.return_value = True
+
+        result = enforce_2fa_if_required("testuser")
+
+        # Function returns False because st.rerun() is called
+        assert result is False
+        mock_st.rerun.assert_called_once()
+
+    @patch("src.auth.enforce_2fa.st")
+    @patch("src.auth.enforce_2fa.check_2fa_requirement")
+    def test_enforce_exception_handling(self, mock_check, mock_st):
+        """Test exception handling in enforcement."""
+        from src.auth.enforce_2fa import enforce_2fa_if_required
+
+        mock_check.side_effect = Exception("Check failed")
+
+        result = enforce_2fa_if_required("testuser")
+
+        assert result is False
+        mock_st.error.assert_called()

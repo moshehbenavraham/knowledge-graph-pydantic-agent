@@ -1,7 +1,6 @@
 import json
 import mimetypes
 import os
-import sys
 import time
 from datetime import datetime
 from pathlib import Path
@@ -9,11 +8,10 @@ from typing import Any
 
 import structlog
 
-structlog_logger = structlog.get_logger(__name__)
+from src.rag_pipeline.common.db_handler import delete_document_by_file_id, process_file_for_rag
+from src.rag_pipeline.common.text_processor import extract_text_from_file
 
-sys.path.append(str(Path(__file__).parent.parent.resolve()))
-from common.db_handler import delete_document_by_file_id, process_file_for_rag
-from common.text_processor import extract_text_from_file
+structlog_logger = structlog.get_logger(__name__)
 
 
 class LocalFileWatcher:
