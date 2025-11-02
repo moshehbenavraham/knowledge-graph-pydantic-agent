@@ -1,64 +1,15 @@
 # Testing TODO - Remaining Work Only
 
-**Current State**: 3,789 tests | ~3,733 passed (98.5%) | 1 failing in Phase 4 | 106 skipped | ~77% coverage
+**Current State**: 3,789 tests | ~3,754 passed (99.1%) | 0 failing | 106 skipped | ~77% coverage
 **Target State**: 100% pass rate | <20 skipped | 80%+ coverage
 
-**Completed Work**: See `/docs/a-changelogs/changelog_current.md` for details on Phases 1-3 (231 tests) and Phase 4 (10 tests)
-
----
-
-## PHASE 4: Authentication System (1 test remaining)
-**Priority**: MEDIUM
-**Status**: 91% Complete (10/11 tests passing)
-
-### Remaining Task:
-
-**File**: `tests/auth/test_user_profile_ultra_comprehensive.py`
-
-- [ ] Fix `test_render_user_profile_revoke_all_sessions`
-  - Complex Streamlit `st.session_state` attribute mocking
-  - Multi-button click simulation with `side_effect`
-  - Requires precise `__contains__` and attribute access mocking
-  - **Note**: Not blocking - core functionality works correctly
-
-**Run**: `pytest tests/auth/test_user_profile_ultra_comprehensive.py::TestRenderUserProfile::test_render_user_profile_revoke_all_sessions -v`
-
----
-
-## PHASE 5: Configuration and Small Test Groups
-**Priority**: MEDIUM
-**Estimated Time**: 2-3 hours
-
-### Tasks:
-
-#### 5.1 Configuration Tests (5 tests)
-**File**: `tests/config/test_config_modules_comprehensive.py`
-
-- [ ] Review configuration facade implementations
-- [ ] Fix settings singleton pattern in tests
-- [ ] Verify environment variable loading
-- [ ] Update tests for current config structure
-- [ ] Run: `pytest tests/config/test_config_modules_comprehensive.py -v`
-
-#### 5.2 Search System Tests (9 tests)
-- [ ] Fix intent analyzer tests (5 tests)
-  - [ ] Update scoring logic tests
-  - [ ] Fix entity extraction tests
-  - [ ] Run: `pytest tests/agentic_rag/search/test_intent_analyzer_comprehensive.py -v`
-- [ ] Fix ranker tests (4 tests)
-  - [ ] Update diversity enforcement tests
-  - [ ] Fix feedback reranking tests
-  - [ ] Run: `pytest tests/agentic_rag/search/test_ranker_comprehensive.py -v`
-
-#### 5.3 Cache Tests (7 tests)
-**File**: `tests/utils/test_cache_comprehensive.py`
-
-- [ ] Fix fallback cache implementation
-- [ ] Ensure Redis API compatibility
-- [ ] Update memory limit tests
-- [ ] Run: `pytest tests/utils/test_cache_comprehensive.py -v`
-
-**Success Criteria**: All 21 tests passing
+**Completed Work**: See `/docs/a-changelogs/changelog_current.md` for:
+- Phase 1: Chunker Tests (74 tests fixed) - v2.4.0
+- Phase 2: Integration Test Infrastructure (62 tests fixed) - v2.4.0
+- Phase 3: API Endpoint Test Suite (53 tests fixed) - v2.5.0
+- Phase 4: Authentication System Tests (10 tests fixed) - v2.6.0
+- Phase 5: Configuration and Small Test Groups (21 tests fixed) - v2.7.0
+- **Total Fixed**: 220 tests
 
 ---
 
@@ -233,10 +184,9 @@
 
 ```bash
 # Run specific phase tests
-pytest tests/auth/test_user_profile_ultra_comprehensive.py::TestRenderUserProfile::test_render_user_profile_revoke_all_sessions -v  # Phase 4 remaining
-pytest tests/config/ -v                              # Phase 5 (Config)
-pytest tests/agentic_rag/search/ -v                  # Phase 5 (Search)
-pytest tests/utils/test_cache_comprehensive.py -v    # Phase 5 (Cache)
+pytest tests/ingestion/ -v                          # Phase 6 (Ingestion)
+pytest tests/tools/ -v                              # Phase 6 (Tools)
+pytest tests/constitution_validator/ -v             # Phase 6 (Validator)
 
 # Run all tests
 make test-coverage
@@ -260,8 +210,6 @@ pytest --collect-only -q -m skip
 
 | Phase | Description | Tests Remaining | Priority | Est. Time |
 |-------|-------------|-----------------|----------|-----------|
-| 4 | Authentication (final test) | 1 | MEDIUM | 30 min |
-| 5 | Config & Small Groups | 21 | MEDIUM | 2-3 hrs |
 | 6 | Miscellaneous | 11 | LOW | 1-2 hrs |
 | 7 | Add Tests for 0% Coverage | N/A | HIGH | 6-8 hrs |
 | 8 | Improve Low Coverage Files | N/A | MEDIUM | 8-10 hrs |
@@ -270,8 +218,8 @@ pytest --collect-only -q -m skip
 | 11 | Final Verification | N/A | CRITICAL | 1 hr |
 
 **Progress**:
-- **Completed**: Phases 1-3 (231 tests) + Phase 4 (10 tests) = **241 tests fixed**
-- **Remaining in Current Phases**: 33 tests (1 + 21 + 11)
+- **Completed**: Phases 1-5 (220 tests fixed)
+- **Remaining in Current Phases**: 11 tests + 103 skipped
 - **Coverage Target**: 80%+ (currently ~77%)
 
-**Next Step**: Complete Phase 4 final test OR start Phase 5 (Configuration & Small Test Groups)
+**Next Step**: Phase 6 (Miscellaneous Test Fixes) OR Phase 7 (Add Tests for 0% Coverage Files)

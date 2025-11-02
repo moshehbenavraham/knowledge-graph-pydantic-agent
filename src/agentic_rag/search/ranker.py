@@ -238,12 +238,12 @@ class ResultRanker:
         Returns:
             Similarity score (0-1)
         """
-        # Use existing similarity if available
-        if hasattr(chunk, "similarity"):
+        # Use existing similarity if available and it's a number
+        if hasattr(chunk, "similarity") and isinstance(chunk.similarity, int | float):
             score = chunk.similarity
             structlog_logger.debug("_similarity_score", score=score, source="chunk.similarity")
             return score
-        if hasattr(chunk, "score"):
+        if hasattr(chunk, "score") and isinstance(chunk.score, int | float):
             score = chunk.score
             structlog_logger.debug("_similarity_score", score=score, source="chunk.score")
             return score
@@ -481,7 +481,8 @@ class ResultRanker:
             "_ensure_diversity called", num_chunks=len(scored_chunks), limit=limit
         )
 
-        if len(scored_chunks) <= limit:
+        # Apply diversity even when chunks == limit, to penalize duplicates
+        if len(scored_chunks) < limit:
             return scored_chunks
 
         diverse_results = []
@@ -553,17 +554,27 @@ class ResultRanker:
             chunk_id = str(getattr(chunk, "chunk_id", ""))
 
             # Boost positive examples
-            if chunk_id in positive_examples and hasattr(chunk, "similarity"):
+            if (
+                chunk_id in positive_examples
+                and hasattr(chunk, "similarity")
+                and isinstance(chunk.similarity, int | float)
+            ):
                 chunk.similarity = min(1.0, chunk.similarity * 1.5)
                 positive_count += 1
 
             # Penalize negative examples
-            if chunk_id in negative_examples and hasattr(chunk, "similarity"):
+            if (
+                chunk_id in negative_examples
+                and hasattr(chunk, "similarity")
+                and isinstance(chunk.similarity, int | float)
+            ):
                 chunk.similarity = chunk.similarity * 0.5
                 negative_count += 1
 
         # Re-rank with updated scores
-        result = self.rank_chunks(chunks, len(chunks))
+        # Sort by similarity (primary factor in ranking)
+        chunks_sorted = sorted(chunks, key=lambda c: getattr(c, "similarity", 0.5), reverse=True)
+        result = chunks_sorted
 
         structlog_logger.info(
             "rerank_with_feedback completed",

@@ -85,10 +85,13 @@ class RedisCache:
                 value = self._redis_client.get(key)
                 if value:
                     return pickle.loads(value)  # nosec B301 - Internal cache only
+                return None
         except (RedisError, Exception) as e:
             logger.debug("Redis get failed", key=key, error=str(e))
-            if self.enable_fallback:
-                return self._memory_cache.get(key)
+
+        # Use fallback if Redis unavailable or failed
+        if self.enable_fallback:
+            return self._memory_cache.get(key)
         return None
 
     def set(self, key: str, value: Any, ttl: int | None = None) -> bool:
@@ -100,14 +103,16 @@ class RedisCache:
                 return bool(self._redis_client.setex(key, ttl, serialized))
         except (RedisError, Exception) as e:
             logger.debug("Redis set failed", key=key, error=str(e))
-            if self.enable_fallback:
-                self._memory_cache[key] = value
-                # Simple memory cache size limit
-                if len(self._memory_cache) > 10000:
-                    # Remove oldest entries
-                    for _ in range(1000):
-                        self._memory_cache.pop(next(iter(self._memory_cache)))
-                return True
+
+        # Use fallback if Redis unavailable or failed
+        if self.enable_fallback:
+            self._memory_cache[key] = value
+            # Simple memory cache size limit
+            if len(self._memory_cache) > 10000:
+                # Remove oldest entries
+                for _ in range(1000):
+                    self._memory_cache.pop(next(iter(self._memory_cache)))
+            return True
         return False
 
     def delete(self, key: str) -> bool:
@@ -117,9 +122,11 @@ class RedisCache:
                 return bool(self._redis_client.delete(key))
         except (RedisError, Exception) as e:
             logger.debug("Redis delete failed", key=key, error=str(e))
-            if self.enable_fallback and key in self._memory_cache:
-                del self._memory_cache[key]
-                return True
+
+        # Use fallback if Redis unavailable or failed
+        if self.enable_fallback and key in self._memory_cache:
+            del self._memory_cache[key]
+            return True
         return False
 
     def flush(self) -> bool:
@@ -140,8 +147,10 @@ class RedisCache:
                 return bool(self._redis_client.exists(key))
         except (RedisError, Exception) as e:
             logger.debug("Redis exists check failed", key=key, error=str(e))
-            if self.enable_fallback:
-                return key in self._memory_cache
+
+        # Use fallback if Redis unavailable or failed
+        if self.enable_fallback:
+            return key in self._memory_cache
         return False
 
     def incr(self, key: str, amount: int = 1) -> int | None:
@@ -151,10 +160,12 @@ class RedisCache:
                 return self._redis_client.incr(key, amount)
         except (RedisError, Exception) as e:
             logger.debug("Redis incr failed", key=key, error=str(e))
-            if self.enable_fallback:
-                current = self._memory_cache.get(key, 0)
-                self._memory_cache[key] = current + amount
-                return self._memory_cache[key]
+
+        # Use fallback if Redis unavailable or failed
+        if self.enable_fallback:
+            current = self._memory_cache.get(key, 0)
+            self._memory_cache[key] = current + amount
+            return self._memory_cache[key]
         return None
 
     def health_check(self) -> bool:

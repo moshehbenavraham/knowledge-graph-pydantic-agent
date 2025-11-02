@@ -505,10 +505,20 @@ class TestDiversityEnforcement:
 
         diverse = ranker._ensure_diversity(scored, limit=5)
 
-        # Should penalize chunks 4+ from doc1
-        # Chunk from doc2 should be ranked higher
-        doc_ids_in_top_3 = [diverse[i]["chunk"].document_id for i in range(3)]
-        assert "doc2" in doc_ids_in_top_3
+        # Debug: print results
+        print("\nDiversity results:")
+        for i, item in enumerate(diverse):
+            print(
+                f"  [{i}] chunk_id={item['chunk'].chunk_id}, doc_id={item['chunk'].document_id}, score={item['final_score']}"
+            )
+
+        # Penalty applies to 4th+ chunk from same document (seen_documents >= 3)
+        # So chunks 1,2,3 from doc1 get score 0.9, chunk 4 gets penalized to 0.45, chunk 5 (doc2) gets 0.9
+        # Top 4 should include doc2
+        doc_ids_in_top_4 = [diverse[i]["chunk"].document_id for i in range(4)]
+        assert "doc2" in doc_ids_in_top_4
+        # Chunk 4 should be last (penalized)
+        assert diverse[4]["chunk"].chunk_id == "4"
 
     def test_diversity_update_seen_content(self):
         """Test updating seen content."""
