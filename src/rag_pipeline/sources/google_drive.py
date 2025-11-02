@@ -1,6 +1,5 @@
 import io
 import json
-import sys
 import time
 from datetime import UTC, datetime
 from pathlib import Path
@@ -14,11 +13,10 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 
-structlog_logger = structlog.get_logger(__name__)
+from src.rag_pipeline.common.db_handler import delete_document_by_file_id, process_file_for_rag
+from src.rag_pipeline.common.text_processor import extract_text_from_file
 
-sys.path.append(str(Path(__file__).parent.parent.resolve()))
-from common.db_handler import delete_document_by_file_id, process_file_for_rag
-from common.text_processor import extract_text_from_file
+structlog_logger = structlog.get_logger(__name__)
 
 # If modifying these scopes, delete the file token.json.
 SCOPES = [
@@ -195,8 +193,27 @@ class GoogleDriveWatcher:
             else:
                 structlog_logger.info("No valid credentials, starting authentication flow")
                 flow = InstalledAppFlow.from_client_secrets_file(self.credentials_path, SCOPES)
-                creds = flow.run_local_server(port=0)
-                structlog_logger.info("Authentication completed")
+                try:
+                    creds = flow.run_local_server(port=0)
+                    structlog_logger.info("Authentication completed")
+                except Exception as e:
+                    structlog_logger.warning(
+                        "Local server OAuth failed, falling back to manual flow", error=str(e)
+                    )
+                    print("\n" + "=" * 80)
+                    print("WSL/headless environment detected. Using manual authorization flow.")
+                    print("=" * 80)
+                    auth_url, _ = flow.authorization_url(prompt="consent")
+                    print(f"\nPlease visit this URL in your browser:\n{auth_url}\n")
+                    print("After authorizing, you'll be redirected to a URL starting with:")
+                    print("http://localhost/?state=...&code=...\n")
+                    code = input("Paste the FULL URL here: ").strip()
+                    # Extract code from URL if full URL was pasted
+                    if "code=" in code:
+                        code = code.split("code=")[1].split("&")[0]
+                    flow.fetch_token(code=code)
+                    creds = flow.credentials
+                    structlog_logger.info("Manual authentication completed")
 
             # Save the credentials for the next run
             with Path(self.token_path).open("w") as token:

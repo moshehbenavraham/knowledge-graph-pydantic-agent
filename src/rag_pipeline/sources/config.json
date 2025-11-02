@@ -1,1 +1,21 @@
-{}
+{
+  "supported_mime_types": [
+    "application/pdf",
+    "text/plain",
+    "text/html",
+    "text/csv",
+    "application/vnd.google-apps.document",
+    "application/vnd.google-apps.spreadsheet",
+    "application/vnd.google-apps.presentation"
+  ],
+  "export_mime_types": {
+    "application/vnd.google-apps.document": "text/plain",
+    "application/vnd.google-apps.spreadsheet": "text/csv",
+    "application/vnd.google-apps.presentation": "text/plain"
+  },
+  "text_processing": {
+    "default_chunk_size": 400,
+    "default_chunk_overlap": 0
+  },
+  "last_check_time": "2025-11-02T18:59:42.622047Z"
+}

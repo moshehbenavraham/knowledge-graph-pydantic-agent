@@ -1,5 +1,4 @@
 import base64
-import json
 import sys
 import traceback
 from pathlib import Path
@@ -38,39 +37,18 @@ supabase: Client = (
 
 def delete_document_by_file_id(file_id: str) -> None:
     """
-    Delete all records related to a specific file ID (documents, document_rows, and document_metadata).
+    Delete all records related to a specific file ID (documents and chunks).
 
     Args:
         file_id: The Google Drive file ID
     """
     structlog_logger.info("delete_document_by_file_id called", file_id=file_id)
     try:
-        # Delete all documents with the specified file_id in metadata
+        # Delete document by file_id in metadata (cascades to chunks)
         response = supabase.table("documents").delete().eq("metadata->>file_id", file_id).execute()
         structlog_logger.info(
-            "Deleted document chunks", chunks_deleted=len(response.data), file_id=file_id
+            "Deleted documents", documents_deleted=len(response.data), file_id=file_id
         )
-
-        # Delete all document_rows with the specified dataset_id
-        try:
-            rows_response = (
-                supabase.table("document_rows").delete().eq("dataset_id", file_id).execute()
-            )
-            structlog_logger.info(
-                "Deleted document rows", rows_deleted=len(rows_response.data), file_id=file_id
-            )
-        except Exception as e:
-            structlog_logger.error("Error deleting document rows", error=str(e), file_id=file_id)
-
-        # Delete the document_metadata record
-        try:
-            supabase.table("document_metadata").delete().eq("id", file_id).execute()
-            structlog_logger.info("Deleted document metadata", file_id=file_id)
-        except Exception as e:
-            structlog_logger.error(
-                "Error deleting document metadata", error=str(e), file_id=file_id
-            )
-
     except Exception as e:
         structlog_logger.error("Error deleting documents", error=str(e), file_id=file_id)
 
@@ -87,7 +65,7 @@ def insert_document_chunks(
     file_contents: bytes | None = None,
 ) -> None:
     """
-    Insert document chunks with their embeddings into the Supabase database.
+    Insert document and chunks with embeddings into the Supabase database (new schema).
 
     Args:
         chunks: List of text chunks
@@ -110,33 +88,49 @@ def insert_document_chunks(
         if len(chunks) != len(embeddings):
             raise ValueError("Number of chunks and embeddings must match")
 
-        # Prepare the data for insertion
-        data = []
+        # 1. Create the parent document
+        full_content = "\n\n".join(chunks)
+        file_bytes_str = base64.b64encode(file_contents).decode("utf-8") if file_contents else None
+
+        doc_data = {
+            "title": file_title,
+            "source": file_url,
+            "content": full_content,
+            "metadata": {
+                "file_id": file_id,
+                "file_url": file_url,
+                "mime_type": mime_type,
+                **({"file_contents": file_bytes_str} if file_bytes_str else {}),
+            },
+        }
+
+        doc_response = supabase.table("documents").insert(doc_data).execute()
+        document_id = doc_response.data[0]["id"]
+        structlog_logger.info("Created document", document_id=document_id, file_id=file_id)
+
+        # 2. Create chunks with embeddings
+        chunk_data = []
         for i, (chunk, embedding) in enumerate(zip(chunks, embeddings, strict=False)):
-            file_bytes_str = (
-                base64.b64encode(file_contents).decode("utf-8") if file_contents else None
-            )
-            data.append(
+            chunk_data.append(
                 {
+                    "document_id": document_id,
                     "content": chunk,
+                    "embedding_1536": embedding,
+                    "chunk_index": i,
+                    "start_char": 0,  # Can be calculated if needed
+                    "end_char": len(chunk),
                     "metadata": {
                         "file_id": file_id,
-                        "file_url": file_url,
-                        "file_title": file_title,
-                        "mime_type": mime_type,
                         "chunk_index": i,
-                        **({"file_contents": file_bytes_str} if file_bytes_str else {}),
                     },
-                    "embedding": embedding,
                 }
             )
 
-        # Insert the data into the documents table
-        for item in data:
-            supabase.table("documents").insert(item).execute()
+        # Insert chunks in batch
+        supabase.table("chunks").insert(chunk_data).execute()
 
         structlog_logger.info(
-            "insert_document_chunks completed", file_id=file_id, chunks_inserted=len(data)
+            "insert_document_chunks completed", file_id=file_id, chunks_inserted=len(chunk_data)
         )
     except Exception as e:
         structlog_logger.error("Error inserting document chunks", error=str(e), file_id=file_id)
@@ -146,7 +140,7 @@ def insert_or_update_document_metadata(
     file_id: str, file_title: str, file_url: str, schema: list[str] | None = None
 ) -> None:
     """
-    Insert or update a record in the document_metadata table.
+    No-op function - metadata now stored in documents table.
 
     Args:
         file_id: The Google Drive file ID (used as primary key)
@@ -155,38 +149,11 @@ def insert_or_update_document_metadata(
         schema: Optional schema for tabular files (column names)
     """
     structlog_logger.info(
-        "insert_or_update_document_metadata called",
+        "insert_or_update_document_metadata called (no-op - metadata in documents table)",
         file_id=file_id,
         file_title=file_title,
         has_schema=schema is not None,
     )
-    try:
-        # Check if the record already exists
-        response = supabase.table("document_metadata").select("*").eq("id", file_id).execute()
-
-        # Prepare the data
-        data = {"id": file_id, "title": file_title, "url": file_url}
-
-        # Add schema if provided
-        if schema:
-            data["schema"] = json.dumps(schema)
-
-        if response.data and len(response.data) > 0:
-            # Update existing record
-            supabase.table("document_metadata").update(data).eq("id", file_id).execute()
-            structlog_logger.info(
-                "Updated document metadata", file_id=file_id, file_title=file_title
-            )
-        else:
-            # Insert new record
-            supabase.table("document_metadata").insert(data).execute()
-            structlog_logger.info(
-                "Inserted document metadata", file_id=file_id, file_title=file_title
-            )
-    except Exception as e:
-        structlog_logger.error(
-            "Error inserting/updating document metadata", error=str(e), file_id=file_id
-        )
 
 
 def insert_document_rows(file_id: str, rows: list[dict[str, Any]]) -> None:
@@ -194,21 +161,38 @@ def insert_document_rows(file_id: str, rows: list[dict[str, Any]]) -> None:
     Insert rows from a tabular file into the document_rows table.
 
     Args:
-        file_id: The Google Drive file ID (references document_metadata.id)
+        file_id: The Google Drive file ID
         rows: List of row data as dictionaries
     """
     structlog_logger.info("insert_document_rows called", file_id=file_id, num_rows=len(rows))
     try:
-        # First, delete any existing rows for this file
-        supabase.table("document_rows").delete().eq("dataset_id", file_id).execute()
-        structlog_logger.info("Deleted existing rows", file_id=file_id)
+        # Find the document UUID by file_id in metadata
+        doc_response = (
+            supabase.table("documents").select("id").eq("metadata->>file_id", file_id).execute()
+        )
 
-        # Insert new rows
-        for row in rows:
-            supabase.table("document_rows").insert(
-                {"dataset_id": file_id, "row_data": row}
-            ).execute()
-        structlog_logger.info("Inserted document rows", file_id=file_id, rows_inserted=len(rows))
+        if not doc_response.data:
+            structlog_logger.error("Document not found for file_id", file_id=file_id)
+            return
+
+        document_id = doc_response.data[0]["id"]
+        structlog_logger.info("Found document", document_id=document_id, file_id=file_id)
+
+        # Delete existing rows for this document
+        supabase.table("document_rows").delete().eq("dataset_id", document_id).execute()
+        structlog_logger.info("Deleted existing rows", document_id=document_id)
+
+        # Insert new rows with row_index
+        row_data_list = []
+        for i, row in enumerate(rows):
+            row_data_list.append({"dataset_id": document_id, "row_data": row, "row_index": i})
+
+        if row_data_list:
+            supabase.table("document_rows").insert(row_data_list).execute()
+
+        structlog_logger.info(
+            "Inserted document rows", document_id=document_id, rows_inserted=len(row_data_list)
+        )
     except Exception as e:
         structlog_logger.error("Error inserting document rows", error=str(e), file_id=file_id)
 

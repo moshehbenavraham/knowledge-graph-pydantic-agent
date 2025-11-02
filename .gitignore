@@ -172,3 +172,11 @@ sessions/
 backups/
 CLAUDE.md
 config/auth_config.yaml
+
+# Google Drive OAuth
+credentials.json
+token.json
+config/google_credentials.json
+config/google_token.json
+src/rag_pipeline/sources/credentials.json
+src/rag_pipeline/sources/token.json

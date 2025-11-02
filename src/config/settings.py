@@ -431,6 +431,16 @@ class Settings(BaseSettings):
         description="SearXNG instance URL",
     )
 
+    # Google Drive Configuration
+    google_drive_folder_id: str | None = Field(
+        default=None,
+        description="Google Drive folder ID to watch (None = watch entire drive)",
+    )
+    google_drive_credentials_path: str = Field(
+        default="config/google_credentials.json",
+        description="Path to Google OAuth credentials file",
+    )
+
     # Circuit Breaker Settings
     circuit_breaker_failure_threshold: int = Field(
         default=5,

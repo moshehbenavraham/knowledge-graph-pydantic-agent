@@ -1,10 +1,13 @@
 import argparse
 
 import structlog
-from sources.google_drive import GoogleDriveWatcher
-from sources.local_files import LocalFileWatcher
+
+from src.config import get_settings
+from src.rag_pipeline.sources.google_drive import GoogleDriveWatcher
+from src.rag_pipeline.sources.local_files import LocalFileWatcher
 
 structlog_logger = structlog.get_logger(__name__)
+settings = get_settings()
 
 
 def main():
@@ -36,7 +39,11 @@ def main():
         structlog_logger.info("LocalFileWatcher watch completed")
     elif args.source == "google_drive":
         structlog_logger.info("Initializing GoogleDriveWatcher...")
-        watcher = GoogleDriveWatcher()
+        watcher = GoogleDriveWatcher(
+            credentials_path=settings.google_drive_credentials_path,
+            token_path="config/google_token.json",  # nosec B106 - This is a filename, not a password
+            folder_id=settings.google_drive_folder_id,
+        )
         structlog_logger.info("Starting Google Drive watcher", interval_seconds=args.interval)
         watcher.watch_for_changes(args.interval)
         structlog_logger.info("GoogleDriveWatcher watch completed")
