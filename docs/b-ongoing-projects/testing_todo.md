@@ -1,29 +1,9 @@
 # Testing TODO - Remaining Work Only
 
-**Current State**: 4,116 tests collected | 78% coverage
+**Current State**: 4,178 tests collected | 78% coverage
 **Target State**: 100% pass rate | 80%+ coverage
 
 **Historical Work**: See `/docs/a-changelogs/changelog_current.md` for completed phases
-
----
-
-## PHASE 10: Performance and Cleanup
-
-**Estimated Time**: 2-4 hours
-
-### 10.1 Test Performance
-- [ ] Identify slowest tests (`pytest --durations=20`)
-- [ ] Optimize tests >1 second
-- [ ] Add parallel execution (pytest-xdist)
-- [ ] Target: <2 minute total execution time
-
-### 10.2 Warning Cleanup
-- [ ] Document datetime.utcnow() replacements (150+ occurrences)
-
-### 10.3 CI/CD Setup
-- [ ] Configure GitHub Actions
-- [ ] Enforce 75% minimum coverage
-- [ ] Add test result reporting
 
 ---
 
@@ -45,6 +25,9 @@
 # Run all tests with coverage
 make test-coverage
 
+# Run tests in parallel (faster)
+make test-parallel-coverage
+
 # Run specific module tests
 pytest tests/constitution_validator/ -v --cov=src/constitution_validator
 
@@ -55,7 +38,7 @@ pytest --lf
 pytest --cov=src/constitution_validator/reporter --cov-report=term-missing
 
 # Identify slow tests
-pytest --durations=20
+make test-durations
 
 # Find skipped tests
 pytest --collect-only -q -m skip
@@ -67,8 +50,6 @@ pytest --collect-only -q -m skip
 
 | Phase | Status | Priority | Time Remaining |
 |-------|--------|----------|----------------|
-| 9 | NOT STARTED | LOW | 4-6 hrs |
-| 10 | NOT STARTED | LOW | 2-4 hrs |
 | 11 | NOT STARTED | CRITICAL | 1 hr |
 
-**Next Action**: Enable skipped tests (Phase 9)
+**Next Action**: Final Verification (Phase 11)

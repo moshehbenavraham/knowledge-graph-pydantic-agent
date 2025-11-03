@@ -45,9 +45,19 @@ jobs:
     - name: Type checking with MyPy
       run: mypy src/ tests/
 
-    - name: Test with pytest
+    - name: Test with pytest (parallel execution)
+      timeout-minutes: 20
       run: |
-        pytest tests/ --cov=src --cov-report=xml --cov-report=term-missing
+        pytest tests/ \
+          -n auto \
+          --cov=src \
+          --cov-report=xml \
+          --cov-report=term-missing \
+          --cov-report=html \
+          --cov-fail-under=75 \
+          --durations=20 \
+          --junit-xml=test-results.xml \
+          -v
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
@@ -56,6 +66,24 @@ jobs:
         file: ./coverage.xml
         flags: unittests
         name: codecov-umbrella
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results-${{ matrix.python-version }}
+        path: |
+          test-results.xml
+          htmlcov/
+          .coverage
+
+    - name: Publish test results
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      if: always() && matrix.python-version == '3.11'
+      with:
+        files: test-results.xml
+        check_name: Test Results (Python ${{ matrix.python-version }})
+        comment_mode: off
 
   security:
     name: Security Scan

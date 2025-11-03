@@ -18,6 +18,15 @@ test:  ## Run test suite (3,788 tests, ~7-10 minutes)
 test-coverage:  ## Run tests with coverage (3,788 tests, ~10-15 minutes) - USE GENEROUS TIMEOUTS IN SCRIPTS
 	bash -c "source .venv/bin/activate && pytest --cov=src --cov-report=term-missing --cov-report=html tests/"
 
+test-parallel:  ## Run tests in parallel using pytest-xdist (faster, ~2-5 minutes)
+	bash -c "source .venv/bin/activate && pytest tests/ -n auto"
+
+test-parallel-coverage:  ## Run tests in parallel with coverage (~5-8 minutes)
+	bash -c "source .venv/bin/activate && pytest tests/ -n auto --cov=src --cov-report=term-missing --cov-report=html --cov-fail-under=75"
+
+test-durations:  ## Show 20 slowest tests
+	bash -c "source .venv/bin/activate && pytest tests/ --durations=20 -q"
+
 lint:
 	bash -c "source .venv/bin/activate && ruff check src/ tests/"
 	bash -c "source .venv/bin/activate && black --check src/ tests/"
