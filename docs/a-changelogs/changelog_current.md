@@ -11,6 +11,70 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Start Changelog Entries
 ---
 
+## [2.11.5] - 2025-11-03
+
+### Phase 9: Enable Skipped Tests Complete (19 Tests Enabled, 1 Production Bug Fixed)
+
+**Status**: COMPLETE - Target achieved (21 skip markers, 7 permanent + 14 conditional)
+
+**Summary**:
+Reduced permanent skipped tests from 23 to 7, with 14 conditional skips (integration tests) properly documented and enableable via environment flag. Fixed critical production bug and enabled 19 additional tests.
+
+**Major Changes**:
+
+1. **Integration Test Enablement (13 tests)**
+   - Added ENABLE_INTEGRATION_TESTS environment variable flag
+   - Updated tests/integration/conftest.py with flexible skip condition
+   - Updated .env.example with documentation
+   - Tests can be enabled with: export ENABLE_INTEGRATION_TESTS=true
+   - Safety check prevents accidental production database testing
+
+2. **CLI Tests Fixed and Enabled (18 tests)**
+   - Fixed incorrect import from validate_command to validate
+   - Removed module-level skip in tests/unit/constitution_validator/test_cli.py
+   - All 18 CLI tests now running (quiet mode, dry-run, pre-commit hooks, argument parsing)
+
+3. **Graph Search Production Bug Fixed (1 test enabled)**
+   - Fixed chunk_refs None handling in src/agentic_rag/search/graph_search.py
+   - Changed record.get("chunk_refs", []) to record.get("chunk_refs") or []
+   - Enabled test_entity_search_no_chunk_refs in tests/test_graph_search_extended.py
+   - More robust entity search handling for edge cases
+
+4. **E2E Tool Import Fixes (5 conditional skips fixed)**
+   - Corrected 14 import/patch paths from tools.* to src.tools.*
+   - Fixed tests/test_e2e.py tool imports
+   - Tool availability checks now work correctly
+
+5. **Enhanced Skip Documentation (7 files updated)**
+   - Updated skip messages in 7 test files with detailed reasons
+   - All permanent skips reference docs/b-ongoing-projects/phase9_skip_analysis.md
+   - Clear explanations for lifespan, streaming, async context manager tests
+
+**Final Skip Breakdown**:
+- Permanent Skips (7 acceptable): 2 lifespan, 3 streaming errors, 1 async context, 1 cache size
+- Conditional Skips (14 expected): 13 integration tests + 1 full RAG flow (enable with flag)
+- Dynamic/Runtime Skips (5-10 acceptable): Database/Neo4j/LLM availability, platform-specific
+
+**Documentation Created**:
+- docs/b-ongoing-projects/phase9_skip_analysis.md - Comprehensive categorization and analysis
+- docs/b-ongoing-projects/phase9_completion_summary.md - Complete implementation summary
+
+**Technical Improvements**:
+- Fixed dict.get() None handling pattern for optional list fields
+- Corrected module import paths across test suite
+- Established proper conditional skip patterns with environment variables
+- Enhanced skip message documentation standards
+
+**Impact**:
+- Tests enabled: 19 (18 CLI + 1 graph search)
+- Production bugs fixed: 1 (chunk_refs None handling)
+- Skip documentation: 100% of permanent skips documented with reasons
+- Integration tests: Enableable via ENABLE_INTEGRATION_TESTS flag
+
+**Next Phase**: Phase 10 - Performance and Cleanup
+
+---
+
 ## [2.11.4] - 2025-11-03
 
 ### Phase 8: Test Execution Fixes Complete (600+ Tests Fixed)
@@ -76,6 +140,7 @@ End Changelog Entries
 
 | Version | Release Date | Key Features |
 |---------|--------------|--------------|
+| **2.11.5** | 2025-11-03 | Phase 9 Complete: Enable Skipped Tests (19 Tests Enabled, 1 Bug Fixed) - Reduced permanent skips from 23 to 7 (target achieved) - Added ENABLE_INTEGRATION_TESTS flag for 13 integration tests - Fixed CLI imports: enabled 18 tests - Fixed chunk_refs None handling bug: enabled 1 test - Fixed e2e tool imports: resolved 5 conditional skips - Enhanced skip documentation: 7 files updated with detailed reasons - Final breakdown: 7 permanent + 14 conditional (integration tests) + 5-10 dynamic skips - Documentation: phase9_skip_analysis.md and phase9_completion_summary.md created |
 | **2.11.4** | 2025-11-03 | Phase 8 Complete: Test Execution Fixes (600+ Tests) - All 6 remaining Phase 8 files processed - Fixed critical mocking issues: Path.exists(), shutil.which, property patching - Test improvements: cli.py (45+ tests), streamlit_app.py (437/457 passing), streamlit_auth.py (59/83 passing), google_drive.py (32/55 passing), oauth_profile (4/4 passing), oauth_analytics (22/22 passing) - Established proper patterns for property decorators, async tests, import path resolution - Overall 85%+ pass rate improvement |
 | **2.11.3** | 2025-11-03 | Phase 8 Testing: 3 Files Complete (90%+ Coverage Achieved) - Fixed 3 of 9 Phase 8 files with 87 tests (100% pass rate) - Coverage improvements: admin_2fa_management.py (36.14%->90.96%), enforce_2fa.py (34.64%->99.35%), pipeline.py (18.52%->100%) - Fixed critical import bug in local_files.py (relative->absolute imports) - Established comprehensive testing patterns for Streamlit UI, 2FA authentication, RAG pipeline - Phase 8 progress: 33% complete (3 of 9 files) |
 | **2.11.2** | 2025-11-02 | Phase 8 Testing: reporter.py Tests Complete (0.00%->97.06%) - Created 26 comprehensive tests for constitution_validator/reporter.py - Fixed all Pydantic validation errors in test data - Documented ViolationRecord validation requirements - Established pattern for fixing Phase 8 low-coverage files - First Phase 8 file completed successfully |

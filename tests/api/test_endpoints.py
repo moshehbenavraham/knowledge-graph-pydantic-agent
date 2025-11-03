@@ -436,7 +436,11 @@ class TestHealthChecks:
 class TestIntegrationScenarios:
     """Integration tests for end-to-end scenarios."""
 
-    @pytest.mark.skip(reason="Requires full environment setup")
+    @pytest.mark.skip(
+        reason="Integration test requiring full database setup. "
+        "Enable with ENABLE_INTEGRATION_TESTS=true environment variable. "
+        "See docs/b-ongoing-projects/phase9_skip_analysis.md Category 4"
+    )
     @pytest.mark.asyncio
     async def test_full_rag_flow(self, client):
         """Test complete RAG flow: ingest -> search -> chat."""

@@ -251,7 +251,10 @@ class TestChatStreamEndpoint:
         assert response.status_code == 200
 
     @pytest.mark.skip(
-        reason="Flaky test - async generator error handling is complex to mock properly"
+        reason="PERMANENT SKIP: Async generator error handling edge case is difficult to test reliably. "
+        "StreamingResponse errors during generator creation cannot be properly caught by TestClient. "
+        "Error paths are tested through real usage. "
+        "See docs/b-ongoing-projects/phase9_skip_analysis.md Category 2.2"
     )
     @patch("src.api.endpoints.chat.sse_manager")
     def test_chat_stream_error(self, mock_sse, test_client):

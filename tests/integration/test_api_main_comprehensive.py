@@ -316,14 +316,22 @@ class TestRouterInclusion:
 class TestLifespanManagement:
     """Test application lifespan management."""
 
-    @pytest.mark.skip(reason="Flaky test - lifespan testing with mocked dependencies is unreliable")
+    @pytest.mark.skip(
+        reason="PERMANENT SKIP: Lifespan testing with mocked dependencies is unreliable. "
+        "Lifespan functionality is tested implicitly through other integration tests. "
+        "See docs/b-ongoing-projects/phase9_skip_analysis.md Category 2.1"
+    )
     def test_lifespan_startup(self):
         """Test lifespan startup phase."""
         # This test is skipped due to complex mocking requirements
         # The lifespan functionality is tested indirectly through other tests
         pass
 
-    @pytest.mark.skip(reason="Flaky test - lifespan testing with mocked dependencies is unreliable")
+    @pytest.mark.skip(
+        reason="PERMANENT SKIP: Lifespan testing with mocked dependencies is unreliable. "
+        "Lifespan functionality is tested implicitly through other integration tests. "
+        "See docs/b-ongoing-projects/phase9_skip_analysis.md Category 2.1"
+    )
     def test_lifespan_shutdown(self):
         """Test lifespan shutdown phase."""
         # This test is skipped due to complex mocking requirements

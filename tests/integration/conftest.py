@@ -27,11 +27,19 @@ def event_loop():
 @pytest.fixture(scope="session")
 def test_settings():
     """Get test settings from environment."""
+    import os
+
     settings = get_settings()
 
-    # Verify test database is configured
-    if "test" not in settings.supabase_url.lower():
-        pytest.skip("Test database not configured - skipping integration tests")
+    # Check if integration tests are explicitly enabled
+    enable_integration = os.getenv("ENABLE_INTEGRATION_TESTS", "false").lower() == "true"
+
+    # Verify test database is configured OR integration tests are explicitly enabled
+    if not enable_integration and "test" not in settings.supabase_url.lower():
+        pytest.skip(
+            "Integration tests disabled. Set ENABLE_INTEGRATION_TESTS=true to run "
+            "integration tests (WARNING: will use configured database)"
+        )
 
     return settings
 

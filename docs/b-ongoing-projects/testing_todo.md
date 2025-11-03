@@ -7,30 +7,8 @@
 
 ---
 
-## PHASE 9: Enable Skipped Tests
-
-**Priority**: LOW
-**Estimated Time**: 4-6 hours
-
-### 9.1 Database Integration Tests (13 skipped)
-File: `tests/integration/test_postgres_store.py`
-
-- [ ] Set up test database fixture
-- [ ] Mock Supabase client for unit tests
-- [ ] Enable all 13 skipped integration tests
-
-### 9.2 Other Skipped Tests (~90 remaining)
-- [ ] Categorize by skip reason
-- [ ] Enable tests with available infrastructure
-- [ ] Document permanent skips with clear reasons
-
-**Success Criteria**: <20 skipped tests (only permanent skips)
-
----
-
 ## PHASE 10: Performance and Cleanup
 
-**Priority**: LOW
 **Estimated Time**: 2-4 hours
 
 ### 10.1 Test Performance

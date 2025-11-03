@@ -284,12 +284,14 @@ class GraphSearch:
 
             entities = []
             for record in results:
+                # Handle None chunk_refs explicitly (get() returns None if key exists with None value)
+                chunk_refs = record.get("chunk_refs") or []
                 entities.append(
                     GraphEntity(
                         id=record["id"],
                         name=record["name"],
                         type=record["type"],
-                        chunk_refs=record.get("chunk_refs", []),
+                        chunk_refs=chunk_refs,
                         confidence=record.get("confidence", 1.0),
                     )
                 )

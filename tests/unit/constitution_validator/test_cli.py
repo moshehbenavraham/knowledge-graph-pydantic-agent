@@ -9,12 +9,7 @@ from unittest.mock import patch
 import pytest
 from click.testing import CliRunner
 
-# Import CLI functions (will be tested)
-try:
-    from src.constitution_validator.cli import validate_command
-except ImportError:
-    # CLI may have different structure - this is for test skeleton
-    pytest.skip("CLI module structure needs verification", allow_module_level=True)
+from src.constitution_validator.cli import validate
 
 
 class TestQuietMode:
@@ -33,7 +28,7 @@ class TestQuietMode:
                 "warning_count": 2,
             }
 
-            result = runner.invoke(validate_command, ["--quiet"])
+            result = runner.invoke(validate, ["--quiet"])
 
             # Should only show counts, not detailed violations
             assert "3 errors" in result.output or "3" in result.output
@@ -54,7 +49,7 @@ class TestQuietMode:
                 "error_count": 3,
             }
 
-            result = runner.invoke(validate_command, ["--quiet"])
+            result = runner.invoke(validate, ["--quiet"])
             assert result.exit_code != 0  # Non-zero on violations
 
     def test_quiet_mode_exit_code_on_success(self):
@@ -68,7 +63,7 @@ class TestQuietMode:
                 "error_count": 0,
             }
 
-            result = runner.invoke(validate_command, ["--quiet"])
+            result = runner.invoke(validate, ["--quiet"])
             assert result.exit_code == 0  # Zero on success
 
     def test_quiet_mode_suitable_for_scripting(self):
@@ -83,7 +78,7 @@ class TestQuietMode:
                 "warning_count": 2,
             }
 
-            result = runner.invoke(validate_command, ["--quiet"])
+            result = runner.invoke(validate, ["--quiet"])
 
             # Output should be simple and parseable
             lines = result.output.strip().split("\n")
@@ -105,7 +100,7 @@ class TestDryRunMode:
                 Path("src/file3.py"),
             ]
 
-            result = runner.invoke(validate_command, ["--dry-run"])
+            result = runner.invoke(validate, ["--dry-run"])
 
             # Should show files that would be checked
             assert "src/file1.py" in result.output
@@ -116,7 +111,7 @@ class TestDryRunMode:
         """Test that --dry-run lists rules that would be executed."""
         runner = CliRunner()
 
-        result = runner.invoke(validate_command, ["--dry-run"])
+        result = runner.invoke(validate, ["--dry-run"])
 
         # Should show which principles/rules will be checked
         assert "Principle I" in result.output or "CONST-I" in result.output
@@ -130,7 +125,7 @@ class TestDryRunMode:
         runner = CliRunner()
 
         start_time = time.time()
-        _result = runner.invoke(validate_command, ["--dry-run", "src/"])
+        _result = runner.invoke(validate, ["--dry-run", "src/"])
         end_time = time.time()
 
         execution_time = end_time - start_time
@@ -142,7 +137,7 @@ class TestDryRunMode:
         """Test that --dry-run always returns zero exit code (no actual validation)."""
         runner = CliRunner()
 
-        result = runner.invoke(validate_command, ["--dry-run"])
+        result = runner.invoke(validate, ["--dry-run"])
 
         # Dry-run should always succeed (it's just showing what would happen)
         assert result.exit_code == 0
@@ -154,7 +149,7 @@ class TestDryRunMode:
         with patch("src.constitution_validator.cli.discover_files") as mock_discover:
             mock_discover.return_value = [Path("src/file1.py")]
 
-            result = runner.invoke(validate_command, ["--dry-run"])
+            result = runner.invoke(validate, ["--dry-run"])
 
             # Should have clear sections
             output_lower = result.output.lower()
@@ -178,7 +173,7 @@ class TestPreCommitHookIntegration:
 
             # Simulate pre-commit hook invocation with staged files
             result = runner.invoke(
-                validate_command,
+                validate,
                 ["src/file1.py", "src/file2.py"],  # Specific files from git diff --cached
             )
 
@@ -198,7 +193,7 @@ class TestPreCommitHookIntegration:
 
             # Simulate pre-commit hook invocation
             result = runner.invoke(
-                validate_command,
+                validate,
                 ["src/file1.py"],
             )
 
@@ -223,7 +218,7 @@ class TestPreCommitHookIntegration:
             }
 
             start_time = time.time()
-            _result = runner.invoke(validate_command, test_files)
+            _result = runner.invoke(validate, test_files)
             end_time = time.time()
 
             execution_time = end_time - start_time
@@ -251,7 +246,7 @@ class TestPreCommitHookIntegration:
                 ],
             }
 
-            result = runner.invoke(validate_command, ["src/file.py"])
+            result = runner.invoke(validate, ["src/file.py"])
 
             # Should show summary of violations
             assert "3" in result.output  # violation count
@@ -264,13 +259,13 @@ class TestPreCommitHookIntegration:
         # Test case 1: Violations found
         with patch("src.constitution_validator.cli.run_validation") as mock_validate:
             mock_validate.return_value = {"passed": False, "error_count": 5}
-            result = runner.invoke(validate_command, [])
+            result = runner.invoke(validate, [])
             assert result.exit_code != 0
 
         # Test case 2: No violations
         with patch("src.constitution_validator.cli.run_validation") as mock_validate:
             mock_validate.return_value = {"passed": True, "error_count": 0}
-            result = runner.invoke(validate_command, [])
+            result = runner.invoke(validate, [])
             assert result.exit_code == 0
 
 
@@ -285,7 +280,7 @@ class TestCLIArgumentParsing:
             mock_validate.return_value = {"passed": True}
 
             result = runner.invoke(
-                validate_command,
+                validate,
                 ["src/file1.py", "src/file2.py"],
             )
 
@@ -300,7 +295,7 @@ class TestCLIArgumentParsing:
             mock_validate.return_value = {"passed": True}
 
             result = runner.invoke(
-                validate_command,
+                validate,
                 ["src/", "tests/"],
             )
 
@@ -311,7 +306,7 @@ class TestCLIArgumentParsing:
         """Test that --help shows comprehensive usage information."""
         runner = CliRunner()
 
-        result = runner.invoke(validate_command, ["--help"])
+        result = runner.invoke(validate, ["--help"])
 
         # Should describe all flags
         assert "--quiet" in result.output

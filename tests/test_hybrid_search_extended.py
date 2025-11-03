@@ -646,7 +646,12 @@ class TestCacheIntegration:
 
         assert cache.get(key) is None
 
-    @pytest.mark.skip(reason="SearchCache does not support max_size parameter")
+    @pytest.mark.skip(
+        reason="PERMANENT SKIP: SearchCache does not implement max_size parameter. "
+        "This feature is not currently needed for the application. "
+        "If max_size becomes required, implement the feature and enable this test. "
+        "See docs/b-ongoing-projects/phase9_skip_analysis.md Category 6.2"
+    )
     def test_cache_size_limit(self, mock_connection_manager):
         """Test cache respects maximum size."""
         cache = SearchCache(max_size=2)

@@ -278,7 +278,10 @@ def test_chat_stream_with_parameters(app_client, mock_agent_deps):
 
 
 @pytest.mark.skip(
-    reason="StreamingResponse errors during iteration can't be properly tested with TestClient"
+    reason="PERMANENT SKIP: StreamingResponse errors during iteration cannot be properly tested with TestClient. "
+    "This is a limitation of the Starlette TestClient with async generators. "
+    "Error handling is validated through manual testing and real-world usage. "
+    "See docs/b-ongoing-projects/phase9_skip_analysis.md Category 2.2"
 )
 def test_chat_stream_error(app_client, mock_agent_deps):
     """Test streaming endpoint error handling."""

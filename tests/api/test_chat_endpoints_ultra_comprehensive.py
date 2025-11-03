@@ -250,7 +250,10 @@ class TestChatStreamEndpoint:
             asyncio.run(chat_stream(request, mock_agent_deps))
 
     @pytest.mark.skip(
-        reason="Streaming errors during generator creation are not caught by HTTPException"
+        reason="PERMANENT SKIP: Streaming errors during generator creation cannot be caught by HTTPException. "
+        "This is an edge case in async generator error handling that's extremely difficult to test with mocks. "
+        "Error paths are validated through real usage and manual testing. "
+        "See docs/b-ongoing-projects/phase9_skip_analysis.md Category 2.2"
     )
     def test_chat_stream_error(self, mock_agent_deps):
         """Test streaming error handling."""

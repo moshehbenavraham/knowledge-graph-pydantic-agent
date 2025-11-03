@@ -116,7 +116,6 @@ class TestEntitySearchEdgeCases:
             assert all("Microsoft" in e.name for e in results)
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="chunk_refs handling issue")
     async def test_entity_search_no_chunk_refs(self, mock_connection_manager):
         """Test entity search when entities have no chunk references."""
         search = GraphSearch(mock_connection_manager)

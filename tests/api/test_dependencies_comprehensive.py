@@ -737,7 +737,10 @@ async def test_all_search_providers(mock_ia_class, mock_hs_class, mock_vs_class)
 
 @pytest.mark.asyncio
 @pytest.mark.skip(
-    reason="Complex async context manager cleanup - generator exception handling edge case"
+    reason="PERMANENT SKIP: Complex async context manager cleanup edge case. "
+    "This tests a very specific generator exception handling scenario during cleanup that's "
+    "difficult to reproduce reliably. Normal cleanup paths are well-tested elsewhere. "
+    "See docs/b-ongoing-projects/phase9_skip_analysis.md Category 3"
 )
 async def test_session_cleanup_on_exception():
     """Test that sessions cleanup properly even on exception."""

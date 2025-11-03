@@ -14,9 +14,9 @@ import pytest
 
 # Import tools that are currently imported within functions
 try:
-    from tools.code_execution import execute_safe_code_tool
-    from tools.rag import get_document_content_tool, retrieve_relevant_documents_tool
-    from tools.sql_query import execute_sql_query_tool
+    from src.tools.code_execution import execute_safe_code_tool
+    from src.tools.rag import get_document_content_tool, retrieve_relevant_documents_tool
+    from src.tools.sql_query import execute_sql_query_tool
 except ImportError:
     # Mock these if not available
     get_document_content_tool = None
@@ -141,8 +141,8 @@ class TestCompleteUserWorkflows:
         }
 
     @pytest.mark.asyncio
-    @patch("tools.rag.retrieve_relevant_documents_tool")
-    @patch("tools.web_search.web_search_tool")
+    @patch("src.tools.rag.retrieve_relevant_documents_tool")
+    @patch("src.tools.web_search.web_search_tool")
     async def test_research_query_workflow(self, mock_web_search, mock_rag, mock_complete_system):
         """Test complete research query workflow: memory -> RAG -> web search -> response."""
         # Setup mocks
@@ -203,7 +203,7 @@ class TestCompleteUserWorkflows:
     async def test_document_analysis_workflow(self, mock_complete_system):
         """Test document analysis workflow: upload -> process -> query -> response."""
         # Mock document content retrieval tool
-        with patch("tools.rag.get_document_content_tool") as mock_get_content:
+        with patch("src.tools.rag.get_document_content_tool") as mock_get_content:
             # Setup realistic document content
             expected_content = (
                 "Document contains financial analysis data. "
@@ -225,7 +225,7 @@ class TestCompleteUserWorkflows:
     async def test_code_execution_workflow(self, mock_complete_system):
         """Test code execution workflow: code input -> execution -> result display."""
         # Mock code execution
-        with patch("tools.code_execution.execute_safe_code_tool") as mock_code_exec:
+        with patch("src.tools.code_execution.execute_safe_code_tool") as mock_code_exec:
             mock_code_exec.return_value = "Result: 42\n"
 
             # Execute code
@@ -241,9 +241,9 @@ class TestCompleteUserWorkflows:
     async def test_multi_tool_workflow(self, mock_complete_system):
         """Test workflow using multiple tools in sequence."""
         with (
-            patch("tools.web_search.web_search_tool") as mock_web_search,
-            patch("tools.rag.retrieve_relevant_documents_tool") as mock_rag,
-            patch("tools.sql_query.execute_sql_query_tool") as mock_sql,
+            patch("src.tools.web_search.web_search_tool") as mock_web_search,
+            patch("src.tools.rag.retrieve_relevant_documents_tool") as mock_rag,
+            patch("src.tools.sql_query.execute_sql_query_tool") as mock_sql,
         ):
 
             # Setup tool responses
@@ -404,7 +404,7 @@ class TestErrorHandlingWorkflows:
     async def test_database_connection_failure_workflow(self):
         """Test complete workflow when database connection fails."""
         # Mock database failure
-        with patch("tools.sql_query.execute_sql_query_tool") as mock_sql_tool:
+        with patch("src.tools.sql_query.execute_sql_query_tool") as mock_sql_tool:
             # Setup mock to raise exception
             mock_sql_tool.side_effect = Exception("Database connection failed")
 
@@ -419,7 +419,7 @@ class TestErrorHandlingWorkflows:
     async def test_embedding_service_failure_workflow(self):
         """Test workflow when embedding service fails."""
         # Mock RAG tool to raise exception
-        with patch("tools.rag.retrieve_relevant_documents_tool") as mock_rag_tool:
+        with patch("src.tools.rag.retrieve_relevant_documents_tool") as mock_rag_tool:
             mock_rag_tool.side_effect = Exception("Embedding service down")
 
             # Test RAG failure handling
@@ -435,7 +435,7 @@ class TestErrorHandlingWorkflows:
         mock_http_client = AsyncMock()
 
         # Mock Brave API failure, SearXNG success
-        with patch("tools.web_search.web_search_tool") as mock_web_search:
+        with patch("src.tools.web_search.web_search_tool") as mock_web_search:
             mock_web_search.return_value = "SearXNG fallback results"
 
             # Execute with None Brave key (should use fallback)
@@ -474,7 +474,7 @@ class TestErrorHandlingWorkflows:
     async def test_timeout_handling_workflow(self):
         """Test timeout handling in complete workflows."""
         # Mock SQL tool to raise timeout error
-        with patch("tools.sql_query.execute_sql_query_tool") as mock_sql_tool:
+        with patch("src.tools.sql_query.execute_sql_query_tool") as mock_sql_tool:
             mock_sql_tool.side_effect = TimeoutError("Operation timed out")
 
             with pytest.raises(asyncio.TimeoutError, match="Operation timed out"):
