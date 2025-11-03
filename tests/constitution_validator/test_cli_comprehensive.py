@@ -73,12 +73,10 @@ class TestGetStagedFiles:
         mock_run.return_value = mock_result
 
         # Create a mock that returns True only for "src/exists.py"
-        def exists_check(filepath):
-            return str(filepath) == "src/exists.py"
+        def exists_check(self):
+            return str(self) == "src/exists.py"
 
-        with patch(
-            "pathlib.Path.exists", new_callable=lambda: property(lambda self: exists_check(self))
-        ):
+        with patch("pathlib.Path.exists", exists_check):
             files = _get_staged_files()
 
         assert len(files) == 1
@@ -269,54 +267,57 @@ class TestDiscoverFiles:
 class TestCheckDependencies:
     """Test check_dependencies() function."""
 
-    @patch("src.constitution_validator.cli.shutil.which")
+    @patch("shutil.which")
     def test_check_dependencies_all_present(self, mock_which):
         """Test when all dependencies are present."""
         mock_which.return_value = "/usr/bin/git"
 
-        with patch.dict("sys.modules", {"coverage": Mock(), "git": Mock()}):
-            check_dependencies()  # Should not raise
+        # All dependencies are present, should not raise
+        check_dependencies()
 
-    @patch("src.constitution_validator.cli.shutil.which")
-    def test_check_dependencies_missing_coverage(self, mock_which):
+    def test_check_dependencies_missing_coverage(self):
         """Test when coverage package is missing."""
-        mock_which.return_value = "/usr/bin/git"
+        with patch("shutil.which", return_value="/usr/bin/git"):
+            # Mock the import to fail for coverage
+            import builtins
 
-        with patch.dict("sys.modules", {"git": Mock()}):
-            with patch(
-                "builtins.__import__", side_effect=ImportError("No module named 'coverage'")
-            ):
+            real_import = builtins.__import__
+
+            def mock_import(name, *args, **kwargs):
+                if name == "coverage":
+                    raise ImportError("No module named 'coverage'")
+                return real_import(name, *args, **kwargs)
+
+            with patch("builtins.__import__", side_effect=mock_import):
                 with pytest.raises(DependencyCheckError, match="coverage"):
                     check_dependencies()
 
-    @patch("src.constitution_validator.cli.shutil.which")
-    def test_check_dependencies_missing_git_executable(self, mock_which):
+    def test_check_dependencies_missing_git_executable(self):
         """Test when git executable is not found."""
-        mock_which.return_value = None
-
-        with patch.dict("sys.modules", {"coverage": Mock()}):
+        with patch("shutil.which", return_value=None):
             with pytest.raises(DependencyCheckError, match="git"):
                 check_dependencies()
 
-    @patch("src.constitution_validator.cli.shutil.which")
-    def test_check_dependencies_missing_gitpython(self, mock_which):
+    def test_check_dependencies_missing_gitpython(self):
         """Test when GitPython package is missing."""
-        mock_which.return_value = "/usr/bin/git"
+        with patch("shutil.which", return_value="/usr/bin/git"):
+            # Mock the import to fail for git (GitPython)
+            import builtins
 
-        with patch.dict("sys.modules", {"coverage": Mock()}):
-            with patch(
-                "builtins.__import__",
-                side_effect=lambda name, *args: Mock() if name == "coverage" else ImportError(),
-            ):
+            real_import = builtins.__import__
+
+            def mock_import(name, *args, **kwargs):
+                if name == "git":
+                    raise ImportError("No module named 'git'")
+                return real_import(name, *args, **kwargs)
+
+            with patch("builtins.__import__", side_effect=mock_import):
                 with pytest.raises(DependencyCheckError, match="GitPython"):
                     check_dependencies()
 
-    @patch("src.constitution_validator.cli.shutil.which")
-    def test_check_dependencies_error_message_helpful(self, mock_which):
+    def test_check_dependencies_error_message_helpful(self):
         """Test that error messages provide installation instructions."""
-        mock_which.return_value = None
-
-        with patch.dict("sys.modules", {"coverage": Mock()}):
+        with patch("shutil.which", return_value=None):
             with pytest.raises(DependencyCheckError) as exc_info:
                 check_dependencies()
 
@@ -336,51 +337,60 @@ class TestValidateCommand:
         assert result.exit_code == 0
         assert "bypassed" in result.output.lower() or "skip" in result.output.lower()
 
-    @patch("src.constitution_validator.cli.check_dependencies")
-    @patch("src.constitution_validator.cli.ConstitutionLoader")
-    @patch("src.constitution_validator.cli.IgnoreConfigurationLoader")
-    def test_validate_dry_run_shows_files(
-        self, mock_ignore_loader, mock_const_loader, mock_check_deps
-    ):
+    def test_validate_dry_run_shows_files(self):
         """Test that --dry-run shows files to be scanned."""
         runner = CliRunner()
 
-        # Mock loaders
-        mock_const_loader.return_value.load.return_value = Mock(principles=[])
-        mock_ignore_loader.return_value.load.return_value = Mock(should_ignore=lambda x: False)
+        # Mock dependencies and loaders
+        with patch("src.constitution_validator.cli.check_dependencies"):
+            with patch("src.constitution_validator.loader.ConstitutionLoader") as mock_const_loader:
+                with patch(
+                    "src.constitution_validator.loader.IgnoreConfigurationLoader"
+                ) as mock_ignore_loader:
+                    mock_const_loader.return_value.load.return_value = Mock(principles=[])
+                    mock_ignore_loader.return_value.load.return_value = Mock(
+                        should_ignore=lambda x: False
+                    )
 
-        with patch(
-            "src.constitution_validator.cli._discover_files",
-            return_value=[Path("file1.py"), Path("file2.py")],
-        ):
-            result = runner.invoke(validate, ["--dry-run"])
+                    with patch(
+                        "src.constitution_validator.cli._discover_files",
+                        return_value=[Path("file1.py"), Path("file2.py")],
+                    ):
+                        result = runner.invoke(validate, ["--dry-run"])
 
         assert result.exit_code == 0
         assert "file1.py" in result.output or "2" in result.output
 
-    @patch("src.constitution_validator.cli.check_dependencies")
-    def test_validate_quiet_mode_minimal_output(self, mock_check_deps):
+    def test_validate_quiet_mode_minimal_output(self):
         """Test that --quiet produces minimal output."""
         runner = CliRunner()
 
-        with patch("src.constitution_validator.cli._discover_files", return_value=[]):
-            with patch("src.constitution_validator.cli.ConstitutionLoader"):
-                with patch("src.constitution_validator.cli.IgnoreConfigurationLoader"):
-                    result = runner.invoke(validate, ["--quiet"])
+        with patch("src.constitution_validator.cli.check_dependencies"):
+            with patch("src.constitution_validator.cli._discover_files", return_value=[]):
+                with patch("src.constitution_validator.loader.ConstitutionLoader"):
+                    with patch("src.constitution_validator.loader.IgnoreConfigurationLoader"):
+                        result = runner.invoke(validate, ["--quiet"])
 
         # Output should be minimal
         lines = [line for line in result.output.split("\n") if line.strip()]
         assert len(lines) <= 10
 
-    @patch("src.constitution_validator.cli.check_dependencies")
-    def test_validate_verbose_mode_detailed_output(self, mock_check_deps):
+    def test_validate_verbose_mode_detailed_output(self):
         """Test that --verbose shows detailed output."""
         runner = CliRunner()
 
-        # This test would need more complex mocking for full validation
-        # For now, just test that the flag is accepted
-        with patch("src.constitution_validator.cli._discover_files", return_value=[]):
-            result = runner.invoke(validate, ["--verbose"])
+        # Mock all dependencies
+        with patch("src.constitution_validator.cli.check_dependencies"):
+            with patch("src.constitution_validator.cli._discover_files", return_value=[]):
+                with patch("src.constitution_validator.loader.ConstitutionLoader") as mock_const:
+                    with patch(
+                        "src.constitution_validator.loader.IgnoreConfigurationLoader"
+                    ) as mock_ignore:
+                        mock_const.return_value.load.return_value = Mock(principles=[])
+                        mock_ignore.return_value.load.return_value = Mock(
+                            should_ignore=lambda x: False
+                        )
+                        result = runner.invoke(validate, ["--verbose"])
 
         assert "--verbose" not in result.output or result.exit_code in [0, 1]
 
@@ -563,65 +573,87 @@ class TestValidateEdgeCases:
 class TestValidateCompleteFlow:
     """Test complete validation flow with mocked components."""
 
-    @patch("src.constitution_validator.cli.check_dependencies")
-    @patch("src.constitution_validator.cli.ConstitutionLoader")
-    @patch("src.constitution_validator.cli.IgnoreConfigurationLoader")
-    @patch("src.constitution_validator.cli.ASTScanner")
-    @patch("src.constitution_validator.cli.UnifiedAgentRule")
-    @patch("src.constitution_validator.cli.CentralizedConfigRule")
-    @patch("src.constitution_validator.cli.DualDatabaseRule")
-    @patch("src.constitution_validator.cli.TestCoverageRule")
-    @patch("src.constitution_validator.cli.ObservabilityRule")
-    @patch("src.constitution_validator.cli.GitAttributionRule")
-    @patch("src.constitution_validator.cli._discover_files")
-    def test_validate_complete_success_flow(
-        self,
-        mock_discover,
-        mock_git_rule,
-        mock_obs_rule,
-        mock_cov_rule,
-        mock_db_rule,
-        mock_cfg_rule,
-        mock_agent_rule,
-        mock_scanner,
-        mock_ignore_loader,
-        mock_const_loader,
-        mock_check_deps,
-        tmp_path,
-    ):
+    def test_validate_complete_success_flow(self, tmp_path):
         """Test complete successful validation flow."""
         runner = CliRunner()
 
         # Setup mocks
         test_file = tmp_path / "test.py"
         test_file.write_text("# test")
-        mock_discover.return_value = [test_file]
 
-        mock_principle = Mock()
-        mock_principle.principle_id = "I"
-        mock_principle.name = "Test Principle"
-        mock_const = Mock()
-        mock_const.version = "1.0.0"
-        mock_const.principles = [mock_principle]
-        mock_const_loader.return_value.load.return_value = mock_const
+        with patch("src.constitution_validator.cli.check_dependencies"):
+            with patch("src.constitution_validator.cli._discover_files", return_value=[test_file]):
+                with patch(
+                    "src.constitution_validator.loader.ConstitutionLoader"
+                ) as mock_const_loader:
+                    with patch(
+                        "src.constitution_validator.loader.IgnoreConfigurationLoader"
+                    ) as mock_ignore_loader:
+                        with patch(
+                            "src.constitution_validator.scanners.ast_scanner.ASTScanner"
+                        ) as mock_scanner:
+                            with patch(
+                                "src.constitution_validator.rules.principle_i.UnifiedAgentRule"
+                            ) as mock_agent_rule:
+                                with patch(
+                                    "src.constitution_validator.rules.principle_ii.CentralizedConfigRule"
+                                ) as mock_cfg_rule:
+                                    with patch(
+                                        "src.constitution_validator.rules.principle_iii.DualDatabaseRule"
+                                    ) as mock_db_rule:
+                                        with patch(
+                                            "src.constitution_validator.rules.principle_iv.TestCoverageRule"
+                                        ) as mock_cov_rule:
+                                            with patch(
+                                                "src.constitution_validator.rules.principle_v.ObservabilityRule"
+                                            ) as mock_obs_rule:
+                                                with patch(
+                                                    "src.constitution_validator.rules.principle_vi.GitAttributionRule"
+                                                ) as mock_git_rule:
+                                                    mock_principle = Mock()
+                                                    mock_principle.principle_id = "I"
+                                                    mock_principle.name = "Test Principle"
+                                                    mock_const = Mock()
+                                                    mock_const.version = "1.0.0"
+                                                    mock_const.principles = [mock_principle]
+                                                    mock_const_loader.return_value.load.return_value = (
+                                                        mock_const
+                                                    )
 
-        mock_ignore = Mock()
-        mock_ignore.should_ignore.return_value = False
-        mock_ignore_loader.return_value.load.return_value = mock_ignore
+                                                    mock_ignore = Mock()
+                                                    mock_ignore.should_ignore.return_value = False
+                                                    mock_ignore_loader.return_value.load.return_value = (
+                                                        mock_ignore
+                                                    )
 
-        mock_tree = Mock()
-        mock_scanner_instance = Mock()
-        mock_scanner_instance.parse_file.return_value = mock_tree
-        mock_scanner.return_value = mock_scanner_instance
+                                                    mock_tree = Mock()
+                                                    mock_scanner_instance = Mock()
+                                                    mock_scanner_instance.parse_file.return_value = (
+                                                        mock_tree
+                                                    )
+                                                    mock_scanner.return_value = (
+                                                        mock_scanner_instance
+                                                    )
 
-        # All rules return no violations
-        for rule_mock in [mock_agent_rule, mock_cfg_rule, mock_db_rule, mock_obs_rule]:
-            rule_mock.return_value.execute.return_value = []
+                                                    # All rules return no violations
+                                                    for rule_mock in [
+                                                        mock_agent_rule,
+                                                        mock_cfg_rule,
+                                                        mock_db_rule,
+                                                        mock_obs_rule,
+                                                    ]:
+                                                        rule_mock.return_value.execute.return_value = (
+                                                            []
+                                                        )
 
-        mock_cov_rule.return_value.execute_coverage_check.return_value = []
-        mock_git_rule.return_value.execute_git_check.return_value = []
+                                                    mock_cov_rule.return_value.execute_coverage_check.return_value = (
+                                                        []
+                                                    )
+                                                    mock_git_rule.return_value.execute_git_check.return_value = (
+                                                        []
+                                                    )
 
-        result = runner.invoke(validate, [])
+                                                    result = runner.invoke(validate, [])
 
         assert result.exit_code == 0
 

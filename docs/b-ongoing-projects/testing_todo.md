@@ -7,34 +7,6 @@
 
 ---
 
-## PHASE 8: Fix Test Execution and Improve Coverage
-
-**Priority**: CRITICAL
-**Status**: IN PROGRESS (3 of 9 files complete)
-**Estimated Remaining Time**: 4-6 hours
-
-### Tasks Remaining
-
-#### 8.1 Core Pipeline
-- [ ] Fix `src/constitution_validator/cli.py` (14.85% -> 80%)
-  - File: `tests/constitution_validator/test_cli_comprehensive.py`
-
-#### 8.2 UI Components
-- [ ] Fix `src/ui/streamlit_app.py` (0.00% -> 70%)
-  - Files: Multiple test files in `tests/ui/`
-- [ ] Fix `src/auth/streamlit_auth.py` (0.00% -> 70%)
-  - Files: `test_streamlit_auth_comprehensive.py`, `test_streamlit_auth_ultra_comprehensive.py`
-
-#### 8.3 Other Low Coverage Files
-- [ ] Fix `src/rag_pipeline/sources/google_drive.py` (0.00% -> 95%)
-  - Files: `test_google_drive.py`, `test_google_drive_comprehensive.py`
-- [ ] Fix `src/auth/oauth_profile_management.py` (0.00% -> 60%)
-  - File: `tests/auth/test_oauth_profile_comprehensive.py`
-- [ ] Fix `src/auth/oauth_analytics_dashboard.py` (0.00% -> 60%)
-  - File: `tests/auth/test_oauth_analytics_comprehensive.py`
-
----
-
 ## PHASE 9: Enable Skipped Tests
 
 **Priority**: LOW
@@ -117,9 +89,8 @@ pytest --collect-only -q -m skip
 
 | Phase | Status | Priority | Time Remaining |
 |-------|--------|----------|----------------|
-| 8 | IN PROGRESS | CRITICAL | 4-6 hrs |
 | 9 | NOT STARTED | LOW | 4-6 hrs |
 | 10 | NOT STARTED | LOW | 2-4 hrs |
 | 11 | NOT STARTED | CRITICAL | 1 hr |
 
-**Next Action**: Fix `src/constitution_validator/cli.py` tests (14.85% -> 80%)
+**Next Action**: Enable skipped tests (Phase 9)

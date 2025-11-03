@@ -122,32 +122,38 @@ class TestUIConfig:
 
     def test_uiconfig_init_simple_mode(self):
         """Test UIConfig initialization with SIMPLE mode."""
-        with patch("src.ui.streamlit_app.config.mode", UIMode.SIMPLE):
-            ui_config = UIConfig()
+        from src.config.ui import ui_config
 
-        assert ui_config.mode == UIMode.SIMPLE
-        assert ui_config.features["streaming"] is False
-        assert ui_config.features["memory"] is False
-        assert ui_config.features["mcp"] is False
+        with patch.object(ui_config, "mode", UIMode.SIMPLE):
+            ui_cfg = UIConfig()
+
+        assert ui_cfg.mode == UIMode.SIMPLE
+        assert ui_cfg.features["streaming"] is False
+        assert ui_cfg.features["memory"] is False
+        assert ui_cfg.features["mcp"] is False
 
     def test_uiconfig_init_standard_mode(self):
         """Test UIConfig initialization with STANDARD mode."""
-        with patch("src.ui.streamlit_app.config.mode", UIMode.STANDARD):
-            ui_config = UIConfig()
+        from src.config.ui import ui_config
 
-        assert ui_config.mode == UIMode.STANDARD
-        assert ui_config.features["streaming"] is True
-        assert ui_config.features["memory"] is False
+        with patch.object(ui_config, "mode", UIMode.STANDARD):
+            ui_cfg = UIConfig()
+
+        assert ui_cfg.mode == UIMode.STANDARD
+        assert ui_cfg.features["streaming"] is True
+        assert ui_cfg.features["memory"] is False
 
     def test_uiconfig_init_advanced_mode(self):
         """Test UIConfig initialization with ADVANCED mode."""
-        with patch("src.ui.streamlit_app.config.mode", UIMode.ADVANCED):
-            ui_config = UIConfig()
+        from src.config.ui import ui_config
 
-        assert ui_config.mode == UIMode.ADVANCED
-        assert ui_config.features["streaming"] is True
-        assert ui_config.features["memory"] is True
-        assert ui_config.features["mcp"] is True
+        with patch.object(ui_config, "mode", UIMode.ADVANCED):
+            ui_cfg = UIConfig()
+
+        assert ui_cfg.mode == UIMode.ADVANCED
+        assert ui_cfg.features["streaming"] is True
+        assert ui_cfg.features["memory"] is True
+        assert ui_cfg.features["mcp"] is True
 
     def test_uiconfig_get_handler_simple(self):
         """Test get_handler() returns SimpleHandler for SIMPLE mode."""
