@@ -517,7 +517,7 @@ def validate(
             output.write_text(report_output)
             if not quiet:
                 click.echo(f"Report written to {output}")
-        else:
+        elif not quiet:
             click.echo(report_output)
 
         # Summary for quiet mode

@@ -11,6 +11,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Start Changelog Entries
 ---
 
+## [2.11.7] - 2025-11-03
+
+### Test Infrastructure: Fixed 6 Hanging Tests and --quiet Flag Bug
+
+**Status**: COMPLETE - All CLI comprehensive tests now pass in <2 seconds
+
+**Summary**:
+Fixed critical test hanging issues in constitution validator CLI tests by implementing comprehensive mocking strategy. Also fixed production bug where --quiet flag still output full report instead of minimal summary.
+
+**Major Changes**:
+
+1. **Fixed 6 Hanging Tests in test_cli_comprehensive.py**
+   - Tests were hanging indefinitely trying to run real coverage and git checks
+   - Added comprehensive mocking for all validation pipeline components:
+     * ConstitutionLoader and IgnoreConfigurationLoader with proper return values
+     * ASTScanner to prevent real file parsing
+     * All 6 rule classes (UnifiedAgentRule, CentralizedConfigRule, DualDatabaseRule, TestCoverageRule, ObservabilityRule, GitAttributionRule)
+     * Each rule method configured to return empty violations list
+   - Fixed tests:
+     * test_validate_quiet_mode_minimal_output
+     * test_validate_staged_flag
+     * test_validate_verbose_mode_detailed_output
+     * test_validate_skip_git_flag
+     * test_validate_json_format
+     * test_validate_text_format
+
+2. **Fixed --quiet Flag Implementation Bug (cli.py:521)**
+   - Bug: --quiet flag still output full JSON report (30 lines) + summary = 31 lines
+   - Fix: Added `if not quiet:` check before outputting full report
+   - Now correctly outputs only: "PASSED: 0 errors, 0 warnings" (1 line)
+   - Matches documented behavior: "Show only violation counts (suitable for CI/CD)"
+
+**Root Cause Analysis**:
+- Even with empty file lists and loader mocks, validate() function always:
+  * Instantiates all scanners and rules
+  * Runs coverage check unless --skip-coverage flag used
+  * Runs git check unless --skip-git flag used
+- Tests were trying to run real coverage analysis and git commands, causing indefinite hangs
+- Missing mocks allowed real I/O operations (file access, subprocess calls)
+
+**Technical Improvements**:
+- Established proper mocking pattern for CLI validation pipeline
+- All dependencies properly isolated in tests
+- Prevented accidental execution of expensive operations during testing
+
+**Files Modified**:
+- tests/constitution_validator/test_cli_comprehensive.py (6 tests fixed with comprehensive mocks)
+- src/constitution_validator/cli.py (1 line fix for --quiet flag)
+
+**Test Results**:
+- Before: Tests hung indefinitely (22+ spawned processes, had to kill with pkill)
+- After: All 6 tests pass in 1.95 seconds
+- Performance improvement: Infinite hang -> <2 seconds
+
+**Impact**:
+- Test suite reliability: No more hanging CLI tests
+- CI/CD pipeline: Faster, more reliable builds
+- Production bug fixed: --quiet flag now works correctly for CI/CD usage
+- Developer experience: Fast test feedback loop restored
+
+---
+
 ## [2.11.6] - 2025-11-03
 
 ### Phase 10: Test Performance and Cleanup Complete
@@ -210,6 +272,7 @@ End Changelog Entries
 
 | Version | Release Date | Key Features |
 |---------|--------------|--------------|
+| **2.11.7** | 2025-11-03 | Test Infrastructure: Fixed 6 Hanging CLI Tests and --quiet Flag Bug - Fixed indefinite test hangs by adding comprehensive mocking (loaders, scanners, all 6 rule classes) - Fixed --quiet flag production bug (was outputting full report instead of summary) - Performance improvement: Infinite hang to <2 seconds - Tests fixed: test_validate_quiet_mode_minimal_output, test_validate_staged_flag, test_validate_verbose_mode_detailed_output, test_validate_skip_git_flag, test_validate_json_format, test_validate_text_format - Root cause: Tests running real coverage/git checks instead of mocks - Impact: Improved test reliability, faster CI/CD, fixed CI/CD quiet mode usage |
 | **2.11.6** | 2025-11-03 | Phase 10 Complete: Test Performance and Cleanup - Parallel test execution (pytest-xdist) for 60-70% speedup - CI/CD enhancements: coverage enforcement (75%), test reporting, timeout protection - Makefile targets: test-parallel, test-parallel-coverage, test-durations - datetime.utcnow() migration documentation (4 occurrences identified) - Expected performance: 44 min serial to 15-18 min parallel - Documentation: datetime_utcnow_migration.md and phase10_test_performance.md created |
 | **2.11.5** | 2025-11-03 | Phase 9 Complete: Enable Skipped Tests (19 Tests Enabled, 1 Bug Fixed) - Reduced permanent skips from 23 to 7 (target achieved) - Added ENABLE_INTEGRATION_TESTS flag for 13 integration tests - Fixed CLI imports: enabled 18 tests - Fixed chunk_refs None handling bug: enabled 1 test - Fixed e2e tool imports: resolved 5 conditional skips - Enhanced skip documentation: 7 files updated with detailed reasons - Final breakdown: 7 permanent + 14 conditional (integration tests) + 5-10 dynamic skips - Documentation: phase9_skip_analysis.md and phase9_completion_summary.md created |
 | **2.11.4** | 2025-11-03 | Phase 8 Complete: Test Execution Fixes (600+ Tests) - All 6 remaining Phase 8 files processed - Fixed critical mocking issues: Path.exists(), shutil.which, property patching - Test improvements: cli.py (45+ tests), streamlit_app.py (437/457 passing), streamlit_auth.py (59/83 passing), google_drive.py (32/55 passing), oauth_profile (4/4 passing), oauth_analytics (22/22 passing) - Established proper patterns for property decorators, async tests, import path resolution - Overall 85%+ pass rate improvement |
