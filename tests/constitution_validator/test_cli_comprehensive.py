@@ -746,7 +746,60 @@ class TestValidateCommand:
         test_file.write_text("# test")
 
         with patch("src.constitution_validator.cli.check_dependencies"):
-            result = runner.invoke(validate, [str(test_file)])
+            with patch("src.constitution_validator.loader.ConstitutionLoader") as mock_const:
+                with patch(
+                    "src.constitution_validator.loader.IgnoreConfigurationLoader"
+                ) as mock_ignore:
+                    with patch(
+                        "src.constitution_validator.scanners.ast_scanner.ASTScanner"
+                    ) as mock_scanner:
+                        with patch(
+                            "src.constitution_validator.rules.principle_i.UnifiedAgentRule"
+                        ) as mock_agent_rule:
+                            with patch(
+                                "src.constitution_validator.rules.principle_ii.CentralizedConfigRule"
+                            ) as mock_cfg_rule:
+                                with patch(
+                                    "src.constitution_validator.rules.principle_iii.DualDatabaseRule"
+                                ) as mock_db_rule:
+                                    with patch(
+                                        "src.constitution_validator.rules.principle_iv.TestCoverageRule"
+                                    ) as mock_cov_rule:
+                                        with patch(
+                                            "src.constitution_validator.rules.principle_v.ObservabilityRule"
+                                        ) as mock_obs_rule:
+                                            with patch(
+                                                "src.constitution_validator.rules.principle_vi.GitAttributionRule"
+                                            ) as mock_git_rule:
+                                                # Configure loader return values
+                                                mock_const.return_value.load.return_value = Mock(
+                                                    principles=[], version="1.0.0"
+                                                )
+                                                mock_ignore.return_value.load.return_value = Mock(
+                                                    should_ignore=lambda x: False
+                                                )
+
+                                                # Configure scanner to return valid AST
+                                                mock_scanner.return_value.parse_file.return_value = (
+                                                    Mock()
+                                                )
+
+                                                # Configure rule return values
+                                                for rule_mock in [
+                                                    mock_agent_rule,
+                                                    mock_cfg_rule,
+                                                    mock_db_rule,
+                                                    mock_obs_rule,
+                                                ]:
+                                                    rule_mock.return_value.execute.return_value = []
+                                                mock_cov_rule.return_value.execute_coverage_check.return_value = (
+                                                    []
+                                                )
+                                                mock_git_rule.return_value.execute_git_check.return_value = (
+                                                    []
+                                                )
+
+                                                result = runner.invoke(validate, [str(test_file)])
 
         # Should accept file path
         assert result.exit_code in [0, 1]
