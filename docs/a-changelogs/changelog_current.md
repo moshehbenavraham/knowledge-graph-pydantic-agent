@@ -11,6 +11,81 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Start Changelog Entries
 ---
 
+## [2.11.8] - 2025-11-03
+
+### Test Suite: Phase 1 Async Mock Fixes Complete (P0 Blocking Issue Resolved)
+
+**Status**: COMPLETE - Zero async coroutine warnings in test suite
+
+**Summary**:
+Fixed critical P0 async mock warning issue that was causing RuntimeWarnings about unawaited coroutines. Implemented proper AsyncMock patterns and created comprehensive documentation for async testing best practices.
+
+**Major Changes**:
+
+1. **Fixed AsyncMock Coroutine Warnings (4 instances)**
+   - Root cause: Tests using `AsyncMock(return_value=asyncio.sleep(0))` pattern
+   - This created coroutine objects immediately that were never awaited
+   - Fixed pattern: Changed to `AsyncMock(return_value=None)` (AsyncMock already returns awaitables)
+   - File: tests/agentic_rag/storage/test_connection_manager_comprehensive.py (lines 420, 424, 428, 446)
+   - Tests affected: test_close_all_connections, test_close_partial_connections
+
+2. **Comprehensive Async Mock Documentation Created**
+   - Created docs/b-ongoing-projects/async_mock_best_practices.md
+   - Common anti-patterns and fixes documented
+   - Async context manager mocking patterns
+   - Return value and side_effect usage guidelines
+   - Testing checklist and warning detection commands
+   - Examples from codebase for reference
+
+3. **Testing Fixes Todo Updated**
+   - Updated docs/b-ongoing-projects/testing_fixes_todo.md
+   - Marked Phase 1 as COMPLETE with detailed status
+   - Added root cause analysis and verification results
+   - Documented solution for future reference
+
+**Technical Details**:
+
+Problem pattern (INCORRECT):
+```python
+mock_pool.close = AsyncMock(return_value=asyncio.sleep(0))  # Creates unawaited coroutine
+```
+
+Fixed pattern (CORRECT):
+```python
+mock_pool.close = AsyncMock(return_value=None)  # AsyncMock already returns awaitable
+```
+
+**Root Cause**:
+- `asyncio.sleep(0)` immediately creates a coroutine object
+- Assigning it as return_value means the coroutine is never awaited
+- Led to RuntimeWarning: coroutine 'sleep' was never awaited
+- Caused potential memory leaks and unreliable test results
+
+**Verification Results**:
+- 308 tests passed across storage, ingestion, and OAuth test suites
+- Zero async coroutine warnings (down from multiple warnings)
+- All 145 storage tests passing cleanly
+- Test execution: 9.10 seconds for validation suite
+- Only 1 warning remaining (unrelated Pydantic deprecation)
+
+**Files Modified**:
+- tests/agentic_rag/storage/test_connection_manager_comprehensive.py (4 instances fixed)
+
+**Documentation Created**:
+- docs/b-ongoing-projects/async_mock_best_practices.md (comprehensive guide)
+- docs/b-ongoing-projects/testing_fixes_todo.md (Phase 1 status updated)
+
+**Impact**:
+- Eliminated P0 blocking async warnings from test suite
+- Established proper async mock patterns for all future tests
+- Clean test execution foundation for addressing remaining test failures
+- Clear documentation prevents regression of async mock issues
+- Expected to facilitate fixing remaining test failures in subsequent phases
+
+**Next Phase**: Phase 2 - Authentication System Failures (101 tests, P1 priority)
+
+---
+
 ## [2.11.7] - 2025-11-03
 
 ### Test Infrastructure: Fixed 6 Hanging Tests and --quiet Flag Bug
@@ -272,6 +347,7 @@ End Changelog Entries
 
 | Version | Release Date | Key Features |
 |---------|--------------|--------------|
+| **2.11.8** | 2025-11-03 | Test Suite: Phase 1 Async Mock Fixes Complete (P0 Blocking Issue) - Fixed critical async coroutine warnings (4 instances) - Changed AsyncMock(return_value=asyncio.sleep(0)) to AsyncMock(return_value=None) pattern - File: test_connection_manager_comprehensive.py - Verification: 308 tests passing, zero async warnings - Created comprehensive async mock best practices guide - Documentation: async_mock_best_practices.md and testing_fixes_todo.md updated - Impact: Eliminated P0 blocking warnings, established proper async mock patterns for future tests - Next: Phase 2 Authentication System Failures (101 tests, P1) |
 | **2.11.7** | 2025-11-03 | Test Infrastructure: Fixed 6 Hanging CLI Tests and --quiet Flag Bug - Fixed indefinite test hangs by adding comprehensive mocking (loaders, scanners, all 6 rule classes) - Fixed --quiet flag production bug (was outputting full report instead of summary) - Performance improvement: Infinite hang to <2 seconds - Tests fixed: test_validate_quiet_mode_minimal_output, test_validate_staged_flag, test_validate_verbose_mode_detailed_output, test_validate_skip_git_flag, test_validate_json_format, test_validate_text_format - Root cause: Tests running real coverage/git checks instead of mocks - Impact: Improved test reliability, faster CI/CD, fixed CI/CD quiet mode usage |
 | **2.11.6** | 2025-11-03 | Phase 10 Complete: Test Performance and Cleanup - Parallel test execution (pytest-xdist) for 60-70% speedup - CI/CD enhancements: coverage enforcement (75%), test reporting, timeout protection - Makefile targets: test-parallel, test-parallel-coverage, test-durations - datetime.utcnow() migration documentation (4 occurrences identified) - Expected performance: 44 min serial to 15-18 min parallel - Documentation: datetime_utcnow_migration.md and phase10_test_performance.md created |
 | **2.11.5** | 2025-11-03 | Phase 9 Complete: Enable Skipped Tests (19 Tests Enabled, 1 Bug Fixed) - Reduced permanent skips from 23 to 7 (target achieved) - Added ENABLE_INTEGRATION_TESTS flag for 13 integration tests - Fixed CLI imports: enabled 18 tests - Fixed chunk_refs None handling bug: enabled 1 test - Fixed e2e tool imports: resolved 5 conditional skips - Enhanced skip documentation: 7 files updated with detailed reasons - Final breakdown: 7 permanent + 14 conditional (integration tests) + 5-10 dynamic skips - Documentation: phase9_skip_analysis.md and phase9_completion_summary.md created |

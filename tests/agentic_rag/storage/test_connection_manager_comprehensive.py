@@ -7,7 +7,6 @@ health checks, error handling, and resource cleanup.
 Target: Increase coverage from 60% to 90%+ (cover 149 uncovered lines).
 """
 
-import asyncio
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -417,15 +416,15 @@ async def test_close_all_connections():
     # Mock pool, driver, and redis
     mock_pool = AsyncMock()
     mock_pool._closed = False
-    mock_pool.close = AsyncMock(return_value=asyncio.sleep(0))  # Return a coroutine
+    mock_pool.close = AsyncMock(return_value=None)  # AsyncMock already returns awaitable
     manager.pg_pool = mock_pool
 
     mock_driver = AsyncMock()
-    mock_driver.close = AsyncMock(return_value=asyncio.sleep(0))  # Return a coroutine
+    mock_driver.close = AsyncMock(return_value=None)  # AsyncMock already returns awaitable
     manager.neo4j_driver = mock_driver
 
     mock_redis = AsyncMock()
-    mock_redis.aclose = AsyncMock(return_value=asyncio.sleep(0))  # Use aclose, not close
+    mock_redis.aclose = AsyncMock(return_value=None)  # AsyncMock already returns awaitable
     manager.redis_client = mock_redis
 
     await manager.close()
@@ -443,7 +442,7 @@ async def test_close_partial_connections():
     # Only PostgreSQL pool exists
     mock_pool = AsyncMock()
     mock_pool._closed = False
-    mock_pool.close = AsyncMock(return_value=asyncio.sleep(0))
+    mock_pool.close = AsyncMock(return_value=None)  # AsyncMock already returns awaitable
     manager.pg_pool = mock_pool
     manager.neo4j_driver = None
     manager.redis_client = None
