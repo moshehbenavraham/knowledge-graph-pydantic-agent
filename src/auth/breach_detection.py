@@ -227,7 +227,7 @@ class BreachDetectionManager:
         if not last_check:
             return True
 
-        days_since_check = (datetime.now(UTC) - last_check.replace(tzinfo=None)).days
+        days_since_check = (datetime.now(UTC) - last_check).days
         return days_since_check >= check_interval_days
 
     async def _log_breach_check(

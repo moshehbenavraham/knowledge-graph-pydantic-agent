@@ -7,7 +7,7 @@ Tests haveibeenpwned.com API integration, k-anonymity model, breach detection lo
 error handling, logging, and singleton pattern.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import httpx
@@ -75,11 +75,13 @@ class TestBreachDetectionManager:
         """Test checking breached password."""
         manager = BreachDetectionManager()
 
-        # Mock HTTP response
+        # Mock HTTP response (HIBP API returns suffix only, not full hash)
+        # Password "password" hashes to 5BAA61E4C9B93F3F0682250B6CF8331B7EE68FD8
+        # Prefix: 5BAA6, Suffix: 1E4C9B93F3F0682250B6CF8331B7EE68FD8
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.text = (
-            "ABCDE12345:100\r\n5BAA61E4C9B93F3F0682250B6CF8331B7EE68FD8:3861493\r\nOTHERHASH:50\r\n"
+            "ABCDE12345:100\r\n1E4C9B93F3F0682250B6CF8331B7EE68FD8:3861493\r\nOTHERHASH:50\r\n"
         )
 
         mock_http_client = AsyncMock()
@@ -166,7 +168,7 @@ class TestBreachDetectionManager:
         mock_http_client = AsyncMock()
         mock_http_client.get = AsyncMock(side_effect=httpx.TimeoutException("Timeout"))
         mock_http_client.__aenter__ = AsyncMock(return_value=mock_http_client)
-        mock_http_client.__aexit__ = AsyncMock()
+        mock_http_client.__aexit__ = AsyncMock(return_value=False)  # Don't suppress exception
 
         with patch("src.config.clients.clients_config.create_http_client") as mock_create:
             mock_create.return_value = mock_http_client
@@ -190,7 +192,7 @@ class TestBreachDetectionManager:
         mock_http_client = AsyncMock()
         mock_http_client.get = AsyncMock(side_effect=Exception("Network error"))
         mock_http_client.__aenter__ = AsyncMock(return_value=mock_http_client)
-        mock_http_client.__aexit__ = AsyncMock()
+        mock_http_client.__aexit__ = AsyncMock(return_value=False)  # Don't suppress exception
 
         with patch("src.config.clients.clients_config.create_http_client") as mock_create:
             mock_create.return_value = mock_http_client
@@ -339,10 +341,8 @@ class TestBreachDetectionManager:
         """Test should_check_breach when recently checked."""
         manager = BreachDetectionManager()
 
-        # Last check was 10 days ago (use naive datetime)
-        from datetime import timedelta
-
-        last_check = datetime.now() - timedelta(days=10)
+        # Last check was 10 days ago (use timezone-aware datetime)
+        last_check = datetime.now(UTC) - timedelta(days=10)
         manager.get_last_check = AsyncMock(return_value=last_check)
 
         result = await manager.should_check_breach("user-123", check_interval_days=30)
@@ -354,10 +354,8 @@ class TestBreachDetectionManager:
         """Test should_check_breach when check is due."""
         manager = BreachDetectionManager()
 
-        # Last check was 35 days ago (use naive datetime)
-        from datetime import timedelta
-
-        last_check = datetime.now() - timedelta(days=35)
+        # Last check was 35 days ago (use timezone-aware datetime)
+        last_check = datetime.now(UTC) - timedelta(days=35)
         manager.get_last_check = AsyncMock(return_value=last_check)
 
         result = await manager.should_check_breach("user-123", check_interval_days=30)

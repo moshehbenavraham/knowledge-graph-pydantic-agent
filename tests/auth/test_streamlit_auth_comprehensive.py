@@ -108,8 +108,8 @@ class TestLoadCredentialsFromDatabase:
             },
         ]
 
-        with patch("src.auth.streamlit_auth.list_users", return_value=mock_users):
-            with patch("src.auth.streamlit_auth.get_supabase_client") as mock_client:
+        with patch("src.auth.db.list_users", return_value=mock_users):
+            with patch("src.clients.database.get_supabase_client") as mock_client:
                 mock_table = Mock()
                 mock_result = Mock()
                 mock_result.data = [{"password_hash": "hash1"}]
@@ -141,8 +141,8 @@ class TestLoadCredentialsFromDatabase:
             },
         ]
 
-        with patch("src.auth.streamlit_auth.list_users", return_value=mock_users):
-            with patch("src.auth.streamlit_auth.get_supabase_client") as mock_client:
+        with patch("src.auth.db.list_users", return_value=mock_users):
+            with patch("src.clients.database.get_supabase_client") as mock_client:
                 mock_table = Mock()
                 mock_result = Mock()
                 mock_result.data = [{"password_hash": "hash"}]
@@ -158,7 +158,7 @@ class TestLoadCredentialsFromDatabase:
 
     async def test_load_credentials_handles_database_error(self):
         """Test handling of database error."""
-        with patch("src.auth.streamlit_auth.list_users", side_effect=Exception("DB error")):
+        with patch("src.auth.db.list_users", side_effect=Exception("DB error")):
             with pytest.raises(Exception, match="DB error"):
                 await load_credentials_from_database()
 
@@ -202,8 +202,7 @@ class TestLoadAuthConfig:
 
             with patch("pathlib.Path.exists", return_value=False):
                 with patch("src.auth.streamlit_auth.asyncio.run", return_value=mock_credentials):
-                    with patch("src.auth.streamlit_auth.nest_asyncio"):
-                        config = load_auth_config()
+                    config = load_auth_config()
 
         assert "credentials" in config
         assert "user1" in config["credentials"]["usernames"]
@@ -230,8 +229,7 @@ class TestLoadAuthConfig:
             mock_settings.return_value.use_database_auth = True
 
             with patch("src.auth.streamlit_auth.asyncio.run", side_effect=Exception("DB error")):
-                with patch("src.auth.streamlit_auth.nest_asyncio"):
-                    config = load_auth_config(str(config_file))
+                config = load_auth_config(str(config_file))
 
         # Should fall back to YAML credentials
         assert "credentials" in config
@@ -360,10 +358,10 @@ class TestCreateDbSession:
     async def test_create_db_session_success(self):
         """Test successful session creation."""
         with patch("src.auth.streamlit_auth.get_use_database_auth", return_value=True):
-            with patch("src.auth.streamlit_auth.get_user_by_username") as mock_get_user:
+            with patch("src.auth.db.get_user_by_username") as mock_get_user:
                 mock_get_user.return_value = {"id": "user123", "username": "testuser"}
 
-                with patch("src.auth.streamlit_auth.create_session") as mock_create:
+                with patch("src.auth.db.create_session") as mock_create:
                     mock_create.return_value = {"id": "session123", "session_token": "token123"}
 
                     with patch("streamlit.context"):
@@ -374,10 +372,10 @@ class TestCreateDbSession:
     async def test_create_db_session_with_remember_me(self):
         """Test session creation with remember_me extends duration."""
         with patch("src.auth.streamlit_auth.get_use_database_auth", return_value=True):
-            with patch("src.auth.streamlit_auth.get_user_by_username") as mock_get_user:
+            with patch("src.auth.db.get_user_by_username") as mock_get_user:
                 mock_get_user.return_value = {"id": "user123"}
 
-                with patch("src.auth.streamlit_auth.create_session") as mock_create:
+                with patch("src.auth.db.create_session") as mock_create:
                     mock_create.return_value = {"id": "session123", "session_token": "token123"}
 
                     with patch("streamlit.context"):
@@ -390,7 +388,7 @@ class TestCreateDbSession:
     async def test_create_db_session_user_not_found(self):
         """Test session creation when user not found."""
         with patch("src.auth.streamlit_auth.get_use_database_auth", return_value=True):
-            with patch("src.auth.streamlit_auth.get_user_by_username", return_value=None):
+            with patch("src.auth.db.get_user_by_username", return_value=None):
                 token = await create_db_session("nonexistent")
 
         assert token is None
@@ -410,7 +408,7 @@ class TestRevokeDbSession:
     async def test_revoke_db_session_success(self):
         """Test successful session revocation."""
         with patch("src.auth.streamlit_auth.get_use_database_auth", return_value=True):
-            with patch("src.auth.streamlit_auth.revoke_session") as mock_revoke:
+            with patch("src.auth.db.revoke_session") as mock_revoke:
                 mock_revoke.return_value = True
 
                 result = await revoke_db_session("token123")
@@ -433,7 +431,7 @@ class TestRevokeDbSession:
     async def test_revoke_db_session_error(self):
         """Test error handling in session revocation."""
         with patch("src.auth.streamlit_auth.get_use_database_auth", return_value=True):
-            with patch("src.auth.streamlit_auth.revoke_session", side_effect=Exception("DB error")):
+            with patch("src.auth.db.revoke_session", side_effect=Exception("DB error")):
                 result = await revoke_db_session("token123")
 
         assert result is False
@@ -454,8 +452,8 @@ class TestHandleOAuthCallback:
             "is_new_user": False,
         }
 
-        with patch("src.auth.streamlit_auth.complete_oauth_flow", return_value=mock_result):
-            with patch("src.auth.streamlit_auth.log_auth_event"):
+        with patch("src.auth.oauth_handler.complete_oauth_flow", return_value=mock_result):
+            with patch("src.auth.security.log_auth_event"):
                 user = await handle_oauth_callback("google", "auth_code", "state123")
 
         assert user == mock_user
@@ -465,8 +463,8 @@ class TestHandleOAuthCallback:
         mock_user = {"username": "new_user", "full_name": "New User"}
         mock_result = {"user": mock_user, "is_new_user": True}
 
-        with patch("src.auth.streamlit_auth.complete_oauth_flow", return_value=mock_result):
-            with patch("src.auth.streamlit_auth.log_auth_event"):
+        with patch("src.auth.oauth_handler.complete_oauth_flow", return_value=mock_result):
+            with patch("src.auth.security.log_auth_event"):
                 user = await handle_oauth_callback("github", "auth_code", "state123")
 
         assert user["username"] == "new_user"
@@ -474,9 +472,9 @@ class TestHandleOAuthCallback:
     async def test_handle_oauth_callback_error(self):
         """Test OAuth callback error handling."""
         with patch(
-            "src.auth.streamlit_auth.complete_oauth_flow", side_effect=Exception("OAuth error")
+            "src.auth.oauth_handler.complete_oauth_flow", side_effect=Exception("OAuth error")
         ):
-            with patch("src.auth.streamlit_auth.log_auth_event"):
+            with patch("src.auth.security.log_auth_event"):
                 user = await handle_oauth_callback("google", "bad_code", "state")
 
         assert user is None
@@ -490,7 +488,7 @@ class TestInitiateOAuthLogin:
     @patch("streamlit.session_state", {})
     def test_initiate_oauth_login_google(self, mock_stop, mock_markdown):
         """Test initiating Google OAuth login."""
-        with patch("src.auth.streamlit_auth.initiate_oauth_flow") as mock_flow:
+        with patch("src.auth.oauth_handler.initiate_oauth_flow") as mock_flow:
             mock_flow.return_value = ("https://google.com/oauth", "state123")
 
             with patch(
@@ -507,7 +505,7 @@ class TestInitiateOAuthLogin:
     @patch("streamlit.session_state", {})
     def test_initiate_oauth_login_github(self, mock_stop, mock_markdown):
         """Test initiating GitHub OAuth login."""
-        with patch("src.auth.streamlit_auth.initiate_oauth_flow") as mock_flow:
+        with patch("src.auth.oauth_handler.initiate_oauth_flow") as mock_flow:
             mock_flow.return_value = ("https://github.com/oauth", "state456")
 
             with patch(
@@ -678,7 +676,7 @@ class TestEdgeCases:
     @pytest.mark.asyncio
     async def test_load_credentials_with_empty_database(self):
         """Test loading credentials when database is empty."""
-        with patch("src.auth.streamlit_auth.list_users", return_value=[]):
+        with patch("src.auth.db.list_users", return_value=[]):
             credentials = await load_credentials_from_database()
 
         assert credentials["usernames"] == {}
