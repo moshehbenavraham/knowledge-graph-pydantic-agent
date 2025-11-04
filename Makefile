@@ -60,15 +60,19 @@ quality: lint security deadcode complexity docstring-coverage
 
 # Running Services
 run-ui:
+	@lsof -ti :8501 | xargs kill -9 2>/dev/null || true
 	bash -c "source .venv/bin/activate && PYTHONPATH=$(PWD):$$PYTHONPATH UI_MODE=$(or $(MODE),advanced) streamlit run src/ui/streamlit_app.py"
 
 run-ui-simple:
+	@lsof -ti :8501 | xargs kill -9 2>/dev/null || true
 	bash -c "source .venv/bin/activate && PYTHONPATH=$(PWD):$$PYTHONPATH UI_MODE=simple streamlit run src/ui/streamlit_app.py"
 
 run-ui-standard:
+	@lsof -ti :8501 | xargs kill -9 2>/dev/null || true
 	bash -c "source .venv/bin/activate && PYTHONPATH=$(PWD):$$PYTHONPATH UI_MODE=standard streamlit run src/ui/streamlit_app.py"
 
 run-ui-advanced:
+	@lsof -ti :8501 | xargs kill -9 2>/dev/null || true
 	bash -c "source .venv/bin/activate && PYTHONPATH=$(PWD):$$PYTHONPATH UI_MODE=advanced streamlit run src/ui/streamlit_app.py"
 
 run-rag:
@@ -84,6 +88,7 @@ run-agentic-rag:
 	bash -c "source .venv/bin/activate && PYTHONPATH=$(PWD):$$PYTHONPATH python -m src.agentic_rag.agent.agent"
 
 dev:
+	@lsof -ti :8501 | xargs kill -9 2>/dev/null || true
 	bash -c "source .venv/bin/activate && PYTHONPATH=$(PWD):$$PYTHONPATH UI_MODE=$(or $(MODE),advanced) streamlit run src/ui/streamlit_app.py --server.runOnSave true"
 
 # ngrok Deployment
@@ -91,11 +96,13 @@ ngrok-start:  ## Start ngrok tunnel manually
 	ngrok start base-agent-ui
 
 ngrok-ui:  ## Start Streamlit only (for manual ngrok)
+	@lsof -ti :8501 | xargs kill -9 2>/dev/null || true
 	bash -c "source .venv/bin/activate && \
 	  PYTHONPATH=$(PWD):$$PYTHONPATH UI_MODE=advanced \
 	  streamlit run src/ui/streamlit_app.py --server.port=8501"
 
 deploy-ngrok:  ## Start Streamlit + ngrok tunnel + HTTP log monitor (logs to logs/ngrok_auth_logs/)
+	@lsof -ti :8501 | xargs kill -9 2>/dev/null || true
 	@mkdir -p logs/ngrok_auth_logs
 	@echo "Cleaning up logs older than 3 days..."
 	@find logs/ngrok_auth_logs -name "*.log" -type f -mtime +3 -delete 2>/dev/null || true
