@@ -1,0 +1,35 @@
+{
+  "application": {
+    "name": "luminari-ai-agent",
+    "version": "1.2.5",
+    "python": ">=3.11",
+    "source": "F:pyproject.toml\u2020L1-L52"
+  },
+  "dependencies": [
+    {"name": "pydantic-ai", "version_range": ">=0.1.2", "category": "runtime", "source": "F:pyproject.toml\u2020L6-L52"},
+    {"name": "fastapi", "version_range": ">=0.104.0", "category": "runtime", "source": "F:pyproject.toml\u2020L6-L52"},
+    {"name": "uvicorn", "version_range": ">=0.24.0", "category": "runtime", "source": "F:pyproject.toml\u2020L6-L52"},
+    {"name": "asyncpg", "version_range": ">=0.28.0", "category": "runtime", "source": "F:pyproject.toml\u2020L6-L52"},
+    {"name": "pgvector", "version_range": ">=0.3.0", "category": "runtime", "source": "F:pyproject.toml\u2020L6-L52"},
+    {"name": "neo4j", "version_range": ">=5.28.0", "category": "rag optional", "source": "F:pyproject.toml\u2020L78-L87"},
+    {"name": "graphiti-core", "version_range": ">=0.1.0", "category": "rag optional", "source": "F:pyproject.toml\u2020L78-L87"},
+    {"name": "redis[hiredis]", "version_range": ">=5.0.0", "category": "cache", "source": "F:pyproject.toml\u2020L6-L52"},
+    {"name": "opentelemetry-distro", "version_range": ">=0.48b0", "category": "observability", "source": "F:pyproject.toml\u2020L6-L52"},
+    {"name": "pytest", "version_range": ">=7.4.0", "category": "dev", "source": "F:pyproject.toml\u2020L54-L77"},
+    {"name": "bandit", "version_range": ">=1.7.5", "category": "security", "source": "F:pyproject.toml\u2020L54-L117"}
+  ],
+  "docker_images": [
+    {"image": "python:3.11-slim", "role": "app base", "source": "F:docker/Dockerfile\u2020L1-L58"},
+    {"image": "neo4j:5-community", "role": "graph database", "source": "F:docker-compose.yml\u2020L105-L133"},
+    {"image": "redis:7-alpine", "role": "cache", "source": "F:docker-compose.yml\u2020L134-L149"},
+    {"image": "searxng/searxng:latest", "role": "web search", "source": "F:docker-compose.yml\u2020L86-L104"},
+    {"image": "prom/prometheus:latest", "role": "monitoring", "source": "F:docker-compose.monitoring.yml\u2020L4-L24"},
+    {"image": "grafana/grafana:latest", "role": "dashboards", "source": "F:docker-compose.monitoring.yml\u2020L26-L48"},
+    {"image": "jaegertracing/all-in-one:latest", "role": "tracing", "source": "F:docker-compose.monitoring.yml\u2020L49-L67"}
+  ],
+  "lockfiles": [
+    {"path": "requirements.txt", "sha256": "61f37e6f8f4bd6caacd21ca5ca910dcf347441015c2b1fa69f8f220c95034f95", "source": "ad9977\u2020L1-L4"},
+    {"path": "requirements.in", "sha256": "ce633bd67270c0ec370d7579a79caedbe45c1867f51d431a7649ef4dc4c263d2", "source": "ad9977\u2020L1-L4"},
+    {"path": "pyproject.toml", "sha256": "401e91b14af4281e19fe7d27c40801f46e028cb629805358ad2ffc648ce97e18", "source": "ad9977\u2020L1-L4"}
+  ]
+}
