@@ -30,9 +30,9 @@ COPY pyproject.toml README.md ./
 # Copy source code (needed for installation)
 COPY src/ ./src/
 
-# Install the package with RAG features using uv (10-20x faster than pip)
-# uv doesn't backtrack like pip, so it avoids the Deprecated/importlib-metadata hang
-RUN uv pip install --prefix=/build/deps --no-cache .[rag]
+# Install the package with ALL optional dependencies (rag, auth, security)
+# uv is 10-20x faster than pip and avoids the Deprecated/importlib-metadata hang
+RUN uv pip install --prefix=/build/deps --no-cache .[rag,auth,security]
 
 # -----------------------------------------------
 # Stage 2: Runtime - Minimal production image
