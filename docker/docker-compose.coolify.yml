@@ -1,0 +1,180 @@
+version: '3.8'
+
+# Coolify Deployment Configuration
+# Uses external managed databases (Neo4j Aura + Supabase)
+# Simplified configuration - no self-hosted databases
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.production
+      target: runtime
+    container_name: base-agent-coolify
+
+    ports:
+      - "8501:8501"
+
+    environment:
+      # ===== CORE DATABASE CONFIGURATION =====
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
+      - DATABASE_URL=${DATABASE_URL}
+
+      # ===== NEO4J AURA (KNOWLEDGE GRAPH) =====
+      - NEO4J_URI=${NEO4J_URI}
+      - NEO4J_QUERY_API_URL=${NEO4J_QUERY_API_URL}
+      - NEO4J_USER=${NEO4J_USER}
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD}
+      - NEO4J_DATABASE=${NEO4J_DATABASE:-neo4j}
+      - NEO4J_ENCRYPTED=${NEO4J_ENCRYPTED:-true}
+
+      # ===== LLM CONFIGURATION =====
+      - LLM_PROVIDER=${LLM_PROVIDER}
+      - LLM_API_KEY=${LLM_API_KEY}
+      - LLM_MODEL=${LLM_MODEL}
+      - LLM_TEMPERATURE=${LLM_TEMPERATURE:-0.7}
+      - LLM_MAX_TOKENS=${LLM_MAX_TOKENS:-2000}
+
+      # ===== EMBEDDING CONFIGURATION =====
+      - EMBEDDING_PROVIDER=${EMBEDDING_PROVIDER}
+      - EMBEDDING_API_KEY=${EMBEDDING_API_KEY}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL}
+      - EMBEDDING_DIMENSION=${EMBEDDING_DIMENSION:-1536}
+
+      # ===== AUTHENTICATION (REQUIRED FOR PRODUCTION) =====
+      - USE_DATABASE_AUTH=${USE_DATABASE_AUTH:-true}
+      - AUTH_COOKIE_KEY=${AUTH_COOKIE_KEY}
+      - AUTH_COOKIE_NAME=${AUTH_COOKIE_NAME:-base_agent_auth}
+      - AUTH_COOKIE_EXPIRY_DAYS=${AUTH_COOKIE_EXPIRY_DAYS:-30}
+      - AUTH_COOKIE_DOMAIN=${AUTH_COOKIE_DOMAIN}
+      - AUTH_COOKIE_SECURE=${AUTH_COOKIE_SECURE:-true}
+      - AUTH_COOKIE_HTTPONLY=${AUTH_COOKIE_HTTPONLY:-true}
+      - SESSION_IDLE_TIMEOUT_MINUTES=${SESSION_IDLE_TIMEOUT_MINUTES:-30}
+      - SESSION_ABSOLUTE_TIMEOUT_HOURS=${SESSION_ABSOLUTE_TIMEOUT_HOURS:-24}
+
+      # ===== PASSWORD RESET (OPTIONAL) =====
+      - PASSWORD_RESET_URL=${PASSWORD_RESET_URL}
+      - EMAIL_ENABLED=${EMAIL_ENABLED:-false}
+      - EMAIL_PROVIDER=${EMAIL_PROVIDER:-smtp}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL}
+
+      # ===== OAUTH AUTHENTICATION (OPTIONAL) =====
+      - OAUTH_ENABLED=${OAUTH_ENABLED:-false}
+      - OAUTH_ENCRYPTION_KEY=${OAUTH_ENCRYPTION_KEY}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI}
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
+      - GITHUB_REDIRECT_URI=${GITHUB_REDIRECT_URI}
+
+      # ===== FEATURE FLAGS =====
+      - ENABLE_RAG=${ENABLE_RAG:-true}
+      - ENABLE_AGENTIC_RAG=${ENABLE_AGENTIC_RAG:-true}
+      - ENABLE_GRAPH_SEARCH=${ENABLE_GRAPH_SEARCH:-true}
+      - ENABLE_WEB_SEARCH=${ENABLE_WEB_SEARCH:-true}
+      - ENABLE_IMAGE_ANALYSIS=${ENABLE_IMAGE_ANALYSIS:-true}
+      - ENABLE_LONG_TERM_MEMORY=${ENABLE_LONG_TERM_MEMORY:-true}
+      - ENABLE_METRICS=${ENABLE_METRICS:-true}
+
+      # ===== WEB SEARCH (OPTIONAL) =====
+      - JINA_API_KEY=${JINA_API_KEY}
+      - BRAVE_API_KEY=${BRAVE_API_KEY}
+
+      # ===== LOGGING & MONITORING =====
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+      - ENABLE_STRUCTURED_LOGGING=${ENABLE_STRUCTURED_LOGGING:-true}
+
+      # ===== PERFORMANCE TUNING =====
+      - PG_POOL_MIN_SIZE=${PG_POOL_MIN_SIZE:-5}
+      - PG_POOL_MAX_SIZE=${PG_POOL_MAX_SIZE:-20}
+      - PG_POOL_TIMEOUT=${PG_POOL_TIMEOUT:-10.0}
+      - NEO4J_MAX_CONNECTION_POOL_SIZE=${NEO4J_MAX_CONNECTION_POOL_SIZE:-50}
+      - NEO4J_CONNECTION_TIMEOUT=${NEO4J_CONNECTION_TIMEOUT:-30.0}
+      - VECTOR_SEARCH_LIMIT=${VECTOR_SEARCH_LIMIT:-10}
+      - GRAPH_SEARCH_LIMIT=${GRAPH_SEARCH_LIMIT:-10}
+      - HYBRID_SEARCH_ALPHA=${HYBRID_SEARCH_ALPHA:-0.7}
+
+      # ===== RATE LIMITING =====
+      - RATE_LIMIT_ENABLED=${RATE_LIMIT_ENABLED:-true}
+      - RATE_LIMIT_PER_MINUTE=${RATE_LIMIT_PER_MINUTE:-60}
+
+      # ===== UI CONFIGURATION =====
+      - UI_MODE=${UI_MODE:-advanced}
+      - STREAMLIT_SERVER_PORT=8501
+      - STREAMLIT_SERVER_ADDRESS=0.0.0.0
+      - STREAMLIT_SERVER_HEADLESS=${STREAMLIT_SERVER_HEADLESS:-true}
+      - STREAMLIT_BROWSER_GATHER_USAGE_STATS=${STREAMLIT_BROWSER_GATHER_USAGE_STATS:-false}
+
+    volumes:
+      - app_data:/app/data
+      - app_logs:/app/logs
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 8192M
+        reservations:
+          cpus: '2.0'
+          memory: 4096M
+
+  # Optional: API Service (FastAPI)
+  # Uncomment if you want to deploy the API alongside the UI
+  # api:
+  #   build:
+  #     context: ..
+  #     dockerfile: docker/Dockerfile.production
+  #     target: api
+  #   container_name: base-agent-api-coolify
+  #
+  #   ports:
+  #     - "8058:8058"
+  #
+  #   environment:
+  #     # Same environment variables as app service
+  #     - SUPABASE_URL=${SUPABASE_URL}
+  #     - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
+  #     - DATABASE_URL=${DATABASE_URL}
+  #     - NEO4J_URI=${NEO4J_URI}
+  #     - NEO4J_USER=${NEO4J_USER}
+  #     - NEO4J_PASSWORD=${NEO4J_PASSWORD}
+  #     - LLM_PROVIDER=${LLM_PROVIDER}
+  #     - LLM_API_KEY=${LLM_API_KEY}
+  #     - LOG_LEVEL=${LOG_LEVEL:-INFO}
+  #     - API_HOST=0.0.0.0
+  #     - API_PORT=8058
+  #     - API_WORKERS=${API_WORKERS:-4}
+  #     - API_RELOAD=${API_RELOAD:-false}
+  #
+  #   volumes:
+  #     - api_logs:/app/logs
+  #
+  #   restart: unless-stopped
+  #
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:8058/health"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #     start_period: 30s
+
+volumes:
+  app_data:
+  app_logs:
+  # api_logs:  # Uncomment if enabling API service

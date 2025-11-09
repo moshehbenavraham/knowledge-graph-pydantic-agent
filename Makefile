@@ -126,6 +126,42 @@ ngrok-logs:  ## View ngrok access logs (via API)
 ngrok-monitor:  ## Start ngrok HTTP log monitor (writes to logs/ngrok_auth_logs/)
 	@bash -c "source .venv/bin/activate && python3 scripts/monitor_ngrok_logs.py"
 
+# Coolify Deployment
+coolify-check:  ## Run pre-deployment checks for Coolify
+	@echo "Running Coolify pre-deployment checks..."
+	@bash scripts/coolify-pre-deploy-check.sh
+
+coolify-env:  ## Generate Coolify environment variables template
+	@echo "Generating Coolify environment template..."
+	@bash scripts/generate-coolify-env.sh
+
+coolify-build:  ## Build production Docker image for Coolify
+	@echo "Building Coolify production image..."
+	docker build \
+		-f docker/Dockerfile.production \
+		-t base-agent:latest \
+		--target runtime \
+		.
+
+coolify-test-build:  ## Test build Coolify Docker image locally
+	@echo "Testing Coolify Docker build..."
+	docker build \
+		-f docker/Dockerfile.production \
+		-t base-agent:coolify-test \
+		--target runtime \
+		. && \
+	echo "Build successful! Test with: docker run -p 8501:8501 --env-file .env base-agent:coolify-test"
+
+coolify-compose-up:  ## Start services using Coolify docker-compose (local test)
+	@echo "Starting Coolify services locally..."
+	docker-compose -f docker/docker-compose.coolify.yml up -d
+
+coolify-compose-down:  ## Stop Coolify docker-compose services
+	docker-compose -f docker/docker-compose.coolify.yml down
+
+coolify-compose-logs:  ## View logs from Coolify docker-compose
+	docker-compose -f docker/docker-compose.coolify.yml logs -f
+
 # Docker
 docker-build:
 	docker-compose build
@@ -730,4 +766,4 @@ deploy-clean-all:
 	docker-compose -f docker/docker-compose.staging.yml down -v
 	docker-compose -f docker/docker-compose.prod.yml down -v
 
-.PHONY: setup check format test test-coverage lint security run-ui run-ui-simple run-ui-standard run-ui-advanced run-rag run-mcp run-api run-agentic-rag dev ngrok-start ngrok-ui deploy-ngrok ngrok-status ngrok-logs docker-build docker-run docker-stop db-setup db-migrate neo4j-init ingest ingest-clean clean clean-all requirements install-dev load-test load-test-headless stress-test monitoring-up monitoring-down monitoring-logs profile profile-memory db-migrate db-rollback db-history db-revision redis-cli redis-flush redis-stats redis-monitor api-test api-search api-metrics api-status full-stack-up full-stack-down benchmark poetry-install poetry-update poetry-lock poetry-export poetry-build poetry-shell poetry-check poetry-show tox tox-py311 tox-py312 tox-lint tox-security tox-parallel tox-recreate http-test http-chat http-search http-status http-metrics profile-api profile-ui profile-rag profile-tests profile-top profile-memory-api profile-memory-ui redis-commander-up redis-commander-down redis-commander-logs dev-setup dev-check dev-format dev-clean pre-commit-install pre-commit-run pre-commit-update full-test full-profile full-monitoring image-build image-build-api image-push image-push-api image-tag-release image-scan image-scan-full image-sbom image-sign image-verify deploy-dev deploy-dev-down deploy-staging deploy-staging-down deploy-prod deploy-prod-down health-check health-check-staging health-check-prod rollback-staging rollback-prod ci-supply-chain ci-deploy logs-app logs-api logs-all metrics-export image-clean deploy-clean-all
+.PHONY: setup check format test test-coverage lint security run-ui run-ui-simple run-ui-standard run-ui-advanced run-rag run-mcp run-api run-agentic-rag dev ngrok-start ngrok-ui deploy-ngrok ngrok-status ngrok-logs ngrok-monitor coolify-check coolify-env coolify-build coolify-test-build coolify-compose-up coolify-compose-down coolify-compose-logs docker-build docker-run docker-stop db-setup db-migrate neo4j-init ingest ingest-clean clean clean-all requirements install-dev load-test load-test-headless stress-test monitoring-up monitoring-down monitoring-logs profile profile-memory db-migrate db-rollback db-history db-revision redis-cli redis-flush redis-stats redis-monitor api-test api-search api-metrics api-status full-stack-up full-stack-down benchmark poetry-install poetry-update poetry-lock poetry-export poetry-build poetry-shell poetry-check poetry-show tox tox-py311 tox-py312 tox-lint tox-security tox-parallel tox-recreate http-test http-chat http-search http-status http-metrics profile-api profile-ui profile-rag profile-tests profile-top profile-memory-api profile-memory-ui redis-commander-up redis-commander-down redis-commander-logs dev-setup dev-check dev-format dev-clean pre-commit-install pre-commit-run pre-commit-update full-test full-profile full-monitoring image-build image-build-api image-push image-push-api image-tag-release image-scan image-scan-full image-sbom image-sign image-verify deploy-dev deploy-dev-down deploy-staging deploy-staging-down deploy-prod deploy-prod-down health-check health-check-staging health-check-prod rollback-staging rollback-prod ci-supply-chain ci-deploy logs-app logs-api logs-all metrics-export image-clean deploy-clean-all

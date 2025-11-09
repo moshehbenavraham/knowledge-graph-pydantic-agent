@@ -25,14 +25,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 
 # Copy dependency specifications
-COPY requirements.txt pyproject.toml README.md ./
+COPY pyproject.toml README.md ./
 
-# Install Python dependencies to a local directory
-RUN pip install --no-cache-dir --prefix=/build/deps -r requirements.txt
-
-# Install the package in editable mode for RAG features
+# Copy source code (needed for installation)
 COPY src/ ./src/
-RUN pip install --no-cache-dir --prefix=/build/deps -e .[rag]
+
+# Install the package with RAG features to a local directory
+# Use non-editable install for production (no -e flag)
+RUN pip install --no-cache-dir --prefix=/build/deps .[rag]
 
 # -----------------------------------------------
 # Stage 2: Runtime - Minimal production image
@@ -65,11 +65,12 @@ COPY --from=builder /build/deps /usr/local
 # Copy application code
 COPY --chown=appuser:appuser src/ ./src/
 COPY --chown=appuser:appuser sql/ ./sql/
+COPY --chown=appuser:appuser config/ ./config/
 COPY --chown=appuser:appuser Makefile ./
 COPY --chown=appuser:appuser pyproject.toml README.md ./
 
 # Create necessary directories with proper permissions
-RUN mkdir -p /app/data /app/logs /app/config && \
+RUN mkdir -p /app/data /app/logs && \
     chown -R appuser:appuser /app
 
 # Switch to non-root user
