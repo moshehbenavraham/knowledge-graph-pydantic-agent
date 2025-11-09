@@ -48,12 +48,12 @@ async def init_dependencies():
         logger.info("Connection manager initialized")
 
         # Initialize storage layers
-        _postgres_store = PostgresStore()
+        _postgres_store = PostgresStore(_connection_manager)
         logger.info("PostgreSQL store initialized")
 
         # Initialize Neo4j if enabled
         if settings.enable_graph_rag:
-            _neo4j_store = Neo4jStore()
+            _neo4j_store = Neo4jStore(_connection_manager)
             _graphiti_client = GraphitiClient()
             logger.info("Neo4j and Graphiti initialized")
         else:

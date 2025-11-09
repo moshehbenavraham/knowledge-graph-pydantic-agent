@@ -60,6 +60,11 @@ class APIConfig:
         return get_settings().jaeger_port
 
     @property
+    def app_env(self) -> str:
+        """Get application environment."""
+        return get_settings().app_env
+
+    @property
     def is_production(self) -> bool:
         """Check if running in production."""
         return get_settings().app_env == "production"

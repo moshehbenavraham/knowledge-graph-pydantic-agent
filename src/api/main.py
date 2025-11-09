@@ -57,7 +57,7 @@ async def lifespan(app: FastAPI):
     logger.info(
         "starting_agentic_rag_api",
         version=app.version,
-        environment=api_config._settings.app_env,
+        environment=api_config.app_env,
     )
 
     try:
