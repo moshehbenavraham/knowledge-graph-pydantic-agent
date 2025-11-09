@@ -13,7 +13,8 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 
-from src.rag_pipeline.common.db_handler import delete_document_by_file_id, process_file_for_rag
+from src.rag_pipeline.adapters.agentic_rag_adapter import process_file_with_agentic_rag_sync
+from src.rag_pipeline.common.db_handler import delete_document_by_file_id
 from src.rag_pipeline.common.text_processor import extract_text_from_file
 
 structlog_logger = structlog.get_logger(__name__)
@@ -504,12 +505,23 @@ class GoogleDriveWatcher:
             text_length=text_length,
         )
 
-        # Process the file for RAG
+        # Delete existing records (Agentic RAG doesn't handle updates yet)
+        structlog_logger.info("Deleting existing records for file", file_id=file_id)
+        delete_document_by_file_id(file_id)
+
+        # Process the file with Agentic RAG pipeline
         structlog_logger.info(
-            "Processing file for RAG pipeline", file_id=file_id, file_name=file_name
+            "Processing file with Agentic RAG pipeline",
+            file_id=file_id,
+            file_name=file_name,
         )
-        success = process_file_for_rag(
-            file_content, text, file_id, web_view_link, file_name, mime_type, self.config
+        success = process_file_with_agentic_rag_sync(
+            text=text,
+            file_id=file_id,
+            file_title=file_name,
+            file_url=web_view_link,
+            mime_type=mime_type,
+            use_rest_api=False,  # Try PostgreSQL first, fallback to REST
         )
 
         # Update the known files dictionary

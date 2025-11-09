@@ -47,8 +47,8 @@ class TestGoogleDriveWatcher:
                 "rag_pipeline.sources.google_drive.extract_text_from_file"
             ) as mock_extract_text_from_file,
             patch(
-                "rag_pipeline.sources.google_drive.process_file_for_rag"
-            ) as mock_process_file_for_rag,
+                "rag_pipeline.sources.google_drive.process_file_with_agentic_rag_sync"
+            ) as mock_process_file_with_agentic_rag_sync,
             patch(
                 "rag_pipeline.sources.google_drive.delete_document_by_file_id"
             ) as mock_delete_document_by_file_id,
@@ -99,7 +99,7 @@ class TestGoogleDriveWatcher:
 
             # Configure common functions mocks
             mock_extract_text_from_file.return_value = "extracted text"
-            mock_process_file_for_rag.return_value = True
+            mock_process_file_with_agentic_rag_sync.return_value = True
             mock_delete_document_by_file_id.return_value = None
 
             self.mock_build = mock_build
@@ -112,7 +112,7 @@ class TestGoogleDriveWatcher:
             self.mock_sleep = mock_sleep
             self.mock_datetime = mock_datetime
             self.mock_extract_text_from_file = mock_extract_text_from_file
-            self.mock_process_file_for_rag = mock_process_file_for_rag
+            self.mock_process_file_with_agentic_rag_sync = mock_process_file_with_agentic_rag_sync
             self.mock_delete_document_by_file_id = mock_delete_document_by_file_id
             self.mock_service = mock_service
             self.mock_files = mock_files
@@ -392,7 +392,7 @@ class TestGoogleDriveWatcher:
 
         watcher.process_file(file_info)
         self.mock_extract_text_from_file.assert_not_called()
-        self.mock_process_file_for_rag.assert_not_called()
+        self.mock_process_file_with_agentic_rag_sync.assert_not_called()
 
     def test_process_file_success(self):
         watcher = GoogleDriveWatcher()
@@ -410,14 +410,16 @@ class TestGoogleDriveWatcher:
         self.mock_extract_text_from_file.assert_called_once_with(
             b"file content", "text/plain", "File", watcher.config
         )
-        self.mock_process_file_for_rag.assert_called_once_with(
-            b"file content",
-            "extracted text",
-            "file_id",
-            "link",
-            "File",
-            "text/plain",
-            watcher.config,
+        # Verify delete_document_by_file_id is called before processing
+        self.mock_delete_document_by_file_id.assert_called_once_with("file_id")
+        # Verify new adapter is called with correct parameters
+        self.mock_process_file_with_agentic_rag_sync.assert_called_once_with(
+            text="extracted text",
+            file_id="file_id",
+            file_title="File",
+            file_url="link",
+            mime_type="text/plain",
+            use_rest_api=False,
         )
         assert watcher.known_files["file_id"] == file_info.get("modifiedTime")
 

@@ -19,20 +19,27 @@ Start Changelog Entries
   - Supports automatic source type detection (Google Drive vs local files)
   - Enables knowledge extraction, entity/fact/relationship extraction, Neo4j graph storage
   - Includes comprehensive error handling and structured logging
-- **Local File Watcher Integration**: Updated local_files.py to use Agentic RAG adapter
+- **Local File Watcher Integration (Phase 1)**: Updated local_files.py to use Agentic RAG adapter
   - Files now processed through DocumentIngestionPipeline with semantic/simple chunking
   - Multi-provider embeddings support (OpenAI/Ollama)
   - Full knowledge graph integration with cross-reference updates
+- **Google Drive Watcher Integration (Phase 2)**: Updated google_drive.py to use Agentic RAG adapter
+  - Replaced legacy process_file_for_rag with process_file_with_agentic_rag_sync
+  - Added delete_document_by_file_id call before processing to handle updates
+  - Google Drive files now processed through full Agentic RAG pipeline
+  - Updated test_google_drive.py with new adapter mocks and verification
 - **Test Coverage**: Created comprehensive test suite for adapter
   - 9 unit tests covering success/failure cases, REST API mode, context manager cleanup
   - Integration test verified end-to-end processing (9 entities, 10 relationships, 5 facts extracted)
   - All tests passing with 100% adapter code coverage
+  - All linting checks passed (ruff, black, bandit)
 
 ### Changed
-- **RAG Processing Flow**: Local File Watcher now uses full Agentic RAG pipeline instead of legacy process_file_for_rag
+- **RAG Processing Flow**: Both Local File Watcher and Google Drive Watcher now use full Agentic RAG pipeline instead of legacy process_file_for_rag
   - Processing time increased from 2-5s to 8-15s per file (includes LLM-based knowledge extraction)
   - Richer data: entities, facts, relationships now captured in Neo4j knowledge graph
   - Dual-database storage: PostgreSQL for content, Neo4j for graph
+  - Automatic source type detection (google_drive vs local_file) based on URL
 
 ## [2.11.10] - 2025-11-09
 
