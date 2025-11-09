@@ -64,7 +64,7 @@ COPY --from=builder /build/deps /usr/local
 
 # Copy application code
 COPY --chown=appuser:appuser src/ ./src/
-COPY --chown=appuser:appuser sql/ ./sql/
+# SQL migrations are in src/agentic_rag/storage/migrations/sql/ (already copied above)
 COPY --chown=appuser:appuser config/ ./config/
 COPY --chown=appuser:appuser Makefile ./
 COPY --chown=appuser:appuser pyproject.toml README.md ./
