@@ -162,6 +162,10 @@ coolify-compose-down:  ## Stop Coolify docker-compose services
 coolify-compose-logs:  ## View logs from Coolify docker-compose
 	docker-compose -f docker/docker-compose.coolify.yml logs -f
 
+coolify-deploy-api:  ## Deploy to Coolify via API (fully automated)
+	@echo "Deploying to Coolify via API..."
+	@bash scripts/coolify-deploy.sh
+
 # Docker
 docker-build:
 	docker-compose build
