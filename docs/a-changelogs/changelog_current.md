@@ -11,8 +11,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Start Changelog Entries
 ---
 
-New Changelog Entries HERE in format (note ever record should have a unique versioning number, we don't use "unreleased"):
-## [X.XX.X] - YYYY-MM-DD
+## [2.11.10] - 2025-11-09
+
+### Fixed
+- **API Configuration**: Fixed APIConfig property access (use app_env property instead of _settings)
+- **Dependency Injection**: Updated PostgresStore and Neo4jStore to accept connection manager for proper initialization
+- **Docker Production**: Added HOME=/app environment variable to production Docker image
+- **Authentication**: Changed pyotp version from >=3.0.0 to >=2.0.0 for compatibility
+- **Python Compatibility**: Pinned wrapt>=1.14.0 for Python 3.11 compatibility
+- **Module Imports**: Added PYTHONPATH=/app for proper module resolution in Docker
+- **Dockerfile**: Removed non-existent sql/ directory copy command
+
+### Added
+- **Coolify Deployment**: Complete deployment infrastructure for Coolify platform
+- **Async Support**: Added nest-asyncio>=1.5.0 dependency for async event loop handling
+- **Package Management**: Replaced pip with uv for faster, more reliable dependency resolution
+
+### Changed
+- **Installation**: Install ALL optional dependencies (rag+auth+security) in production Docker image
+- **UV Package Manager**: Use --prefix with uv instead of --system for better compatibility
 
 ---
 End Changelog Entries
