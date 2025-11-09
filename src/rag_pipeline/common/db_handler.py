@@ -1,6 +1,5 @@
 import base64
 import sys
-import traceback
 from pathlib import Path
 from typing import Any
 
@@ -10,15 +9,6 @@ from supabase import create_client  # type: ignore
 from supabase.client import Client
 
 structlog_logger = structlog.get_logger(__name__)
-
-sys.path.append(str(Path(__file__).parent.resolve()))
-from text_processor import (
-    chunk_text,
-    create_embeddings,
-    extract_rows_from_csv,
-    extract_schema_from_csv,
-    is_tabular_file,
-)
 
 # Add project root to path for imports
 project_root = Path(__file__).resolve().parent.parent.parent
@@ -195,102 +185,3 @@ def insert_document_rows(file_id: str, rows: list[dict[str, Any]]) -> None:
         )
     except Exception as e:
         structlog_logger.error("Error inserting document rows", error=str(e), file_id=file_id)
-
-
-def process_file_for_rag(
-    file_content: bytes,
-    text: str,
-    file_id: str,
-    file_url: str,
-    file_title: str,
-    mime_type: str | None = None,
-    config: dict[str, Any] | None = None,
-) -> bool | None:
-    """
-    Process a file for the RAG pipeline - delete existing records and insert new ones.
-
-    Args:
-        file_content: The binary content of the file
-        text: The text content extracted from the file
-        file_id: The Google Drive file ID
-        file_url: The URL to access the file
-        file_title: The title of the file
-        mime_type: Mime type of the file
-        config: Configuration for things like the chunk size and overlap
-    """
-    structlog_logger.info(
-        "process_file_for_rag called",
-        file_id=file_id,
-        file_title=file_title,
-        mime_type=mime_type,
-        text_length=len(text),
-    )
-    try:
-        # First, delete any existing records for this file
-        delete_document_by_file_id(file_id)
-
-        # Check if this is a tabular file
-        is_tabular = False
-        schema = None
-
-        if mime_type:
-            is_tabular = is_tabular_file(mime_type, config)
-
-        if is_tabular:
-            # Extract schema (column names) from CSV
-            schema = extract_schema_from_csv(file_content)
-
-        # First, insert or update document metadata (needed for foreign key constraint)
-        insert_or_update_document_metadata(file_id, file_title, file_url, schema)
-
-        # Then, if it's a tabular file, insert the rows
-        if is_tabular:
-            # Extract and insert rows for tabular files
-            rows = extract_rows_from_csv(file_content)
-            if rows:
-                insert_document_rows(file_id, rows)
-
-        # Get text processing settings from config
-        text_processing = config.get("text_processing", {}) if config else {}
-        chunk_size = text_processing.get("default_chunk_size", 400)
-        chunk_overlap = text_processing.get("default_chunk_overlap", 0)
-
-        # Chunk the text
-        chunks = chunk_text(text, chunk_size=chunk_size, overlap=chunk_overlap)
-        if not chunks:
-            structlog_logger.warning("No chunks created", file_id=file_id, file_title=file_title)
-            return None
-
-        # Create embeddings for the chunks
-        embeddings = create_embeddings(chunks)
-
-        # For images, don't chunk the image, just store the title for RAG and include the binary in the metadata
-        if mime_type and mime_type.startswith("image"):
-            insert_document_chunks(
-                chunks, embeddings, file_id, file_url, file_title, mime_type, file_content
-            )
-            structlog_logger.info(
-                "process_file_for_rag completed - image file",
-                file_id=file_id,
-                chunks_created=len(chunks),
-            )
-            return True
-
-        # Insert the chunks with their embeddings
-        insert_document_chunks(
-            chunks,
-            embeddings,
-            file_id,
-            file_url,
-            file_title,
-            mime_type or "application/octet-stream",
-        )
-
-        structlog_logger.info(
-            "process_file_for_rag completed", file_id=file_id, chunks_created=len(chunks)
-        )
-        return True
-    except Exception as e:
-        traceback.print_exc()
-        structlog_logger.error("Error processing file for RAG", error=str(e), file_id=file_id)
-        return False

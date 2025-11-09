@@ -5,8 +5,8 @@
 | System | Use Case | Mode | Database | Knowledge Extraction |
 |--------|----------|------|----------|---------------------|
 | **Agentic RAG Pipeline** | Batch ingestion with graph | CLI | PostgreSQL + Neo4j | Full (entities/facts/relationships) |
-| **Google Drive Watcher** | Real-time Google Drive sync | Background | PostgreSQL | None |
-| **Local File Watcher** | Real-time filesystem sync | Background | PostgreSQL | None |
+| **Google Drive Watcher** | Real-time Google Drive sync | Background | PostgreSQL + Neo4j | Full (entities/facts/relationships) |
+| **Local File Watcher** | Real-time filesystem sync | Background | PostgreSQL + Neo4j | Full (entities/facts/relationships) |
 | **Streamlit Upload** | User web uploads | Interactive | PostgreSQL | None |
 
 ---
@@ -106,12 +106,15 @@ NEO4J_URI=neo4j+s://...
 
 ## 2. Google Drive Watcher
 
-**Purpose**: Real-time sync from Google Drive folders.
+**Purpose**: Real-time sync from Google Drive folders with full Agentic RAG pipeline.
 
 ### Flow
 ```
-Google Drive → OAuth → Poll (60s) → Change Detection → Download → Text Extract → RAG Process → PostgreSQL
+Google Drive → OAuth → Poll (60s) → Change Detection → Download → Text Extract →
+Agentic RAG Adapter → Chunking → Embedding → Knowledge Extraction → PostgreSQL + Neo4j
 ```
+
+**Note**: As of Phase 2, Google Drive Watcher uses the full Agentic RAG pipeline via `process_file_with_agentic_rag_sync`, providing entity extraction, relationship mapping, and knowledge graph storage.
 
 ### Features
 
@@ -156,6 +159,14 @@ watcher.authenticate()
 watcher.watch_for_changes(interval_seconds=60)  # Runs forever
 ```
 
+### Metadata Structure
+
+Files processed through Google Drive Watcher include the following metadata in PostgreSQL:
+- `file_id`: Google Drive file ID
+- `source_type`: "google_drive"
+- `mime_type`: Original MIME type (e.g., "application/pdf", "text/plain")
+- Plus all standard Agentic RAG metadata (entities, relationships, facts stored in Neo4j)
+
 ### Configuration (config.json)
 ```json
 {
@@ -182,12 +193,15 @@ GOOGLE_DRIVE_FOLDER_ID=1a2b3c4d5e6f7g8h9i
 
 ## 3. Local File Watcher
 
-**Purpose**: Real-time sync from local filesystem.
+**Purpose**: Real-time sync from local filesystem with full Agentic RAG pipeline.
 
 ### Flow
 ```
-Local Dir → Filesystem Poll (60s) → Change Detection → Read → Text Extract → RAG Process → PostgreSQL
+Local Dir → Filesystem Poll (60s) → Change Detection → Read → Text Extract →
+Agentic RAG Adapter → Chunking → Embedding → Knowledge Extraction → PostgreSQL + Neo4j
 ```
+
+**Note**: As of Phase 1, Local File Watcher uses the full Agentic RAG pipeline via `process_file_with_agentic_rag_sync`, providing entity extraction, relationship mapping, and knowledge graph storage.
 
 ### Features
 
@@ -210,6 +224,14 @@ from src.rag_pipeline.sources.local_files import LocalFileWatcher
 watcher = LocalFileWatcher(watch_directory="my_docs")
 watcher.watch_for_changes(interval_seconds=60)  # Runs forever
 ```
+
+### Metadata Structure
+
+Files processed through Local File Watcher include the following metadata in PostgreSQL:
+- `file_id`: Local file path (e.g., "/path/to/file.txt")
+- `source_type`: "local_file"
+- `mime_type`: Detected MIME type (e.g., "application/pdf", "text/plain")
+- Plus all standard Agentic RAG metadata (entities, relationships, facts stored in Neo4j)
 
 ### Configuration (config.json)
 ```json
@@ -292,27 +314,33 @@ result = asyncio.run(process_document_upload(file, supabase, embedding))
 
 ## Decision Matrix
 
-**Use Agentic RAG when**: Need knowledge graph, entity extraction, batch ingestion, multi-provider embeddings
-**Use Google Drive when**: Docs in Drive, team collaboration, Google Workspace files, real-time sync
-**Use Local Files when**: Local/network filesystem, file-drop workflows, no cloud dependencies
-**Use Streamlit when**: End users upload directly, interactive UI, images/tabular data
+**Use Agentic RAG (CLI) when**: Batch ingestion, initial data load, need control over processing order
+**Use Google Drive when**: Docs in Drive, team collaboration, Google Workspace files, real-time sync with full knowledge extraction
+**Use Local Files when**: Local/network filesystem, file-drop workflows, no cloud dependencies, real-time sync with full knowledge extraction
+**Use Streamlit when**: End users upload directly, interactive UI, images/tabular data, simpler/faster processing without graph
+
+**Note**: Both Google Drive and Local File watchers now provide the same knowledge extraction capabilities as the CLI Agentic RAG pipeline.
 
 ---
 
 ## Performance
 
-| System | Speed | Bottleneck |
-|--------|-------|-----------|
-| Agentic RAG | 2-10 docs/min | Embedding API, LLM extraction |
-| Google Drive | Poll interval | API rate limits (1000/100s) |
-| Local Files | Poll interval | Large dirs (10k+ files) |
-| Streamlit | 2-30s/file | Embedding API, network |
+| System | Speed | Bottleneck | Notes |
+|--------|-------|-----------|-------|
+| Agentic RAG | 2-10 docs/min | Embedding API, LLM extraction | CLI batch processing |
+| Google Drive | 8-15s/file | Knowledge extraction, Neo4j writes | Now uses full Agentic RAG (Phase 2) |
+| Local Files | 8-15s/file | Knowledge extraction, Neo4j writes | Now uses full Agentic RAG (Phase 1) |
+| Streamlit | 2-30s/file | Embedding API, network | Basic RAG only (no graph) |
+
+**Performance Change (Watchers)**: Watchers now use Agentic RAG pipeline, increasing processing time from legacy 2-5s to 8-15s per file due to entity extraction, relationship mapping, and Neo4j graph storage. This tradeoff provides richer knowledge representation and better search quality.
 
 **Optimization**:
-- Agentic RAG: Enable caching (50-80% hit rate), use Ollama, skip graph (2x faster)
-- Google Drive: Increase interval for large folders, use service account
-- Local Files: Increase interval for large dirs (300s), use subdirs
+- Agentic RAG (CLI): Enable caching (50-80% hit rate), use Ollama, skip graph (2x faster)
+- Google Drive: Increase interval for large folders, set `ENABLE_GRAPH=false` to skip graph (2x faster), use service account
+- Local Files: Increase interval for large dirs (300s), set `ENABLE_GRAPH=false` to skip graph (2x faster), use subdirs
 - Streamlit: Batch uploads, increase maxUploadSize
+
+**Note**: Watchers respect global `ENABLE_GRAPH` and `USE_SEMANTIC_CHUNKING` settings. Disabling graph storage significantly improves processing speed but reduces search quality.
 
 ---
 
@@ -366,4 +394,7 @@ GOOGLE_DRIVE_CREDENTIALS_PATH=credentials.json
 GOOGLE_DRIVE_FOLDER_ID=...  # Optional
 ```
 
-**All watchers**: Also use config.json for MIME types, text processing, last_check_time
+**Watchers (Google Drive & Local Files)**:
+- Use global Agentic RAG settings: `ENABLE_GRAPH`, `USE_SEMANTIC_CHUNKING`, `CHUNK_SIZE`, `CHUNK_OVERLAP`
+- Use config.json for MIME types, text processing fallback, last_check_time
+- Files processed through watchers get same knowledge extraction as CLI pipeline

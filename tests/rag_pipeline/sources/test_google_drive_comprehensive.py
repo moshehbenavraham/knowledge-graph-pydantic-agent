@@ -687,13 +687,16 @@ class TestProcessFile:
                     return_value="Extracted text",
                 ):
                     with patch(
-                        "src.rag_pipeline.sources.google_drive.process_file_for_rag",
+                        "src.rag_pipeline.sources.google_drive.process_file_with_agentic_rag_sync",
                         return_value=True,
                     ):
-                        watcher = GoogleDriveWatcher()
-                        watcher.config = {"supported_mime_types": ["application/pdf"]}
+                        with patch(
+                            "src.rag_pipeline.sources.google_drive.delete_document_by_file_id"
+                        ):
+                            watcher = GoogleDriveWatcher()
+                            watcher.config = {"supported_mime_types": ["application/pdf"]}
 
-                        watcher.process_file(file)
+                            watcher.process_file(file)
 
         assert "file1" in watcher.known_files
         assert watcher.known_files["file1"] == "2024-01-01T12:00:00.000Z"

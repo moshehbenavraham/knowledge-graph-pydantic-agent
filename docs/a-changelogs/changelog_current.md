@@ -33,6 +33,16 @@ Start Changelog Entries
   - Integration test verified end-to-end processing (9 entities, 10 relationships, 5 facts extracted)
   - All tests passing with 100% adapter code coverage
   - All linting checks passed (ruff, black, bandit)
+- **Cleanup and Documentation (Phase 3)**: Completed migration cleanup and comprehensive documentation updates
+  - Removed legacy process_file_for_rag function (97 lines) from src/rag_pipeline/common/db_handler.py
+  - Removed 4 obsolete test functions from tests/rag_pipeline/test_db_handler.py
+  - Updated test_google_drive_comprehensive.py to mock new adapter functions
+  - Cleaned up unused imports (traceback, chunk_text, create_embeddings, etc.)
+  - Verified zero references to process_file_for_rag remain in codebase
+  - Updated docs/0-RAG/ingestion-systems.md with new architecture flows and performance metrics
+  - Documented metadata structure (file_id, source_type, mime_type) for both watchers
+  - Added performance comparison (legacy 2-5s vs Agentic RAG 8-15s per file)
+  - All imports verified working, critical test passing
 
 ### Changed
 - **RAG Processing Flow**: Both Local File Watcher and Google Drive Watcher now use full Agentic RAG pipeline instead of legacy process_file_for_rag
@@ -40,6 +50,11 @@ Start Changelog Entries
   - Richer data: entities, facts, relationships now captured in Neo4j knowledge graph
   - Dual-database storage: PostgreSQL for content, Neo4j for graph
   - Automatic source type detection (google_drive vs local_file) based on URL
+- **Documentation**: Updated ingestion-systems.md to reflect new watcher architecture
+  - Both watchers now documented with PostgreSQL + Neo4j storage
+  - Flow diagrams updated to show Agentic RAG pipeline integration
+  - Decision matrix clarified that watchers provide same knowledge extraction as CLI
+  - Configuration guidance added for ENABLE_GRAPH and USE_SEMANTIC_CHUNKING settings
 
 ## [2.11.10] - 2025-11-09
 
