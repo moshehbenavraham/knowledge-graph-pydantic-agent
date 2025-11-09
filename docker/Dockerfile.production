@@ -32,7 +32,7 @@ COPY src/ ./src/
 
 # Install the package with RAG features using uv (10-20x faster than pip)
 # uv doesn't backtrack like pip, so it avoids the Deprecated/importlib-metadata hang
-RUN uv pip install --system --no-cache .[rag]
+RUN uv pip install --prefix=/build/deps --no-cache .[rag]
 
 # -----------------------------------------------
 # Stage 2: Runtime - Minimal production image
