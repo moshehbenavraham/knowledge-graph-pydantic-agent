@@ -128,10 +128,10 @@ Version history and release notes.
 
 ---
 
-#### 📝 [Example Documents](x-examples/index.md)
-Sample documents for testing and demonstration.
+#### 📝 Example Documents
+Sample quarterly earnings PDFs (2022-2023) for AAPL, AMZN, INTC, MSFT, NVDA.
 
-> Test data for RAG ingestion and system validation
+> 20 PDF documents in `x-examples/` for agentic RAG ingestion testing
 
 ---
 
