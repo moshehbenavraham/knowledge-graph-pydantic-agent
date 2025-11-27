@@ -9,7 +9,7 @@ import asyncio
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 import structlog
@@ -19,7 +19,7 @@ from src.agentic_rag.storage.connection_manager import ConnectionManager
 from src.config import SearchStrategy
 
 from .graph_search import GraphSearch, GraphSearchResult
-from .intent_analyzer import IntentAnalyzer, SearchIntent
+from .intent_analyzer import IntentAnalysisResult, IntentAnalyzer, SearchIntent
 from .ranker import ResultRanker
 from .vector_search import ChunkResult, VectorSearch
 
@@ -91,10 +91,10 @@ class HybridSearch:
         self.intent_analyzer = IntentAnalyzer()
         self.ranker = ResultRanker()
 
-        self._stats = {
+        self._stats: dict[str, int | float | dict[str, int]] = {
             "searches": 0,
             "strategies": {s.value: 0 for s in SearchStrategy},
-            "total_latency": 0,
+            "total_latency": 0.0,
             "graph_boosts": 0,
             "entity_boosts": 0,
         }
@@ -127,7 +127,8 @@ class HybridSearch:
         """
         structlog_logger.info("search called", query_preview=query[:100], limit=limit)
         start_time = datetime.now()
-        self._stats["searches"] += 1
+        searches_count = cast("int", self._stats["searches"])
+        self._stats["searches"] = searches_count + 1
 
         # Analyze intent if strategy not specified
         if strategy is None:
@@ -138,7 +139,8 @@ class HybridSearch:
             intent = None
             intent_result = None
 
-        self._stats["strategies"][strategy.value] += 1
+        strategies_dict = cast("dict[str, int]", self._stats["strategies"])
+        strategies_dict[strategy.value] = strategies_dict.get(strategy.value, 0) + 1
 
         logger.info(
             f"\n{'=' * 80}\n"
@@ -171,7 +173,8 @@ class HybridSearch:
         result.query_time = (datetime.now() - start_time).total_seconds()
 
         # Update statistics
-        self._stats["total_latency"] += result.query_time
+        total_latency = cast("float", self._stats["total_latency"])
+        self._stats["total_latency"] = total_latency + result.query_time
 
         logger.info(
             f"Hybrid search completed in {result.query_time:.3f}s: "
@@ -193,7 +196,7 @@ class HybridSearch:
 
         return result
 
-    def _select_strategy(self, intent_result) -> SearchStrategy:
+    def _select_strategy(self, intent_result: IntentAnalysisResult) -> SearchStrategy:
         """
         Select search strategy based on intent.
 
@@ -272,7 +275,9 @@ class HybridSearch:
 
         return HybridSearchResult(chunks=chunks, metadata={"search_type": "vector_only"})
 
-    async def _graph_only_search(self, query: str, limit: int, intent_result) -> HybridSearchResult:
+    async def _graph_only_search(
+        self, query: str, limit: int, intent_result: IntentAnalysisResult | None
+    ) -> HybridSearchResult:
         """
         Perform graph-only search with optional chunk retrieval.
 
@@ -330,7 +335,9 @@ class HybridSearch:
             metadata={"search_type": "graph_only", "chunk_refs": []},
         )
 
-    async def _hybrid_search(self, query: str, limit: int, intent_result) -> HybridSearchResult:
+    async def _hybrid_search(
+        self, query: str, limit: int, intent_result: IntentAnalysisResult | None
+    ) -> HybridSearchResult:
         """
         Perform combined vector and graph search.
 
@@ -390,7 +397,9 @@ class HybridSearch:
             },
         )
 
-    async def _adaptive_search(self, query: str, limit: int, intent_result) -> HybridSearchResult:
+    async def _adaptive_search(
+        self, query: str, limit: int, intent_result: IntentAnalysisResult | None
+    ) -> HybridSearchResult:
         """
         Adaptive search that adjusts strategy based on initial results.
 
@@ -440,7 +449,10 @@ class HybridSearch:
         return HybridSearchResult(chunks=more_chunks, metadata={"search_type": "adaptive_vector"})
 
     async def _boost_with_graph_context(
-        self, vector_results: list[ChunkResult], graph_results: GraphSearchResult, intent_result
+        self,
+        vector_results: list[ChunkResult],
+        graph_results: GraphSearchResult,
+        intent_result: IntentAnalysisResult | None,
     ) -> list[ChunkResult]:
         """
         Boost vector results using graph context.
@@ -464,13 +476,15 @@ class HybridSearch:
             # Boost if chunk is referenced in graph results
             if str(chunk.chunk_id) in relevant_chunk_ids:
                 boost *= 1.3
-                self._stats["graph_boosts"] += 1
+                graph_boosts = cast("int", self._stats["graph_boosts"])
+                self._stats["graph_boosts"] = graph_boosts + 1
 
             # Boost if chunk contains relevant entities
             chunk_entities_lower = {e.lower() for e in chunk.entities}
             if chunk_entities_lower & relevant_entities:
                 boost *= 1.2
-                self._stats["entity_boosts"] += 1
+                entity_boosts = cast("int", self._stats["entity_boosts"])
+                self._stats["entity_boosts"] = entity_boosts + 1
 
             # Boost based on intent match
             if intent_result:
@@ -543,7 +557,7 @@ class HybridSearch:
         Returns:
             Statistics dictionary
         """
-        stats = self._stats.copy()
+        stats: dict[str, Any] = dict(self._stats)
 
         # Add component stats
         stats["vector_stats"] = self.vector_search.get_stats()
@@ -551,14 +565,19 @@ class HybridSearch:
         stats["intent_stats"] = self.intent_analyzer.get_stats()
 
         # Calculate averages
-        if stats["searches"] > 0:
-            stats["avg_latency"] = stats["total_latency"] / stats["searches"]
-            stats["strategy_distribution"] = {
-                strategy: count / stats["searches"]
-                for strategy, count in stats["strategies"].items()
-            }
-            stats["avg_graph_boosts"] = stats["graph_boosts"] / stats["searches"]
-            stats["avg_entity_boosts"] = stats["entity_boosts"] / stats["searches"]
+        searches_count = cast("int", stats["searches"])
+        if searches_count > 0:
+            total_latency = cast("float", stats["total_latency"])
+            stats["avg_latency"] = total_latency / searches_count
+            strategies = stats["strategies"]
+            if isinstance(strategies, dict):
+                stats["strategy_distribution"] = {
+                    strategy: count / searches_count for strategy, count in strategies.items()
+                }
+            graph_boosts = cast("int", stats["graph_boosts"])
+            entity_boosts = cast("int", stats["entity_boosts"])
+            stats["avg_graph_boosts"] = graph_boosts / searches_count
+            stats["avg_entity_boosts"] = entity_boosts / searches_count
 
         return stats
 

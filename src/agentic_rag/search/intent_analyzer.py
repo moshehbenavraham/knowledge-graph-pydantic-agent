@@ -8,7 +8,7 @@ import logging
 import re
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any
+from typing import Any, cast
 
 import structlog
 
@@ -136,10 +136,13 @@ class IntentAnalyzer:
         r"\b(?:GPT-\d+|Claude|Gemini|LaMDA|PaLM|DALL-E|Stable Diffusion)\b",  # AI models
     ]
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize intent analyzer."""
         structlog_logger.info("IntentAnalyzer initializing")
-        self._stats = {"analyses": 0, "intents": {intent.value: 0 for intent in SearchIntent}}
+        self._stats: dict[str, int | dict[str, int]] = {
+            "analyses": 0,
+            "intents": {intent.value: 0 for intent in SearchIntent},
+        }
         structlog_logger.info("IntentAnalyzer initialized")
 
     def analyze(self, query: str) -> IntentAnalysisResult:
@@ -153,7 +156,8 @@ class IntentAnalyzer:
             Intent analysis result
         """
         structlog_logger.info("analyze called", query_preview=query[:100])
-        self._stats["analyses"] += 1
+        analyses_count = cast("int", self._stats["analyses"])
+        self._stats["analyses"] = analyses_count + 1
         query_lower = query.lower()
 
         # Extract features
@@ -185,7 +189,8 @@ class IntentAnalyzer:
             confidence = 0.7
 
         # Update statistics
-        self._stats["intents"][primary_intent.value] += 1
+        intents_dict = cast("dict[str, int]", self._stats["intents"])
+        intents_dict[primary_intent.value] = intents_dict.get(primary_intent.value, 0) + 1
 
         # Comprehensive logging
         logger.info(
@@ -459,11 +464,14 @@ class IntentAnalyzer:
         Returns:
             Statistics dictionary
         """
-        stats = self._stats.copy()
+        stats: dict[str, Any] = dict(self._stats)
+        analyses_count = cast("int", stats["analyses"])
 
-        if stats["analyses"] > 0:
-            stats["intent_distribution"] = {
-                intent: count / stats["analyses"] for intent, count in stats["intents"].items()
-            }
+        if analyses_count > 0:
+            intents = stats["intents"]
+            if isinstance(intents, dict):
+                stats["intent_distribution"] = {
+                    intent: count / analyses_count for intent, count in intents.items()
+                }
 
         return stats

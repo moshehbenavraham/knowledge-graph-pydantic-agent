@@ -89,7 +89,7 @@ class SearchCache:
 
     def set(
         self, key: str, results: list[ChunkResult]
-    ):  # Constitution exception: CONST-V-001 - Simple cache accessor
+    ) -> None:  # Constitution exception: CONST-V-001 - Simple cache accessor
         """
         Cache results.
 
@@ -99,7 +99,7 @@ class SearchCache:
         """
         self._cache[key] = (datetime.now(), results)
 
-    def clear(self):
+    def clear(self) -> None:
         """Clear the cache."""
         self._cache.clear()
 
@@ -495,7 +495,7 @@ class VectorSearch:
         )
         return stats
 
-    def clear_cache(self):
+    def clear_cache(self) -> None:
         """Clear the search cache."""
         if self.cache:
             self.cache.clear()

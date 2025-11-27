@@ -242,6 +242,9 @@ class GraphSearch:
 
             facts = []
             for result in results:
+                # Skip non-dict results
+                if not isinstance(result, dict):
+                    continue
                 # Parse Graphiti result format
                 if "fact" in result or "content" in result:
                     fact_text = result.get("fact") or result.get("content", "")

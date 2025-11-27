@@ -86,7 +86,7 @@ class ResultRanker:
             "temporal_boosts": 0,
         }
 
-    def _normalize_weights(self):
+    def _normalize_weights(self) -> None:
         """Normalize weights to sum to 1.0."""
         total = sum(self.weights.values())
         if total > 0:
@@ -228,7 +228,7 @@ class ResultRanker:
         structlog_logger.info("Chunk ranking complete", chunks_returned=len(ranked))
         return ranked
 
-    def _similarity_score(self, chunk) -> float:
+    def _similarity_score(self, chunk: Any) -> float:
         """
         Get semantic similarity score.
 
@@ -250,7 +250,7 @@ class ResultRanker:
         structlog_logger.debug("_similarity_score", score=0.5, source="default")
         return 0.5  # Default middle score
 
-    def _entity_overlap_score(self, chunk, query_entities: list[str] | None) -> float:
+    def _entity_overlap_score(self, chunk: Any, query_entities: list[str] | None) -> float:
         """
         Calculate entity overlap score.
 
@@ -299,7 +299,7 @@ class ResultRanker:
             return score
         return 0.0
 
-    def _temporal_relevance_score(self, chunk, temporal_context: datetime | None) -> float:
+    def _temporal_relevance_score(self, chunk: Any, temporal_context: datetime | None) -> float:
         """
         Calculate temporal relevance score.
 
@@ -362,7 +362,7 @@ class ResultRanker:
         )
         return score
 
-    def _authority_score(self, chunk) -> float:
+    def _authority_score(self, chunk: Any) -> float:
         """
         Calculate source authority score.
 
@@ -413,7 +413,7 @@ class ResultRanker:
         structlog_logger.debug("_authority_score completed", score=score, source_type=source_type)
         return score
 
-    def _diversity_score(self, chunk, seen_content: set[str]) -> float:
+    def _diversity_score(self, chunk: Any, seen_content: set[str]) -> float:
         """
         Calculate diversity score to avoid redundancy.
 
@@ -453,7 +453,7 @@ class ResultRanker:
         structlog_logger.debug("_diversity_score - novel content", score=1.0)
         return 1.0  # Novel content
 
-    def _update_seen_content(self, chunk, seen_content: set[str]):
+    def _update_seen_content(self, chunk: Any, seen_content: set[str]) -> None:
         """
         Update seen content set.
 
