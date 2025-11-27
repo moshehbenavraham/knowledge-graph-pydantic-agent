@@ -4,28 +4,43 @@ name: CI
 on:
   push:
     branches: [ main, develop ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.gitignore'
+      - 'LICENSE'
+      - '.markdownlint.json'
   pull_request:
     branches: [ main, develop ]
-  schedule:
-    - cron: '0 2 * * 1'  # Weekly security scans
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.gitignore'
+      - 'LICENSE'
+  # Removed weekly schedule - security workflow handles this
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
-    name: Test Python ${{ matrix.python-version }}
+    name: Test
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ['3.11', '3.12']
-      fail-fast: false
+    # Single Python version for regular CI - expand matrix only for releases
+    # strategy:
+    #   matrix:
+    #     python-version: ['3.11', '3.12']
+    #   fail-fast: false
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set up Python ${{ matrix.python-version }}
+    - name: Set up Python 3.11
       uses: actions/setup-python@v5
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: '3.11'
         cache: 'pip'
 
     - name: Install dependencies
@@ -61,7 +76,6 @@ jobs:
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
-      if: matrix.python-version == '3.11'
       with:
         file: ./coverage.xml
         flags: unittests
@@ -71,7 +85,7 @@ jobs:
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: test-results-${{ matrix.python-version }}
+        name: test-results
         path: |
           test-results.xml
           htmlcov/
@@ -79,10 +93,10 @@ jobs:
 
     - name: Publish test results
       uses: EnricoMi/publish-unit-test-result-action@v2
-      if: always() && matrix.python-version == '3.11'
+      if: always()
       with:
         files: test-results.xml
-        check_name: Test Results (Python ${{ matrix.python-version }})
+        check_name: Test Results
         comment_mode: off
 
   security:

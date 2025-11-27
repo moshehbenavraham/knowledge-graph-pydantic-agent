@@ -3,10 +3,28 @@ name: Security & Supply Chain
 on:
   push:
     branches: [ main, develop ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.gitignore'
+      - 'LICENSE'
+      - '.markdownlint.json'
+      - 'tests/**'  # Security scan focuses on src/, not tests
   pull_request:
     branches: [ main, develop ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.gitignore'
+      - 'LICENSE'
+      - 'tests/**'
   schedule:
-    - cron: '0 0 * * *'  # Daily at midnight UTC
+    - cron: '0 2 * * 1'  # Weekly on Monday at 2 AM UTC (was daily)
+  workflow_dispatch:  # Allow manual triggering
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   REGISTRY: ghcr.io
