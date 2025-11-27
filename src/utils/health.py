@@ -57,13 +57,13 @@ class ComponentHealth(BaseModel):
 class HealthChecker:
     """System health monitoring and checks."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         settings = get_settings()
         self.start_time = time.time()
         self.version = settings.app_version
         self.check_interval = settings.health_check_interval
-        self.component_checks = {}
-        self.last_full_check = None
+        self.component_checks: dict[str, ComponentHealth] = {}
+        self.last_full_check: datetime | None = None
 
     async def check_database_health(self) -> ComponentHealth:
         """Check database connectivity and performance."""

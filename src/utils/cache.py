@@ -1,14 +1,18 @@
 """Redis caching utilities for performance optimization."""
 
+import asyncio
 import hashlib
 import json
 import pickle  # nosec B403 - Used only for internal cache, not user input
 from collections.abc import Callable
 from functools import wraps
-from typing import Any
+from typing import Any, ParamSpec, TypeVar
 
 import redis
 import structlog
+
+P = ParamSpec("P")
+T = TypeVar("T")
 from redis import ConnectionPool
 from redis.exceptions import RedisError
 
@@ -72,7 +76,7 @@ class RedisCache:
             if not enable_fallback:
                 raise
 
-    def _generate_key(self, prefix: str, *args, **kwargs) -> str:
+    def _generate_key(self, prefix: str, *args: Any, **kwargs: Any) -> str:
         """Generate cache key from prefix and arguments."""
         key_data = {
             "prefix": prefix,
@@ -225,8 +229,8 @@ def get_cache() -> RedisCache:
 def cache(
     prefix: str = "func",
     ttl: int = 3600,
-    key_func: Callable | None = None,
-):
+    key_func: Callable[..., str] | None = None,
+) -> Callable[[Callable[P, T]], Callable[P, T]]:
     """Decorator for caching function results.
 
     Args:
@@ -235,9 +239,9 @@ def cache(
         key_func: Custom function to generate cache key
     """
 
-    def decorator(func: Callable) -> Callable:
+    def decorator(func: Callable[P, T]) -> Callable[P, T]:
         @wraps(func)
-        async def async_wrapper(*args, **kwargs):
+        async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
             cache_obj = get_cache()
 
             # Generate cache key
@@ -250,10 +254,10 @@ def cache(
             cached_value = cache_obj.get(cache_key)
             if cached_value is not None:
                 logger.debug("Cache hit", function=func.__name__, key=cache_key)
-                return cached_value
+                return cached_value  # type: ignore[return-value]
 
             # Execute function
-            result = await func(*args, **kwargs)
+            result = await func(*args, **kwargs)  # type: ignore[misc]
 
             # Store in cache
             cache_obj.set(cache_key, result, ttl)
@@ -262,7 +266,7 @@ def cache(
             return result
 
         @wraps(func)
-        def sync_wrapper(*args, **kwargs):
+        def sync_wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
             cache_obj = get_cache()
 
             # Generate cache key
@@ -275,10 +279,10 @@ def cache(
             cached_value = cache_obj.get(cache_key)
             if cached_value is not None:
                 logger.debug("Cache hit", function=func.__name__, key=cache_key)
-                return cached_value
+                return cached_value  # type: ignore[return-value]
 
             # Execute function
-            result = func(*args, **kwargs)
+            result = func(*args, **kwargs)  # type: ignore[return-value]
 
             # Store in cache
             cache_obj.set(cache_key, result, ttl)
@@ -287,11 +291,9 @@ def cache(
             return result
 
         # Return appropriate wrapper based on function type
-        import asyncio
-
         if asyncio.iscoroutinefunction(func):
-            return async_wrapper
-        return sync_wrapper
+            return async_wrapper  # type: ignore[return-value]
+        return sync_wrapper  # type: ignore[return-value]
 
     return decorator
 

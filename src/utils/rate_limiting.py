@@ -3,10 +3,14 @@
 import asyncio
 import time
 from collections import defaultdict, deque
+from collections.abc import Callable
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, ParamSpec, TypeVar
 
 from .monitoring import ERROR_COUNT, logger
+
+P = ParamSpec("P")
+T = TypeVar("T")
 
 
 class RateLimiter:
@@ -90,7 +94,7 @@ class RateLimiter:
 class APIRateLimiter:
     """Rate limiter for external API calls."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         # Different limits for different services
         self.limiters = {
             "openai": RateLimiter(max_requests=60, window_seconds=60),  # 60 RPM
@@ -122,7 +126,7 @@ class APIRateLimiter:
 
     async def wait_for_api_limit(
         self, service: str, user_id: str = "system", max_wait: float = 60.0
-    ):
+    ) -> bool:
         """Wait until API call is allowed, with maximum wait time."""
         start_time = time.time()
 
@@ -144,16 +148,16 @@ class APIRateLimiter:
 class UserRateLimiter:
     """Rate limiter for user requests."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         # Different limits for different user tiers
         self.limiters = {
             "free": RateLimiter(max_requests=10, window_seconds=60),  # 10 per minute
             "premium": RateLimiter(max_requests=100, window_seconds=60),  # 100 per minute
             "enterprise": RateLimiter(max_requests=1000, window_seconds=60),  # 1000 per minute
         }
-        self.user_tiers = defaultdict(lambda: "free")  # user_id -> tier
+        self.user_tiers: defaultdict[str, str] = defaultdict(lambda: "free")  # user_id -> tier
 
-    def set_user_tier(self, user_id: str, tier: str):
+    def set_user_tier(self, user_id: str, tier: str) -> None:
         """Set user tier for rate limiting."""
         if tier in self.limiters:
             self.user_tiers[user_id] = tier
@@ -203,7 +207,7 @@ class UserRateLimiter:
 class RateLimitMiddleware:
     """Middleware for applying rate limits to requests."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.api_limiter = APIRateLimiter()
         self.user_limiter = UserRateLimiter()
 
@@ -224,7 +228,7 @@ class RateLimitMiddleware:
 
         return True, {"type": "allowed", "user_info": user_info}
 
-    async def enforce_limits(self, user_id: str, service: str | None = None):
+    async def enforce_limits(self, user_id: str, service: str | None = None) -> None:
         """Enforce rate limits, raising exception if exceeded."""
         allowed, info = await self.check_limits(user_id, service)
 
@@ -277,21 +281,23 @@ class RateLimitExceededError(Exception):
 rate_limiter = RateLimitMiddleware()
 
 
-def rate_limit(service: str | None = None):
+def rate_limit(
+    service: str | None = None,
+) -> Callable[[Callable[P, T]], Callable[P, T]]:
     """Decorator to apply rate limiting to functions."""
 
-    def decorator(func):
-        async def async_wrapper(*args, **kwargs):
-            user_id = kwargs.get("user_id", "anonymous")
+    def decorator(func: Callable[P, T]) -> Callable[P, T]:
+        async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+            user_id = str(kwargs.get("user_id", "anonymous"))
 
             # Enforce rate limits
             await rate_limiter.enforce_limits(user_id, service)
 
             # Execute function
-            return await func(*args, **kwargs)
+            return await func(*args, **kwargs)  # type: ignore[misc]
 
-        def sync_wrapper(*args, **kwargs):
-            user_id = kwargs.get("user_id", "anonymous")
+        def sync_wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+            user_id = str(kwargs.get("user_id", "anonymous"))
 
             # For sync functions, we need to run the async check
             loop = asyncio.get_event_loop()
@@ -304,8 +310,10 @@ def rate_limit(service: str | None = None):
             else:
                 loop.run_until_complete(rate_limiter.enforce_limits(user_id, service))
 
-            return func(*args, **kwargs)
+            return func(*args, **kwargs)  # type: ignore[return-value]
 
-        return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
+        if asyncio.iscoroutinefunction(func):
+            return async_wrapper  # type: ignore[return-value]
+        return sync_wrapper  # type: ignore[return-value]
 
     return decorator

@@ -4,11 +4,14 @@ import asyncio
 import functools
 import logging
 import time
-from collections.abc import Callable
+from collections.abc import AsyncGenerator, Callable, Generator
 from contextlib import asynccontextmanager, contextmanager
-from typing import Any
+from typing import Any, ParamSpec, TypeVar
 
 import structlog
+
+P = ParamSpec("P")
+T = TypeVar("T")
 from prometheus_client import (
     REGISTRY,
     Counter,
@@ -26,7 +29,7 @@ except ImportError:
 
 
 # Configure structured logging
-def configure_logging():
+def configure_logging() -> structlog.stdlib.BoundLogger:
     """Configure structured logging with JSON output."""
     # Note: We use basic print here since logger is not yet initialized
     print("Configuring structured logging...")
@@ -68,8 +71,13 @@ logger = configure_logging()
 
 
 def _get_or_create_metric(
-    metric_class, name, description, labelnames=None, buckets=None, registry=REGISTRY
-):
+    metric_class: type[Counter] | type[Gauge] | type[Histogram],
+    name: str,
+    description: str,
+    labelnames: list[str] | None = None,
+    buckets: list[float] | None = None,
+    registry: Any = REGISTRY,
+) -> Any:
     """Get existing metric or create new one to avoid duplicates.
 
     This function is essential for Streamlit compatibility where module reloading
@@ -198,12 +206,12 @@ ERROR_COUNT = _get_or_create_metric(
 class PerformanceMonitor:
     """Performance monitoring and metrics collection."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.start_time = time.time()
-        self.active_requests = {}
+        self.active_requests: dict[str, dict[str, Any]] = {}
         self.session_count = 0
 
-    def start_metrics_server(self, port: int = 8000):
+    def start_metrics_server(self, port: int = 8000) -> None:
         """Start Prometheus metrics server."""
         try:
             start_http_server(port)
@@ -212,7 +220,9 @@ class PerformanceMonitor:
             logger.error("Failed to start metrics server", error=str(e), port=port)
 
     @contextmanager
-    def track_request(self, method: str, endpoint: str, user_id: str = "anonymous"):
+    def track_request(
+        self, method: str, endpoint: str, user_id: str = "anonymous"
+    ) -> Generator[None, None, None]:
         """Context manager to track request metrics."""
         start_time = time.time()
         request_id = f"{method}_{endpoint}_{user_id}_{start_time}"
@@ -256,7 +266,9 @@ class PerformanceMonitor:
             )
 
     @asynccontextmanager
-    async def track_tool_execution(self, tool_name: str, user_id: str = "anonymous"):
+    async def track_tool_execution(
+        self, tool_name: str, user_id: str = "anonymous"
+    ) -> AsyncGenerator[None, None]:
         """Context manager to track tool execution metrics."""
         start_time = time.time()
 
@@ -285,7 +297,7 @@ class PerformanceMonitor:
             )
 
     @contextmanager
-    def track_database_query(self, operation: str, table: str):
+    def track_database_query(self, operation: str, table: str) -> Generator[None, None, None]:
         """Context manager to track database query metrics."""
         start_time = time.time()
 
@@ -315,7 +327,7 @@ class PerformanceMonitor:
 
     def track_llm_tokens(
         self, model: str, input_tokens: int, output_tokens: int, user_id: str = "anonymous"
-    ):
+    ) -> None:
         """Track LLM token usage."""
         LLM_TOKEN_COUNT.labels(model=model, type="input", user_id=user_id).inc(input_tokens)
 
@@ -329,7 +341,7 @@ class PerformanceMonitor:
             user_id=user_id,
         )
 
-    def update_session_count(self, count: int):
+    def update_session_count(self, count: int) -> None:
         """Update active session count."""
         ACTIVE_SESSIONS.set(count)
         self.session_count = count
@@ -390,11 +402,13 @@ class PerformanceMonitor:
 monitor = PerformanceMonitor()
 
 
-def track_performance(tool_name: str | None = None, endpoint: str | None = None):
+def track_performance(
+    tool_name: str | None = None, endpoint: str | None = None
+) -> Callable[[Callable[P, T]], Callable[P, T]]:
     """Decorator to track function performance."""
     logger.debug("Creating performance tracking decorator", tool_name=tool_name, endpoint=endpoint)
 
-    def decorator(func: Callable) -> Callable:
+    def decorator(func: Callable[P, T]) -> Callable[P, T]:
         func_name = func.__name__
         is_async = asyncio.iscoroutinefunction(func)
 
@@ -407,9 +421,9 @@ def track_performance(tool_name: str | None = None, endpoint: str | None = None)
         )
 
         @functools.wraps(func)
-        async def async_wrapper(*args, **kwargs):
+        async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
             name = tool_name or func.__name__
-            user_id = kwargs.get("user_id", "anonymous")
+            user_id = str(kwargs.get("user_id", "anonymous"))
 
             logger.debug(
                 "Starting async function execution tracking",
@@ -427,7 +441,7 @@ def track_performance(tool_name: str | None = None, endpoint: str | None = None)
                 )
                 with monitor.track_request("CALL", endpoint, user_id):
                     async with monitor.track_tool_execution(name, user_id):
-                        result = await func(*args, **kwargs)
+                        result = await func(*args, **kwargs)  # type: ignore[misc]
                         logger.debug(
                             "Async function execution completed with request tracking",
                             function=func.__name__,
@@ -437,7 +451,7 @@ def track_performance(tool_name: str | None = None, endpoint: str | None = None)
             else:
                 logger.debug("Tracking without request context", function=func.__name__)
                 async with monitor.track_tool_execution(name, user_id):
-                    result = await func(*args, **kwargs)
+                    result = await func(*args, **kwargs)  # type: ignore[misc]
                     logger.debug(
                         "Async function execution completed",
                         function=func.__name__,
@@ -446,9 +460,9 @@ def track_performance(tool_name: str | None = None, endpoint: str | None = None)
                     return result
 
         @functools.wraps(func)
-        def sync_wrapper(*args, **kwargs):
+        def sync_wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
             name = tool_name or func.__name__
-            user_id = kwargs.get("user_id", "anonymous")
+            user_id = str(kwargs.get("user_id", "anonymous"))
 
             logger.debug(
                 "Starting sync function execution tracking",
@@ -552,7 +566,7 @@ def track_performance(tool_name: str | None = None, endpoint: str | None = None)
                         user_id=user_id,
                     )
 
-        wrapper = async_wrapper if is_async else sync_wrapper
+        wrapper: Callable[P, T] = async_wrapper if is_async else sync_wrapper  # type: ignore[assignment]
         logger.debug(
             "Performance tracking decorator created",
             function=func_name,

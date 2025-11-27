@@ -6,12 +6,15 @@ Implements circuit breaker pattern and retry logic with exponential backoff.
 
 import asyncio
 import time
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from enum import Enum
 from functools import wraps
-from typing import Any
+from typing import Any, ParamSpec, TypeVar
 
 import structlog
+
+P = ParamSpec("P")
+T = TypeVar("T")
 
 logger = structlog.get_logger()
 
@@ -78,7 +81,7 @@ class CircuitBreaker:
 
         return self._state
 
-    def call(self, func: Callable, *args, **kwargs) -> Any:
+    def call(self, func: Callable[..., T], *args: Any, **kwargs: Any) -> T:
         """
         Execute function with circuit breaker protection.
 
@@ -110,7 +113,7 @@ class CircuitBreaker:
             self._on_failure()
             raise
 
-    async def call_async(self, func: Callable, *args, **kwargs) -> Any:
+    async def call_async(self, func: Callable[..., Awaitable[T]], *args: Any, **kwargs: Any) -> T:
         """
         Execute async function with circuit breaker protection.
 
@@ -142,7 +145,7 @@ class CircuitBreaker:
             self._on_failure()
             raise
 
-    def _on_success(self):
+    def _on_success(self) -> None:
         """Handle successful execution."""
         if self._state == CircuitState.HALF_OPEN:
             logger.info(
@@ -153,7 +156,7 @@ class CircuitBreaker:
         self._failure_count = 0
         self._state = CircuitState.CLOSED
 
-    def _on_failure(self):
+    def _on_failure(self) -> None:
         """Handle failed execution."""
         self._failure_count += 1
         self._last_failure_time = time.time()
@@ -166,7 +169,7 @@ class CircuitBreaker:
             )
             self._state = CircuitState.OPEN
 
-    def reset(self):
+    def reset(self) -> None:
         """Manually reset circuit breaker."""
         logger.info("circuit_breaker_reset", circuit=self.name)
         self._failure_count = 0
@@ -177,9 +180,9 @@ class CircuitBreaker:
 def circuit_breaker(
     failure_threshold: int = 5,
     recovery_timeout: float = 60.0,
-    expected_exceptions: tuple = (Exception,),
+    expected_exceptions: tuple[type[Exception], ...] = (Exception,),
     name: str | None = None,
-):
+) -> Callable[[Callable[P, T]], Callable[P, T]]:
     """
     Circuit breaker decorator.
 
@@ -202,7 +205,7 @@ def circuit_breaker(
         name=name,
     )
 
-    def decorator(func):
+    def decorator(func: Callable[P, T]) -> Callable[P, T]:
         logger.info(
             "circuit_breaker_decorator_applied",
             function=func.__name__,
@@ -211,14 +214,14 @@ def circuit_breaker(
         )
 
         @wraps(func)
-        async def async_wrapper(*args, **kwargs):
+        async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
             logger.debug(
                 "circuit_breaker_async_wrapper_called",
                 function=func.__name__,
                 circuit=name or "unnamed",
             )
             try:
-                result = await breaker.call_async(func, *args, **kwargs)
+                result: T = await breaker.call_async(func, *args, **kwargs)  # type: ignore[arg-type]
                 logger.debug(
                     "circuit_breaker_async_wrapper_succeeded",
                     function=func.__name__,
@@ -236,20 +239,20 @@ def circuit_breaker(
                 raise
 
         @wraps(func)
-        def sync_wrapper(*args, **kwargs):
+        def sync_wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
             logger.debug(
                 "circuit_breaker_sync_wrapper_called",
                 function=func.__name__,
                 circuit=name or "unnamed",
             )
             try:
-                result = breaker.call(func, *args, **kwargs)
+                result = breaker.call(func, *args, **kwargs)  # type: ignore[arg-type]
                 logger.debug(
                     "circuit_breaker_sync_wrapper_succeeded",
                     function=func.__name__,
                     circuit=name or "unnamed",
                 )
-                return result
+                return result  # type: ignore[return-value]
             except Exception as e:
                 logger.error(
                     "circuit_breaker_sync_wrapper_failed",
@@ -261,7 +264,7 @@ def circuit_breaker(
                 raise
 
         if asyncio.iscoroutinefunction(func):
-            return async_wrapper
+            return async_wrapper  # type: ignore[return-value]
         return sync_wrapper
 
     return decorator
@@ -331,7 +334,9 @@ class RetryStrategy:
         )
         return delay
 
-    async def execute_async(self, func: Callable, *args, **kwargs) -> Any:
+    async def execute_async(
+        self, func: Callable[..., Awaitable[T]], *args: Any, **kwargs: Any
+    ) -> T:
         """
         Execute async function with retry logic.
 
@@ -385,7 +390,7 @@ class RetryStrategy:
             raise last_exception
         raise RuntimeError("Retry loop exited without result or exception")
 
-    def execute(self, func: Callable, *args, **kwargs) -> Any:
+    def execute(self, func: Callable[..., T], *args: Any, **kwargs: Any) -> T:
         """
         Execute function with retry logic (synchronous).
 
@@ -446,8 +451,8 @@ def retry(
     max_delay: float = 60.0,
     exponential_base: float = 2.0,
     jitter: bool = True,
-    retriable_exceptions: tuple = (Exception,),
-):
+    retriable_exceptions: tuple[type[Exception], ...] = (Exception,),
+) -> Callable[[Callable[P, T]], Callable[P, T]]:
     """
     Retry decorator with exponential backoff.
 
@@ -474,7 +479,7 @@ def retry(
         retriable_exceptions=retriable_exceptions,
     )
 
-    def decorator(func):
+    def decorator(func: Callable[P, T]) -> Callable[P, T]:
         logger.info(
             "retry_decorator_applied",
             function=func.__name__,
@@ -483,14 +488,14 @@ def retry(
         )
 
         @wraps(func)
-        async def async_wrapper(*args, **kwargs):
+        async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
             logger.debug(
                 "retry_async_wrapper_called",
                 function=func.__name__,
                 max_attempts=max_attempts,
             )
             try:
-                result = await strategy.execute_async(func, *args, **kwargs)
+                result: T = await strategy.execute_async(func, *args, **kwargs)  # type: ignore[arg-type]
                 logger.debug(
                     "retry_async_wrapper_succeeded",
                     function=func.__name__,
@@ -506,19 +511,19 @@ def retry(
                 raise
 
         @wraps(func)
-        def sync_wrapper(*args, **kwargs):
+        def sync_wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
             logger.debug(
                 "retry_sync_wrapper_called",
                 function=func.__name__,
                 max_attempts=max_attempts,
             )
             try:
-                result = strategy.execute(func, *args, **kwargs)
+                result = strategy.execute(func, *args, **kwargs)  # type: ignore[arg-type]
                 logger.debug(
                     "retry_sync_wrapper_succeeded",
                     function=func.__name__,
                 )
-                return result
+                return result  # type: ignore[return-value]
             except Exception as e:
                 logger.error(
                     "retry_sync_wrapper_failed",
@@ -529,14 +534,16 @@ def retry(
                 raise
 
         if asyncio.iscoroutinefunction(func):
-            return async_wrapper
-        return sync_wrapper
+            return async_wrapper  # type: ignore[return-value]
+        return sync_wrapper  # type: ignore[return-value]
 
     return decorator
 
 
 # Convenience decorators for common patterns
-def retry_on_network_error(max_attempts: int = 3):
+def retry_on_network_error(
+    max_attempts: int = 3,
+) -> Callable[[Callable[P, T]], Callable[P, T]]:
     """Retry decorator for network-related errors."""
     logger.info(
         "retry_on_network_error_decorator_called",
@@ -562,7 +569,9 @@ def retry_on_network_error(max_attempts: int = 3):
     return result
 
 
-def retry_on_database_error(max_attempts: int = 3):
+def retry_on_database_error(
+    max_attempts: int = 3,
+) -> Callable[[Callable[P, T]], Callable[P, T]]:
     """Retry decorator for database-related errors."""
     logger.info(
         "retry_on_database_error_decorator_called",
