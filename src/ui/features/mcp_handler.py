@@ -1,3 +1,4 @@
+from collections.abc import AsyncIterator
 from typing import Any
 
 import structlog
@@ -12,17 +13,17 @@ logger = structlog.get_logger(__name__)
 
 
 class MCPHandler(MemoryHandler):
-    def __init__(self, config: dict[str, Any]):
+    def __init__(self, config: dict[str, Any]) -> None:
         super().__init__(config)
         self.enable_mcp = config.get("enable_mcp", True)
 
-    async def run_agent(
+    async def run_agent(  # type: ignore[override]
         self,
         user_input: str,
         message_history: list[ModelRequest | ModelResponse],
         http_client: AsyncClient,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> AsyncIterator[dict[str, Any]]:
         logger.info("=" * 80)
         logger.info(
             "MCPHandler.run_agent() - MCP-ENABLED streaming",

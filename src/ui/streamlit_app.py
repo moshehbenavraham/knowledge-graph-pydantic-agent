@@ -132,7 +132,7 @@ def make_json_safe(obj: Any, max_depth: int = 10, _current_depth: int = 0) -> An
 
 
 class UIConfig:
-    def __init__(self):
+    def __init__(self) -> None:
         self.mode = config.mode
         self.features = self._get_features_for_mode(self.mode)
 
@@ -203,7 +203,7 @@ class UIConfig:
         return handler
 
 
-def display_message_part(part):
+def display_message_part(part: Any) -> None:
     if part.part_kind == "user-prompt" and part.content:
         with st.chat_message("user"):
             st.markdown(part.content)
@@ -263,7 +263,7 @@ def display_message_part(part):
                 st.code(content_str)
 
 
-def initialize_session_state():
+def initialize_session_state() -> None:
     logger.info("=" * 80)
     logger.info("initialize_session_state() called")
 
@@ -443,7 +443,7 @@ def initialize_session_state():
     )
 
 
-def render_sidebar():
+def render_sidebar() -> None:
     with st.sidebar:
         st.title("⚙️ Settings")
 
@@ -601,8 +601,10 @@ def render_sidebar():
                 for msg in st.session_state.messages:
                     if isinstance(msg, ModelRequest | ModelResponse):
                         for part in msg.parts:
-                            if part.part_kind in ["user-prompt", "text"] and part.content:
-                                conversation_count += 1
+                            if part.part_kind in ["user-prompt", "text"]:
+                                content = getattr(part, "content", None)
+                                if content:
+                                    conversation_count += 1
 
                 # Check memory status
                 memory_active = (
@@ -660,7 +662,7 @@ def render_sidebar():
         st.caption("Powered by Pydantic AI")
 
 
-async def render_dashboard():
+async def render_dashboard() -> None:
     """Render the GraphRAG Dashboard with analytics and visualizations."""
     st.title("📊 GraphRAG Dashboard")
     st.caption("Real-time analytics and visualization of your Agentic RAG system")
@@ -722,7 +724,7 @@ async def render_dashboard():
         return
 
 
-async def _render_dashboard_content(handler: DashboardHandler):
+async def _render_dashboard_content(handler: DashboardHandler) -> None:
     """Render dashboard content with initialized handler."""
 
     # Add refresh buttons
@@ -1198,7 +1200,7 @@ async def _render_dashboard_content(handler: DashboardHandler):
         st.error(f"Error loading agent interaction data: {e}")
 
 
-def export_conversation():
+def export_conversation() -> None:
     import json
     from datetime import datetime
 
@@ -1219,14 +1221,16 @@ def export_conversation():
     for msg in st.session_state.messages:
         if isinstance(msg, ModelRequest | ModelResponse):
             for part in msg.parts:
-                if part.part_kind in ["user-prompt", "text"] and part.content:
-                    export_data["messages"].append(
-                        {
-                            "role": "user" if part.part_kind == "user-prompt" else "assistant",
-                            "content": part.content,
-                        }
-                    )
-                    message_count += 1
+                if part.part_kind in ["user-prompt", "text"]:
+                    content = getattr(part, "content", None)
+                    if content:
+                        export_data["messages"].append(
+                            {
+                                "role": "user" if part.part_kind == "user-prompt" else "assistant",
+                                "content": content,
+                            }
+                        )
+                        message_count += 1
 
     file_name = f"conversation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
     export_json = json.dumps(export_data, indent=2)
@@ -1249,7 +1253,7 @@ def export_conversation():
     logger.info("Export download button displayed", file_name=file_name)
 
 
-async def handle_user_input(user_input: str):
+async def handle_user_input(user_input: str) -> None:
     logger.info("=" * 80)
     logger.info(
         "handle_user_input() called - USER MESSAGE RECEIVED",
@@ -1453,7 +1457,7 @@ async def handle_user_input(user_input: str):
         st.rerun()
 
 
-async def main():
+async def main() -> None:
     st.set_page_config(
         page_title="AI with Apex Advanced RAG Agent",
         page_icon="🤖",

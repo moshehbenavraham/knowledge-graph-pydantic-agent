@@ -1,3 +1,4 @@
+from collections.abc import AsyncIterator
 from typing import Any
 
 import structlog
@@ -12,12 +13,12 @@ logger = structlog.get_logger(__name__)
 
 
 class MemoryHandler(StreamingHandler):
-    def __init__(self, config: dict[str, Any]):
+    def __init__(self, config: dict[str, Any]) -> None:
         super().__init__(config)
-        self.memory_client = None
+        self.memory_client: Any = None
         self.user_id = config.get("user_id", "streamlit_user")
 
-    def _setup_hook(self):
+    def _setup_hook(self) -> None:
         logger.info(
             "MemoryHandler._setup_hook() called",
             enable_memory=self.config.get("enable_memory", True),
@@ -95,7 +96,7 @@ class MemoryHandler(StreamingHandler):
             )
             return ""
 
-    def add_memory(self, user_input: str, agent_response: str | None = None):
+    def add_memory(self, user_input: str, agent_response: str | None = None) -> None:
         logger.debug(
             "MemoryHandler.add_memory() called",
             user_input_length=len(user_input),
@@ -135,13 +136,13 @@ class MemoryHandler(StreamingHandler):
                 user_id=self.user_id,
             )
 
-    async def run_agent(
+    async def run_agent(  # type: ignore[override]
         self,
         user_input: str,
         message_history: list[ModelRequest | ModelResponse],
         http_client: AsyncClient,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> AsyncIterator[dict[str, Any]]:
         logger.info("=" * 80)
         logger.info(
             "MemoryHandler.run_agent() - MEMORY-AWARE streaming",

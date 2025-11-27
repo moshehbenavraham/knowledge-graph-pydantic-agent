@@ -32,7 +32,7 @@ class StreamingHandler(BaseHandler):
         user_input: str,
         message_history: list[ModelRequest | ModelResponse],
         http_client: AsyncClient,
-        **kwargs,
+        **kwargs: Any,
     ) -> AsyncIterator[dict[str, Any]]:
         logger.info("=" * 80)
         logger.info(
@@ -207,7 +207,7 @@ class StreamingHandler(BaseHandler):
                                         )
                                     yield {"type": "delta", "content": event.delta.content_delta}
 
-            new_messages_count = len(run.result.new_messages())
+            new_messages_count = len(run.result.new_messages()) if run.result else 0
 
             # Log agent interaction to analytics
             interaction_end_time = datetime.now()
@@ -247,7 +247,7 @@ class StreamingHandler(BaseHandler):
 
             yield {
                 "type": "complete",
-                "new_messages": run.result.new_messages(),
+                "new_messages": run.result.new_messages() if run.result else [],
                 "streaming": True,
             }
 

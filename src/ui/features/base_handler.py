@@ -13,13 +13,13 @@ logger = structlog.get_logger(__name__)
 
 
 class BaseHandler(ABC):
-    def __init__(self, config: dict[str, Any]):
+    def __init__(self, config: dict[str, Any]) -> None:
         self.config = config
         self.embedding_client: Any = None
         self.supabase: Any = None
         self._initialized = False
 
-    def initialize(self):
+    def initialize(self) -> None:
         logger.info("=" * 80)
         logger.info(
             "BaseHandler.initialize() called",
@@ -69,7 +69,7 @@ class BaseHandler(ABC):
                 handler_class=self.__class__.__name__,
             )
 
-    def _setup_hook(self):
+    def _setup_hook(self) -> None:
         pass
 
     @abstractmethod
@@ -78,12 +78,12 @@ class BaseHandler(ABC):
         user_input: str,
         message_history: list[ModelRequest | ModelResponse],
         http_client: AsyncClient,
-        **kwargs,
+        **kwargs: Any,
     ) -> Any:  # Return type can be Any or AsyncIterator, depending on implementation
         pass
 
     def get_agent_deps(
-        self, http_client: AsyncClient, memories_str: str = "", **kwargs
+        self, http_client: AsyncClient, memories_str: str = "", **kwargs: Any
     ) -> UnifiedAgentDeps:
         logger.debug(
             "Creating UnifiedAgentDeps for agent execution",
@@ -130,8 +130,8 @@ class SimpleHandler(BaseHandler):
         user_input: str,
         message_history: list[ModelRequest | ModelResponse],
         http_client: AsyncClient,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> dict[str, Any]:
         logger.info("=" * 80)
         logger.info(
             "SimpleHandler.run_agent() - NON-STREAMING execution",

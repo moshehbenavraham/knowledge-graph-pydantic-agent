@@ -10,6 +10,7 @@ import nest_asyncio
 import pandas as pd
 import streamlit as st
 import structlog
+from streamlit.runtime.uploaded_file_manager import UploadedFile
 
 from supabase import Client
 
@@ -17,7 +18,7 @@ logger = structlog.get_logger(__name__)
 
 
 async def process_document_upload(
-    file, supabase_client: Client, embedding_client: Any
+    file: UploadedFile, supabase_client: Client, embedding_client: Any
 ) -> dict[str, Any]:
     """
     Process an uploaded document (PDF, TXT, MD, etc.).
@@ -118,7 +119,7 @@ async def process_document_upload(
         }
 
 
-async def process_image_upload(file, supabase_client: Client) -> dict[str, Any]:
+async def process_image_upload(file: UploadedFile, supabase_client: Client) -> dict[str, Any]:
     """
     Process an uploaded image.
 
@@ -196,7 +197,7 @@ async def process_image_upload(file, supabase_client: Client) -> dict[str, Any]:
         }
 
 
-async def process_tabular_upload(file, supabase_client: Client) -> dict[str, Any]:
+async def process_tabular_upload(file: UploadedFile, supabase_client: Client) -> dict[str, Any]:
     """
     Process an uploaded CSV/Excel file.
 
@@ -317,7 +318,7 @@ async def process_tabular_upload(file, supabase_client: Client) -> dict[str, Any
         }
 
 
-def render_upload_section(supabase_client: Client, embedding_client: Any):
+def render_upload_section(supabase_client: Client, embedding_client: Any) -> None:
     """
     Render the file upload section in the sidebar.
 
