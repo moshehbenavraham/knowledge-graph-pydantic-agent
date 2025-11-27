@@ -5,7 +5,12 @@ Provides centralized analytics logging with async batching.
 This is NOT optional - it's foundational system infrastructure.
 """
 
+from typing import TYPE_CHECKING
+
 import structlog
+
+if TYPE_CHECKING:
+    from src.agentic_rag.storage.connection_manager import ConnectionManager
 
 from .logger import (
     AgentInteractionEvent,
@@ -43,7 +48,7 @@ def get_analytics_logger() -> AnalyticsLogger:
     return _analytics_logger
 
 
-async def initialize_analytics_logger(connection_manager) -> AnalyticsLogger:
+async def initialize_analytics_logger(connection_manager: "ConnectionManager") -> AnalyticsLogger:
     """
     Initialize global analytics logger.
 

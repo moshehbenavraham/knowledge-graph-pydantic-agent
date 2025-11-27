@@ -1,8 +1,8 @@
 # MyPy Fix Phase 07: Type Annotations - api/ Module
 
-**Status**: Not Started
-**Estimated Errors**: 50
-**Files**: 8
+**Status**: Completed
+**Actual Errors Fixed**: 60
+**Files**: 9 (including middleware.py which was not in original estimate)
 **Prerequisites**: Phase 06 complete
 
 ---
@@ -13,18 +13,19 @@ Add missing type annotations to the `src/api/` module.
 
 ---
 
-## Files to Annotate
+## Files Annotated
 
-| File | Missing Annotations |
+| File | Annotations Added |
 |------|---------------------|
-| src/api/main.py | 11 |
+| src/api/main.py | 9 |
 | src/api/health_endpoints.py | 10 |
-| src/api/streaming.py | 8 |
-| src/api/endpoints/documents.py | 8 |
+| src/api/streaming.py | 7 |
+| src/api/endpoints/documents.py | 5 |
 | src/api/endpoints/chat.py | 6 |
 | src/api/endpoints/search.py | 5 |
 | src/api/telemetry.py | 7 |
-| src/api/dependencies.py | ~5 |
+| src/api/dependencies.py | 2 |
+| src/api/middleware.py | 3 |
 
 ---
 
@@ -91,45 +92,21 @@ async def stream_response(request: ChatRequest) -> StreamingResponse:
     return StreamingResponse(generate())
 ```
 
----
+### Union Return Types with FastAPI
+```python
+# IMPORTANT: FastAPI doesn't support Union return types in response models
+# Use response_model=None to disable automatic response model generation
 
-## File-by-File Strategy
+# Before (causes FastAPIError)
+@router.get("/readiness")
+async def readiness_check() -> dict[str, Any] | JSONResponse:
+    ...
 
-### main.py (11 annotations)
-- App factory function
-- Lifespan handlers
-- Middleware setup
-- Exception handlers
-
-### health_endpoints.py (10 annotations)
-- Health check functions
-- Component status checks
-- Readiness/liveness probes
-
-### streaming.py (8 annotations)
-- SSE generators
-- Stream formatting
-- Event serialization
-
-### endpoints/documents.py (8 annotations)
-- CRUD operations
-- File upload handlers
-- Search endpoints
-
-### endpoints/chat.py (6 annotations)
-- Chat completion
-- Streaming chat
-- Message formatting
-
-### endpoints/search.py (5 annotations)
-- Search query handlers
-- Filter processing
-- Result formatting
-
-### telemetry.py (7 annotations)
-- Metrics collection
-- Tracing setup
-- Span creation
+# After (works correctly)
+@router.get("/readiness", response_model=None)
+async def readiness_check() -> dict[str, Any] | JSONResponse:
+    ...
+```
 
 ---
 
@@ -147,23 +124,25 @@ mypy src/api/ --ignore-missing-imports --disallow-untyped-defs
 
 ## Completion Checklist
 
-- [ ] Annotate main.py (11 functions)
-- [ ] Annotate health_endpoints.py (10 functions)
-- [ ] Annotate streaming.py (8 functions)
-- [ ] Annotate endpoints/documents.py (8 functions)
-- [ ] Annotate endpoints/chat.py (6 functions)
-- [ ] Annotate endpoints/search.py (5 functions)
-- [ ] Annotate telemetry.py (7 functions)
-- [ ] Annotate dependencies.py
-- [ ] Verify with mypy --disallow-untyped-defs
-- [ ] Run test suite
-- [ ] Commit changes
+- [x] Annotate main.py (9 functions)
+- [x] Annotate health_endpoints.py (10 functions)
+- [x] Annotate streaming.py (7 functions)
+- [x] Annotate endpoints/documents.py (5 functions)
+- [x] Annotate endpoints/chat.py (6 functions)
+- [x] Annotate endpoints/search.py (5 functions)
+- [x] Annotate telemetry.py (7 functions)
+- [x] Annotate dependencies.py (2 functions)
+- [x] Annotate middleware.py (3 functions)
+- [x] Verify with mypy --disallow-untyped-defs
+- [x] Run test suite
 
 ---
 
 ## Notes
 
 - FastAPI endpoints should have explicit return types
-- Use response_model for OpenAPI documentation
+- Use `response_model=None` for endpoints that return Union types (e.g., `dict | JSONResponse`)
 - Streaming functions need AsyncGenerator annotations
 - Depend on Pydantic models for request/response types
+- Nested functions (like inner generators) also need type annotations for `--disallow-untyped-defs`
+- Middleware classes need typed `__init__` methods with `ASGIApp` for app parameter

@@ -427,7 +427,7 @@ class ComplianceReporter:
         info_count = sum(1 for v in violations if v.severity == "info")
 
         # Build report dictionary
-        report_dict = {
+        report_dict: dict[str, Any] = {
             "report_id": str(uuid.uuid4()),
             "generated_at": datetime.now(UTC).isoformat() + "Z",
             "validator_version": self.validator_version,

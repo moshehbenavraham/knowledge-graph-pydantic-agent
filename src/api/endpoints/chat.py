@@ -5,6 +5,7 @@ Provides synchronous, SSE streaming, and WebSocket interfaces.
 """
 
 import time
+from collections.abc import AsyncGenerator
 from typing import Any
 from uuid import uuid4
 
@@ -141,7 +142,7 @@ async def chat(
 async def chat_stream(
     request: ChatRequest,
     deps: UnifiedAgentDeps = Depends(get_agent_deps),
-):
+) -> StreamingResponse:
     """
     Streaming chat endpoint using SSE.
 
@@ -158,7 +159,7 @@ async def chat_stream(
 
     try:
         # Stream response
-        async def event_generator():
+        async def event_generator() -> AsyncGenerator[str, None]:
             async for event in sse_manager.stream_agent_response(
                 agent=super_agent, message=request.message, deps=deps, **agent_params
             ):
@@ -190,7 +191,7 @@ async def chat_stream(
 async def chat_websocket(
     websocket: WebSocket,
     deps: UnifiedAgentDeps = Depends(get_agent_deps),
-):
+) -> None:
     """
     WebSocket endpoint for bidirectional chat.
 
@@ -207,7 +208,7 @@ async def chat_websocket(
         logger.info("websocket_chat_started", connection_id=connection_id)
 
         # Message handler
-        async def handle_message(conn_id: str, data: dict[str, Any]):
+        async def handle_message(conn_id: str, data: dict[str, Any]) -> None:
             """Handle received WebSocket messages."""
             message_type = data.get("type", "chat")
 
@@ -239,7 +240,7 @@ async def chat_websocket(
 @router.post("/feedback", response_model=FeedbackResponse)
 async def submit_feedback(
     feedback: FeedbackRequest,
-):
+) -> FeedbackResponse:
     """
     Submit user feedback on chat response.
 
@@ -273,7 +274,7 @@ async def submit_feedback(
 async def get_session_history(
     session_id: str,
     limit: int = 50,
-):
+) -> dict[str, Any]:
     """
     Get chat history for session.
 

@@ -1,6 +1,7 @@
 """Health check and monitoring API endpoints."""
 
 from datetime import UTC, datetime
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import JSONResponse
@@ -14,7 +15,7 @@ router = APIRouter(tags=["health"])
 
 
 @router.get("/")
-async def basic_health_check():
+async def basic_health_check() -> dict[str, Any]:
     """Basic health check endpoint."""
     settings = get_settings()
     return {
@@ -26,7 +27,7 @@ async def basic_health_check():
 
 
 @router.get("/detailed")
-async def detailed_health_check():
+async def detailed_health_check() -> JSONResponse:
     """Detailed health check with all component status."""
     try:
         health_status = await health_checker.get_health_status()
@@ -61,7 +62,7 @@ async def detailed_health_check():
 
 
 @router.get("/metrics")
-async def get_metrics():
+async def get_metrics() -> dict[str, Any]:
     """Get system metrics and statistics."""
     try:
         settings = get_settings()
@@ -78,7 +79,7 @@ async def get_metrics():
 
 
 @router.get("/rate-limits/{user_id}")
-async def get_rate_limit_status(user_id: str):
+async def get_rate_limit_status(user_id: str) -> dict[str, Any]:
     """Get rate limiting status for a user."""
     try:
         stats = rate_limiter.get_all_stats(user_id)
@@ -93,7 +94,7 @@ async def get_rate_limit_status(user_id: str):
 @router.post("/rate-limits/{user_id}/tier")
 async def set_user_tier(
     user_id: str, tier: str = Query(..., pattern="^(free|premium|enterprise)$")
-):
+) -> dict[str, Any]:
     """Set user tier for rate limiting."""
     try:
         rate_limiter.user_limiter.set_user_tier(user_id, tier)
@@ -104,7 +105,7 @@ async def set_user_tier(
 
 
 @router.get("/components/{component}")
-async def get_component_health(component: str):
+async def get_component_health(component: str) -> JSONResponse:
     """Get health status for a specific component."""
     try:
         if component == "database":
@@ -147,8 +148,8 @@ async def get_component_health(component: str):
         ) from e
 
 
-@router.get("/readiness")
-async def readiness_check():
+@router.get("/readiness", response_model=None)
+async def readiness_check() -> dict[str, Any] | JSONResponse:
     """Kubernetes readiness probe endpoint."""
     try:
         # Check critical components only
@@ -176,8 +177,8 @@ async def readiness_check():
         )
 
 
-@router.get("/liveness")
-async def liveness_check():
+@router.get("/liveness", response_model=None)
+async def liveness_check() -> dict[str, Any] | JSONResponse:
     """Kubernetes liveness probe endpoint."""
     try:
         # Simple check that the service is running
@@ -192,8 +193,8 @@ async def liveness_check():
         )
 
 
-@router.get("/startup")
-async def startup_check():
+@router.get("/startup", response_model=None)
+async def startup_check() -> dict[str, Any] | JSONResponse:
     """Kubernetes startup probe endpoint."""
     try:
         # Check if all services have been initialized
@@ -230,7 +231,7 @@ async def startup_check():
 
 
 # Initialize monitoring on module import
-def initialize_monitoring():
+def initialize_monitoring() -> None:
     """Initialize monitoring and metrics collection."""
     try:
         settings = get_settings()

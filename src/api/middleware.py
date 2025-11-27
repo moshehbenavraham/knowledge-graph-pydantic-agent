@@ -14,6 +14,7 @@ from fastapi import Request, Response, status
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.gzip import GZipMiddleware
+from starlette.types import ASGIApp
 
 from src.api.models import ErrorDetail, ErrorResponse
 
@@ -175,7 +176,7 @@ class CompressionMiddleware(GZipMiddleware):
     Extends GZipMiddleware with configuration.
     """
 
-    def __init__(self, app, minimum_size: int = 1000, compresslevel: int = 5):
+    def __init__(self, app: ASGIApp, minimum_size: int = 1000, compresslevel: int = 5) -> None:
         """
         Initialize compression middleware.
 
@@ -230,7 +231,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     For production, use Redis-backed rate limiting.
     """
 
-    def __init__(self, app, requests_per_minute: int = 60, burst_size: int = 10):
+    def __init__(self, app: ASGIApp, requests_per_minute: int = 60, burst_size: int = 10) -> None:
         """
         Initialize rate limit middleware.
 
@@ -242,7 +243,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self.requests_per_minute = requests_per_minute
         self.burst_size = burst_size
-        self._client_requests: dict = {}
+        self._client_requests: dict[str, list[float]] = {}
         self._last_cleanup = time.time()
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
@@ -322,7 +323,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         return max(0, self.requests_per_minute - len(recent_requests))
 
-    def _cleanup_old_entries(self, current_time: float):
+    def _cleanup_old_entries(self, current_time: float) -> None:
         """Remove old entries from rate limit tracking."""
         cutoff_time = current_time - 120  # Keep 2 minutes of history
 

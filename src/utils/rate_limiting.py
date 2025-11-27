@@ -310,10 +310,10 @@ def rate_limit(
             else:
                 loop.run_until_complete(rate_limiter.enforce_limits(user_id, service))
 
-            return func(*args, **kwargs)  # type: ignore[return-value]
+            return func(*args, **kwargs)
 
         if asyncio.iscoroutinefunction(func):
             return async_wrapper  # type: ignore[return-value]
-        return sync_wrapper  # type: ignore[return-value]
+        return sync_wrapper
 
     return decorator

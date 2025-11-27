@@ -169,12 +169,11 @@ markers = [
 ignore_missing_imports = true
 strict_optional = true
 warn_redundant_casts = true
-warn_unused_ignores = false
-disallow_untyped_defs = false
+warn_unused_ignores = true
+disallow_untyped_defs = true
 check_untyped_defs = true
-disable_error_code = ["attr-defined", "operator", "method-assign", "union-attr", "index"]
-# Focus on catching serious issues like name errors and import problems
-# Ignore common test-related type issues to keep CI green
+# MyPy strict mode enabled (Phase 15 complete)
+# All 126 source files pass strict type checking
 
 [[tool.mypy.overrides]]
 module = "tests.*"

@@ -246,13 +246,13 @@ def circuit_breaker(
                 circuit=name or "unnamed",
             )
             try:
-                result = breaker.call(func, *args, **kwargs)  # type: ignore[arg-type]
+                result = breaker.call(func, *args, **kwargs)
                 logger.debug(
                     "circuit_breaker_sync_wrapper_succeeded",
                     function=func.__name__,
                     circuit=name or "unnamed",
                 )
-                return result  # type: ignore[return-value]
+                return result
             except Exception as e:
                 logger.error(
                     "circuit_breaker_sync_wrapper_failed",
@@ -518,12 +518,12 @@ def retry(
                 max_attempts=max_attempts,
             )
             try:
-                result = strategy.execute(func, *args, **kwargs)  # type: ignore[arg-type]
+                result = strategy.execute(func, *args, **kwargs)
                 logger.debug(
                     "retry_sync_wrapper_succeeded",
                     function=func.__name__,
                 )
-                return result  # type: ignore[return-value]
+                return result
             except Exception as e:
                 logger.error(
                     "retry_sync_wrapper_failed",
@@ -535,7 +535,7 @@ def retry(
 
         if asyncio.iscoroutinefunction(func):
             return async_wrapper  # type: ignore[return-value]
-        return sync_wrapper  # type: ignore[return-value]
+        return sync_wrapper
 
     return decorator
 

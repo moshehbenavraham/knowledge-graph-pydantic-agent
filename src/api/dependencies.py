@@ -33,7 +33,7 @@ _graphiti_client: GraphitiClient | None = None
 _cache_manager: RedisCache | None = None
 
 
-async def init_dependencies():
+async def init_dependencies() -> None:
     """Initialize global dependencies during app startup."""
     global _connection_manager, _postgres_store, _neo4j_store
     global _graphiti_client, _cache_manager
@@ -55,7 +55,7 @@ async def init_dependencies():
         logger.info("PostgreSQL store initialized")
 
         # Initialize Neo4j if enabled
-        if settings.enable_graph_rag:
+        if settings.enable_graph:
             _neo4j_store = Neo4jStore(_connection_manager)
             _graphiti_client = GraphitiClient(_neo4j_store)
             logger.info("Neo4j and Graphiti initialized")
@@ -67,7 +67,7 @@ async def init_dependencies():
         raise
 
 
-async def cleanup_dependencies():
+async def cleanup_dependencies() -> None:
     """Cleanup dependencies during app shutdown."""
     global _connection_manager, _postgres_store, _neo4j_store
     global _graphiti_client
@@ -75,17 +75,11 @@ async def cleanup_dependencies():
     logger.info("Cleaning up API dependencies")
 
     try:
-        # Close database connections
+        # Close database connections via connection manager
+        # (stores use the connection manager's connections, so closing it cleans up all)
         if _connection_manager:
-            await _connection_manager.close_all()
+            await _connection_manager.close()
             logger.info("Database connections closed")
-
-        # Cleanup stores
-        if _postgres_store:
-            await _postgres_store.close()
-
-        if _neo4j_store:
-            await _neo4j_store.close()
 
     except Exception as e:
         logger.error("Error during dependency cleanup", error=str(e))
@@ -182,7 +176,7 @@ async def get_postgres_session() -> AsyncGenerator:
     """
     conn_manager = await get_connection_manager()
 
-    async with conn_manager.get_postgres_connection() as conn:
+    async with conn_manager.get_pg_connection() as conn:
         yield conn
 
 
@@ -219,17 +213,12 @@ async def check_database_health() -> dict:
     }
 
     try:
-        # Check PostgreSQL
-        if _postgres_store:
-            health["postgres"] = await _postgres_store.health_check()
-
-        # Check Neo4j
-        if _neo4j_store:
-            health["neo4j"] = await _neo4j_store.health_check()
-
-        # Check cache
-        if _cache_manager:
-            health["cache"] = _cache_manager.health_check()
+        # Check all services via connection manager
+        if _connection_manager:
+            conn_health = await _connection_manager.health_check()
+            health["postgres"] = conn_health.get("postgres", {}).get("healthy", False)
+            health["neo4j"] = conn_health.get("neo4j", {}).get("healthy", False)
+            health["cache"] = conn_health.get("redis", {}).get("healthy", False)
 
     except Exception as e:
         logger.error("Health check failed", error=str(e))

@@ -200,7 +200,7 @@ class ClientsConfig:
         """Check if Neo4j is configured."""
         return bool(self.neo4j_uri and self.neo4j_user and self.neo4j_password)
 
-    def create_http_client(self, timeout: float = 30.0, **kwargs) -> "AsyncClient":
+    def create_http_client(self, timeout: float = 30.0, **kwargs: Any) -> "AsyncClient":
         """
         Create a properly configured HTTP client for external API calls.
 

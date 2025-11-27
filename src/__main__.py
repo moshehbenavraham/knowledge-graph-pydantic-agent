@@ -1,4 +1,4 @@
-def main():
+def main() -> None:
     print("Please run the agent using the Streamlit UI:")
     print("streamlit run src/ui/streamlit_app.py")
 

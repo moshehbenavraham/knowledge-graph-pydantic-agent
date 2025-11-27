@@ -85,6 +85,10 @@ async def load_credentials_from_database() -> dict:
                 logger.debug("Skipping inactive user", username=username)
                 continue  # Skip inactive users
 
+            if not username:
+                logger.debug("Skipping user with no username")
+                continue  # Skip users without username
+
             # Get password_hash directly from database (without popping it)
             from src.clients.database import get_supabase_client
 
@@ -108,7 +112,9 @@ async def load_credentials_from_database() -> dict:
                 password_hash_length=len(password_hash) if password_hash else 0,
             )
 
-            credentials["usernames"][username] = {
+            # username is guaranteed to be a non-empty string at this point
+            username_str: str = str(username)
+            credentials["usernames"][username_str] = {
                 "email": user.get("email") or "",
                 "name": user.get("full_name") or "",
                 "password": password_hash or "",
@@ -218,7 +224,8 @@ def load_auth_config(config_path: str = "config/auth_config.yaml") -> dict:
     else:
         logger.info("Using YAML authentication backend - credentials from config file")
         if "credentials" in config:
-            user_count = len(config["credentials"].get("usernames", {}))
+            creds = config["credentials"]
+            user_count = len(creds.get("usernames", {}) if isinstance(creds, dict) else {})
             logger.debug("YAML credentials found", user_count=user_count)
         else:
             logger.error("No credentials found in YAML config")

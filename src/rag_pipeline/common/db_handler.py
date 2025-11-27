@@ -5,7 +5,7 @@ from typing import Any
 
 import structlog
 
-from supabase import create_client  # type: ignore
+from supabase import create_client
 from supabase.client import Client
 
 structlog_logger = structlog.get_logger(__name__)

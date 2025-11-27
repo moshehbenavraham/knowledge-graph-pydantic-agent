@@ -18,6 +18,7 @@ from src.agentic_rag.search.intent_analyzer import (
     SearchIntent,
 )
 from src.agentic_rag.search.vector_search import VectorSearch
+from src.agentic_rag.storage.graphiti_client import GraphitiClient
 from src.api.dependencies import (
     get_cache_manager,
     get_graphiti_client,
@@ -136,7 +137,7 @@ async def search(
 async def search_suggest(
     query: str = Query(..., min_length=2, description="Search query prefix"),
     limit: int = Query(5, ge=1, le=20, description="Maximum suggestions"),
-):
+) -> dict[str, Any]:
     """
     Search query suggestions/autocomplete.
 
@@ -162,8 +163,8 @@ async def search_suggest(
 @router.get("/entities/{entity_name}")
 async def get_entity_info(
     entity_name: str,
-    graphiti_client=Depends(get_graphiti_client),
-):
+    graphiti_client: GraphitiClient | None = Depends(get_graphiti_client),
+) -> dict[str, Any]:
     """
     Get information about specific entity from knowledge graph.
 
@@ -199,8 +200,8 @@ async def find_relationships(
     entity1: str = Query(..., description="First entity name"),
     entity2: str = Query(..., description="Second entity name"),
     max_depth: int = Query(3, ge=1, le=5, description="Max relationship depth"),
-    graphiti_client=Depends(get_graphiti_client),
-):
+    graphiti_client: GraphitiClient | None = Depends(get_graphiti_client),
+) -> dict[str, Any]:
     """
     Find relationships between two entities in knowledge graph.
 

@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from prometheus_client import Counter, Histogram
 
 from src.agentic_rag.ingestion.pipeline import DocumentIngestionPipeline as IngestionPipeline
+from src.agentic_rag.storage.graphiti_client import GraphitiClient
 from src.agentic_rag.storage.postgres_store import PostgresStore
 from src.api.dependencies import get_graphiti_client, get_postgres_store
 from src.api.models import (
@@ -38,7 +39,7 @@ ingest_duration = Histogram("ingest_duration_seconds", "Document ingestion durat
 async def ingest_document(
     request: IngestRequest,
     postgres_store: PostgresStore = Depends(get_postgres_store),
-    graphiti_client=Depends(get_graphiti_client),
+    graphiti_client: GraphitiClient | None = Depends(get_graphiti_client),
 ) -> IngestResponse:
     """
     Ingest new document into the system.
@@ -218,8 +219,8 @@ async def get_document(
 async def delete_document(
     document_id: str,
     postgres_store: PostgresStore = Depends(get_postgres_store),
-    graphiti_client=Depends(get_graphiti_client),
-):
+    graphiti_client: GraphitiClient | None = Depends(get_graphiti_client),
+) -> dict[str, str]:
     """
     Delete document and associated data.
 
@@ -266,9 +267,9 @@ async def delete_document(
 async def update_document(
     document_id: str,
     title: str | None = None,
-    metadata: dict | None = None,
+    metadata: dict[str, Any] | None = None,
     postgres_store: PostgresStore = Depends(get_postgres_store),
-):
+) -> dict[str, Any]:
     """
     Update document metadata.
 
@@ -328,8 +329,8 @@ async def update_document(
 async def reindex_document(
     document_id: str,
     postgres_store: PostgresStore = Depends(get_postgres_store),
-    graphiti_client=Depends(get_graphiti_client),
-):
+    graphiti_client: GraphitiClient | None = Depends(get_graphiti_client),
+) -> dict[str, str]:
     """
     Reindex document (regenerate embeddings and knowledge extraction).
 
@@ -373,8 +374,8 @@ async def reindex_document(
 async def get_document_stats(
     document_id: str,
     postgres_store: PostgresStore = Depends(get_postgres_store),
-    graphiti_client=Depends(get_graphiti_client),
-):
+    graphiti_client: GraphitiClient | None = Depends(get_graphiti_client),
+) -> dict[str, Any]:
     """
     Get statistics for document.
 

@@ -6,7 +6,7 @@ from src.config.clients import clients_config
 logger = structlog.get_logger(__name__)
 
 
-def get_embedding_client():
+def get_embedding_client() -> AsyncOpenAI:
     """Get the embedding client for document processing and RAG."""
     logger.info(
         "Creating embedding client",

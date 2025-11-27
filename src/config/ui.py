@@ -28,7 +28,7 @@ class DashboardConfig:
 class UIConfig:
     """Facade for UI-related configuration."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize dashboard configuration."""
         self.dashboard = DashboardConfig()
 

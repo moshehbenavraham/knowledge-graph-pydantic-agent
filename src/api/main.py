@@ -4,7 +4,9 @@ FastAPI main application - Phase 4: Production-Ready API.
 Comprehensive API with streaming, caching, resilience, and observability.
 """
 
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from typing import Any
 
 import structlog
 import uvicorn
@@ -47,7 +49,7 @@ except ImportError:
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """
     Application lifespan manager.
 
@@ -150,7 +152,7 @@ app.include_router(analytics.router, tags=["analytics"])
 
 
 @app.get("/")
-async def root():
+async def root() -> dict[str, Any]:
     """Root endpoint with API information."""
     return {
         "name": "Agentic RAG API",
@@ -174,7 +176,7 @@ async def root():
 
 
 @app.get("/api/v1/status", response_model=StatusResponse)
-async def status():
+async def status() -> StatusResponse:
     """
     Get API status and health information.
 
@@ -212,7 +214,7 @@ async def status():
 
 
 @app.get("/metrics")
-async def metrics():
+async def metrics() -> Response:
     """
     Prometheus metrics endpoint.
 
@@ -224,8 +226,8 @@ async def metrics():
     )
 
 
-@app.delete("/api/v1/cache")
-async def clear_cache(pattern: str = "*"):
+@app.delete("/api/v1/cache", response_model=None)
+async def clear_cache(pattern: str = "*") -> dict[str, str] | JSONResponse:
     """
     Clear cache entries.
 
@@ -252,7 +254,7 @@ async def clear_cache(pattern: str = "*"):
 
 
 @app.exception_handler(404)
-async def not_found_handler(request: Request, exc):
+async def not_found_handler(request: Request, exc: Exception) -> JSONResponse:
     """Handle 404 Not Found errors."""
     return JSONResponse(
         status_code=404,
@@ -266,7 +268,7 @@ async def not_found_handler(request: Request, exc):
 
 
 @app.exception_handler(500)
-async def internal_error_handler(request: Request, exc):
+async def internal_error_handler(request: Request, exc: Exception) -> JSONResponse:
     """Handle 500 Internal Server errors."""
     logger.error(
         "internal_server_error",
@@ -288,7 +290,7 @@ async def internal_error_handler(request: Request, exc):
 # ===== Tracing Setup =====
 
 
-def _setup_tracing(app: FastAPI):
+def _setup_tracing(app: FastAPI) -> None:
     """
     Setup OpenTelemetry tracing.
 
@@ -326,7 +328,7 @@ def _setup_tracing(app: FastAPI):
         trace.set_tracer_provider(provider)
 
         # Setup OTLP exporter (or Jaeger)
-        if api_config._settings.jaeger_host:
+        if api_config.jaeger_host:
             # Use Jaeger if configured
             from opentelemetry.exporter.jaeger.thrift import JaegerExporter
 
@@ -345,7 +347,7 @@ def _setup_tracing(app: FastAPI):
 
         logger.info(
             "tracing_enabled",
-            exporter="jaeger" if api_config._settings.jaeger_host else "otlp",
+            exporter="jaeger" if api_config.jaeger_host else "otlp",
         )
 
     except ImportError as e:
@@ -361,7 +363,7 @@ def _setup_tracing(app: FastAPI):
 # ===== Server Runner =====
 
 
-def run_server():
+def run_server() -> None:
     """
     Run the FastAPI server.
 

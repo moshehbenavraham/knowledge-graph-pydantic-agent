@@ -1,4 +1,5 @@
 import os
+from typing import Any
 
 import structlog
 from mem0 import AsyncMemory, Memory
@@ -8,7 +9,7 @@ from src.config import clients
 logger = structlog.get_logger(__name__)
 
 
-def get_mem0_config():
+def get_mem0_config() -> dict[str, Any]:
     # Get configuration from centralized settings
     # Note: Don't call get_settings() here as it may re-cache old values
     # The clients.clients_config already has the current settings
@@ -20,7 +21,7 @@ def get_mem0_config():
     )
 
     # Initialize config dictionary
-    config = {}
+    config: dict[str, Any] = {}
 
     # Configure LLM based on provider
     # Use clients.clients_config to get current singleton instance (supports test reloading)
@@ -113,13 +114,13 @@ def get_mem0_config():
     return config
 
 
-def get_mem0_client():
+def get_mem0_client() -> Memory:
     # Create and return the Memory client
     config = get_mem0_config()
     return Memory.from_config(config)
 
 
-async def get_mem0_client_async():
+async def get_mem0_client_async() -> AsyncMemory:
     # Create and return the Memory client
     config = get_mem0_config()
     return await AsyncMemory.from_config(config)

@@ -254,7 +254,7 @@ def cache(
             cached_value = cache_obj.get(cache_key)
             if cached_value is not None:
                 logger.debug("Cache hit", function=func.__name__, key=cache_key)
-                return cached_value  # type: ignore[return-value]
+                return cached_value
 
             # Execute function
             result = await func(*args, **kwargs)  # type: ignore[misc]
@@ -279,10 +279,10 @@ def cache(
             cached_value = cache_obj.get(cache_key)
             if cached_value is not None:
                 logger.debug("Cache hit", function=func.__name__, key=cache_key)
-                return cached_value  # type: ignore[return-value]
+                return cached_value
 
             # Execute function
-            result = func(*args, **kwargs)  # type: ignore[return-value]
+            result = func(*args, **kwargs)
 
             # Store in cache
             cache_obj.set(cache_key, result, ttl)
@@ -293,7 +293,7 @@ def cache(
         # Return appropriate wrapper based on function type
         if asyncio.iscoroutinefunction(func):
             return async_wrapper  # type: ignore[return-value]
-        return sync_wrapper  # type: ignore[return-value]
+        return sync_wrapper
 
     return decorator
 

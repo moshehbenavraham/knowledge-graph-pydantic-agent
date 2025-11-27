@@ -112,6 +112,9 @@ async def process_file_with_agentic_rag(
         )
         return False
 
+    # Unreachable but satisfies mypy's control flow analysis
+    return False
+
 
 def process_file_with_agentic_rag_sync(
     text: str,

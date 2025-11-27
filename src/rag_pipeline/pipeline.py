@@ -10,7 +10,7 @@ structlog_logger = structlog.get_logger(__name__)
 settings = get_settings()
 
 
-def main():
+def main() -> None:
     structlog_logger.info("=" * 80)
     structlog_logger.info("RAG Pipeline main() called")
 

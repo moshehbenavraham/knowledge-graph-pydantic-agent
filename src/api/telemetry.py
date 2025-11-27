@@ -150,7 +150,7 @@ class OpenTelemetryConfig:
         logger.info(f"OpenTelemetry metrics initialized for {self.service_name}")
         return provider
 
-    def instrument_fastapi(self, app: FastAPI):
+    def instrument_fastapi(self, app: FastAPI) -> None:
         """Instrument FastAPI application with OpenTelemetry."""
         # Instrument FastAPI
         FastAPIInstrumentor.instrument_app(app)
@@ -193,7 +193,7 @@ def setup_telemetry(
     app: FastAPI,
     otlp_endpoint: str | None = None,
     enable_console_export: bool = False,
-):
+) -> None:
     """
     Set up comprehensive telemetry for the FastAPI application.
 
@@ -225,7 +225,7 @@ def setup_telemetry(
 
 def record_llm_request(
     provider: str, model: str, duration: float, success: bool, error_type: str = ""
-):
+) -> None:
     """Record LLM request metrics."""
     struct_logger.info(
         "Recording LLM request", provider=provider, model=model, duration=duration, success=success
@@ -238,14 +238,16 @@ def record_llm_request(
         ).inc()
 
 
-def record_vector_search(search_type: str, duration: float):
+def record_vector_search(search_type: str, duration: float) -> None:
     """Record vector search metrics."""
     struct_logger.info("Recording vector search", search_type=search_type, duration=duration)
     vector_search_total.labels(search_type=search_type).inc()
     vector_search_duration_seconds.labels(search_type=search_type).observe(duration)
 
 
-def record_graph_search(query_type: str, duration: float, success: bool, error_type: str = ""):
+def record_graph_search(
+    query_type: str, duration: float, success: bool, error_type: str = ""
+) -> None:
     """Record graph search metrics."""
     struct_logger.info(
         "Recording graph search", query_type=query_type, duration=duration, success=success
@@ -256,7 +258,7 @@ def record_graph_search(query_type: str, duration: float, success: bool, error_t
         graph_search_failures_total.labels(error_type=error_type).inc()
 
 
-def record_cache_access(hit: bool):
+def record_cache_access(hit: bool) -> None:
     """Record cache access metrics."""
     struct_logger.info("Recording cache access", hit=hit)
     if hit:
@@ -265,7 +267,7 @@ def record_cache_access(hit: bool):
         cache_misses_total.inc()
 
 
-def record_document_ingestion(success: bool, error_type: str = ""):
+def record_document_ingestion(success: bool, error_type: str = "") -> None:
     """Record document ingestion metrics."""
     document_ingestion_total.inc()
     if not success:

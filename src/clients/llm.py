@@ -27,7 +27,7 @@ except ImportError:
     AnthropicProvider = None  # type: ignore
 
 
-def get_llm_client():
+def get_llm_client() -> AsyncOpenAI | None:
     """Get the LLM client for agent interactions."""
     logger.info(
         "Creating LLM client",
@@ -47,7 +47,7 @@ def get_llm_client():
     return llm_client
 
 
-def get_model():
+def get_model() -> AnthropicModel | OpenAIChatModel:
     """
     Get the configured model for the agent.
 

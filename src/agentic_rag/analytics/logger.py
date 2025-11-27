@@ -12,8 +12,11 @@ import json
 import logging
 from collections import deque
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
+
+if TYPE_CHECKING:
+    from src.agentic_rag.storage.connection_manager import ConnectionManager
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -147,10 +150,10 @@ class AnalyticsLogger:
 
     def __init__(
         self,
-        connection_manager,
+        connection_manager: "ConnectionManager",
         batch_size: int = 100,
         batch_interval_seconds: float = 5.0,
-    ):
+    ) -> None:
         """
         Initialize analytics logger.
 

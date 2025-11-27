@@ -68,8 +68,9 @@ class TestCoverageRule(BaseValidationRule):
             analysis = cov.analysis2(str(file_path))
             if analysis:
                 _, executable, _excluded, missing, _ = analysis
-                if executable:
-                    coverage_pct = ((executable - len(missing)) / executable) * 100
+                executable_count = len(executable) if executable else 0
+                if executable_count > 0:
+                    coverage_pct = ((executable_count - len(missing)) / executable_count) * 100
 
                     if coverage_pct < self.MINIMUM_COVERAGE:
                         self.add_violation(
