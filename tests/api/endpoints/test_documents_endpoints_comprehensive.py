@@ -94,7 +94,7 @@ class TestDocumentIngestion:
         mock_result.document_id = "doc123"
         mock_result.chunks_created = 5
         mock_result.entities_extracted = 3
-        mock_result.get = Mock(return_value=2)
+        mock_result.relationships_extracted = 2
         mock_ingestion_pipeline.ingest_document.return_value = mock_result
 
         response = client.post(

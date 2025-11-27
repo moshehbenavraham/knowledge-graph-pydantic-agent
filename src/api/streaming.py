@@ -41,7 +41,7 @@ class SSEManager:
         self.chunk_size = chunk_size
 
     async def stream_agent_response(
-        self, agent: Agent, message: str, deps: Any, **kwargs
+        self, agent: Agent[Any, Any], message: str, deps: Any, **kwargs
     ) -> AsyncGenerator[str, None]:
         """
         Stream agent response as SSE events.
@@ -71,15 +71,12 @@ class SSEManager:
                         event="content", data={"text": chunk}, event_id=event_id
                     )
 
-                # Get final result with metadata
-                final_result = await result
-
                 # Send completion event with metadata
                 yield self._format_event(
                     event="done",
                     data={
                         "message_id": event_id,
-                        "usage": final_result.usage() if hasattr(final_result, "usage") else {},
+                        "usage": result.usage() if hasattr(result, "usage") else {},
                     },
                     event_id=event_id,
                 )
@@ -274,7 +271,7 @@ class WebSocketManager:
             await self.disconnect(connection_id)
 
     async def handle_agent_stream(
-        self, connection_id: str, agent: Agent, message: str, deps: Any, **kwargs
+        self, connection_id: str, agent: Agent[Any, Any], message: str, deps: Any, **kwargs
     ):
         """
         Stream agent response through WebSocket.
@@ -299,15 +296,12 @@ class WebSocketManager:
                         connection_id, {"type": "stream_chunk", "content": text}
                     )
 
-                # Get final result
-                final_result = await result
-
                 # Send completion message
                 await self.send_message(
                     connection_id,
                     {
                         "type": "stream_complete",
-                        "usage": final_result.usage() if hasattr(final_result, "usage") else {},
+                        "usage": result.usage() if hasattr(result, "usage") else {},
                     },
                 )
 

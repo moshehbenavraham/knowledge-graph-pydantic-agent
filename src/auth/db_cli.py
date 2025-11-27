@@ -103,7 +103,9 @@ async def cmd_get(username: str):
 
         # Get roles
         roles = get_user_roles(user["id"])
-        role_names = [r.get("role_name") for r in roles] if roles else []
+        role_names: list[str] = (
+            [str(r.get("role_name")) for r in roles if r.get("role_name")] if roles else []
+        )
 
         # Get active sessions
         sessions = get_user_sessions(user["id"], active_only=True)

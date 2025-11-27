@@ -18,8 +18,10 @@ except ImportError:
 
 try:
     from pydantic_ai.models.anthropic import AnthropicModel
+    from pydantic_ai.providers.anthropic import AnthropicProvider
 except ImportError:
     AnthropicModel = None  # type: ignore
+    AnthropicProvider = None  # type: ignore
 
 from src.config import get_settings
 from supabase.client import Client
@@ -39,7 +41,7 @@ async def image_analysis_tool(supabase: Client, document_id: str, query: str) ->
         # Define the vision agent based on the provider
         model: Any
         if provider == "anthropic":
-            if AnthropicModel is None:
+            if AnthropicModel is None or AnthropicProvider is None:
                 raise ImportError("Anthropic model not available")
 
             # Map common model names to Anthropic's naming
@@ -51,7 +53,7 @@ async def image_analysis_tool(supabase: Client, document_id: str, query: str) ->
                 "claude-3-haiku": "claude-3-haiku-20240307",
             }
             anthropic_model = model_map.get(llm, llm)
-            model = AnthropicModel(anthropic_model, api_key=api_key)
+            model = AnthropicModel(anthropic_model, provider=AnthropicProvider(api_key=api_key))
         else:
             base_url = settings.llm_base_url
             model = OpenAIChatModel(

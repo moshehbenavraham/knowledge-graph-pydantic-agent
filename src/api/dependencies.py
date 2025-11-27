@@ -6,6 +6,7 @@ Provides database sessions, search clients, agent orchestrator, and cache.
 
 from collections.abc import AsyncGenerator
 
+import httpx
 import structlog
 from fastapi import Depends, HTTPException, status
 
@@ -17,6 +18,8 @@ from src.agentic_rag.storage.connection_manager import ConnectionManager
 from src.agentic_rag.storage.graphiti_client import GraphitiClient
 from src.agentic_rag.storage.neo4j_store import Neo4jStore
 from src.agentic_rag.storage.postgres_store import PostgresStore
+from src.clients.database import get_supabase_client
+from src.clients.embedding import get_embedding_client
 from src.config import get_settings
 from src.utils.cache import RedisCache, get_cache
 
@@ -54,7 +57,7 @@ async def init_dependencies():
         # Initialize Neo4j if enabled
         if settings.enable_graph_rag:
             _neo4j_store = Neo4jStore(_connection_manager)
-            _graphiti_client = GraphitiClient()
+            _graphiti_client = GraphitiClient(_neo4j_store)
             logger.info("Neo4j and Graphiti initialized")
         else:
             logger.info("Graph RAG disabled, skipping Neo4j initialization")
@@ -131,10 +134,10 @@ async def get_cache_manager() -> RedisCache:
 
 
 async def get_vector_search(
-    postgres_store: PostgresStore = Depends(get_postgres_store),
+    connection_manager: ConnectionManager = Depends(get_connection_manager),
 ) -> VectorSearch:
     """Get vector search instance."""
-    return VectorSearch(postgres_store)
+    return VectorSearch(connection_manager)
 
 
 async def get_hybrid_search(
@@ -149,11 +152,7 @@ async def get_intent_analyzer() -> IntentAnalyzer:
     return IntentAnalyzer()
 
 
-async def get_agent_deps(
-    postgres_store: PostgresStore = Depends(get_postgres_store),
-    neo4j_store: Neo4jStore | None = Depends(get_neo4j_store),
-    cache_manager: RedisCache = Depends(get_cache_manager),
-) -> UnifiedAgentDeps:
+async def get_agent_deps() -> UnifiedAgentDeps:
     """
     Get unified agent dependencies.
 
@@ -162,12 +161,13 @@ async def get_agent_deps(
     settings = get_settings()
 
     return UnifiedAgentDeps(
-        postgres_store=postgres_store,
-        neo4j_store=neo4j_store,
-        cache_manager=cache_manager,
-        enable_web_search=settings.enable_web_search,
-        enable_sql_query=settings.enable_sql_query,
-        enable_code_execution=settings.enable_code_execution,
+        supabase=get_supabase_client(),
+        embedding_client=get_embedding_client(),
+        http_client=httpx.AsyncClient(timeout=30.0),
+        brave_api_key=settings.brave_api_key,
+        searxng_base_url=settings.searxng_base_url,
+        jina_api_key=settings.jina_api_key,
+        web_search_provider=settings.web_search_provider,
     )
 
 

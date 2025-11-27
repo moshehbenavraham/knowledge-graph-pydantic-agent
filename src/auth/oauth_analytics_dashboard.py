@@ -101,7 +101,7 @@ def render_oauth_analytics_dashboard() -> None:
     # Check if user is admin
     from src.auth.admin_2fa_management import is_admin
 
-    is_admin_user = asyncio.run(is_admin(current_username))
+    is_admin_user: bool = is_admin(current_username)
     if not is_admin_user:
         st.error("⛔ Access denied. Admin privileges required.")
         return

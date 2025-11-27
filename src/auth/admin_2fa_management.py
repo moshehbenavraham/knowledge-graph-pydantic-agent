@@ -5,7 +5,6 @@ Provides admin interface for managing 2FA requirements for users.
 This component can be included in admin dashboards or user management pages.
 """
 
-import asyncio
 from typing import Any
 
 import streamlit as st
@@ -16,7 +15,7 @@ from src.auth.db import get_user_roles, list_users, set_2fa_requirement
 logger = structlog.get_logger(__name__)
 
 
-async def is_admin(username: str) -> bool:
+def is_admin(username: str) -> bool:
     """
     Check if a user has admin role.
 
@@ -53,7 +52,7 @@ def render_2fa_management_ui() -> None:
         return
 
     # Check if current user is admin
-    is_admin_user = asyncio.run(is_admin(current_username))
+    is_admin_user = is_admin(current_username)
     if not is_admin_user:
         st.error("⛔ Access denied. Admin privileges required.")
         return
@@ -63,7 +62,7 @@ def render_2fa_management_ui() -> None:
 
     # Load all users
     try:
-        users: list[dict[str, Any]] = asyncio.run(list_users(limit=1000, include_deleted=False))
+        users: list[dict[str, Any]] = list_users(limit=1000, include_deleted=False)
 
         # Filter to active users only
         active_users = [u for u in users if u.get("is_active", False)]
@@ -124,11 +123,9 @@ def render_2fa_management_ui() -> None:
                 totp_manager = get_totp_manager()
                 backup_code_manager = get_backup_code_manager()
                 try:
-                    is_2fa_enabled: bool = asyncio.run(totp_manager.is_2fa_enabled(user["id"]))
+                    is_2fa_enabled: bool = totp_manager.is_2fa_enabled(user["id"])
                     backup_codes_count = (
-                        asyncio.run(backup_code_manager.get_unused_count(user["id"]))
-                        if is_2fa_enabled
-                        else 0
+                        backup_code_manager.get_unused_count(user["id"]) if is_2fa_enabled else 0
                     )
 
                     if is_2fa_enabled:
@@ -157,7 +154,7 @@ def render_2fa_management_ui() -> None:
                         type="primary" if not current_requirement else "secondary",
                     ):
                         try:
-                            asyncio.run(set_2fa_requirement(selected_username, True))
+                            set_2fa_requirement(selected_username, True)
                             st.success(f"✅ 2FA is now required for user '{selected_username}'")
                             logger.info(
                                 "2FA requirement enabled",
@@ -185,7 +182,7 @@ def render_2fa_management_ui() -> None:
                         type="secondary",
                     ):
                         try:
-                            asyncio.run(set_2fa_requirement(selected_username, False))
+                            set_2fa_requirement(selected_username, False)
                             st.success(f"✅ 2FA is now optional for user '{selected_username}'")
                             logger.info(
                                 "2FA requirement disabled",
@@ -221,10 +218,10 @@ def render_2fa_management_ui() -> None:
                     # Get all users with admin role
                     admin_count = 0
                     for user in active_users:
-                        roles: list[dict[str, Any]] = asyncio.run(get_user_roles(user["id"]))
+                        roles: list[dict[str, Any]] = get_user_roles(user["id"])
                         if any(role.get("name") == "admin" for role in roles):
                             if not user.get("requires_2fa", False):
-                                asyncio.run(set_2fa_requirement(user["username"], True))
+                                set_2fa_requirement(user["username"], True)
                                 admin_count += 1
 
                     if admin_count > 0:
@@ -263,7 +260,7 @@ def render_user_2fa_settings(username: str) -> None:
         # Get user info
         from src.auth.db import get_user_by_username
 
-        user: dict[str, Any] | None = asyncio.run(get_user_by_username(username))
+        user: dict[str, Any] | None = get_user_by_username(username)
         if not user:
             st.error("User not found")
             return
@@ -276,10 +273,8 @@ def render_user_2fa_settings(username: str) -> None:
 
         totp_manager = get_totp_manager()
         backup_code_manager = get_backup_code_manager()
-        is_2fa_enabled: bool = asyncio.run(totp_manager.is_2fa_enabled(user_id))
-        backup_codes_count = (
-            asyncio.run(backup_code_manager.get_unused_count(user_id)) if is_2fa_enabled else 0
-        )
+        is_2fa_enabled: bool = totp_manager.is_2fa_enabled(user_id)
+        backup_codes_count = backup_code_manager.get_unused_count(user_id) if is_2fa_enabled else 0
 
         # Display current status
         if requires_2fa:
@@ -299,7 +294,7 @@ def render_user_2fa_settings(username: str) -> None:
 
                 backup_code_manager = get_backup_code_manager()
                 try:
-                    new_codes = asyncio.run(backup_code_manager.generate_backup_codes(user_id))
+                    new_codes = backup_code_manager.create_backup_codes(user_id)
                     st.success("✅ New backup codes generated!")
                     st.code("\n".join(new_codes), language=None)
                     st.warning(
@@ -318,7 +313,7 @@ def render_user_2fa_settings(username: str) -> None:
                     )
                     if st.button("⚠️ Yes, Disable 2FA", type="primary"):
                         try:
-                            success: bool = asyncio.run(totp_manager.disable_2fa(user_id))
+                            success: bool = totp_manager.disable_2fa(user_id)
                             if success:
                                 st.success("✅ 2FA disabled successfully")
                                 st.rerun()

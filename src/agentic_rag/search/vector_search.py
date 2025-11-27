@@ -9,7 +9,7 @@ import json
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 import structlog
@@ -201,7 +201,9 @@ class VectorSearch:
 
         # Generate query embedding
         embed_start = datetime.now()
-        query_embedding = await self.embedder.embed(query)
+        raw_embedding = await self.embedder.embed(query)
+        # Single text input returns single embedding (list[float]), not batch
+        query_embedding: list[float] = cast("list[float]", raw_embedding)
         embed_time = (datetime.now() - embed_start).total_seconds()
         structlog_logger.info(
             "Embedding generated",

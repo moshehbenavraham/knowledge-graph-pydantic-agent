@@ -8,7 +8,7 @@ import ast
 import re
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import structlog
 
@@ -112,7 +112,7 @@ class BaseValidationRule(ABC):
         detected_code: str | None = None,
         suggested_fix: str | None = None,
         confidence: ConfidenceLevel = ConfidenceLevel.HIGH,
-        severity: str = "error",
+        severity: Literal["error", "warning", "info"] = "error",
         metadata: dict[str, Any] | None = None,
     ) -> None:
         """
@@ -133,6 +133,9 @@ class BaseValidationRule(ABC):
         """
         # Check for inline suppression
         suppressed, suppression_reason = self._check_suppression(line_number)
+
+        # Ensure file_path is set (should be set by prepare_execution)
+        assert self.file_path is not None, "file_path must be set before adding violations"
 
         location = ViolationLocation(
             file_path=self.file_path,

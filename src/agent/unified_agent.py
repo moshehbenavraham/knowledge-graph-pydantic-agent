@@ -592,11 +592,17 @@ async def run_unified_agent(
         Agent response with answer and metadata
     """
     # Create dependencies
+    from src.clients.database import get_supabase_client
+    from src.clients.embedding import get_embedding_client
     from src.config.clients import clients_config
 
+    # Use provided clients or get from centralized config
+    resolved_supabase = supabase_client or get_supabase_client()
+    resolved_embedding = embedding_client or get_embedding_client()
+
     deps = UnifiedAgentDeps(
-        supabase=supabase_client,
-        embedding_client=embedding_client,
+        supabase=resolved_supabase,
+        embedding_client=resolved_embedding,
         http_client=http_client
         or clients_config.create_http_client(),  # CONST-III-001 - Use centralized HTTP client factory
         brave_api_key=agent_config.brave_api_key,

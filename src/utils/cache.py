@@ -45,6 +45,11 @@ class RedisCache:
         settings = get_settings()
         redis_url = redis_url or settings.redis_url
 
+        if redis_url is None:
+            logger.warning("No Redis URL configured, using in-memory cache")
+            self._redis_client = None
+            return
+
         try:
             # Create connection pool for better performance
             pool = ConnectionPool.from_url(

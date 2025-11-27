@@ -186,6 +186,9 @@ async def request_password_reset(
 
         # Send reset email
         email = user.get("email")
+        if not email:
+            logger.warning("User has no email address", username=user.get("username"))
+            return (True, "If an account exists, a password reset link has been sent.")
         email_sent = await send_reset_email(email, reset_token, reset_url)
 
         if email_sent:

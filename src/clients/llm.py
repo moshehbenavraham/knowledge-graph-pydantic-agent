@@ -21,8 +21,10 @@ except ImportError:
 
 try:
     from pydantic_ai.models.anthropic import AnthropicModel
+    from pydantic_ai.providers.anthropic import AnthropicProvider
 except ImportError:
     AnthropicModel = None  # type: ignore
+    AnthropicProvider = None  # type: ignore
 
 
 def get_llm_client():
@@ -65,7 +67,7 @@ def get_model():
     logger.info("Getting configured model", provider=provider, model=llm)
 
     if provider == "anthropic":
-        if AnthropicModel is None:
+        if AnthropicModel is None or AnthropicProvider is None:
             raise ImportError("Anthropic model not available")
 
         # Map common model names to Anthropic's naming
@@ -78,7 +80,7 @@ def get_model():
         }
         # Use mapped name if available, otherwise use as-is
         anthropic_model = model_map.get(llm, llm)
-        return AnthropicModel(anthropic_model, api_key=api_key)
+        return AnthropicModel(anthropic_model, provider=AnthropicProvider(api_key=api_key))
 
     # OpenAI, Ollama, and OpenRouter all use OpenAI-compatible API
     # Ollama exposes an OpenAI-compatible endpoint at http://localhost:11434/v1

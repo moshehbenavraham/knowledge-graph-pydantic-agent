@@ -217,8 +217,12 @@ class EmbeddingGenerator:
         Returns:
             Single embedding or list of embeddings
         """
-        is_single = isinstance(text, str)
-        texts = [text] if is_single else text
+        if isinstance(text, str):
+            is_single = True
+            texts: list[str] = [text]
+        else:
+            is_single = False
+            texts = text
 
         structlog_logger.info("embed called", num_texts=len(texts), is_single=is_single)
 

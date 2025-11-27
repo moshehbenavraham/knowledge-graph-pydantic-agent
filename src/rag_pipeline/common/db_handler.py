@@ -18,6 +18,8 @@ from src.config import get_settings
 
 # Initialize Supabase client using centralized configuration
 settings = get_settings()
+if settings.supabase_url is None or settings.supabase_service_key is None:
+    raise ValueError("SUPABASE_URL and SUPABASE_SERVICE_KEY must be configured")
 supabase: Client = (
     create_client(  # Constitution exception: CONST-III-001 - RAG pipeline module-level client using centralized config
         settings.supabase_url, settings.supabase_service_key

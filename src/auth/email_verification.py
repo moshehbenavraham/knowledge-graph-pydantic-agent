@@ -304,6 +304,9 @@ async def request_email_verification(user_id: str, verification_url: str) -> tup
         # Send verification email
         email = user.get("email")
         user_name = user.get("full_name", "User")
+        if not email:
+            logger.warning("User has no email address", user_id=user_id)
+            return (False, "No email address on file. Please contact support.")
         email_sent = await send_verification_email(
             email, verification_token, verification_url, user_name
         )

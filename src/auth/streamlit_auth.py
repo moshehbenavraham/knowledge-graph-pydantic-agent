@@ -905,6 +905,12 @@ def require_authentication() -> tuple[str, stauth.Authenticate]:
         if authentication_status is True:
             logger.info("User authenticated successfully", username=username, name=name)
 
+            # Ensure username is set (should always be set if authenticated)
+            if not username:
+                logger.error("Authentication succeeded but username is None")
+                st.error("Authentication error. Please try again.")
+                st.stop()
+
             # Record successful login in rate limiter
             rate_limiter = get_rate_limiter()
             rate_limiter.record_successful_login(username)

@@ -176,7 +176,7 @@ class IntentAnalyzer:
         }
 
         # Determine primary intent
-        primary_intent = max(scores, key=scores.get)
+        primary_intent = max(scores, key=lambda x: scores[x])
         confidence = scores[primary_intent]
 
         # Adjust for ambiguous cases

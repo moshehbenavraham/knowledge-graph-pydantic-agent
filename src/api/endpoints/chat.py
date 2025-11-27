@@ -98,6 +98,8 @@ async def chat(
             message_id=message_id,
             metrics=ChatMetrics(
                 response_time_ms=duration_ms,
+                search_time_ms=None,
+                llm_time_ms=None,
                 tokens_used=usage.get("total_tokens", 0),
                 tokens_prompt=usage.get("prompt_tokens", 0),
                 tokens_completion=usage.get("completion_tokens", 0),

@@ -1001,6 +1001,7 @@ def update_oauth_tokens(
     access_token: str,
     refresh_token: str | None = None,
     token_expires_at: datetime | None = None,
+    profile_data: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """
     Update OAuth account tokens.
@@ -1010,6 +1011,7 @@ def update_oauth_tokens(
         access_token: New access token
         refresh_token: New refresh token (optional)
         token_expires_at: New expiration datetime (optional)
+        profile_data: Profile data from OAuth provider (optional)
 
     Returns:
         Updated OAuth account record
@@ -1022,6 +1024,7 @@ def update_oauth_tokens(
         oauth_account_id=str(oauth_account_id),
         has_refresh_token=bool(refresh_token),
         has_token_expires_at=bool(token_expires_at),
+        has_profile_data=bool(profile_data),
     )
     client = get_supabase_client()
 
@@ -1033,6 +1036,8 @@ def update_oauth_tokens(
         update_data["refresh_token"] = refresh_token
     if token_expires_at:
         update_data["token_expires_at"] = token_expires_at.isoformat()
+    if profile_data:
+        update_data["profile_data"] = profile_data
 
     response = (
         client.table("auth_oauth_accounts")

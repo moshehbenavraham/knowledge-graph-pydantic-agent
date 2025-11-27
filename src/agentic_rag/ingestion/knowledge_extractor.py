@@ -12,7 +12,7 @@ import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, ClassVar
+from typing import Any, ClassVar, cast
 
 from pydantic_ai import Agent
 from pydantic_ai.models.openai import OpenAIChatModel
@@ -205,8 +205,13 @@ class KnowledgeExtractor:
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        entities = results[0] if not isinstance(results[0], Exception) else []
-        facts = results[1] if not isinstance(results[1], Exception) else []
+        # Cast results to proper types (asyncio.gather returns list[object])
+        entities: list[Entity] = (
+            cast("list[Entity]", results[0]) if not isinstance(results[0], Exception) else []
+        )
+        facts: list[Fact] = (
+            cast("list[Fact]", results[1]) if not isinstance(results[1], Exception) else []
+        )
 
         # Extract relationships after entities (needs entity list)
         relationships = await self.extract_relationships(text, entities)

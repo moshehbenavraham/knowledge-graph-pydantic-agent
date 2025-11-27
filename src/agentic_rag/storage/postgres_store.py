@@ -624,8 +624,8 @@ class PostgresStore:
                 logger.warning(f"No valid fields to update for document {document_id}")
                 return False
 
-            set_clauses = []
-            values = [document_id]
+            set_clauses: list[str] = []
+            values: list[Any] = [document_id]
             param_idx = 2
 
             for field, value in update_fields.items():

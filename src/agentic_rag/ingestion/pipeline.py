@@ -9,7 +9,7 @@ import asyncio
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from src.agentic_rag.config import get_config
@@ -137,6 +137,8 @@ class DocumentIngestionPipeline:
             from src.config import get_settings
 
             settings = get_settings()
+            if settings.supabase_url is None or settings.supabase_service_key is None:
+                raise ValueError("SUPABASE_URL and SUPABASE_SERVICE_KEY must be configured")
             self.pg_store = SupabaseRestStore(settings.supabase_url, settings.supabase_service_key)
             self.connection_manager = None
         else:
@@ -587,7 +589,8 @@ class DocumentIngestionPipeline:
                     )
                 )
             else:
-                final_results.append(result)
+                # Result is IngestionResult, not Exception
+                final_results.append(cast("IngestionResult", result))
 
         return final_results
 

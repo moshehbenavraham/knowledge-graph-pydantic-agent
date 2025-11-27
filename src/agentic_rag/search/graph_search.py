@@ -9,7 +9,7 @@ import asyncio
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 
 import structlog
 
@@ -180,15 +180,23 @@ class GraphSearch:
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        # Handle results
-        facts = results[0] if not isinstance(results[0], Exception) else []
-        entities = results[1] if not isinstance(results[1], Exception) else []
-        relationships = results[2] if not isinstance(results[2], Exception) else []
+        # Handle results with proper type narrowing
+        facts: list[GraphFact] = (
+            cast("list[GraphFact]", results[0]) if not isinstance(results[0], Exception) else []
+        )
+        entities: list[GraphEntity] = (
+            cast("list[GraphEntity]", results[1]) if not isinstance(results[1], Exception) else []
+        )
+        relationships: list[GraphRelationship] = (
+            cast("list[GraphRelationship]", results[2])
+            if not isinstance(results[2], Exception)
+            else []
+        )
 
         # Log any exceptions
         for result, name in zip(results, ["facts", "entities", "relationships"], strict=False):
             if isinstance(result, Exception):
-                logger.warning(f"│  ⚠ {name.capitalize()} search failed: {result}")
+                logger.warning(f"|  Warning: {name.capitalize()} search failed: {result}")
 
         # Extract unique chunk references
         chunk_refs = self._extract_chunk_refs(facts, entities, relationships)
@@ -201,10 +209,11 @@ class GraphSearch:
         self._stats["relationships_found"] += len(relationships)
 
         logger.info(
-            f"│  ✓ Parallel searches completed\n"
-            f"│  Results: {len(facts)} facts, {len(entities)} entities, {len(relationships)} relationships\n"
-            f"│  Chunk references: {len(chunk_refs)} unique chunks\n"
-            f"└─ Graph search completed in {query_time:.3f}s"
+            f"|  Parallel searches completed "
+            f"Results: {len(facts)} facts, {len(entities)} entities, "
+            f"{len(relationships)} relationships "
+            f"Chunk references: {len(chunk_refs)} unique chunks "
+            f"Graph search completed in {query_time:.3f}s"
         )
 
         return GraphSearchResult(

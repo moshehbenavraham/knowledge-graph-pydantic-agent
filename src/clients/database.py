@@ -20,6 +20,9 @@ def get_supabase_client() -> Client:
     supabase_url = clients_config.supabase_url
     supabase_key = clients_config.supabase_service_key
 
+    if supabase_url is None or supabase_key is None:
+        raise ValueError("SUPABASE_URL and SUPABASE_SERVICE_KEY must be configured")
+
     # Create client with configured httpx client options
     options = ClientOptions(
         postgrest_client_timeout=60,

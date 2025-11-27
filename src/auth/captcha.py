@@ -326,9 +326,11 @@ def get_captcha_manager(
     global _captcha_manager
 
     if _captcha_manager is None:
-        provider = provider or getattr(settings, "captcha_provider", "hcaptcha")
+        resolved_provider: str = provider or str(
+            getattr(settings, "captcha_provider", None) or "hcaptcha"
+        )
         _captcha_manager = CaptchaManager(
-            provider=provider, site_key=site_key, secret_key=secret_key
+            provider=resolved_provider, site_key=site_key, secret_key=secret_key
         )
 
     return _captcha_manager

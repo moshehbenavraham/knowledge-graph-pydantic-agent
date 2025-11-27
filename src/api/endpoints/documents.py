@@ -6,6 +6,7 @@ Handles document ingestion, updates, listing, and content inspection.
 
 import time
 from typing import Any
+from uuid import UUID
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -172,7 +173,8 @@ async def get_document(
     """
     try:
         # Get document
-        document = await postgres_store.get_document(document_id)
+        doc_uuid = UUID(document_id)
+        document = await postgres_store.get_document(doc_uuid)
 
         if not document:
             raise HTTPException(
@@ -184,7 +186,7 @@ async def get_document(
         chunks = None
         if include_chunks:
             raw_chunks = await postgres_store.get_document_chunks(
-                document_id, include_embeddings=False
+                doc_uuid, include_embeddings=False
             )
             chunks = [chunk["content"] for chunk in raw_chunks]
 
@@ -227,7 +229,8 @@ async def delete_document(
         logger.info("document_deletion_started", document_id=document_id)
 
         # Check if document exists
-        document = await postgres_store.get_document(document_id)
+        doc_uuid = UUID(document_id)
+        document = await postgres_store.get_document(doc_uuid)
         if not document:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -235,7 +238,7 @@ async def delete_document(
             )
 
         # Delete from PostgreSQL (cascades to chunks)
-        await postgres_store.delete_document(document_id)
+        await postgres_store.delete_document(doc_uuid)
 
         # TODO: Clean up knowledge graph references
         if graphiti_client:
@@ -273,7 +276,8 @@ async def update_document(
     """
     try:
         # Check if document exists
-        document = await postgres_store.get_document(document_id)
+        doc_uuid = UUID(document_id)
+        document = await postgres_store.get_document(doc_uuid)
         if not document:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -294,7 +298,7 @@ async def update_document(
             )
 
         # Perform update
-        success = await postgres_store.update_document(document_id, updates)
+        success = await postgres_store.update_document(doc_uuid, updates)
 
         if not success:
             raise HTTPException(
@@ -335,7 +339,8 @@ async def reindex_document(
         logger.info("document_reindex_started", document_id=document_id)
 
         # Get document
-        document = await postgres_store.get_document(document_id)
+        doc_uuid = UUID(document_id)
+        document = await postgres_store.get_document(doc_uuid)
         if not document:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -377,7 +382,8 @@ async def get_document_stats(
     """
     try:
         # Check if document exists
-        document = await postgres_store.get_document(document_id)
+        doc_uuid = UUID(document_id)
+        document = await postgres_store.get_document(doc_uuid)
         if not document:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -385,7 +391,7 @@ async def get_document_stats(
             )
 
         # Get chunk count
-        chunk_count = await postgres_store.count_chunks(document_id)
+        chunk_count = await postgres_store.count_chunks(doc_uuid)
 
         # Get knowledge graph stats
         entity_count = 0

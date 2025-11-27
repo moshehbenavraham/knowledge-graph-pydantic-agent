@@ -70,7 +70,11 @@ class GitAttributionRule(BaseValidationRule):
             ]
 
             for commit in commits:
-                message = commit.message
+                # Ensure message is a string (decode if bytes)
+                raw_message = commit.message
+                message: str = (
+                    raw_message.decode() if isinstance(raw_message, bytes) else raw_message
+                )
 
                 # Skip merge commits
                 if len(commit.parents) > 1:
