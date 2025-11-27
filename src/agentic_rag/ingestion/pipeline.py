@@ -121,7 +121,7 @@ class DocumentIngestionPipeline:
 
         self._initialized = False
 
-    async def initialize(self):
+    async def initialize(self) -> None:
         """
         Async initialization of storage connections.
 
@@ -167,18 +167,23 @@ class DocumentIngestionPipeline:
         self._initialized = True
         logger.info("✅ Ingestion pipeline fully initialized")
 
-    async def close(self):
+    async def close(self) -> None:
         """Close all connections gracefully."""
         if self.connection_manager:
             await self.connection_manager.close()
             logger.info("Connections closed")
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> "DocumentIngestionPipeline":
         """Async context manager entry."""
         await self.initialize()
         return self
 
-    async def __aexit__(self, exc_type, exc_val, _exc_tb):
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        _exc_tb: Any,
+    ) -> bool:
         """Async context manager exit."""
         await self.close()
         return False  # Don't suppress exceptions
@@ -353,7 +358,9 @@ class DocumentIngestionPipeline:
         Returns:
             Document ID and chunk IDs
         """
-        # Store document
+        # Store document (pg_store must be initialized)
+        if self.pg_store is None:
+            raise RuntimeError("Pipeline not initialized - call await pipeline.initialize() first")
         doc_id = await self.pg_store.store_document(title, source, content, metadata)
 
         # Prepare chunk data
@@ -380,7 +387,8 @@ class DocumentIngestionPipeline:
 
             chunk_data.append(chunk_dict)
 
-        # Store chunks
+        # Store chunks (pg_store already checked above)
+        assert self.pg_store is not None
         chunk_ids = await self.pg_store.store_chunks(doc_id, chunk_data)
 
         return doc_id, chunk_ids
@@ -403,7 +411,7 @@ class DocumentIngestionPipeline:
         # Process chunks in parallel (with limit)
         semaphore = asyncio.Semaphore(5)  # Limit concurrent extractions
 
-        async def extract_chunk(chunk: DocumentChunk, chunk_id: UUID):
+        async def extract_chunk(chunk: DocumentChunk, chunk_id: UUID) -> dict[str, Any]:
             async with semaphore:
                 try:
                     result = await self.extractor.extract(chunk.content, str(chunk_id))
@@ -435,7 +443,7 @@ class DocumentIngestionPipeline:
 
     async def _update_knowledge_graph(
         self, extraction_results: list[dict[str, Any]], document_id: UUID, chunk_ids: list[UUID]
-    ):
+    ) -> None:
         """
         Update Neo4j knowledge graph with extracted knowledge.
 
@@ -463,7 +471,8 @@ class DocumentIngestionPipeline:
                             }
                             for entity in result["entities"]
                         ]
-                        # Add entities in batch
+                        # Add entities in batch (neo4j_store checked in parent scope)
+                        assert self.neo4j_store is not None
                         await self.neo4j_store.add_entities(
                             entities=entity_dicts, source_chunk_id=str(chunk_id)
                         )
@@ -484,6 +493,7 @@ class DocumentIngestionPipeline:
                             for rel in result["relationships"]
                         ]
                         # Add relationships in batch
+                        assert self.neo4j_store is not None
                         await self.neo4j_store.add_relationships(
                             relationships=relationship_dicts, source_chunk_id=str(chunk_id)
                         )
@@ -501,6 +511,7 @@ class DocumentIngestionPipeline:
                             fact_entity_names.extend(fact.entities)
 
                         # Add episodes to Neo4j
+                        assert self.neo4j_store is not None
                         await self.neo4j_store.add_episodes(
                             facts=fact_texts,
                             entity_names=list(set(fact_entity_names)),  # Deduplicate
@@ -530,7 +541,7 @@ class DocumentIngestionPipeline:
 
     async def _update_cross_references(
         self, chunk_ids: list[UUID], extraction_results: list[dict[str, Any]]
-    ):
+    ) -> None:
         """
         Update PostgreSQL chunks with entity references.
 
@@ -538,6 +549,8 @@ class DocumentIngestionPipeline:
             chunk_ids: Chunk IDs
             extraction_results: Extraction results
         """
+        if self.pg_store is None:
+            raise RuntimeError("Pipeline not initialized - call await pipeline.initialize() first")
         for chunk_id, result in zip(chunk_ids, extraction_results, strict=False):
             entity_names = [e.name for e in result["entities"]]
 
@@ -559,7 +572,7 @@ class DocumentIngestionPipeline:
         """
         semaphore = asyncio.Semaphore(max_concurrent)
 
-        async def ingest_with_semaphore(doc: dict[str, Any]):
+        async def ingest_with_semaphore(doc: dict[str, Any]) -> IngestionResult:
             async with semaphore:
                 return await self.ingest_document(
                     content=doc["content"],

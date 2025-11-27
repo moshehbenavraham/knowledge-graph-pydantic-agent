@@ -7,7 +7,7 @@ Provides both semantic (LLM-powered) and simple (rule-based) chunking approaches
 import logging
 import re
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, cast
 
 import structlog
 from pydantic_ai import Agent
@@ -31,7 +31,7 @@ class ChunkingConfig:
     preserve_structure: bool = True
     strategy: ChunkingStrategy = ChunkingStrategy.AUTO
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate configuration."""
         if self.chunk_overlap >= self.chunk_size:
             raise ValueError("Chunk overlap must be less than chunk size")
@@ -41,12 +41,12 @@ class ChunkingConfig:
             self.max_chunk_size = self.chunk_size * 2
 
 
-def get_chunking_config():
+def get_chunking_config() -> dict[str, Any]:
     """Get chunking configuration from global settings."""
     structlog_logger.info("get_chunking_config called")
     config = get_config().ingestion
 
-    chunk_config = {
+    chunk_config: dict[str, Any] = {
         "chunk_size": config.chunk_size,
         "chunk_overlap": config.chunk_overlap,
         "max_chunk_size": 2000,
@@ -57,12 +57,17 @@ def get_chunking_config():
     }
 
     # Validate configuration
-    if chunk_config["chunk_overlap"] >= chunk_config["chunk_size"]:
+    chunk_overlap = cast("int", chunk_config["chunk_overlap"])
+    chunk_size = cast("int", chunk_config["chunk_size"])
+    min_chunk_size = cast("int", chunk_config["min_chunk_size"])
+    max_chunk_size = cast("int", chunk_config["max_chunk_size"])
+
+    if chunk_overlap >= chunk_size:
         raise ValueError("Chunk overlap must be less than chunk size")
-    if chunk_config["min_chunk_size"] <= 0:
+    if min_chunk_size <= 0:
         raise ValueError("Minimum chunk size must be positive")
-    if chunk_config["max_chunk_size"] < chunk_config["chunk_size"]:
-        chunk_config["max_chunk_size"] = chunk_config["chunk_size"] * 2
+    if max_chunk_size < chunk_size:
+        chunk_config["max_chunk_size"] = chunk_size * 2
 
     structlog_logger.info(
         "get_chunking_config completed",
@@ -88,7 +93,7 @@ class DocumentChunk:
     facts: list[Any] = field(default_factory=list)
     relationships: list[Any] = field(default_factory=list)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Calculate token count if not provided."""
         if self.token_count is None:
             # Rough estimation: ~4 characters per token
@@ -117,13 +122,13 @@ class SemanticChunker:
         """
         structlog_logger.info("SemanticChunker initializing")
         self.config = config or get_chunking_config()
-        self._llm_client = None
+        self._llm_client: Agent[None] | None = None
         structlog_logger.info(
             "SemanticChunker initialized", chunk_size=self.config.get("chunk_size")
         )
 
     @property
-    def llm_client(self):
+    def llm_client(self) -> Agent[None]:
         """Lazy load LLM client."""
         if self._llm_client is None:
             llm_config = get_config().llm

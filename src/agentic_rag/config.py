@@ -18,7 +18,7 @@ logger = structlog.get_logger(__name__)
 class DatabaseConfig:
     """Database configuration settings (backward compatibility)."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         settings = get_settings()
         self.database_url = settings.database_url
         self.supabase_url = settings.supabase_url
@@ -36,7 +36,7 @@ class DatabaseConfig:
 class ConnectionPoolConfig:
     """Connection pool configuration (backward compatibility)."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         settings = get_settings()
         self.pg_pool_min = settings.pg_pool_min
         self.pg_pool_max = settings.pg_pool_max
@@ -54,7 +54,7 @@ class ConnectionPoolConfig:
 class EmbeddingConfig:
     """Embedding configuration (backward compatibility)."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         settings = get_settings()
         self.provider = settings.embedding_provider.value
         self.base_url = settings.embedding_base_url
@@ -68,7 +68,7 @@ class EmbeddingConfig:
 class LLMConfig:
     """LLM configuration (backward compatibility)."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         settings = get_settings()
         self.provider = settings.llm_provider.value
         self.base_url = settings.llm_base_url
@@ -83,7 +83,7 @@ class LLMConfig:
 class PerformanceConfig:
     """Performance and optimization settings (backward compatibility)."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         settings = get_settings()
         self.vector_search_timeout = settings.vector_search_timeout
         self.graph_search_timeout = settings.graph_search_timeout
@@ -104,7 +104,7 @@ class PerformanceConfig:
 class IngestionConfig:
     """Document ingestion settings (backward compatibility)."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         settings = get_settings()
         self.chunk_size = settings.chunk_size
         self.chunk_overlap = settings.chunk_overlap
@@ -117,7 +117,7 @@ class IngestionConfig:
 class APIConfig:
     """API server configuration (backward compatibility)."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         settings = get_settings()
         self.host = settings.api_host
         self.port = settings.api_port
@@ -130,7 +130,7 @@ class APIConfig:
 class Config:
     """Main configuration class combining all settings (backward compatibility)."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.database = DatabaseConfig()
         self.connection_pool = ConnectionPoolConfig()
         self.embedding = EmbeddingConfig()
@@ -180,7 +180,7 @@ def get_config() -> Config:
     return config
 
 
-def reload_config():
+def reload_config() -> Config:
     """Reload configuration from environment variables."""
     logger.info("reload_config called - reloading configuration from environment")
     reload_settings()

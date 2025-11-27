@@ -33,7 +33,7 @@ class EmbeddingConfig:
     retry_delay: float = 1.0
 
 
-def get_embedding_config():
+def get_embedding_config() -> dict[str, Any]:
     """Get embedding configuration from global settings."""
     structlog_logger.info("get_embedding_config called")
     config = get_config().embedding
@@ -94,7 +94,7 @@ class EmbeddingCache:
         structlog_logger.debug("EmbeddingCache.get - cache miss", text_preview=text[:50])
         return None
 
-    def set(self, text: str, embedding: list[float]):
+    def set(self, text: str, embedding: list[float]) -> None:
         """
         Store embedding in cache.
 
@@ -117,7 +117,7 @@ class EmbeddingCache:
         self._access_order.append(key)
         structlog_logger.debug("EmbeddingCache.set - cached embedding", cache_size=len(self._cache))
 
-    def clear(self):
+    def clear(self) -> None:
         """Clear the cache."""
         self._cache.clear()
         self._access_order.clear()
@@ -154,7 +154,7 @@ class EmbeddingGenerator:
         structlog_logger.info("EmbeddingGenerator initializing")
         self.config = config or get_embedding_config()
         self.cache = EmbeddingCache() if self._get_config_value("enable_cache", True) else None
-        self._client = None
+        self._client: openai.AsyncOpenAI | None = None
         self._stats: dict[str, Any] = {
             "cache_hits": 0,
             "cache_misses": 0,
@@ -168,20 +168,20 @@ class EmbeddingGenerator:
             cache_enabled=self.cache is not None,
         )
 
-    def _get_config_value(self, key: str, default=None):
+    def _get_config_value(self, key: str, default: Any = None) -> Any:
         """Get config value supporting both dict and dataclass."""
         if isinstance(self.config, dict):
             return self.config.get(key, default)
         return getattr(self.config, key, default)
 
     @property
-    def client(self):
+    def client(self) -> openai.AsyncOpenAI:
         """Lazy load embedding client."""
         if self._client is None:
             self._client = self._create_client()
         return self._client
 
-    def _create_client(self):
+    def _create_client(self) -> openai.AsyncOpenAI:
         """Create embedding client based on provider."""
         structlog_logger.info("_create_client called", provider=self._get_config_value("provider"))
         config = get_config()
@@ -446,7 +446,7 @@ class EmbeddingGenerator:
 
         return stats
 
-    def clear_cache(self):
+    def clear_cache(self) -> None:
         """Clear the embedding cache."""
         if self.cache:
             self.cache.clear()
@@ -461,7 +461,7 @@ class MultiDimensionEmbedder:
     for different use cases.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize multi-dimension embedder."""
         structlog_logger.info("MultiDimensionEmbedder initializing")
         config = get_config()

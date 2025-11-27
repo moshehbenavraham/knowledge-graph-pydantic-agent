@@ -32,7 +32,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-async def ingest_directory(pipeline: DocumentIngestionPipeline, directory: Path):
+async def ingest_directory(pipeline: DocumentIngestionPipeline, directory: Path) -> None:
     """
     Ingest all markdown files from a directory.
 
@@ -112,7 +112,7 @@ async def ingest_directory(pipeline: DocumentIngestionPipeline, directory: Path)
                 logger.error(f"  - {result.title}: {', '.join(result.errors)}")
 
 
-async def main():
+async def main() -> None:
     """Main CLI entry point with proper async initialization."""
     parser = argparse.ArgumentParser(description="Document ingestion pipeline")
     parser.add_argument(

@@ -62,7 +62,7 @@ class Entity:
     confidence: float = 1.0
     metadata: dict[str, Any] = field(default_factory=dict)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate entity."""
         if not self.name or not self.name.strip():
             raise ValueError("Entity name cannot be empty")
@@ -92,7 +92,7 @@ class Relationship:
     temporal_marker: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate relationship."""
         if not self.source or not self.target:
             raise ValueError("Source and target entities are required")
@@ -121,7 +121,7 @@ class Fact:
     confidence: float = 1.0
     metadata: dict[str, Any] = field(default_factory=dict)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate and truncate fact."""
         if not self.text:
             raise ValueError("Fact text cannot be empty")
@@ -169,10 +169,10 @@ class KnowledgeExtractor:
         ],
     }
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize knowledge extractor."""
         self.config = get_config()
-        self._llm_agent = None
+        self._llm_agent: Agent[None] | None = None
 
     @property
     def llm_agent(self) -> Agent:
