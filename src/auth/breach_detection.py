@@ -315,9 +315,9 @@ async def check_password_safety(
     is_breached, _, message = await manager.get_breach_status(password)
 
     if is_breached:
-        return (False, message)
+        return (False, message or "Password found in breach database")
 
-    return (True, message)
+    return (True, message or "Password is safe")
 
 
 async def validate_password_breach(

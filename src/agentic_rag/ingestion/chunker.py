@@ -127,7 +127,7 @@ class SemanticChunker:
         """Lazy load LLM client."""
         if self._llm_client is None:
             llm_config = get_config().llm
-            self._llm_client = Agent(
+            self._llm_client = Agent(  # type: ignore[call-overload]
                 model=f"{llm_config.provider}:{llm_config.extraction_model}",
                 api_key=llm_config.api_key,
             )

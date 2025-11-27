@@ -65,7 +65,7 @@ def get_model():
     logger.info("Getting configured model", provider=provider, model=llm)
 
     if provider == "anthropic":
-        if not AnthropicModel:
+        if AnthropicModel is None:
             raise ImportError("Anthropic model not available")
 
         # Map common model names to Anthropic's naming

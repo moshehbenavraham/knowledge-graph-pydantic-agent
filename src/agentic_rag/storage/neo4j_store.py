@@ -311,7 +311,9 @@ class Neo4jStore:
             structlog_logger.info("search_entities completed", num_results=len(entities))
             return entities
 
-    async def get_entity_relationships(self, entity_id: str, depth: int = 1) -> dict[str, Any]:
+    async def get_entity_relationships(
+        self, entity_id: str, depth: int = 1
+    ) -> dict[str, Any] | None:
         """Get relationships for an entity up to specified depth."""
         async with self.connection_manager.get_neo4j_session() as session:
             # Get entity and its relationships

@@ -469,6 +469,7 @@ def track_performance(tool_name: str | None = None, endpoint: str | None = None)
                 with monitor.track_request("CALL", endpoint, user_id):
                     # For sync functions, we can't use async context manager
                     start_time = time.time()
+                    status = "unknown"
                     try:
                         logger.debug("Executing sync function...", function=func.__name__)
                         result = func(*args, **kwargs)

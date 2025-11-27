@@ -346,7 +346,7 @@ class RetryStrategy:
         Raises:
             Last exception if all retries fail
         """
-        last_exception = None
+        last_exception: Exception | None = None
 
         for attempt in range(self.max_attempts):
             try:
@@ -381,7 +381,9 @@ class RetryStrategy:
                         error=str(e),
                     )
 
-        raise last_exception
+        if last_exception is not None:
+            raise last_exception
+        raise RuntimeError("Retry loop exited without result or exception")
 
     def execute(self, func: Callable, *args, **kwargs) -> Any:
         """
@@ -398,7 +400,7 @@ class RetryStrategy:
         Raises:
             Last exception if all retries fail
         """
-        last_exception = None
+        last_exception: Exception | None = None
 
         for attempt in range(self.max_attempts):
             try:
@@ -433,7 +435,9 @@ class RetryStrategy:
                         error=str(e),
                     )
 
-        raise last_exception
+        if last_exception is not None:
+            raise last_exception
+        raise RuntimeError("Retry loop exited without result or exception")
 
 
 def retry(

@@ -31,7 +31,7 @@ from src.api.middleware import (
     SecurityHeadersMiddleware,
     TimingMiddleware,
 )
-from src.api.models import StatusResponse
+from src.api.models import ComponentStatus, StatusResponse
 from src.config.api import api_config
 
 logger = structlog.get_logger()
@@ -188,21 +188,21 @@ async def status():
         version="0.8.0",
         cache=None,  # Populated by health check
         components=[
-            {
-                "name": "PostgreSQL",
-                "healthy": health["postgres"],
-                "details": {},
-            },
-            {
-                "name": "Neo4j",
-                "healthy": health["neo4j"],
-                "details": {},
-            },
-            {
-                "name": "Cache",
-                "healthy": health["cache"],
-                "details": {},
-            },
+            ComponentStatus(
+                name="PostgreSQL",
+                healthy=health["postgres"],
+                details={},
+            ),
+            ComponentStatus(
+                name="Neo4j",
+                healthy=health["neo4j"],
+                details={},
+            ),
+            ComponentStatus(
+                name="Cache",
+                healthy=health["cache"],
+                details={},
+            ),
         ],
         metrics={
             "environment": settings["environment"],

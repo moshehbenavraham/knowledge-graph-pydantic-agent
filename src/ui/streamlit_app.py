@@ -182,7 +182,7 @@ class UIConfig:
             config=config,
         )
 
-        handler = None
+        handler: BaseHandler
         if self.mode == UIMode.SIMPLE:
             logger.info("Creating SimpleHandler for SIMPLE mode")
             handler = SimpleHandler(config)

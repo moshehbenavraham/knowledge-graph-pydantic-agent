@@ -37,7 +37,7 @@ async def image_analysis_tool(supabase: Client, document_id: str, query: str) ->
 
         # Define the vision agent based on the provider
         if provider == "anthropic":
-            if not AnthropicModel:
+            if AnthropicModel is None:
                 raise ImportError("Anthropic model not available")
 
             # Map common model names to Anthropic's naming
