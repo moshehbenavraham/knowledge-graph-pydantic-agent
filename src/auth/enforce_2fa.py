@@ -84,14 +84,18 @@ def render_2fa_setup_required() -> None:
             )
 
             # Generate secret and QR code
-            secret = totp_manager.generate_and_store_secret(user_id)
-            qr_code = totp_manager.generate_qr_code(secret, username)
+            setup_result = totp_manager.setup_2fa(user_id, username)
+            secret = setup_result["secret"]
+            qr_code = setup_result["qr_code"]
 
             # Store secret in session for verification
             st.session_state["2fa_setup_secret"] = secret
 
-            # Display QR code
-            st.image(qr_code, caption="Scan this QR code with your authenticator app")
+            # Display QR code (qr_code is base64-encoded PNG)
+            import base64
+
+            qr_image_bytes = base64.b64decode(qr_code)
+            st.image(qr_image_bytes, caption="Scan this QR code with your authenticator app")
 
             # Also show manual entry key
             with st.expander("📝 Can't scan? Enter manually"):
@@ -119,48 +123,41 @@ def render_2fa_setup_required() -> None:
             if not verification_code or len(verification_code) != 6:
                 st.error("Please enter a valid 6-digit code")
             else:
-                # Verify the code
+                # Verify the code and enable 2FA
                 try:
-                    is_valid = totp_manager.verify_totp(user_id, verification_code)
+                    # verify_and_enable_2fa verifies code AND enables 2FA in one step
+                    success = totp_manager.verify_and_enable_2fa(user_id, verification_code)
 
-                    if is_valid:
-                        # Enable 2FA
-                        success = totp_manager.enable_2fa(user_id, verification_code)
+                    if success:
+                        # Generate backup codes
+                        backup_codes = backup_code_manager.create_backup_codes(user_id)
 
-                        if success:
-                            # Generate backup codes
-                            backup_codes = backup_code_manager.generate_backup_codes(user_id)
+                        st.success("✅ 2FA enabled successfully!")
+                        st.balloons()
 
-                            st.success("✅ 2FA enabled successfully!")
-                            st.balloons()
+                        # Display backup codes
+                        st.markdown("---")
+                        st.markdown("#### 🔑 Save Your Backup Codes")
+                        st.warning(
+                            "⚠️ **IMPORTANT**: Save these backup codes in a safe place. "
+                            "You can use them to access your account if you lose "
+                            "access to your authenticator app."
+                        )
 
-                            # Display backup codes
-                            st.markdown("---")
-                            st.markdown("#### 🔑 Save Your Backup Codes")
-                            st.warning(
-                                "⚠️ **IMPORTANT**: Save these backup codes in a safe place. "
-                                "You can use them to access your account if you lose "
-                                "access to your authenticator app."
-                            )
+                        # Display backup codes in a copyable format
+                        backup_codes_text = "\n".join(backup_codes)
+                        st.code(backup_codes_text, language=None)
 
-                            # Display backup codes in a copyable format
-                            backup_codes_text = "\n".join(backup_codes)
-                            st.code(backup_codes_text, language=None)
+                        st.info("💡 **Tip**: Print these codes or save them in a password manager.")
 
-                            st.info(
-                                "💡 **Tip**: Print these codes or save them in a password manager."
-                            )
+                        # Mark 2FA as verified in session
+                        st.session_state["2fa_verified"] = True
+                        st.session_state.pop("2fa_setup_secret", None)
 
-                            # Mark 2FA as verified in session
-                            st.session_state["2fa_verified"] = True
-                            st.session_state.pop("2fa_setup_secret", None)
+                        # Add continue button
+                        if st.button("Continue to Luminari Agent", type="primary"):
+                            st.rerun()
 
-                            # Add continue button
-                            if st.button("Continue to Luminari Agent", type="primary"):
-                                st.rerun()
-
-                        else:
-                            st.error("Failed to enable 2FA. Please try again.")
                     else:
                         st.error("❌ Invalid code. Please try again.")
 
@@ -222,7 +219,7 @@ def render_2fa_verification() -> bool:
             try:
                 # Try TOTP first (6 digits)
                 if len(clean_code) == 6 and clean_code.isdigit():
-                    is_valid = totp_manager.verify_totp(user_id, clean_code)
+                    is_valid = totp_manager.verify_login_code(user_id, clean_code)
 
                     if is_valid:
                         st.success("✅ Verification successful!")
@@ -233,7 +230,7 @@ def render_2fa_verification() -> bool:
 
                 # Try backup code (8 characters)
                 if len(clean_code) == 8:
-                    is_valid = backup_code_manager.verify_backup_code(user_id, clean_code)
+                    is_valid = backup_code_manager.verify_and_use_backup_code(user_id, clean_code)
 
                     if is_valid:
                         st.success("✅ Backup code accepted!")

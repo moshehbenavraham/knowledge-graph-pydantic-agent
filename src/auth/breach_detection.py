@@ -31,7 +31,7 @@ class BreachDetectionManager:
     HIBP_API_URL = "https://api.pwnedpasswords.com/range/{hash_prefix}"
     TIMEOUT = 10.0  # seconds
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize Breach Detection Manager."""
         self.client: Client | None = None
 

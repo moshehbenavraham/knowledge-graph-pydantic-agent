@@ -400,7 +400,7 @@ class BackupCodeManager:
     CODE_LENGTH = 8
     CODE_COUNT = 10
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize Backup Code Manager."""
         self.client: Client | None = None
 

@@ -14,7 +14,7 @@ from src.auth.email_verification import use_verification_token, verify_verificat
 logger = structlog.get_logger(__name__)
 
 
-def render_email_verification_page():
+def render_email_verification_page() -> None:
     """Render email verification completion page."""
     st.markdown(
         """

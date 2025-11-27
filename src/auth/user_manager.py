@@ -176,7 +176,7 @@ class UserManager:
         return {"username": username, "email": user_data["email"], "name": user_data["name"]}
 
 
-def main():
+def main() -> None:
     """CLI interface for user management."""
     logger.info("Starting user management CLI")
     import argparse

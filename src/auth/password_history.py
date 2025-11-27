@@ -27,7 +27,7 @@ class PasswordHistoryManager:
 
     MAX_HISTORY = 5  # Keep last 5 passwords
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize Password History Manager."""
         self.client: Client | None = None
 

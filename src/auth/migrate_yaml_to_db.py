@@ -57,8 +57,11 @@ async def migrate_users(config_path: Path, dry_run: bool = False) -> dict:
 
     print(f"\n📋 Found {len(yaml_users)} user(s) in YAML config\n")
 
-    # Migration results
-    results = {"migrated": 0, "skipped": 0, "errors": 0, "details": []}
+    # Migration results - use separate counters for simpler typing
+    migrated = 0
+    skipped = 0
+    errors = 0
+    details: list[dict[str, str]] = []
 
     # Migrate each user
     for username, user_data in yaml_users.items():
@@ -70,9 +73,7 @@ async def migrate_users(config_path: Path, dry_run: bool = False) -> dict:
 
         if dry_run:
             print(f"   [DRY RUN] Would create user: {username}")
-            results["details"].append(
-                {"username": username, "action": "would_create", "status": "dry_run"}
-            )
+            details.append({"username": username, "action": "would_create", "status": "dry_run"})
             continue
 
         try:
@@ -84,10 +85,8 @@ async def migrate_users(config_path: Path, dry_run: bool = False) -> dict:
 
             if existing.data:
                 print("   ⏭️  User already exists in database, skipping")
-                results["skipped"] += 1
-                results["details"].append(
-                    {"username": username, "action": "skip", "status": "exists"}
-                )
+                skipped += 1
+                details.append({"username": username, "action": "skip", "status": "exists"})
                 continue
 
             # Create user in database
@@ -115,8 +114,8 @@ async def migrate_users(config_path: Path, dry_run: bool = False) -> dict:
             assign_role(user_id, default_role)
 
             print(f"   ✅ Created user with role '{default_role}'")
-            results["migrated"] += 1
-            results["details"].append(
+            migrated += 1
+            details.append(
                 {
                     "username": username,
                     "action": "create",
@@ -127,15 +126,20 @@ async def migrate_users(config_path: Path, dry_run: bool = False) -> dict:
 
         except Exception as e:
             print(f"   ❌ Error: {e}")
-            results["errors"] += 1
-            results["details"].append(
+            errors += 1
+            details.append(
                 {"username": username, "action": "create", "status": "error", "error": str(e)}
             )
 
-    return results
+    return {
+        "migrated": migrated,
+        "skipped": skipped,
+        "errors": errors,
+        "details": details,
+    }
 
 
-async def main():
+async def main() -> int:
     """Main migration function."""
     parser = argparse.ArgumentParser(description="Migrate users from YAML config to database")
     parser.add_argument(

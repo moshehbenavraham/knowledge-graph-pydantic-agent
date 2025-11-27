@@ -75,7 +75,7 @@ def change_user_password(
         return (False, "Failed to change password. Please try again.")
 
 
-def render_user_profile(username: str):
+def render_user_profile(username: str) -> None:
     """Render user profile section in sidebar.
 
     Args:
@@ -303,7 +303,7 @@ def render_user_profile(username: str):
         st.sidebar.error("Failed to load profile.")
 
 
-def render_user_profile_simple(username: str, full_name: str, email: str | None = None):
+def render_user_profile_simple(username: str, full_name: str, email: str | None = None) -> None:
     """Render simplified user profile (for YAML mode without database).
 
     Args:

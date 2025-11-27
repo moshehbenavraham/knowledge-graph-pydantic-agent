@@ -31,7 +31,7 @@ async def cmd_create(
     password: str | None = None,
     role: str = "user",
     active: bool = True,
-):
+) -> int:
     """Create a new user."""
     try:
         user = create_user(
@@ -61,7 +61,7 @@ async def cmd_create(
     return 0
 
 
-async def cmd_list(limit: int = 100, include_deleted: bool = False):
+async def cmd_list(limit: int = 100, include_deleted: bool = False) -> int:
     """List all users."""
     try:
         users = list_users(limit=limit, include_deleted=include_deleted)
@@ -92,7 +92,7 @@ async def cmd_list(limit: int = 100, include_deleted: bool = False):
     return 0
 
 
-async def cmd_get(username: str):
+async def cmd_get(username: str) -> int:
     """Get detailed user information."""
     try:
         user = get_user_by_username(username)
@@ -140,7 +140,7 @@ async def cmd_update(
     new_name: str | None = None,
     activate: bool = False,
     deactivate: bool = False,
-):
+) -> int:
     """Update user information."""
     try:
         # Get existing user
@@ -182,7 +182,7 @@ async def cmd_update(
     return 0
 
 
-async def cmd_update_password(username: str, new_password: str):
+async def cmd_update_password(username: str, new_password: str) -> int:
     """Update user password."""
     try:
         # Get existing user
@@ -203,7 +203,7 @@ async def cmd_update_password(username: str, new_password: str):
     return 0
 
 
-async def cmd_delete(username: str, permanent: bool = False):
+async def cmd_delete(username: str, permanent: bool = False) -> int:
     """Delete user (soft or hard delete)."""
     try:
         # Get existing user
@@ -233,7 +233,7 @@ async def cmd_delete(username: str, permanent: bool = False):
     return 0
 
 
-async def cmd_role(username: str, action: str, role_name: str):
+async def cmd_role(username: str, action: str, role_name: str) -> int:
     """Assign or revoke a role."""
     try:
         # Get existing user
@@ -259,7 +259,7 @@ async def cmd_role(username: str, action: str, role_name: str):
     return 0
 
 
-async def cmd_sessions(username: str, revoke: bool = False):
+async def cmd_sessions(username: str, revoke: bool = False) -> int:
     """List or revoke user sessions."""
     try:
         # Get existing user
@@ -305,7 +305,7 @@ async def cmd_sessions(username: str, revoke: bool = False):
     return 0
 
 
-async def main():
+async def main() -> int:
     """Main CLI function."""
     parser = argparse.ArgumentParser(
         description="Database User Management CLI",

@@ -16,7 +16,7 @@ from src.auth.password_strength import is_password_strong, render_password_stren
 logger = structlog.get_logger(__name__)
 
 
-def render_password_reset_page():
+def render_password_reset_page() -> None:
     """Render password reset completion page."""
     st.markdown(
         """
