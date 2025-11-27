@@ -23,7 +23,7 @@ class Neo4jInitializer:
         self.password = password
         self.driver: AsyncDriver | None = None
 
-    async def initialize(self):
+    async def initialize(self) -> None:
         """Initialize Neo4j with all required constraints and indexes."""
         # Create driver
         self.driver = AsyncGraphDatabase.driver(self.uri, auth=(self.user, self.password))
@@ -47,8 +47,10 @@ class Neo4jInitializer:
             if self.driver:
                 await self.driver.close()
 
-    async def _init_graphiti(self):
+    async def _init_graphiti(self) -> None:
         """Initialize Graphiti which creates base structures."""
+        if self.driver is None:
+            raise RuntimeError("Driver not initialized - call initialize() first")
         async with self.driver.session() as session:
             # Create Graphiti base constraints
             constraints = [
@@ -70,8 +72,10 @@ class Neo4jInitializer:
 
         logger.info("Graphiti base structures initialized successfully")
 
-    async def _create_custom_indexes(self):
+    async def _create_custom_indexes(self) -> None:
         """Create custom indexes beyond Graphiti defaults."""
+        if self.driver is None:
+            raise RuntimeError("Driver not initialized - call initialize() first")
         custom_indexes = [
             # Performance indexes
             "CREATE INDEX entity_name IF NOT EXISTS FOR (e:Entity) ON (e.name)",
@@ -122,8 +126,10 @@ class Neo4jInitializer:
                     if "already exists" not in str(e).lower():
                         logger.warning(f"Fulltext index creation warning: {e}")
 
-    async def _create_initial_structures(self):
+    async def _create_initial_structures(self) -> None:
         """Create initial graph structures."""
+        if self.driver is None:
+            raise RuntimeError("Driver not initialized - call initialize() first")
         async with self.driver.session() as session:
             # Create root concepts for categorization
             root_concepts = [
@@ -151,8 +157,10 @@ class Neo4jInitializer:
 
             logger.info("Created root concept nodes")
 
-    async def _verify_setup(self):
+    async def _verify_setup(self) -> None:
         """Verify the Neo4j setup is correct."""
+        if self.driver is None:
+            raise RuntimeError("Driver not initialized - call initialize() first")
         async with self.driver.session() as session:
             # Check constraints
             result = await session.run("SHOW CONSTRAINTS")
@@ -189,14 +197,18 @@ class Neo4jInitializer:
                 elapsed_ms = (asyncio.get_event_loop().time() - start) * 1000
                 logger.info(f"{name} executed in {elapsed_ms:.2f}ms")
 
-    async def clear_all_data(self):
+    async def clear_all_data(self) -> None:
         """Clear all data from Neo4j (useful for testing)."""
+        if self.driver is None:
+            raise RuntimeError("Driver not initialized - call initialize() first")
         async with self.driver.session() as session:
             await session.run("MATCH (n) DETACH DELETE n")
             logger.info("Cleared all data from Neo4j")
 
     async def get_statistics(self) -> dict[str, Any]:
         """Get database statistics."""
+        if self.driver is None:
+            raise RuntimeError("Driver not initialized - call initialize() first")
         async with self.driver.session() as session:
             stats = {}
 
@@ -221,7 +233,7 @@ class Neo4jInitializer:
             return stats
 
 
-async def initialize_neo4j(uri: str, user: str, password: str):
+async def initialize_neo4j(uri: str, user: str, password: str) -> None:
     """Initialize Neo4j database."""
     initializer = Neo4jInitializer(uri, user, password)
     await initializer.initialize()

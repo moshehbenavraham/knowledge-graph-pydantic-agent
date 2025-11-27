@@ -18,7 +18,7 @@ class GraphitiClient:
     Provides entity extraction, episode management, and search capabilities.
     """
 
-    def __init__(self, neo4j_store, llm_client=None):
+    def __init__(self, neo4j_store: Any, llm_client: Any | None = None) -> None:
         """
         Initialize Graphiti client.
 

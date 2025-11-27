@@ -19,7 +19,7 @@ class PostgreSQLMigration:
         self.database_url = database_url
         self.migrations_dir = Path(__file__).parent / "sql"
 
-    async def initialize_schema(self):
+    async def initialize_schema(self) -> None:
         """Initialize the database schema with all required extensions and tables."""
         conn = await asyncpg.connect(  # Constitution exception: CONST-III-001 - Migration script needs standalone connection
             self.database_url
@@ -63,7 +63,7 @@ class PostgreSQLMigration:
         migrations = sorted(self.migrations_dir.glob("*.sql"))
         return migrations
 
-    async def _run_migration(self, conn: asyncpg.Connection, migration_file: Path):
+    async def _run_migration(self, conn: asyncpg.Connection, migration_file: Path) -> None:
         """Run a single migration file."""
         version = migration_file.stem
         content = migration_file.read_text()
@@ -120,7 +120,7 @@ class PostgreSQLMigration:
 
             raise
 
-    async def _optimize_database(self, conn: asyncpg.Connection):
+    async def _optimize_database(self, conn: asyncpg.Connection) -> None:
         """Optimize database settings for vector search."""
         optimizations = [
             # Memory settings
@@ -161,7 +161,7 @@ class PostgreSQLMigration:
 
         logger.info("Database optimization completed")
 
-    async def rollback(self, target_version: str | None = None):
+    async def rollback(self, target_version: str | None = None) -> None:
         """Rollback migrations to a specific version."""
         conn = await asyncpg.connect(  # Constitution exception: CONST-III-001 - Migration script needs standalone connection
             self.database_url
@@ -234,7 +234,7 @@ class PostgreSQLMigration:
             await conn.close()
 
 
-async def run_migrations(database_url: str):
+async def run_migrations(database_url: str) -> None:
     """Run all pending migrations."""
     migration = PostgreSQLMigration(database_url)
     await migration.initialize_schema()

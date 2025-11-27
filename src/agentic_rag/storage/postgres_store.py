@@ -16,7 +16,7 @@ structlog_logger = structlog.get_logger(__name__)
 class PostgresStore:
     """PostgreSQL operations for document and chunk storage."""
 
-    def __init__(self, connection_manager):
+    def __init__(self, connection_manager: Any) -> None:
         """Initialize with connection manager."""
         structlog_logger.info("PostgresStore initializing")
         self.connection_manager = connection_manager
@@ -101,7 +101,7 @@ class PostgresStore:
 
         return chunk_ids
 
-    async def update_chunk_metadata(self, chunk_id: UUID, metadata_update: dict[str, Any]):
+    async def update_chunk_metadata(self, chunk_id: UUID, metadata_update: dict[str, Any]) -> None:
         """Update chunk metadata with entity references."""
         structlog_logger.info(
             "update_chunk_metadata called",
@@ -275,7 +275,7 @@ class PostgresStore:
             )
             return dict(result) if result else None
 
-    async def delete_document(self, document_id: UUID, hard_delete: bool = False):
+    async def delete_document(self, document_id: UUID, hard_delete: bool = False) -> None:
         """Delete a document (soft delete by default)."""
         structlog_logger.info(
             "delete_document called", document_id=str(document_id), hard_delete=hard_delete
@@ -337,7 +337,7 @@ class PostgresStore:
 
     async def add_message(
         self, session_id: UUID, role: str, content: str, metadata: dict[str, Any] | None = None
-    ):
+    ) -> None:
         """Add a message to a session."""
         async with self.connection_manager.get_pg_connection() as conn:
             await conn.execute(
@@ -373,7 +373,7 @@ class PostgresStore:
         chunk_id: UUID | None = None,
         operation: str = "create",
         payload: dict[str, Any] | None = None,
-    ):
+    ) -> None:
         """Add an item to the graph sync queue."""
         async with self.connection_manager.get_pg_connection() as conn:
             await conn.execute(
@@ -405,7 +405,7 @@ class PostgresStore:
 
     async def update_sync_item_status(
         self, sync_id: UUID, status: str, error_message: str | None = None
-    ):
+    ) -> None:
         """Update sync queue item status."""
         async with self.connection_manager.get_pg_connection() as conn:
             if status == "failed":
@@ -434,7 +434,7 @@ class PostgresStore:
                     sync_id,
                 )
 
-    async def clean_expired_cache(self):
+    async def clean_expired_cache(self) -> None:
         """Clean expired search cache entries."""
         async with self.connection_manager.get_pg_connection() as conn:
             deleted = await conn.fetchval(

@@ -4,10 +4,12 @@ Centralized connection management with pooling, circuit breakers, and monitoring
 
 import asyncio
 import logging
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from enum import Enum
+from types import TracebackType
 from typing import TYPE_CHECKING, Any
 
 import asyncpg
@@ -86,7 +88,7 @@ class ConnectionManager:
         # Circuit breaker config
         self.circuit_config = CircuitBreakerConfig()
 
-    async def initialize(self):
+    async def initialize(self) -> None:
         """Initialize all connection pools with proper error handling."""
         structlog_logger.info("ConnectionManager.initialize() called")
 
@@ -135,7 +137,7 @@ class ConnectionManager:
 
         structlog_logger.info("ConnectionManager.initialize() completed successfully")
 
-    async def _init_postgresql(self):
+    async def _init_postgresql(self) -> None:
         """Initialize PostgreSQL connection pool with optimized settings."""
         structlog_logger.info(
             "_init_postgresql() starting",
@@ -204,7 +206,7 @@ class ConnectionManager:
             self.pg_metrics.last_error_time = datetime.now(UTC)
             raise
 
-    async def _setup_postgres_connection(self, connection):
+    async def _setup_postgres_connection(self, connection: asyncpg.Connection) -> None:
         """Setup function for each PostgreSQL connection."""
         structlog_logger.debug("_setup_postgres_connection() called", connection_id=id(connection))
         try:
@@ -216,7 +218,7 @@ class ConnectionManager:
             structlog_logger.error("Connection setup failed", error=str(e))
             raise
 
-    async def _init_postgres_connection(self, connection):
+    async def _init_postgres_connection(self, connection: asyncpg.Connection) -> None:
         """Initialize function for new PostgreSQL connections."""
         structlog_logger.debug("_init_postgres_connection() called", connection_id=id(connection))
         # Prepare commonly used statements
@@ -224,7 +226,7 @@ class ConnectionManager:
         structlog_logger.debug("Connection init complete (no-op)")
         pass
 
-    async def _init_neo4j(self):
+    async def _init_neo4j(self) -> None:
         """Initialize Neo4j driver with connection pooling."""
         try:
             neo4j_uri = self.config["neo4j_uri"]
@@ -270,7 +272,7 @@ class ConnectionManager:
             structlog_logger.error("Neo4j initialization failed", error=str(e))
             raise
 
-    async def _init_redis(self):
+    async def _init_redis(self) -> None:
         """Initialize Redis client for caching."""
         try:
             self.redis_client = redis.from_url(
@@ -295,7 +297,7 @@ class ConnectionManager:
             self.redis_metrics.last_error_time = datetime.now(UTC)
 
     @asynccontextmanager
-    async def get_pg_connection(self):
+    async def get_pg_connection(self) -> AsyncIterator[asyncpg.Connection]:
         """
         Get PostgreSQL connection from pool with circuit breaker.
         """
@@ -338,7 +340,7 @@ class ConnectionManager:
             self._update_query_metrics("pg", elapsed_ms)
 
     @asynccontextmanager
-    async def get_neo4j_session(self, database: str | None = None):
+    async def get_neo4j_session(self, database: str | None = None) -> AsyncIterator[Any]:
         """
         Get Neo4j session with circuit breaker.
         """
@@ -424,7 +426,7 @@ class ConnectionManager:
         # HALF_OPEN state - allow requests to test recovery
         return True
 
-    def _record_failure(self, service: str, error: Exception):
+    def _record_failure(self, service: str, error: Exception) -> None:
         """Record connection failure for circuit breaker."""
         if service == "pg":
             self.pg_failures += 1
@@ -456,7 +458,7 @@ class ConnectionManager:
                     last_error=str(error)[:100],
                 )
 
-    def _update_query_metrics(self, service: str, elapsed_ms: float):
+    def _update_query_metrics(self, service: str, elapsed_ms: float) -> None:
         """Update query performance metrics."""
         if service == "pg":
             metrics = self.pg_metrics
@@ -477,7 +479,7 @@ class ConnectionManager:
     async def health_check(self) -> dict[str, Any]:
         """Perform health check on all connections."""
         structlog_logger.info("health_check called")
-        health = {"timestamp": datetime.now(UTC).isoformat(), "services": {}}
+        health: dict[str, Any] = {"timestamp": datetime.now(UTC).isoformat(), "services": {}}
 
         # PostgreSQL health check
         pg_healthy = False
@@ -545,7 +547,7 @@ class ConnectionManager:
         )
         return health
 
-    async def close(self):
+    async def close(self) -> None:
         """Close all connections gracefully."""
         structlog_logger.info("ConnectionManager.close() called", instance_id=id(self))
 
@@ -566,20 +568,26 @@ class ConnectionManager:
 
         if self.redis_client:
             structlog_logger.info("Closing Redis client")
-            close_tasks.append(self.redis_client.aclose())
+            # aclose() is correct for async Redis - type stubs are incomplete
+            close_tasks.append(self.redis_client.aclose())  # type: ignore[attr-defined]
 
         structlog_logger.info("Running close tasks", task_count=len(close_tasks))
         await asyncio.gather(*close_tasks, return_exceptions=True)
         structlog_logger.info("All connections closed successfully")
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> "ConnectionManager":
         """Async context manager entry - initialize connections."""
         structlog_logger.info("ConnectionManager.__aenter__() called", instance_id=id(self))
         await self.initialize()
         structlog_logger.info("ConnectionManager.__aenter__() returning self")
         return self
 
-    async def __aexit__(self, exc_type, exc_val, _exc_tb):
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        _exc_tb: TracebackType | None,
+    ) -> bool:
         """Async context manager exit - close connections."""
         structlog_logger.info(
             "ConnectionManager.__aexit__() called",
@@ -699,7 +707,7 @@ async def get_connection_manager() -> ConnectionManager:
             raise
 
 
-async def close_connections():
+async def close_connections() -> None:
     """Close all connections."""
     global _connection_manager, _connection_manager_loop_id
 

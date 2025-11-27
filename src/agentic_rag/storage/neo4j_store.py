@@ -16,7 +16,7 @@ structlog_logger = structlog.get_logger(__name__)
 class Neo4jStore:
     """Neo4j operations for entity and relationship management without content duplication."""
 
-    def __init__(self, connection_manager):
+    def __init__(self, connection_manager: Any) -> None:
         """Initialize with connection manager."""
         structlog_logger.info("Neo4jStore initializing")
         self.connection_manager = connection_manager
@@ -405,7 +405,7 @@ class Neo4jStore:
 
             return timeline
 
-    async def update_entity_importance(self, entity_id: str):
+    async def update_entity_importance(self, entity_id: str) -> None:
         """Update entity importance score based on mentions and relationships."""
         async with self.connection_manager.get_neo4j_session() as session:
             await session.run(
@@ -517,7 +517,7 @@ class Neo4jStore:
             )
             return stats
 
-    async def cleanup_orphaned_entities(self):
+    async def cleanup_orphaned_entities(self) -> None:
         """Remove entities with no relationships or mentions."""
         async with self.connection_manager.get_neo4j_session() as session:
             result = await session.run(

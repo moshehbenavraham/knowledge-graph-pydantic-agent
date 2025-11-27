@@ -141,7 +141,7 @@ class SupabaseRestStore:
 
         return chunk_ids
 
-    async def update_chunk_metadata(self, chunk_id: UUID, metadata_update: dict[str, Any]):
+    async def update_chunk_metadata(self, chunk_id: UUID, metadata_update: dict[str, Any]) -> None:
         """
         Update chunk metadata with entity references.
 
