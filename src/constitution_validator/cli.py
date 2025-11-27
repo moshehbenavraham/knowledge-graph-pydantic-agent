@@ -187,7 +187,7 @@ def check_dependencies() -> None:
 
 @click.group()
 @click.version_option(version=__version__)
-def cli():
+def cli() -> None:
     """Constitution Compliance Validator.
 
     Validates code changes against constitutional principles:
@@ -257,7 +257,7 @@ def validate(
     skip_git: bool,
     skip_coverage: bool,
     staged: bool,
-):
+) -> None:
     """
     Validate code against constitutional principles.
 
@@ -308,6 +308,7 @@ def validate(
             ViolationGroup,
         )
         from src.constitution_validator.reporter import ReportGenerator
+        from src.constitution_validator.rules.base import BaseValidationRule  # noqa: TC001
         from src.constitution_validator.rules.principle_i import UnifiedAgentRule
         from src.constitution_validator.rules.principle_ii import CentralizedConfigRule
         from src.constitution_validator.rules.principle_iii import DualDatabaseRule
@@ -366,13 +367,21 @@ def validate(
         # Initialize scanners and rules
         ast_scanner = ASTScanner()
 
-        rules = {
-            "I": UnifiedAgentRule(),
-            "II": CentralizedConfigRule(),
-            "III": DualDatabaseRule(),
-            "IV": TestCoverageRule(),
-            "V": ObservabilityRule(),
-            "VI": GitAttributionRule(),
+        # Initialize rules with specific types for method access
+        rule_i = UnifiedAgentRule()
+        rule_ii = CentralizedConfigRule()
+        rule_iii = DualDatabaseRule()
+        rule_iv = TestCoverageRule()
+        rule_v = ObservabilityRule()
+        rule_vi = GitAttributionRule()
+
+        rules: dict[str, BaseValidationRule] = {
+            "I": rule_i,
+            "II": rule_ii,
+            "III": rule_iii,
+            "IV": rule_iv,
+            "V": rule_v,
+            "VI": rule_vi,
         }
 
         # Execute validation
@@ -405,7 +414,7 @@ def validate(
         if not skip_coverage:
             logger.info("Checking test coverage")
             try:
-                coverage_violations = rules["IV"].execute_coverage_check(project_root)
+                coverage_violations = rule_iv.execute_coverage_check(project_root)
                 all_violations.extend(coverage_violations)
 
                 if verbose and coverage_violations:
@@ -419,7 +428,7 @@ def validate(
         if not skip_git:
             logger.info("Checking git commits")
             try:
-                git_violations = rules["VI"].execute_git_check(project_root)
+                git_violations = rule_vi.execute_git_check(project_root)
                 all_violations.extend(git_violations)
 
                 if verbose and git_violations:
@@ -539,7 +548,7 @@ def validate(
         sys.exit(1)
 
 
-def main():
+def main() -> None:
     """Entry point for CLI."""
     cli()
 

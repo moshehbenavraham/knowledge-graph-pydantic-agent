@@ -1,8 +1,8 @@
 # MyPy Fix Phase 14: Type Annotations - constitution_validator/ + Misc
 
-**Status**: Not Started
-**Estimated Errors**: 15
-**Files**: 6
+**Status**: Completed
+**Actual Errors Fixed**: 15
+**Files**: 9
 **Prerequisites**: Phase 13 complete
 
 ---
@@ -206,16 +206,19 @@ mypy src/agent/ src/tools/ --ignore-missing-imports --disallow-untyped-defs
 
 ## Completion Checklist
 
-- [ ] Annotate constitution_validator/models.py
-- [ ] Annotate constitution_validator/cli.py
-- [ ] Annotate constitution_validator/reporter.py
-- [ ] Annotate constitution_validator/rules/base.py
-- [ ] Annotate agent/unified_agent.py
-- [ ] Review tools/*.py annotations
-- [ ] Add shared type definitions
-- [ ] Verify with mypy --disallow-untyped-defs
-- [ ] Run test suite
-- [ ] Commit changes
+- [x] Annotate constitution_validator/models.py (3 ValidationInfo params)
+- [x] Annotate constitution_validator/cli.py (cli, validate, main -> None)
+- [x] Annotate constitution_validator/reporter.py (no changes needed)
+- [x] Annotate constitution_validator/rules/base.py (__init__, _prepare_execution)
+- [x] Annotate constitution_validator/scanners/git_scanner.py (__init__)
+- [x] Annotate constitution_validator/scanners/coverage_scanner.py (__init__)
+- [x] Annotate constitution_validator/scanners/ast_scanner.py (clear_cache)
+- [x] Annotate agent/unified_agent.py (__post_init__)
+- [x] Annotate tools/code_execution.py (safe_import, safe_print)
+- [x] Annotate tools/rag.py (cleanup_rag_tools)
+- [x] Verify with mypy --disallow-untyped-defs
+- [x] Run test suite (174 passed)
+- [x] Commit changes
 
 ---
 

@@ -16,7 +16,7 @@ logger = structlog.get_logger()
 class CoverageScanner:
     """Scanner for measuring test coverage using pytest-cov."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize coverage scanner."""
         logger.debug("Initializing CoverageScanner")
         self.coverage_pattern = re.compile(r"TOTAL\s+\d+\s+\d+\s+(\d+(?:\.\d+)?)%")

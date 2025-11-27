@@ -23,7 +23,7 @@ logger = structlog.get_logger()
 class GitScanner:
     """Scanner for git repository operations."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize git scanner."""
         logger.debug("Initializing GitScanner", git_available=GIT_AVAILABLE)
         if not GIT_AVAILABLE:

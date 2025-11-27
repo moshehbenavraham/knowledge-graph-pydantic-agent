@@ -92,7 +92,7 @@ class ASTScanner:
         """
         return hashlib.sha256(content.encode("utf-8")).hexdigest()[:16]
 
-    def clear_cache(self):
+    def clear_cache(self) -> None:
         """Clear the AST parse cache."""
         self._parse_cache.clear()
         logger.info("ast_cache_cleared")

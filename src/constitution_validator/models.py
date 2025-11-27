@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import structlog
-from pydantic import BaseModel, Field, computed_field, field_validator
+from pydantic import BaseModel, Field, ValidationInfo, computed_field, field_validator
 
 logger = structlog.get_logger(__name__)
 
@@ -296,7 +296,7 @@ class ViolationGroup(BaseModel):
 
     @field_validator("count", mode="after")
     @classmethod
-    def validate_count_matches_locations(cls, count: int, info) -> int:
+    def validate_count_matches_locations(cls, count: int, info: ValidationInfo) -> int:
         """Ensure count matches number of locations."""
         logger.debug("Validating violation count", count=count)
         locations = info.data.get("locations", [])
@@ -387,7 +387,7 @@ class ComplianceReport(BaseModel):
 
     @field_validator("passed", mode="after")
     @classmethod
-    def validate_passed_status(cls, passed: bool, info) -> bool:
+    def validate_passed_status(cls, passed: bool, info: ValidationInfo) -> bool:
         """Ensure passed status matches error count."""
         logger.debug("Validating passed status", passed=passed)
         error_count = info.data.get("error_count", 0)
@@ -494,7 +494,9 @@ class IgnorePattern(BaseModel):
 
     @field_validator("rule_ids", mode="after")
     @classmethod
-    def validate_rule_specific_scope(cls, rule_ids: list[str] | None, info) -> list[str] | None:
+    def validate_rule_specific_scope(
+        cls, rule_ids: list[str] | None, info: ValidationInfo
+    ) -> list[str] | None:
         """Ensure rule_ids is set only for rule-specific scope."""
         logger.debug("Validating rule-specific scope", has_rule_ids=rule_ids is not None)
         scope = info.data.get("scope")

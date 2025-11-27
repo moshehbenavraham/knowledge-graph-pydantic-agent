@@ -49,7 +49,7 @@ def execute_safe_code_tool(code: str) -> str:
         allowed_modules["scipy"] = __import__("scipy")
 
     # Custom import function that only allows whitelisted modules
-    def safe_import(name, *args, **kwargs):
+    def safe_import(name: str, *args: object, **kwargs: object) -> object:
         if name in allowed_modules:
             return allowed_modules[name]
         raise ImportError(f"Module {name} is not allowed")
@@ -122,11 +122,11 @@ def execute_safe_code_tool(code: str) -> str:
     }
 
     # Set up output capture
-    output = []
+    output: list[str] = []
 
-    def safe_print(*args, **kwargs):
-        end = kwargs.get("end", "\n")
-        sep = kwargs.get("sep", " ")
+    def safe_print(*args: object, **kwargs: object) -> None:
+        end = str(kwargs.get("end", "\n"))
+        sep = str(kwargs.get("sep", " "))
         output.append(sep.join(str(arg) for arg in args) + end)
 
     # Create restricted globals

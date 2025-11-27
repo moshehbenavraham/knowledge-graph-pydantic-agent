@@ -497,7 +497,7 @@ def _format_search_results(result: HybridSearchResult) -> str:
 
 
 # Cleanup function for graceful shutdown
-async def cleanup_rag_tools():
+async def cleanup_rag_tools() -> None:
     """
     Cleanup RAG tool resources.
 

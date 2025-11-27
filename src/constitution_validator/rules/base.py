@@ -40,7 +40,7 @@ class BaseValidationRule(ABC):
     principle_id: str = "X"
     rule_name: str = "Base Rule"
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize base validation rule."""
         # Instance state reset on each execute() call
         self.violations: list[ViolationRecord] = []
@@ -69,7 +69,7 @@ class BaseValidationRule(ABC):
 
     def _prepare_execution(
         self, file_path: Path, tree: ast.AST | None = None, source_code: str | None = None
-    ):
+    ) -> None:
         """
         Prepare instance state for execution.
 

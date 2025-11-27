@@ -70,7 +70,7 @@ class UnifiedAgentDeps:
     # Search preferences
     search_config: dict[str, Any] | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.search_config is None:
             self.search_config = {
                 "use_vector": True,
@@ -544,16 +544,15 @@ async def iterative_search(
     """
     logger.info(f"Iterative search for: {query}")
 
-    results = {"query": query, "iterations": [], "final_answer": ""}
+    iterations: list[dict[str, Any]] = []
+    results: dict[str, Any] = {"query": query, "iterations": iterations, "final_answer": ""}
 
     # Step 1: Initial search
     initial_results = await retrieve_relevant_documents_tool(
         ctx.deps.supabase, ctx.deps.embedding_client, query
     )
 
-    results["iterations"].append(
-        {"step": 1, "action": "initial_search", "results": initial_results}
-    )
+    iterations.append({"step": 1, "action": "initial_search", "results": initial_results})
 
     # Step 2: Would extract entities and refine search
     # This is where we'd use NER and query expansion
