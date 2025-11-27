@@ -134,7 +134,7 @@ class GraphitiClient:
         """Simple entity extraction using patterns."""
         import re
 
-        entities = []
+        entities: list[dict[str, Any]] = []
 
         # Extract company names (simple heuristic)
         company_pattern = (
@@ -272,7 +272,7 @@ class GraphitiClient:
             List of result objects (default) or dict with categorized results
         """
         collected_results = []
-        metadata = {
+        metadata: dict[str, Any] = {
             "query": query,
             "search_type": search_type,
             "timestamp": datetime.now(UTC).isoformat(),

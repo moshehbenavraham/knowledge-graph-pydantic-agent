@@ -7,6 +7,7 @@ in the Supabase auth_users table.
 
 import argparse
 import asyncio
+from typing import Any
 
 from src.auth.db import (
     assign_role,
@@ -147,7 +148,7 @@ async def cmd_update(
             return 1
 
         # Prepare updates
-        updates = {}
+        updates: dict[str, Any] = {}
         if new_username:
             updates["username"] = new_username
         if new_email:

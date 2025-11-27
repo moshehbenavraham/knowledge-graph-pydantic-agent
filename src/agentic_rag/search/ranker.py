@@ -79,7 +79,7 @@ class ResultRanker:
         self.weights = weights or self.DEFAULT_WEIGHTS.copy()
         self._normalize_weights()
 
-        self._stats = {
+        self._stats: dict[str, Any] = {
             "rankings_performed": 0,
             "total_chunks_ranked": 0,
             "diversity_adjustments": 0,
@@ -188,7 +188,7 @@ class ResultRanker:
 
         # Calculate scores for each chunk
         scored_chunks = []
-        seen_content = set()  # For diversity tracking
+        seen_content: set[str] = set()  # For diversity tracking
 
         for chunk in chunks:
             # Calculate individual factor scores
@@ -486,8 +486,8 @@ class ResultRanker:
             return scored_chunks
 
         diverse_results = []
-        seen_documents = defaultdict(int)
-        seen_topics = defaultdict(int)
+        seen_documents: defaultdict[Any, int] = defaultdict(int)
+        seen_topics: defaultdict[Any, int] = defaultdict(int)
         initial_adjustments = self._stats["diversity_adjustments"]
 
         for item in scored_chunks:

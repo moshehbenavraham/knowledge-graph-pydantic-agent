@@ -438,7 +438,7 @@ def validate(
         suppressed_violations = [v for v in all_violations if v.suppressed]
 
         # Group violations by principle
-        violations_by_principle = {}
+        violations_by_principle: dict[str, list[Any]] = {}
         for v in active_violations:
             if v.principle_id not in violations_by_principle:
                 violations_by_principle[v.principle_id] = []
@@ -450,7 +450,7 @@ def validate(
             violations = violations_by_principle.get(principle.principle_id, [])
 
             # Group by rule_id
-            groups_by_rule = {}
+            groups_by_rule: dict[str, list[Any]] = {}
             for v in violations:
                 if v.rule_id not in groups_by_rule:
                     groups_by_rule[v.rule_id] = []

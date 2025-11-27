@@ -1,4 +1,5 @@
 import base64
+from typing import Any
 
 import structlog
 from pydantic_ai import Agent, BinaryContent
@@ -36,6 +37,7 @@ async def image_analysis_tool(supabase: Client, document_id: str, query: str) ->
         logger.debug("Vision model configuration loaded", provider=provider, model=llm)
 
         # Define the vision agent based on the provider
+        model: Any
         if provider == "anthropic":
             if AnthropicModel is None:
                 raise ImportError("Anthropic model not available")

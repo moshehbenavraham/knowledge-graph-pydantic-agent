@@ -4,6 +4,7 @@ import asyncio
 import time
 from collections import defaultdict, deque
 from datetime import UTC, datetime
+from typing import Any
 
 from .monitoring import ERROR_COUNT, logger
 
@@ -15,9 +16,13 @@ class RateLimiter:
         self.max_requests = max_requests
         self.window_seconds = window_seconds
         self.burst_size = burst_size or max_requests
-        self.requests = defaultdict(deque)  # user_id -> deque of timestamps
-        self.tokens = defaultdict(lambda: self.burst_size)  # user_id -> available tokens
-        self.last_refill = {}  # user_id -> last refill time
+        self.requests: defaultdict[str, deque[float]] = defaultdict(
+            deque
+        )  # user_id -> deque of timestamps
+        self.tokens: defaultdict[str, Any] = defaultdict(
+            lambda: self.burst_size
+        )  # user_id -> available tokens
+        self.last_refill: dict[str, float] = {}  # user_id -> last refill time
         self.lock = asyncio.Lock()
 
     async def is_allowed(self, user_id: str) -> tuple[bool, dict]:

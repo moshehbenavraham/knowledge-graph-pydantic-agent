@@ -136,7 +136,7 @@ class GraphSearch:
         self.neo4j_store = Neo4jStore(self.connection_manager)
         self.graphiti_client = GraphitiClient(self.neo4j_store)
 
-        self._stats = {
+        self._stats: dict[str, Any] = {
             "searches": 0,
             "total_latency": 0,
             "facts_found": 0,

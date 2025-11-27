@@ -6,6 +6,7 @@ This component can be included in admin dashboards or user management pages.
 """
 
 import asyncio
+from typing import Any
 
 import streamlit as st
 import structlog
@@ -62,7 +63,7 @@ def render_2fa_management_ui() -> None:
 
     # Load all users
     try:
-        users = asyncio.run(list_users(limit=1000, include_deleted=False))
+        users: list[dict[str, Any]] = asyncio.run(list_users(limit=1000, include_deleted=False))
 
         # Filter to active users only
         active_users = [u for u in users if u.get("is_active", False)]
@@ -123,7 +124,7 @@ def render_2fa_management_ui() -> None:
                 totp_manager = get_totp_manager()
                 backup_code_manager = get_backup_code_manager()
                 try:
-                    is_2fa_enabled = asyncio.run(totp_manager.is_2fa_enabled(user["id"]))
+                    is_2fa_enabled: bool = asyncio.run(totp_manager.is_2fa_enabled(user["id"]))
                     backup_codes_count = (
                         asyncio.run(backup_code_manager.get_unused_count(user["id"]))
                         if is_2fa_enabled
@@ -220,7 +221,7 @@ def render_2fa_management_ui() -> None:
                     # Get all users with admin role
                     admin_count = 0
                     for user in active_users:
-                        roles = asyncio.run(get_user_roles(user["id"]))
+                        roles: list[dict[str, Any]] = asyncio.run(get_user_roles(user["id"]))
                         if any(role.get("name") == "admin" for role in roles):
                             if not user.get("requires_2fa", False):
                                 asyncio.run(set_2fa_requirement(user["username"], True))
@@ -262,7 +263,7 @@ def render_user_2fa_settings(username: str) -> None:
         # Get user info
         from src.auth.db import get_user_by_username
 
-        user = asyncio.run(get_user_by_username(username))
+        user: dict[str, Any] | None = asyncio.run(get_user_by_username(username))
         if not user:
             st.error("User not found")
             return
@@ -275,7 +276,7 @@ def render_user_2fa_settings(username: str) -> None:
 
         totp_manager = get_totp_manager()
         backup_code_manager = get_backup_code_manager()
-        is_2fa_enabled = asyncio.run(totp_manager.is_2fa_enabled(user_id))
+        is_2fa_enabled: bool = asyncio.run(totp_manager.is_2fa_enabled(user_id))
         backup_codes_count = (
             asyncio.run(backup_code_manager.get_unused_count(user_id)) if is_2fa_enabled else 0
         )
@@ -317,7 +318,7 @@ def render_user_2fa_settings(username: str) -> None:
                     )
                     if st.button("⚠️ Yes, Disable 2FA", type="primary"):
                         try:
-                            success = asyncio.run(totp_manager.disable_2fa(user_id))
+                            success: bool = asyncio.run(totp_manager.disable_2fa(user_id))
                             if success:
                                 st.success("✅ 2FA disabled successfully")
                                 st.rerun()

@@ -68,7 +68,7 @@ async def load_credentials_from_database() -> dict:
         logger.info("Users retrieved from database", total_users=len(users))
 
         # Convert to streamlit-authenticator format
-        credentials = {"usernames": {}}
+        credentials: dict[str, dict[str, dict[str, str]]] = {"usernames": {}}
 
         for user in users:
             username = user.get("username")
@@ -109,9 +109,9 @@ async def load_credentials_from_database() -> dict:
             )
 
             credentials["usernames"][username] = {
-                "email": user.get("email"),
-                "name": user.get("full_name"),
-                "password": password_hash,
+                "email": user.get("email") or "",
+                "name": user.get("full_name") or "",
+                "password": password_hash or "",
             }
 
         logger.info(

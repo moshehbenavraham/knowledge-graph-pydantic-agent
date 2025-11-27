@@ -52,7 +52,7 @@ class PostgresStore:
             "store_chunks called", document_id=str(document_id), num_chunks=len(chunks)
         )
 
-        chunk_ids = []
+        chunk_ids: list[UUID] = []
 
         async with self.connection_manager.get_pg_connection() as conn:
             # Prepare batch insert data

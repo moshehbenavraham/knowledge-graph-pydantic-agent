@@ -165,7 +165,9 @@ def render_oauth_account_management() -> None:
                                 ):
                                     try:
                                         account = linked_providers[provider_key]
-                                        success = asyncio.run(unlink_oauth_account(account["id"]))
+                                        success: bool = asyncio.run(
+                                            unlink_oauth_account(account["id"])
+                                        )
 
                                         if success:
                                             st.success(

@@ -229,11 +229,11 @@ def main():
         if not args.username:
             print("Error: --username is required")
             return
-        user = manager.get_user(args.username)
-        if user:
-            print(f"\nUser: {user['username']}")
-            print(f"Email: {user['email']}")
-            print(f"Name: {user['name']}")
+        found_user = manager.get_user(args.username)
+        if found_user:
+            print(f"\nUser: {found_user['username']}")
+            print(f"Email: {found_user['email']}")
+            print(f"Name: {found_user['name']}")
         else:
             print(f"User '{args.username}' not found")
 

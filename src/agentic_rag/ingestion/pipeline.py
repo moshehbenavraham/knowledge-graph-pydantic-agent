@@ -95,12 +95,13 @@ class DocumentIngestionPipeline:
 
         # Storage components - will be initialized in async initialize()
         self.connection_manager: ConnectionManager | None = None
-        self.pg_store = None
-        self.neo4j_store = None
-        self.graphiti_client = None
+        self.pg_store: PostgresStore | SupabaseRestStore | None = None
+        self.neo4j_store: Neo4jStore | None = None
+        self.graphiti_client: GraphitiClient | None = None
 
         # Processing components - can be initialized synchronously
         self.chunking_config = get_chunking_config()
+        self.chunker: SemanticChunker | SimpleChunker
         if self.chunking_config.get("use_semantic_splitting"):
             self.chunker = SemanticChunker(self.chunking_config)
         else:
@@ -110,7 +111,7 @@ class DocumentIngestionPipeline:
         self.extractor = KnowledgeExtractor()
 
         # Statistics
-        self._stats = {
+        self._stats: dict[str, Any] = {
             "documents_processed": 0,
             "chunks_created": 0,
             "entities_extracted": 0,
@@ -204,7 +205,7 @@ class DocumentIngestionPipeline:
             IngestionResult with processing details
         """
         start_time = datetime.now()
-        errors = []
+        errors: list[str] = []
 
         try:
             logger.info(f"Starting ingestion for document: {title}")

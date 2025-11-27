@@ -516,8 +516,8 @@ async def comprehensive_search(
                 logger.error(f"{search_type} search failed: {result}")
                 results[f"{search_type}_error"] = str(result)
             elif search_type == "vector":
-                results["vector_results"] = result
-                results["combined_results"] = result  # For now, just use vector results
+                results["vector_results"] = result  # type: ignore[assignment]
+                results["combined_results"] = result  # type: ignore[assignment]
 
     return results
 

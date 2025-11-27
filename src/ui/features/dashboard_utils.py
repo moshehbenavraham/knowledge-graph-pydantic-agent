@@ -462,12 +462,12 @@ def calculate_graph_statistics(
         relationship_count=len(relationships),
     )
 
-    entity_types = {}
+    entity_types: dict[str, int] = {}
     for entity in entities:
         entity_type = entity.get("type", "Unknown")
         entity_types[entity_type] = entity_types.get(entity_type, 0) + 1
 
-    relationship_types = {}
+    relationship_types: dict[str, int] = {}
     for rel in relationships:
         rel_type = rel.get("relationship_type", "RELATED_TO")
         relationship_types[rel_type] = relationship_types.get(rel_type, 0) + 1

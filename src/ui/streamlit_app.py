@@ -98,7 +98,7 @@ def make_json_safe(obj: Any, max_depth: int = 10, _current_depth: int = 0) -> An
 
     # Handle dicts recursively
     if isinstance(obj, dict):
-        result = {
+        result = {  # type: ignore[assignment]
             str(key): make_json_safe(value, max_depth, _current_depth + 1)
             for key, value in obj.items()
         }

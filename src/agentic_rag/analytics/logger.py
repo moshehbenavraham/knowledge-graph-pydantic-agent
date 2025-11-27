@@ -253,7 +253,7 @@ class AnalyticsLogger:
             return
 
         # Extract batch
-        batch = []
+        batch: list[SearchAnalyticsEvent] = []
         while self._search_queue and len(batch) < self.batch_size:
             batch.append(self._search_queue.popleft())
 
@@ -320,7 +320,7 @@ class AnalyticsLogger:
         if not self._tool_queue:
             return
 
-        batch = []
+        batch: list[ToolUsageEvent] = []
         while self._tool_queue and len(batch) < self.batch_size:
             batch.append(self._tool_queue.popleft())
 
@@ -372,7 +372,7 @@ class AnalyticsLogger:
         if not self._interaction_queue:
             return
 
-        batch = []
+        batch: list[AgentInteractionEvent] = []
         while self._interaction_queue and len(batch) < self.batch_size:
             batch.append(self._interaction_queue.popleft())
 
@@ -430,7 +430,7 @@ class AnalyticsLogger:
         if not self._ingestion_queue:
             return
 
-        batch = []
+        batch: list[IngestionAnalyticsEvent] = []
         while self._ingestion_queue and len(batch) < self.batch_size:
             batch.append(self._ingestion_queue.popleft())
 
@@ -486,7 +486,7 @@ class AnalyticsLogger:
         if not self._system_queue:
             return
 
-        batch = []
+        batch: list[SystemMetricsEvent] = []
         while self._system_queue and len(batch) < self.batch_size:
             batch.append(self._system_queue.popleft())
 

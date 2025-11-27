@@ -172,7 +172,7 @@ warn_redundant_casts = true
 warn_unused_ignores = false
 disallow_untyped_defs = false
 check_untyped_defs = true
-disable_error_code = ["call-arg", "attr-defined", "assignment", "operator", "method-assign", "arg-type", "union-attr", "var-annotated", "index"]
+disable_error_code = ["call-arg", "attr-defined", "operator", "method-assign", "arg-type", "union-attr", "index"]
 # Focus on catching serious issues like name errors and import problems
 # Ignore common test-related type issues to keep CI green
 

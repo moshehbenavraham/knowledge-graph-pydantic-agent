@@ -31,6 +31,7 @@ def main():
         "Parsed command line arguments", source=args.source, interval=args.interval
     )
 
+    watcher: LocalFileWatcher | GoogleDriveWatcher
     if args.source == "local":
         structlog_logger.info("Initializing LocalFileWatcher...")
         watcher = LocalFileWatcher()

@@ -213,7 +213,7 @@ class SemanticChunker:
 
         lines = content.split("\n")
         sections = []
-        current_section = []
+        current_section: list[str] = []
         current_type = "paragraph"
 
         for line in lines:

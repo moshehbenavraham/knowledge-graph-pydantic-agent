@@ -5,6 +5,7 @@ Provides vector, graph, hybrid, and intent-driven search capabilities.
 """
 
 import time
+from typing import Any
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -143,7 +144,7 @@ async def search_suggest(
     """
     try:
         # TODO: Implement query suggestion logic
-        suggestions = []
+        suggestions: list[str] = []
 
         return {
             "query": query,
@@ -213,7 +214,7 @@ async def find_relationships(
 
     try:
         # TODO: Implement relationship path finding
-        relationships = []
+        relationships: list[dict[str, Any]] = []
 
         return {
             "entity1": entity1,

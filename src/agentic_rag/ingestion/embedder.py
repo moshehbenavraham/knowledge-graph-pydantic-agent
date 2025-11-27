@@ -155,7 +155,12 @@ class EmbeddingGenerator:
         self.config = config or get_embedding_config()
         self.cache = EmbeddingCache() if self._get_config_value("enable_cache", True) else None
         self._client = None
-        self._stats = {"cache_hits": 0, "cache_misses": 0, "api_calls": 0, "total_embeddings": 0}
+        self._stats: dict[str, Any] = {
+            "cache_hits": 0,
+            "cache_misses": 0,
+            "api_calls": 0,
+            "total_embeddings": 0,
+        }
         structlog_logger.info(
             "EmbeddingGenerator initialized",
             provider=self._get_config_value("provider"),
@@ -493,7 +498,7 @@ class MultiDimensionEmbedder:
 
     async def embed_multi(
         self, text: str | list[str]
-    ) -> dict[str, list[float] | list[list[float]]]:
+    ) -> dict[str, list[float] | list[list[float]] | None]:
         """
         Generate embeddings in multiple dimensions.
 
@@ -507,7 +512,7 @@ class MultiDimensionEmbedder:
         num_texts = 1 if is_single else len(text)
         structlog_logger.info("embed_multi called", num_texts=num_texts)
 
-        result = {}
+        result: dict[str, list[float] | list[list[float]] | None] = {}
 
         # Primary embedding
         result["embedding_1536"] = await self.primary_embedder.embed(text)

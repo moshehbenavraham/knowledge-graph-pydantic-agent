@@ -79,7 +79,7 @@ async def chat(
         response_text = result.data if hasattr(result, "data") else str(result)
 
         # Get usage metrics
-        usage = result.usage() if hasattr(result, "usage") else {}
+        usage: dict[str, Any] = result.usage() if hasattr(result, "usage") else {}  # type: ignore[assignment]
 
         # Build sources if available
         sources = []
@@ -148,7 +148,7 @@ async def chat_stream(
     logger.info("chat_stream_started", session_id=request.session_id)
 
     # Configure agent parameters
-    agent_params = {}
+    agent_params: dict[str, Any] = {}
     if request.max_tokens:
         agent_params["max_tokens"] = request.max_tokens
     if request.temperature:

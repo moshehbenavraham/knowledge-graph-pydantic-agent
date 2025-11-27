@@ -155,12 +155,18 @@ class VectorSearch:
         self.embedder = EmbeddingGenerator()
 
         # Initialize cache if enabled
+        self.cache: SearchCache | None
         if self.config.performance.enable_caching:
             self.cache = SearchCache(ttl_seconds=self.config.performance.embedding_cache_ttl)
         else:
             self.cache = None
 
-        self._stats = {"searches": 0, "cache_hits": 0, "cache_misses": 0, "total_latency": 0}
+        self._stats: dict[str, Any] = {
+            "searches": 0,
+            "cache_hits": 0,
+            "cache_misses": 0,
+            "total_latency": 0,
+        }
 
     async def search(
         self,

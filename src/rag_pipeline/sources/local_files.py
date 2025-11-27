@@ -188,6 +188,7 @@ class LocalFileWatcher:
         structlog_logger.info("File extension extracted", file_path=file_path, extension=ext)
 
         # Check if extension is in our custom mappings
+        mime_type: str | None
         if ext in extension_mappings:
             mime_type = extension_mappings[ext]
             structlog_logger.info(
@@ -196,7 +197,8 @@ class LocalFileWatcher:
             return mime_type
 
         # Fall back to mimetypes module
-        mime_type, _ = mimetypes.guess_type(file_path)
+        mime_type_guess, _ = mimetypes.guess_type(file_path)
+        mime_type = mime_type_guess
         if mime_type is None:
             # Default to plain text if can't determine
             mime_type = "text/plain"

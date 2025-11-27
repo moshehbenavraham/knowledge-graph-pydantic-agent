@@ -5,6 +5,7 @@ Handles document ingestion, updates, listing, and content inspection.
 """
 
 import time
+from typing import Any
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -280,7 +281,7 @@ async def update_document(
             )
 
         # Update fields
-        updates = {}
+        updates: dict[str, Any] = {}
         if title:
             updates["title"] = title
         if metadata:

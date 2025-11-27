@@ -15,8 +15,8 @@ logger = structlog.get_logger(__name__)
 class BaseHandler(ABC):
     def __init__(self, config: dict[str, Any]):
         self.config = config
-        self.embedding_client = None
-        self.supabase = None
+        self.embedding_client: Any = None
+        self.supabase: Any = None
         self._initialized = False
 
     def initialize(self):
