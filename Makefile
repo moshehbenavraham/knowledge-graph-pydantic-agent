@@ -92,38 +92,67 @@ dev:
 	bash -c "source .venv/bin/activate && PYTHONPATH=$(PWD):$$PYTHONPATH UI_MODE=$(or $(MODE),advanced) streamlit run src/ui/streamlit_app.py --server.runOnSave true"
 
 # ngrok Deployment
-ngrok-start:  ## Start ngrok tunnel manually
+ngrok-start:  ## Start ngrok tunnel manually (foreground)
 	ngrok start base-agent-ui
 
-ngrok-ui:  ## Start Streamlit only (for manual ngrok)
+ngrok-ui:  ## Start Streamlit only (foreground, for manual ngrok)
 	@lsof -ti :8501 | xargs kill -9 2>/dev/null || true
 	bash -c "source .venv/bin/activate && \
 	  PYTHONPATH=$(PWD):$$PYTHONPATH UI_MODE=advanced \
 	  streamlit run src/ui/streamlit_app.py --server.port=8501"
 
-deploy-ngrok:  ## Start Streamlit + ngrok tunnel + HTTP log monitor (logs to logs/ngrok_auth_logs/)
+deploy-ngrok:  ## Start Streamlit + ngrok (background, persistent) - use deploy-ngrok-stop to stop
+	@echo "Stopping any existing services..."
 	@lsof -ti :8501 | xargs kill -9 2>/dev/null || true
-	@mkdir -p logs/ngrok_auth_logs
-	@echo "Cleaning up logs older than 3 days..."
-	@find logs/ngrok_auth_logs -name "*.log" -type f -mtime +3 -delete 2>/dev/null || true
+	@lsof -ti :4040 | xargs kill -9 2>/dev/null || true
+	@killall ngrok 2>/dev/null || true
+	@sleep 2
+	@mkdir -p logs
 	@echo "Starting Streamlit on port 8501..."
 	@bash -c "source .venv/bin/activate && \
 	  PYTHONPATH=$(PWD):$$PYTHONPATH UI_MODE=advanced \
-	  streamlit run src/ui/streamlit_app.py --server.port=8501 2>&1 | tee logs/ngrok_auth_logs/streamlit_$$(date +%Y%m%d_%H%M%S).log" & \
-	sleep 5 && \
-	echo "Starting ngrok tunnel to aiwithapex.ngrok.io..." && \
-	ngrok start base-agent-ui 2>&1 | tee logs/ngrok_auth_logs/ngrok_$$(date +%Y%m%d_%H%M%S).log & \
-	sleep 3 && \
-	echo "Starting ngrok HTTP log monitor..." && \
-	bash -c "source .venv/bin/activate && python3 scripts/monitor_ngrok_logs.py"
+	  nohup streamlit run src/ui/streamlit_app.py --server.port=8501 > logs/streamlit.log 2>&1 &"
+	@sleep 4
+	@echo "Starting ngrok tunnel..."
+	@bash -c "nohup ngrok start base-agent-ui > logs/ngrok.log 2>&1 &"
+	@sleep 4
+	@echo ""
+	@echo "=============================================="
+	@echo "  DEPLOYMENT COMPLETE"
+	@echo "=============================================="
+	@echo ""
+	@echo "Local:  http://localhost:8501"
+	@curl -s http://localhost:4040/api/tunnels 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); print('Public: ' + d['tunnels'][0]['public_url'])" 2>/dev/null || echo "Public: (ngrok starting...check with 'make ngrok-status')"
+	@echo ""
+	@echo "Logs:   logs/streamlit.log, logs/ngrok.log"
+	@echo "Stop:   make deploy-ngrok-stop"
+	@echo "=============================================="
 
-ngrok-status:  ## Check ngrok tunnel status
-	@curl -s http://localhost:4040/api/tunnels | python -m json.tool
+deploy-ngrok-stop:  ## Stop Streamlit + ngrok services
+	@echo "Stopping services..."
+	@lsof -ti :8501 | xargs kill -9 2>/dev/null || true
+	@lsof -ti :4040 | xargs kill -9 2>/dev/null || true
+	@killall ngrok 2>/dev/null || true
+	@killall streamlit 2>/dev/null || true
+	@echo "Services stopped."
+
+deploy-ngrok-restart:  ## Restart Streamlit + ngrok services
+	@$(MAKE) deploy-ngrok-stop
+	@sleep 2
+	@$(MAKE) deploy-ngrok
+
+ngrok-status:  ## Check ngrok tunnel status and URL
+	@echo "Checking ngrok status..."
+	@curl -s http://localhost:4040/api/tunnels 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); t=d.get('tunnels',[]); print('Tunnel: ' + t[0]['public_url'] if t else 'No active tunnels')" 2>/dev/null || echo "ngrok API not responding (is ngrok running?)"
+	@echo ""
+	@echo "Streamlit: $$(lsof -ti :8501 >/dev/null 2>&1 && echo 'Running' || echo 'Not running')"
+	@echo "ngrok:     $$(pgrep -f 'ngrok start' >/dev/null 2>&1 && echo 'Running' || echo 'Not running')"
 
 ngrok-logs:  ## View ngrok access logs (via API)
-	@curl -s http://localhost:4040/api/requests/http | python -m json.tool
+	@curl -s http://localhost:4040/api/requests/http | python3 -m json.tool
 
-ngrok-monitor:  ## Start ngrok HTTP log monitor (writes to logs/ngrok_auth_logs/)
+ngrok-monitor:  ## Start ngrok HTTP log monitor (foreground, writes to logs/ngrok_auth_logs/)
+	@mkdir -p logs/ngrok_auth_logs
 	@bash -c "source .venv/bin/activate && python3 scripts/monitor_ngrok_logs.py"
 
 # Coolify Deployment
@@ -557,4 +586,4 @@ deploy-clean-all:
 	docker-compose -f docker/docker-compose.staging.yml down -v
 	docker-compose -f docker/docker-compose.prod.yml down -v
 
-.PHONY: setup check format test test-coverage lint security run-ui run-ui-simple run-ui-standard run-ui-advanced run-rag run-mcp run-api run-agentic-rag dev ngrok-start ngrok-ui deploy-ngrok ngrok-status ngrok-logs ngrok-monitor coolify-check coolify-env coolify-build coolify-test-build coolify-compose-up coolify-compose-down coolify-compose-logs docker-build docker-run docker-stop db-setup neo4j-init ingest ingest-clean clean clean-all requirements install-dev load-test load-test-headless stress-test profile profile-memory redis-cli redis-flush redis-stats redis-monitor api-test api-search api-metrics api-status full-stack-up full-stack-down benchmark poetry-install poetry-update poetry-lock poetry-export poetry-build poetry-shell poetry-check poetry-show http-test http-chat http-search http-status http-metrics profile-api profile-ui profile-rag profile-tests profile-top profile-memory-api profile-memory-ui dev-setup dev-check dev-format dev-clean pre-commit-install pre-commit-run pre-commit-update full-test full-profile image-build image-build-api image-push image-push-api image-tag-release image-scan image-scan-full image-sbom image-sign image-verify deploy-dev deploy-dev-down deploy-staging deploy-staging-down deploy-prod deploy-prod-down health-check health-check-staging health-check-prod ci-supply-chain ci-deploy logs-app logs-api logs-all metrics-export image-clean deploy-clean-all
+.PHONY: setup check format test test-coverage lint security run-ui run-ui-simple run-ui-standard run-ui-advanced run-rag run-mcp run-api run-agentic-rag dev ngrok-start ngrok-ui deploy-ngrok deploy-ngrok-stop deploy-ngrok-restart ngrok-status ngrok-logs ngrok-monitor coolify-check coolify-env coolify-build coolify-test-build coolify-compose-up coolify-compose-down coolify-compose-logs docker-build docker-run docker-stop db-setup neo4j-init ingest ingest-clean clean clean-all requirements install-dev load-test load-test-headless stress-test profile profile-memory redis-cli redis-flush redis-stats redis-monitor api-test api-search api-metrics api-status full-stack-up full-stack-down benchmark poetry-install poetry-update poetry-lock poetry-export poetry-build poetry-shell poetry-check poetry-show http-test http-chat http-search http-status http-metrics profile-api profile-ui profile-rag profile-tests profile-top profile-memory-api profile-memory-ui dev-setup dev-check dev-format dev-clean pre-commit-install pre-commit-run pre-commit-update full-test full-profile image-build image-build-api image-push image-push-api image-tag-release image-scan image-scan-full image-sbom image-sign image-verify deploy-dev deploy-dev-down deploy-staging deploy-staging-down deploy-prod deploy-prod-down health-check health-check-staging health-check-prod ci-supply-chain ci-deploy logs-app logs-api logs-all metrics-export image-clean deploy-clean-all
