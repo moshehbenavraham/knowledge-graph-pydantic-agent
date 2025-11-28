@@ -298,7 +298,7 @@ async def get_session_history(
         )
 
 
-def _extract_sources_from_messages(messages: list) -> list[SourceDocument]:
+def _extract_sources_from_messages(messages: list[Any]) -> list[SourceDocument]:
     """
     Extract source documents from agent messages.
 

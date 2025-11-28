@@ -1,9 +1,10 @@
 # Knowledge Graph Improvement Plan
 
-**Document Version:** 1.0
-**Date:** 2025-11-10
-**Status:** Planning Phase
+**Document Version:** 1.1
+**Date:** 2025-11-28
+**Status:** In Progress (Partial Implementation)
 **Target:** Enable comprehensive QnA capabilities for quarterly earnings analysis
+**Last Review:** 2025-11-28
 
 ---
 
@@ -23,6 +24,32 @@ This plan addresses 5 critical issues in the current Neo4j knowledge graph imple
 - Document-level entity tracking
 - Temporal fact queries
 - Canonical entity resolution
+
+---
+
+## Implementation Status Summary (2025-11-28)
+
+| Feature | Status | Location | Notes |
+|---------|--------|----------|-------|
+| Issue 1: Episode-Entity Linking | DONE | `neo4j_store.py:168-245` | Uses `MENTIONED_IN` (reversed direction) |
+| Issue 2: Importance Scoring | DONE | `neo4j_store.py:408-427` | Simpler algorithm than proposed |
+| Issue 3: Document References | NOT DONE | - | `document_refs` always empty |
+| Issue 4: Temporal Metadata | NOT DONE | - | Episodes lack fiscal_quarter/year |
+| Issue 5: Entity Deduplication | NOT DONE | - | No canonical_names.py created |
+| Enhancement 1: Numeric Facts | NOT DONE | - | No numeric extraction |
+| Enhancement 2: Relationship Scoring | NOT DONE | - | Static strength=0.5 |
+| Enhancement 3: Type Hierarchy | NOT DONE | - | Flat types only |
+
+**Scripts Referenced But Not Created:**
+- `scripts/link_episodes_to_entities.py`
+- `scripts/compute_importance_scores.py`
+- `scripts/backfill_document_refs.py`
+- `scripts/merge_duplicate_entities.py`
+
+**Modules Referenced But Not Created:**
+- `src/agentic_rag/entity_resolution/canonical_names.py`
+
+**Overall Progress:** 2 of 8 items implemented (~25%)
 
 ---
 
@@ -73,10 +100,14 @@ This plan addresses 5 critical issues in the current Neo4j knowledge graph imple
 **Schema Changes:**
 
 ```cypher
-// New relationship type
-(Episode)-[:MENTIONS]->(Entity)
+// ACTUAL IMPLEMENTATION (as of 2025-11-28):
+// Direction reversed from original proposal - functionally equivalent
+(Entity)-[:MENTIONED_IN]->(Episode)
 
-// Properties
+// ORIGINALLY PROPOSED (not implemented):
+// (Episode)-[:MENTIONS]->(Entity)
+
+// Properties (proposed but not yet implemented)
 {
   salience: float,        // How central is entity to this fact (0.0-1.0)
   role: string,           // "subject", "object", "context"
@@ -84,9 +115,12 @@ This plan addresses 5 critical issues in the current Neo4j knowledge graph imple
 }
 ```
 
+> **Note:** The actual implementation uses `Entity-[:MENTIONED_IN]->Episode` direction.
+> Query examples below have been updated to reflect the actual schema.
+
 **Implementation Plan:**
 
-1. **Extraction Enhancement** (`src/agentic_rag/ingestion/graphiti_client.py`)
+1. **Extraction Enhancement** (`src/agentic_rag/storage/graphiti_client.py`)
    - After Graphiti extracts episodes, parse the `fact` text to identify mentioned entities
    - Use existing entity names from graph for matching
    - Create `MENTIONS` relationships for each entity reference
@@ -103,13 +137,13 @@ This plan addresses 5 critical issues in the current Neo4j knowledge graph imple
 
 3. **Query Capabilities Enabled:**
    ```cypher
-   // Get all facts about Microsoft
-   MATCH (e:Entity {name: "Microsoft"})<-[:MENTIONS]-(ep:Episode)
+   // Get all facts about Microsoft (using actual schema)
+   MATCH (e:Entity {name: "Microsoft"})-[:MENTIONED_IN]->(ep:Episode)
    RETURN ep.fact ORDER BY ep.timestamp
 
    // Timeline of acquisitions
    MATCH (e:Entity)-[:RELATED_TO {type: "acquired"}]->(target)
-   MATCH (ep:Episode)-[:MENTIONS]->(e)
+   MATCH (e)-[:MENTIONED_IN]->(ep:Episode)
    WHERE ep.fact CONTAINS "acquisition"
    RETURN e.name, target.name, ep.fact, ep.timestamp
    ```
@@ -345,22 +379,25 @@ document_metadata: {
 
 4. **Query Capabilities:**
    ```cypher
-   // Facts from Q3 2023
+   // Facts from Q3 2023 (requires temporal metadata - NOT YET IMPLEMENTED)
    MATCH (ep:Episode)
    WHERE ep.fiscal_quarter = "Q3" AND ep.fiscal_year = 2023
    RETURN ep.fact, ep.company
 
-   // Entity timeline
-   MATCH (e:Entity {name: "Microsoft"})<-[:MENTIONS]-(ep:Episode)
+   // Entity timeline (using actual schema)
+   MATCH (e:Entity {name: "Microsoft"})-[:MENTIONED_IN]->(ep:Episode)
    RETURN ep.fiscal_quarter, ep.fiscal_year, ep.fact
    ORDER BY ep.fiscal_year, ep.fiscal_quarter
 
-   // Cross-quarter trends
-   MATCH (e:Entity {name: "iPhone"})<-[:MENTIONS]-(ep:Episode)
+   // Cross-quarter trends (using actual schema)
+   MATCH (e:Entity {name: "iPhone"})-[:MENTIONED_IN]->(ep:Episode)
    WHERE ep.fact CONTAINS "revenue"
    RETURN ep.fiscal_year, ep.fiscal_quarter, ep.fact
    ORDER BY ep.fiscal_year, ep.fiscal_quarter
    ```
+
+   > **Note:** Temporal properties (`fiscal_quarter`, `fiscal_year`, `company`) are NOT YET
+   > populated in episodes. Currently episodes only have `timestamp` (ingestion time).
 
 **Estimated Effort:** 2-3 days
 
@@ -570,22 +607,30 @@ RETURN e.name
 
 ## Implementation Roadmap
 
+> **Status Review (2025-11-28):** Roadmap updated to reflect actual implementation status.
+> See `src/agentic_rag/storage/neo4j_store.py` and `graphiti_client.py` for current code.
+
 ### Phase 1: Critical Fixes (Week 1)
 **Goal:** Address blocking issues for basic QnA
 
-- [x] **Day 1-2:** Issue 3 - Document References
+- [ ] **Day 1-2:** Issue 3 - Document References
   - Update ingestion pipeline
   - Backfill existing entities
+  - **STATUS: NOT IMPLEMENTED** - `document_refs` initialized as empty array, never populated
 
-- [x] **Day 3-4:** Issue 4 - Temporal Metadata
+- [ ] **Day 3-4:** Issue 4 - Temporal Metadata
   - Enhance document parsing
   - Update episode creation
+  - **STATUS: NOT IMPLEMENTED** - Episodes use ingestion `timestamp`, no `fiscal_quarter`/`fiscal_year`/`document_date` parsing
 
 - [x] **Day 5:** Issue 2 - Importance Scoring
   - Implement scoring algorithm
   - Batch compute scores
+  - **STATUS: IMPLEMENTED** - See `neo4j_store.py:update_entity_importance()` (lines 408-427)
+    - Uses simpler algorithm: `(rel_count * 0.3 + mention_count * 0.7) / (rel_count + mention_count + 10.0)`
 
 **Deliverable:** Entities have document tracking, temporal context, and dynamic importance
+**Actual Status:** Only importance scoring implemented. Document refs and temporal metadata still pending.
 
 ### Phase 2: Graph Connectivity (Week 2)
 **Goal:** Enable entity-fact queries
@@ -594,52 +639,70 @@ RETURN e.name
   - Implement entity mention extraction
   - Create MENTIONS relationships
   - Batch link existing episodes
+  - **STATUS: IMPLEMENTED** - See `neo4j_store.py:add_episodes()` (lines 168-245)
+    - Uses `Entity-[:MENTIONED_IN]->Episode` direction (reversed from proposal)
+    - Creates links at ingestion time, not batch
 
-- [x] **Day 4-5:** Enhancement 1 - Numeric Facts
+- [ ] **Day 4-5:** Enhancement 1 - Numeric Facts
   - Extract numeric values from episodes
   - Structure as queryable properties
+  - **STATUS: NOT IMPLEMENTED** - No `numeric_facts` property extraction
 
 **Deliverable:** Fully connected graph with queryable facts
+**Actual Status:** Episode-entity linking works. Numeric facts not implemented.
 
 ### Phase 3: Quality Improvements (Week 3)
 **Goal:** Clean and optimize graph
 
-- [x] **Day 1-4:** Issue 5 - Entity Deduplication
+- [ ] **Day 1-4:** Issue 5 - Entity Deduplication
   - Build canonical name registry
   - Merge duplicate entities
   - Update ingestion pipeline
+  - **STATUS: NOT IMPLEMENTED** - `entity_resolution/canonical_names.py` does not exist
 
-- [x] **Day 5:** Enhancement 2 - Relationship Scoring
+- [ ] **Day 5:** Enhancement 2 - Relationship Scoring
   - Compute dynamic relationship strengths
+  - **STATUS: NOT IMPLEMENTED** - Relationships use static `strength = 0.5`
 
 **Deliverable:** High-quality, deduplicated graph
+**Actual Status:** Not started.
 
 ### Phase 4: Advanced Features (Week 4)
 **Goal:** Enable sophisticated queries
 
-- [x] **Day 1-2:** Enhancement 3 - Type Hierarchy
+- [ ] **Day 1-2:** Enhancement 3 - Type Hierarchy
   - Implement hierarchical types
   - Update entity creation
+  - **STATUS: NOT IMPLEMENTED** - Flat entity types only
 
-- [x] **Day 3-5:** Testing & Validation
+- [ ] **Day 3-5:** Testing & Validation
   - Test QnA queries
   - Benchmark performance
   - Documentation
+  - **STATUS: UNKNOWN** - No dedicated test files found for graph improvements
 
 **Deliverable:** Production-ready knowledge graph
+**Actual Status:** Not started.
 
 ---
 
 ## Success Metrics
 
-### Before Improvements
+### Before Improvements (Original Baseline)
 - Episode-Entity connections: 0
 - Entity deduplication: 0% (multiple versions exist)
 - Temporal queries: Not possible
 - Document tracking: 0 entities with document_refs
 - Importance variance: 0 (all 0.5)
 
-### After Improvements
+### Current State (2025-11-28)
+- Episode-Entity connections: **IMPLEMENTED** - Episodes linked via `MENTIONED_IN` relationship
+- Entity deduplication: **NOT IMPLEMENTED** - Still 0% (multiple versions exist)
+- Temporal queries: **NOT IMPLEMENTED** - Still not possible (no fiscal_quarter/year)
+- Document tracking: **NOT IMPLEMENTED** - Still 0 entities with document_refs
+- Importance variance: **IMPLEMENTED** - Dynamic scoring via `update_entity_importance()`
+
+### Target State (After Full Implementation)
 - Episode-Entity connections: >90% episodes linked
 - Entity deduplication: >95% reduction in duplicates
 - Temporal queries: All 46 multi-doc temporal questions answerable
@@ -813,11 +876,36 @@ CREATE INDEX entity_importance_idx FOR (e:Entity) ON (e.importance_score);
 
 These improvements will transform the knowledge graph from a disconnected entity index into a fully queryable temporal knowledge base capable of answering complex multi-document questions. The phased approach ensures incremental value delivery while maintaining system stability.
 
-**Priority Order:**
-1. Document references (unlocks cross-doc queries)
-2. Temporal metadata (enables trend analysis)
-3. Episode-entity linking (connects facts to entities)
-4. Entity deduplication (improves quality)
-5. Importance scoring (optimizes search)
+### Current Progress (2025-11-28)
 
-By completing Phase 1-2 (2 weeks), the system will support 80% of QnA dataset requirements. Full implementation (4 weeks) will enable 95%+ coverage with high-quality responses.
+**Implemented (2 of 8 items):**
+1. Episode-entity linking (connects facts to entities) - via `MENTIONED_IN` relationship
+2. Importance scoring (optimizes search) - dynamic calculation based on mentions/relationships
+
+**Remaining Priority Order:**
+1. Document references (unlocks cross-doc queries) - **HIGH PRIORITY**
+2. Temporal metadata (enables trend analysis) - **HIGH PRIORITY**
+3. Entity deduplication (improves quality) - **MEDIUM PRIORITY**
+4. Numeric facts extraction - **MEDIUM PRIORITY**
+5. Relationship scoring - **LOW PRIORITY**
+6. Type hierarchy - **LOW PRIORITY**
+
+### Estimated Remaining Effort
+
+| Item | Estimated Days |
+|------|----------------|
+| Document References | 1-2 days |
+| Temporal Metadata | 2-3 days |
+| Entity Deduplication | 3-4 days |
+| Numeric Facts | 2 days |
+| Relationship Scoring | 1-2 days |
+| Type Hierarchy | 1 day |
+| **Total Remaining** | **10-14 days** |
+
+### Next Steps
+
+1. **Immediate:** Implement document reference population in `add_entities()` and create backfill script
+2. **Short-term:** Add temporal metadata extraction from document filenames during ingestion
+3. **Medium-term:** Build canonical entity resolution system
+
+By completing document references and temporal metadata (1 week), the system will support approximately 60% of QnA dataset requirements. Full implementation will enable 95%+ coverage with high-quality responses.

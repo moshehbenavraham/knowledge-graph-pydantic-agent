@@ -6,6 +6,7 @@ Allows users to view, link, and unlink OAuth providers (Google, GitHub, Microsof
 """
 
 import asyncio
+from typing import Any, cast
 
 import streamlit as st
 import structlog
@@ -16,7 +17,7 @@ from src.config import get_settings
 logger = structlog.get_logger(__name__)
 
 
-def _get_oauth_providers() -> dict:
+def _get_oauth_providers() -> dict[str, dict[str, Any]]:
     """Get OAuth providers configuration from settings."""
     settings = get_settings()
     return {
@@ -53,15 +54,15 @@ OAUTH_PROVIDERS = _get_oauth_providers()
 
 def get_provider_display_name(provider: str) -> str:
     """Get display name for OAuth provider."""
-    return OAUTH_PROVIDERS.get(provider, {}).get("name", provider.capitalize())
+    return cast("str", OAUTH_PROVIDERS.get(provider, {}).get("name", provider.capitalize()))
 
 
 def get_provider_icon(provider: str) -> str:
     """Get icon emoji for OAuth provider."""
-    return OAUTH_PROVIDERS.get(provider, {}).get("icon", "🔗")
+    return cast("str", OAUTH_PROVIDERS.get(provider, {}).get("icon", "🔗"))
 
 
-async def get_linked_oauth_accounts(username: str) -> list[dict]:
+async def get_linked_oauth_accounts(username: str) -> list[dict[str, Any]]:
     """
     Get all linked OAuth accounts for a user.
 

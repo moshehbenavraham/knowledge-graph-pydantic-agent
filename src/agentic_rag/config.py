@@ -6,6 +6,7 @@ while maintaining the same interface for existing code.
 """
 
 from dataclasses import dataclass
+from typing import Any
 
 import structlog
 
@@ -154,7 +155,7 @@ class Config:
         except Exception as e:
             return [str(e)]
 
-    def dict(self) -> dict:
+    def dict(self) -> dict[str, Any]:
         """
         Convert config to dictionary.
 

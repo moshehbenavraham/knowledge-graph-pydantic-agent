@@ -496,7 +496,7 @@ class KnowledgeExtractor:
                 return entity
         return None
 
-    def _validate_relationship(self, rel_dict: dict, entity_names: list[str]) -> bool:
+    def _validate_relationship(self, rel_dict: dict[str, Any], entity_names: list[str]) -> bool:
         """
         Validate relationship data.
 

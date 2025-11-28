@@ -4,6 +4,7 @@ This module provides utilities for managing users in the auth_config.yaml file.
 """
 
 from pathlib import Path
+from typing import Any, cast
 
 import structlog
 import yaml
@@ -26,16 +27,16 @@ class UserManager:
         if not self.config_path.exists():
             raise FileNotFoundError(f"Config file not found: {config_path}")
 
-    def _load_config(self) -> dict:
+    def _load_config(self) -> dict[str, Any]:
         """Load configuration from YAML file.
 
         Returns:
             Configuration dictionary
         """
         with open(self.config_path) as f:
-            return yaml.safe_load(f)
+            return cast("dict[str, Any]", yaml.safe_load(f))
 
-    def _save_config(self, config: dict) -> None:
+    def _save_config(self, config: dict[str, Any]) -> None:
         """Save configuration to YAML file.
 
         Args:

@@ -9,6 +9,7 @@ Provides user profile functionality for Streamlit sidebar:
 """
 
 import asyncio
+from typing import Any
 
 import streamlit as st
 import structlog
@@ -26,7 +27,7 @@ from src.config import get_settings
 logger = structlog.get_logger(__name__)
 
 
-def get_user_info(username: str) -> dict | None:
+def get_user_info(username: str) -> dict[str, Any] | None:
     """Get user information from database.
 
     Args:

@@ -238,7 +238,7 @@ async def find_relationships(
 async def _execute_vector_search(
     vector_search: VectorSearch,
     request: SearchRequest,
-) -> dict:
+) -> dict[str, Any]:
     """Execute vector similarity search."""
     results = await vector_search.search(
         query=request.query,
@@ -264,7 +264,7 @@ async def _execute_vector_search(
 async def _execute_hybrid_search(
     hybrid_search: HybridSearch,
     request: SearchRequest,
-) -> dict:
+) -> dict[str, Any]:
     """Execute hybrid vector + graph search."""
     results = await hybrid_search.search(
         query=request.query,
@@ -322,7 +322,7 @@ async def _execute_adaptive_search(
     hybrid_search: HybridSearch,
     request: SearchRequest,
     intent: IntentAnalysisResult,
-) -> dict:
+) -> dict[str, Any]:
     """Execute adaptive search based on intent analysis."""
     if intent.primary_intent == SearchIntent.VECTOR_HEAVY:
         return await _execute_vector_search(vector_search, request)

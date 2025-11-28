@@ -5,7 +5,7 @@ import time
 from collections import defaultdict, deque
 from collections.abc import Callable
 from datetime import UTC, datetime
-from typing import Any, ParamSpec, TypeVar
+from typing import Any, ParamSpec, TypeVar, cast
 
 from .monitoring import ERROR_COUNT, logger
 
@@ -29,7 +29,7 @@ class RateLimiter:
         self.last_refill: dict[str, float] = {}  # user_id -> last refill time
         self.lock = asyncio.Lock()
 
-    async def is_allowed(self, user_id: str) -> tuple[bool, dict]:
+    async def is_allowed(self, user_id: str) -> tuple[bool, dict[str, Any]]:
         """Check if request is allowed for user."""
         async with self.lock:
             now = time.time()
@@ -73,7 +73,7 @@ class RateLimiter:
                 "retry_after": self.window_seconds / self.max_requests,
             }
 
-    def get_stats(self, user_id: str) -> dict:
+    def get_stats(self, user_id: str) -> dict[str, Any]:
         """Get current rate limiting stats for user."""
         now = time.time()
         user_requests = self.requests[user_id]
@@ -104,7 +104,9 @@ class APIRateLimiter:
             "mem0": RateLimiter(max_requests=100, window_seconds=60),  # 100 RPM
         }
 
-    async def check_api_limit(self, service: str, user_id: str = "system") -> tuple[bool, dict]:
+    async def check_api_limit(
+        self, service: str, user_id: str = "system"
+    ) -> tuple[bool, dict[str, Any]]:
         """Check if API call is allowed for service."""
         if service not in self.limiters:
             logger.warning("Unknown service for rate limiting", service=service)
@@ -165,7 +167,7 @@ class UserRateLimiter:
         else:
             logger.warning("Invalid user tier", user_id=user_id, tier=tier)
 
-    async def check_user_limit(self, user_id: str) -> tuple[bool, dict]:
+    async def check_user_limit(self, user_id: str) -> tuple[bool, dict[str, Any]]:
         """Check if user request is allowed."""
         tier = self.user_tiers[user_id]
         limiter = self.limiters[tier]
@@ -183,7 +185,7 @@ class UserRateLimiter:
 
         return allowed, info
 
-    def get_user_stats(self, user_id: str) -> dict:
+    def get_user_stats(self, user_id: str) -> dict[str, Any]:
         """Get rate limiting stats for user."""
         logger.info("get_user_stats called", user_id=user_id)
 
@@ -211,7 +213,9 @@ class RateLimitMiddleware:
         self.api_limiter = APIRateLimiter()
         self.user_limiter = UserRateLimiter()
 
-    async def check_limits(self, user_id: str, service: str | None = None) -> tuple[bool, dict]:
+    async def check_limits(
+        self, user_id: str, service: str | None = None
+    ) -> tuple[bool, dict[str, Any]]:
         """Check both user and API limits."""
         # Check user limit first
         user_allowed, user_info = await self.user_limiter.check_user_limit(user_id)
@@ -244,7 +248,7 @@ class RateLimitMiddleware:
                     f"Retry after {info.get('retry_after', 60)} seconds"
                 )
 
-    def get_all_stats(self, user_id: str) -> dict:
+    def get_all_stats(self, user_id: str) -> dict[str, Any]:
         """Get comprehensive rate limiting stats for user."""
         logger.info("get_all_stats called", user_id=user_id)
 
@@ -294,7 +298,7 @@ def rate_limit(
             await rate_limiter.enforce_limits(user_id, service)
 
             # Execute function
-            return await func(*args, **kwargs)  # type: ignore[misc]
+            return cast("T", await func(*args, **kwargs))  # type: ignore[misc]
 
         def sync_wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
             user_id = str(kwargs.get("user_id", "anonymous"))

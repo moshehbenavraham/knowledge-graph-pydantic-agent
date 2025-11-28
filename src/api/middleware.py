@@ -6,7 +6,7 @@ Includes correlation IDs, timing, error handling, compression, and rate limiting
 
 import time
 import uuid
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from contextvars import ContextVar
 
 import structlog
@@ -44,7 +44,9 @@ class CorrelationIDMiddleware(BaseHTTPMiddleware):
     Extracts or generates correlation ID and propagates through logging context.
     """
 
-    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+    async def dispatch(
+        self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
         """Process request with correlation ID."""
         # Extract or generate correlation ID
         correlation_id = request.headers.get(
@@ -76,7 +78,9 @@ class TimingMiddleware(BaseHTTPMiddleware):
     Adds X-Process-Time header with request duration in milliseconds.
     """
 
-    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+    async def dispatch(
+        self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
         """Process request with timing."""
         start_time = time.perf_counter()
 
@@ -108,7 +112,9 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
     Catches exceptions and returns structured error responses.
     """
 
-    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+    async def dispatch(
+        self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
         """Process request with error handling."""
         try:
             response = await call_next(request)
@@ -156,7 +162,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     Adds common security headers to all responses.
     """
 
-    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+    async def dispatch(
+        self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
         """Process request with security headers."""
         response = await call_next(request)
 
@@ -195,7 +203,9 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
     Logs all requests with relevant metadata.
     """
 
-    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+    async def dispatch(
+        self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
         """Process request with logging."""
         # Extract request info
         client_host = request.client.host if request.client else "unknown"
@@ -246,7 +256,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self._client_requests: dict[str, list[float]] = {}
         self._last_cleanup = time.time()
 
-    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+    async def dispatch(
+        self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
         """Process request with rate limiting."""
         # Skip rate limiting for health endpoints
         if request.url.path.startswith("/health"):

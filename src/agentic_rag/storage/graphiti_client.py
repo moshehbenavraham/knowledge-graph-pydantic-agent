@@ -4,7 +4,7 @@ Graphiti client wrapper for enhanced graph operations.
 
 import logging
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
 import structlog
 
@@ -415,7 +415,7 @@ class GraphitiClient:
             entities1[0]["id"], entities2[0]["id"], max_depth=3
         )
 
-        return paths
+        return cast("list[dict[str, Any]]", paths)
 
     async def get_temporal_context(
         self, start_date: datetime, end_date: datetime, entity_ids: list[str] | None = None
@@ -433,7 +433,7 @@ class GraphitiClient:
         # Sort by timestamp (most recent first)
         episodes.sort(key=lambda x: x.get("timestamp", datetime.min), reverse=True)
 
-        return episodes
+        return cast("list[dict[str, Any]]", episodes)
 
     async def build_knowledge_graph_summary(self) -> dict[str, Any]:
         """

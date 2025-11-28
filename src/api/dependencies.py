@@ -5,8 +5,8 @@ Provides database sessions, search clients, agent orchestrator, and cache.
 """
 
 from collections.abc import AsyncGenerator
+from typing import Any
 
-import httpx
 import structlog
 from fastapi import Depends, HTTPException, status
 
@@ -21,6 +21,7 @@ from src.agentic_rag.storage.postgres_store import PostgresStore
 from src.clients.database import get_supabase_client
 from src.clients.embedding import get_embedding_client
 from src.config import get_settings
+from src.config.clients import clients_config
 from src.utils.cache import RedisCache, get_cache
 
 logger = structlog.get_logger()
@@ -157,7 +158,7 @@ async def get_agent_deps() -> UnifiedAgentDeps:
     return UnifiedAgentDeps(
         supabase=get_supabase_client(),
         embedding_client=get_embedding_client(),
-        http_client=httpx.AsyncClient(timeout=30.0),
+        http_client=clients_config.create_http_client(timeout=30.0),
         brave_api_key=settings.brave_api_key,
         searxng_base_url=settings.searxng_base_url,
         jina_api_key=settings.jina_api_key,
@@ -168,7 +169,7 @@ async def get_agent_deps() -> UnifiedAgentDeps:
 # ===== Database session providers =====
 
 
-async def get_postgres_session() -> AsyncGenerator:
+async def get_postgres_session() -> AsyncGenerator[Any, None]:
     """
     Get PostgreSQL async session.
 
@@ -180,7 +181,7 @@ async def get_postgres_session() -> AsyncGenerator:
         yield conn
 
 
-async def get_neo4j_session() -> AsyncGenerator:
+async def get_neo4j_session() -> AsyncGenerator[Any, None]:
     """
     Get Neo4j async session.
 
@@ -200,7 +201,7 @@ async def get_neo4j_session() -> AsyncGenerator:
 # ===== Health check dependency =====
 
 
-async def check_database_health() -> dict:
+async def check_database_health() -> dict[str, Any]:
     """
     Check health of database connections.
 
@@ -229,7 +230,7 @@ async def check_database_health() -> dict:
 # ===== Configuration dependency =====
 
 
-async def get_api_settings() -> dict:
+async def get_api_settings() -> dict[str, Any]:
     """Get API configuration settings."""
     settings = get_settings()
 

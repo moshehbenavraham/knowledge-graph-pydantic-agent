@@ -20,16 +20,17 @@ import io
 import secrets
 import string
 from datetime import UTC, datetime, timedelta
+from typing import cast
 
 import bcrypt
 import pyotp
 import qrcode
 import structlog
 from cryptography.fernet import Fernet
+from supabase import Client
 
 from src.clients.database import get_supabase_client
 from src.config import get_settings
-from supabase import Client
 
 logger = structlog.get_logger(__name__)
 
@@ -328,7 +329,7 @@ class TOTPManager:
         if not result.data:
             return False
 
-        return result.data[0]["is_enabled"]
+        return cast("bool", result.data[0]["is_enabled"])
 
     def requires_2fa(self, user_id: str) -> bool:
         """
@@ -348,7 +349,7 @@ class TOTPManager:
         if not result.data:
             return False
 
-        return result.data[0].get("requires_2fa", False)
+        return cast("bool", result.data[0].get("requires_2fa", False))
 
     def _log_2fa_attempt(
         self,

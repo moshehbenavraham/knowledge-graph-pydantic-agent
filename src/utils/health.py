@@ -4,6 +4,7 @@ import asyncio
 import contextlib
 import time
 from datetime import UTC, datetime
+from typing import Any
 
 import httpx
 from pydantic import BaseModel
@@ -40,7 +41,7 @@ class HealthStatus(BaseModel):
     timestamp: datetime
     uptime: float
     version: str
-    checks: dict[str, dict]
+    checks: dict[str, dict[str, Any]]
 
 
 class ComponentHealth(BaseModel):
@@ -51,7 +52,7 @@ class ComponentHealth(BaseModel):
     response_time: float | None = None
     error: str | None = None
     last_check: datetime
-    details: dict | None = None
+    details: dict[str, Any] | None = None
 
 
 class HealthChecker:

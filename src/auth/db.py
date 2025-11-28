@@ -7,7 +7,7 @@ password reset, OAuth accounts, and role-based permissions.
 
 import secrets
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 import structlog
@@ -71,7 +71,7 @@ def create_user(
         raise Exception("Failed to create user")
 
     # Remove password_hash from response
-    user = response.data[0]
+    user: dict[str, Any] = response.data[0]
     user.pop("password_hash", None)
     logger.info("User created successfully", username=username, user_id=user.get("id"))
     return user
@@ -105,7 +105,7 @@ def get_user_by_username(username: str) -> dict[str, Any] | None:
             logger.info("User not found in database", username=username)
             return None
 
-        user = response.data[0]
+        user: dict[str, Any] = response.data[0]
         logger.info(
             "User found in database",
             username=username,
@@ -153,7 +153,7 @@ def get_user_by_email(email: str) -> dict[str, Any] | None:
     if not response.data:
         return None
 
-    user = response.data[0]
+    user: dict[str, Any] = response.data[0]
     user.pop("password_hash", None)
     return user
 
@@ -183,7 +183,7 @@ def get_user_by_id(user_id: UUID | str) -> dict[str, Any] | None:
     if not response.data:
         return None
 
-    user = response.data[0]
+    user: dict[str, Any] = response.data[0]
     user.pop("password_hash", None)
     return user
 
@@ -264,7 +264,7 @@ def verify_user_password(username: str, password: str) -> dict[str, Any] | None:
 
         user.pop("password_hash", None)
         logger.info("Password verification successful", username=username, user_id=user.get("id"))
-        return user
+        return cast("dict[str, Any]", user)
 
     except Exception as e:
         logger.error(
@@ -332,7 +332,7 @@ def update_user(
     if not response.data:
         raise Exception("Failed to update user")
 
-    user = response.data[0]
+    user: dict[str, Any] = response.data[0]
     user.pop("password_hash", None)
     return user
 
@@ -522,7 +522,7 @@ def increment_failed_login(username: str) -> int:
 
     client.table("auth_users").update(update_data).eq("id", user["id"]).execute()
 
-    return new_count
+    return cast("int", new_count)
 
 
 def reset_failed_login(user_id: UUID | str) -> bool:
@@ -606,7 +606,7 @@ def create_session(
     if not response.data:
         raise Exception("Failed to create session")
 
-    return response.data[0]
+    return cast("dict[str, Any]", response.data[0])
 
 
 def get_session(session_token: str) -> dict[str, Any] | None:
@@ -827,7 +827,7 @@ def verify_reset_token(token: str) -> dict[str, Any] | None:
         return None
 
     # Verify token hash (additional security layer)
-    token_record = response.data[0]
+    token_record: dict[str, Any] = response.data[0]
     if not verify_password(token, token_record["token_hash"]):
         return None
 
@@ -942,7 +942,7 @@ def link_oauth_account(
     if not response.data:
         raise Exception("Failed to link OAuth account")
 
-    return response.data[0]
+    return cast("dict[str, Any]", response.data[0])
 
 
 def get_oauth_account(provider: str, provider_user_id: str) -> dict[str, Any] | None:
@@ -1049,7 +1049,7 @@ def update_oauth_tokens(
     if not response.data:
         raise Exception("Failed to update OAuth tokens")
 
-    return response.data[0]
+    return cast("dict[str, Any]", response.data[0])
 
 
 def unlink_oauth_account(oauth_account_id: UUID | str) -> bool:
@@ -1131,7 +1131,7 @@ def assign_role(
     if not response.data:
         raise Exception("Failed to assign role")
 
-    return response.data[0]
+    return cast("dict[str, Any]", response.data[0])
 
 
 def revoke_role(user_id: UUID | str, role_name: str) -> bool:
@@ -1191,8 +1191,8 @@ def get_user_roles(user_id: UUID | str) -> list[dict[str, Any]]:
     if not response.data:
         return []
 
-    user_data = response.data[0]
-    return user_data.get("roles", [])
+    user_data: dict[str, Any] = response.data[0]
+    return cast("list[dict[str, Any]]", user_data.get("roles", []))
 
 
 def check_permission(user_id: UUID | str, permission: str) -> bool:
@@ -1272,4 +1272,4 @@ def get_2fa_requirement(username: str) -> bool:
     if not user:
         raise Exception(f"User '{username}' not found")
 
-    return user.get("requires_2fa", False)
+    return cast("bool", user.get("requires_2fa", False))

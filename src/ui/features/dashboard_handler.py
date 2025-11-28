@@ -9,7 +9,7 @@ not from in-memory counters.
 """
 
 from datetime import datetime, timedelta
-from typing import Any
+from typing import Any, cast
 
 import structlog
 
@@ -84,8 +84,8 @@ class DashboardHandler:
         """
         cache_key = f"search_metrics_{window}"
         cached = self._get_cached(cache_key)
-        if cached:
-            return cached
+        if cached is not None:
+            return cast("dict[str, Any]", cached)
 
         try:
             # Convert window to interval
@@ -194,8 +194,8 @@ class DashboardHandler:
         """
         cache_key = f"intent_distribution_{window}"
         cached = self._get_cached(cache_key)
-        if cached:
-            return cached
+        if cached is not None:
+            return cast("dict[str, float]", cached)
 
         try:
             async with self.connection_manager.get_pg_connection() as conn:
@@ -258,8 +258,8 @@ class DashboardHandler:
         """
         cache_key = f"graph_data_{limit}_{filters!s}"
         cached = self._get_cached(cache_key)
-        if cached:
-            return cached
+        if cached is not None:
+            return cast("dict[str, Any]", cached)
 
         try:
             # Connect to Neo4j and fetch entities
@@ -322,8 +322,8 @@ class DashboardHandler:
         """
         cache_key = f"top_entities_{limit}"
         cached = self._get_cached(cache_key)
-        if cached:
-            return cached
+        if cached is not None:
+            return cast("list[dict[str, Any]]", cached)
 
         try:
             async with self.connection_manager.get_neo4j_session() as session:
@@ -363,8 +363,8 @@ class DashboardHandler:
         """
         cache_key = f"entity_timeline_{entity_id}"
         cached = self._get_cached(cache_key)
-        if cached:
-            return cached
+        if cached is not None:
+            return cast("list[dict[str, Any]]", cached)
 
         try:
             async with self.connection_manager.get_neo4j_session() as session:
@@ -402,8 +402,8 @@ class DashboardHandler:
         """
         cache_key = f"performance_metrics_{window}"
         cached = self._get_cached(cache_key)
-        if cached:
-            return cached
+        if cached is not None:
+            return cast("dict[str, Any]", cached)
 
         try:
             # Convert window to interval
@@ -530,8 +530,8 @@ class DashboardHandler:
         """
         cache_key = f"time_series_{window}_{metric}"
         cached = self._get_cached(cache_key)
-        if cached:
-            return cached
+        if cached is not None:
+            return cast("list[dict[str, Any]]", cached)
 
         try:
             async with self.connection_manager.get_pg_connection() as conn:
@@ -628,8 +628,8 @@ class DashboardHandler:
         """
         cache_key = f"tool_usage_{window}"
         cached = self._get_cached(cache_key)
-        if cached:
-            return cached
+        if cached is not None:
+            return cast("dict[str, Any]", cached)
 
         try:
             async with self.connection_manager.get_pg_connection() as conn:
@@ -721,8 +721,8 @@ class DashboardHandler:
         """
         cache_key = f"agent_interactions_{window}"
         cached = self._get_cached(cache_key)
-        if cached:
-            return cached
+        if cached is not None:
+            return cast("dict[str, Any]", cached)
 
         try:
             # Convert window to interval

@@ -10,6 +10,7 @@ import asyncio
 import shutil
 from datetime import datetime
 from pathlib import Path
+from typing import Any, cast
 
 import structlog
 import yaml
@@ -20,10 +21,10 @@ from src.clients.database import get_supabase_client
 logger = structlog.get_logger(__name__)
 
 
-def load_yaml_config(config_path: Path) -> dict:
+def load_yaml_config(config_path: Path) -> dict[str, Any]:
     """Load YAML configuration file."""
     with open(config_path) as f:
-        return yaml.safe_load(f)
+        return cast("dict[str, Any]", yaml.safe_load(f))
 
 
 def backup_yaml_config(config_path: Path) -> Path:
@@ -36,7 +37,7 @@ def backup_yaml_config(config_path: Path) -> Path:
     return backup_path
 
 
-async def migrate_users(config_path: Path, dry_run: bool = False) -> dict:
+async def migrate_users(config_path: Path, dry_run: bool = False) -> dict[str, Any]:
     """
     Migrate users from YAML to database.
 

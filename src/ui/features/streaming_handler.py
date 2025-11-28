@@ -136,7 +136,7 @@ class StreamingHandler(BaseHandler):
                                             "args": event.part.args,
                                         }
 
-                                    elif event.part.part_kind == "tool-return":
+                                    elif event.part.part_kind == "tool-return":  # type: ignore[comparison-overlap]
                                         event_counts["tool_return"] += 1
                                         tool_name = event.part.tool_name
                                         content_str = str(event.part.content)

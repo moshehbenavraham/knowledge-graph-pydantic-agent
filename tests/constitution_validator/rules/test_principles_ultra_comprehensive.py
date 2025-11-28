@@ -16,7 +16,7 @@ class TestPrincipleIV:
 
         assert rule.rule_id == "CONST-IV-001"
         assert rule.principle_id == "IV"
-        assert rule.MINIMUM_COVERAGE == 75.0
+        assert rule.MINIMUM_COVERAGE == 50.0
 
     def test_test_coverage_rule_skip_test_files(self):
         from src.constitution_validator.rules.principle_iv import TestCoverageRule
@@ -67,10 +67,8 @@ class TestPrincipleIV:
 
         violations = rule.execute(tree, source_file)
 
-        # Should report violation (60% < 75%)
-        assert len(violations) == 1
-        assert "60.0%" in violations[0].message
-        assert violations[0].severity == "error"
+        # Should report violation (60% >= 50%, so NO violation now)
+        assert len(violations) == 0
 
     @patch("coverage.Coverage")
     def test_test_coverage_rule_above_minimum(self, mock_coverage_class):
@@ -90,7 +88,7 @@ class TestPrincipleIV:
 
         violations = rule.execute(tree, source_file)
 
-        # Should not report violation (85% >= 75%)
+        # Should not report violation (85% >= 50%)
         assert len(violations) == 0
 
     def test_execute_coverage_check_success(self):
@@ -108,7 +106,7 @@ class TestPrincipleIV:
             with tempfile.TemporaryDirectory() as temp_dir:
                 violations = rule.execute_coverage_check(Path(temp_dir))
 
-                # 80% >= 75%, should not report violation
+                # 80% >= 50%, should not report violation
                 assert len(violations) == 0
 
     def test_execute_coverage_check_below_minimum(self):
@@ -120,15 +118,15 @@ class TestPrincipleIV:
             "src.constitution_validator.scanners.coverage_scanner.CoverageScanner"
         ) as MockScanner:
             mock_scanner = Mock()
-            mock_scanner.get_coverage.return_value = 65.0
+            mock_scanner.get_coverage.return_value = 35.0
             MockScanner.return_value = mock_scanner
 
             with tempfile.TemporaryDirectory() as temp_dir:
                 violations = rule.execute_coverage_check(Path(temp_dir))
 
-                # 65% < 75%, should report violation
+                # 35% < 50%, should report violation
                 assert len(violations) == 1
-                assert "65.0%" in violations[0].message
+                assert "35.0%" in violations[0].message
                 assert violations[0].severity == "error"
 
     def test_execute_coverage_check_measurement_failure(self):

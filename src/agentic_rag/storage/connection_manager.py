@@ -70,7 +70,7 @@ class ConnectionManager:
             self.config = config
         self.pg_pool: asyncpg.Pool | None = None
         self.neo4j_driver: AsyncDriver | None = None
-        self.redis_client: redis.Redis | None = None
+        self.redis_client: redis.Redis[bytes] | None = None
 
         # Metrics tracking
         self.pg_metrics = PoolMetrics()
@@ -472,7 +472,7 @@ class ConnectionManager:
             metrics.avg_query_time_ms * (metrics.total_queries - 1) + elapsed_ms
         ) / metrics.total_queries
 
-    async def get_redis(self) -> redis.Redis | None:
+    async def get_redis(self) -> "redis.Redis[bytes] | None":
         """Get Redis client if available."""
         return self.redis_client
 

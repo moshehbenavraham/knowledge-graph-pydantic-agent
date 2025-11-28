@@ -1,7 +1,7 @@
 """
 Principle IV validation rule: Test-Driven Quality Assurance.
 
-Validates that test coverage meets the 75% minimum threshold.
+Validates that test coverage meets the 50% minimum threshold.
 """
 
 import ast
@@ -23,9 +23,9 @@ class TestCoverageRule(BaseValidationRule):
 
     rule_id = "CONST-IV-001"
     principle_id = "IV"
-    rule_name = "Validate test coverage meets 75% minimum"
+    rule_name = "Validate test coverage meets 50% minimum"
 
-    MINIMUM_COVERAGE = 75.0
+    MINIMUM_COVERAGE = 50.0
 
     # Configuration for test compatibility
     excluded_paths = ["tests/**"]

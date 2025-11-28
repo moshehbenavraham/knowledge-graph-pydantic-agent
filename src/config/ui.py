@@ -5,6 +5,7 @@ Provides convenient access to UI-related settings.
 """
 
 from dataclasses import dataclass
+from typing import Any
 
 import structlog
 
@@ -102,7 +103,7 @@ class UIConfig:
         """Check if export feature should be shown."""
         return not self.is_simple_mode
 
-    def get_page_config(self) -> dict:
+    def get_page_config(self) -> dict[str, Any]:
         """Get Streamlit page configuration."""
         logger.info("Getting page configuration", mode=self.mode.value)
         return {
@@ -122,7 +123,7 @@ class UIConfig:
         }
         return descriptions.get(self.mode, "Unknown mode")
 
-    def get_ui_config(self) -> dict:
+    def get_ui_config(self) -> dict[str, Any]:
         """Get UI configuration dictionary."""
         logger.info("Getting UI configuration", mode=self.ui_mode, port=self.ui_port)
         return {

@@ -9,7 +9,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
-async def test_vector_search():
+async def test_vector_search() -> bool:
     """Test vector search with semantic query."""
     print("=" * 60)
     print("Test 1: Vector Search (Semantic Query)")
@@ -52,7 +52,7 @@ async def test_vector_search():
         return False
 
 
-async def test_graph_search():
+async def test_graph_search() -> bool:
     """Test graph search with entity/relationship query."""
     print("\n" + "=" * 60)
     print("Test 2: Graph Search (Entity Relationships)")
@@ -127,7 +127,7 @@ async def test_graph_search():
         return False
 
 
-async def test_hybrid_search():
+async def test_hybrid_search() -> bool:
     """Test hybrid search with complex query."""
     print("\n" + "=" * 60)
     print("Test 3: Hybrid Search (Complex Query)")
@@ -191,7 +191,7 @@ async def test_hybrid_search():
         return False
 
 
-async def test_intent_analysis():
+async def test_intent_analysis() -> bool:
     """Test intent analyzer with different query types."""
     print("\n" + "=" * 60)
     print("Test 4: Intent Analysis")
@@ -228,7 +228,7 @@ async def test_intent_analysis():
         return False
 
 
-async def main():
+async def main() -> int:
     """Run all search strategy tests."""
     print("\n🔍 Testing Search Strategies with Real Data\n")
 

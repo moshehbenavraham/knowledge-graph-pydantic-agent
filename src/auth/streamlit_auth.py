@@ -7,6 +7,7 @@ Includes OAuth 2.0 support for Google and GitHub.
 
 import asyncio
 from pathlib import Path
+from typing import Any, cast
 
 import streamlit as st
 import streamlit_authenticator as stauth
@@ -48,7 +49,7 @@ def get_github_oauth_enabled() -> bool:
     return bool(settings.github_client_id and settings.github_client_secret)
 
 
-async def load_credentials_from_database() -> dict:
+async def load_credentials_from_database() -> dict[str, Any]:
     """Load user credentials from database.
 
     Returns:
@@ -134,7 +135,7 @@ async def load_credentials_from_database() -> dict:
         raise
 
 
-def load_auth_config(config_path: str = "config/auth_config.yaml") -> dict:
+def load_auth_config(config_path: str = "config/auth_config.yaml") -> dict[str, Any]:
     """Load authentication configuration.
 
     If USE_DATABASE_AUTH=true, loads credentials from database.
@@ -234,7 +235,7 @@ def load_auth_config(config_path: str = "config/auth_config.yaml") -> dict:
     return config
 
 
-def get_authenticator(config: dict | None = None) -> stauth.Authenticate:
+def get_authenticator(config: dict[str, Any] | None = None) -> stauth.Authenticate:
     """Get configured authenticator instance.
 
     Args:
@@ -625,7 +626,7 @@ async def create_db_session(username: str, remember_me: bool = False) -> str | N
             remember_me=remember_me,
             expires_in_days=expires_in_days,
         )
-        return session["session_token"]
+        return cast("str", session["session_token"])
 
     except Exception as e:
         logger.error("Failed to create database session", username=username, error=str(e))
@@ -656,7 +657,9 @@ async def revoke_db_session(session_token: str | None) -> bool:
         return False
 
 
-async def handle_oauth_callback(provider: str, code: str, state: str | None = None) -> dict | None:
+async def handle_oauth_callback(
+    provider: str, code: str, state: str | None = None
+) -> dict[str, Any] | None:
     """Handle OAuth callback and authenticate user.
 
     Args:
@@ -673,7 +676,7 @@ async def handle_oauth_callback(provider: str, code: str, state: str | None = No
         # Complete OAuth flow
         result = await complete_oauth_flow(provider, code, state)
 
-        user = result["user"]
+        user: dict[str, Any] = result["user"]
         is_new_user = result["is_new_user"]
 
         logger.info(

@@ -4,6 +4,8 @@ API-specific configuration facade.
 Provides convenient access to API-related settings.
 """
 
+from typing import Any
+
 import structlog
 
 from .settings import get_settings
@@ -74,7 +76,7 @@ class APIConfig:
         """Check if running in development."""
         return get_settings().app_env == "development"
 
-    def get_uvicorn_config(self) -> dict:
+    def get_uvicorn_config(self) -> dict[str, Any]:
         """Get Uvicorn server configuration."""
         logger.info("Getting Uvicorn configuration", host=self.host, port=self.port)
         return {
@@ -85,7 +87,7 @@ class APIConfig:
             "access_log": self.debug,
         }
 
-    def get_cors_config(self) -> dict:
+    def get_cors_config(self) -> dict[str, Any]:
         """Get CORS middleware configuration."""
         logger.info("Getting CORS configuration", origins_count=len(self.cors_origins))
         return {

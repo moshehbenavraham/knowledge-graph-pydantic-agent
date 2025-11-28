@@ -8,11 +8,10 @@ Uses Supabase's REST API instead of asyncpg.
 
 import json
 import logging
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 import structlog
-
 from supabase import Client, create_client
 
 logger = logging.getLogger(__name__)
@@ -221,7 +220,7 @@ class SupabaseRestStore:
 
             if result.data:
                 structlog_logger.info("search_similar completed", num_results=len(result.data))
-                return result.data
+                return cast("list[dict[str, Any]]", result.data)
             return []
 
         except Exception as e:
@@ -244,7 +243,7 @@ class SupabaseRestStore:
 
             if result.data and len(result.data) > 0:
                 structlog_logger.info("get_document completed", document_id=str(document_id))
-                return result.data[0]
+                return cast("dict[str, Any]", result.data[0])
             structlog_logger.info("get_document - not found", document_id=str(document_id))
             return None
 
@@ -279,7 +278,7 @@ class SupabaseRestStore:
                     document_id=str(document_id),
                     num_chunks=len(result.data),
                 )
-                return result.data
+                return cast("list[dict[str, Any]]", result.data)
             structlog_logger.info("get_chunks - no chunks found", document_id=str(document_id))
             return []
 

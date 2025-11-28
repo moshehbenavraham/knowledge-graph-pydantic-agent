@@ -4,6 +4,8 @@ Password reset flow implementation.
 Provides secure password reset functionality with email-based token verification.
 """
 
+from typing import Any
+
 import structlog
 
 from src.auth.db import (
@@ -210,7 +212,7 @@ async def request_password_reset(
         return (False, "An error occurred. Please try again later.")
 
 
-async def validate_reset_token(token: str) -> tuple[bool, str, dict | None]:
+async def validate_reset_token(token: str) -> tuple[bool, str, dict[str, Any] | None]:
     """Validate a password reset token.
 
     Args:

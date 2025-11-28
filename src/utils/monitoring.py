@@ -6,7 +6,7 @@ import logging
 import time
 from collections.abc import AsyncGenerator, Callable, Generator
 from contextlib import asynccontextmanager, contextmanager
-from typing import Any, ParamSpec, TypeVar
+from typing import Any, ParamSpec, TypeVar, cast
 
 import structlog
 
@@ -60,7 +60,7 @@ def configure_logging() -> structlog.stdlib.BoundLogger:
     # Set log level
     logging.basicConfig(level=getattr(logging, log_level))
 
-    logger = structlog.get_logger()
+    logger: structlog.stdlib.BoundLogger = structlog.get_logger()
     logger.info("Structured logging configured successfully", log_level=log_level)
 
     return logger
@@ -447,7 +447,7 @@ def track_performance(
                             function=func.__name__,
                             user_id=user_id,
                         )
-                        return result
+                        return cast("T", result)
             else:
                 logger.debug("Tracking without request context", function=func.__name__)
                 async with monitor.track_tool_execution(name, user_id):
@@ -457,7 +457,7 @@ def track_performance(
                         function=func.__name__,
                         user_id=user_id,
                     )
-                    return result
+                    return cast("T", result)
 
         @functools.wraps(func)
         def sync_wrapper(*args: P.args, **kwargs: P.kwargs) -> T:

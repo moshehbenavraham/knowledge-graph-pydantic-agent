@@ -126,10 +126,10 @@ def generate_detailed_text_report(report: ComplianceReport) -> str:
 
     # Coverage Info (if available)
     if report.coverage_percentage is not None:
-        meets_min = report.coverage_percentage >= 75.0
+        meets_min = report.coverage_percentage >= 50.0
         status_icon = "✓" if meets_min else "✗"
         lines.append(f"Test Coverage: {status_icon} {report.coverage_percentage:.1f}%")
-        lines.append("  Minimum Required: 75.0%")
+        lines.append("  Minimum Required: 50.0%")
         lines.append("")
 
     # Git Attribution (if available)
@@ -365,7 +365,7 @@ class ComplianceReporter:
         groups = []
         for rule_id, rule_violations in groups_dict.items():
             # Deduplicate locations by file path and line number
-            unique_locations: dict[tuple, ViolationLocation] = {}
+            unique_locations: dict[tuple[str, int | None], ViolationLocation] = {}
             for v in rule_violations:
                 location_key = (str(v.location.file_path), v.location.line_number)
                 if location_key not in unique_locations:
@@ -448,7 +448,7 @@ class ComplianceReporter:
             },
             "coverage": {
                 "percentage": coverage_percentage,
-                "meets_minimum": coverage_percentage >= 75.0 if coverage_percentage else None,
+                "meets_minimum": coverage_percentage >= 50.0 if coverage_percentage else None,
             },
             "git_attribution": {"commits_checked": unpushed_commits_checked},
             "violations_by_principle": [

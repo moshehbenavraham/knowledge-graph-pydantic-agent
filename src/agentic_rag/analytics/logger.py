@@ -174,10 +174,10 @@ class AnalyticsLogger:
         self._system_queue: deque[SystemMetricsEvent] = deque()
 
         # Background task
-        self._flush_task: asyncio.Task | None = None
+        self._flush_task: asyncio.Task[None] | None = None
         self._lock = asyncio.Lock()
         self._running = False
-        self._background_tasks: set[asyncio.Task] = set()  # Track background tasks
+        self._background_tasks: set[asyncio.Task[None]] = set()  # Track background tasks
 
         # Metrics
         self.events_logged = 0

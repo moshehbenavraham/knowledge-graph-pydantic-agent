@@ -42,7 +42,7 @@ logger = structlog.get_logger()
 try:
     from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 except ImportError:
-    FastAPIInstrumentor = None  # type: ignore
+    FastAPIInstrumentor = None  # type: ignore[misc, assignment]
 
 
 # ===== Application Lifespan =====

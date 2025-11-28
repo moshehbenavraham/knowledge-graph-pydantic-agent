@@ -3,7 +3,7 @@ version: '3.8'
 services:
   app:
     build:
-      context: .
+      context: ..
       dockerfile: docker/Dockerfile
     ports:
       - "8501:8501"
@@ -66,7 +66,7 @@ services:
       - RATE_LIMIT_PER_MINUTE=${RATE_LIMIT_PER_MINUTE:-60}
 
     volumes:
-      - ./config:/app/config:ro
+      - ../config:/app/config:ro
       - app_data:/app/data
       - app_logs:/app/logs
 

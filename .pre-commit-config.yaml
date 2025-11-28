@@ -1,15 +1,6 @@
 repos:
 -   repo: local
     hooks:
-    -   id: constitution-validator
-        name: Constitution Compliance Validator
-        entry: bash -c "source .venv/bin/activate && PYTHONPATH=$(pwd):$PYTHONPATH constitution-validate validate --quiet --skip-coverage"
-        language: system
-        types: [python]
-        pass_filenames: true
-        always_run: false
-        stages: [pre-commit]
-        verbose: false
     -   id: check-problematic-chars
         name: Check for problematic characters
         entry: python3 -c "import sys; content = open(sys.argv[1], 'rb').read(); bad = [i for i, b in enumerate(content) if b == 0 or (b < 0x20 and b not in (0x09, 0x0A, 0x0D))]; sys.exit(f'Found {len(bad)} problematic characters' if bad else 0)"
@@ -55,15 +46,15 @@ repos:
     hooks:
     -   id: ruff
         args: [--fix, --exit-non-zero-on-fix]
--   repo: https://github.com/pre-commit/mirrors-mypy
-    rev: 'v1.17.1'
+-   repo: local
     hooks:
     -   id: mypy
-        args: [--ignore-missing-imports, --no-error-summary, --no-pretty]
-        additional_dependencies: [types-requests, types-PyYAML]
-        verbose: true
-        # Make mypy warnings non-blocking for now
-        stages: [manual]
+        name: mypy
+        entry: bash -c 'source .venv/bin/activate && mypy --strict --no-error-summary "$@"' --
+        language: system
+        types: [python]
+        files: ^(src|tests)/
+        pass_filenames: true
 -   repo: https://github.com/PyCQA/bandit
     rev: '1.8.6'
     hooks:

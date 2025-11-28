@@ -6,7 +6,7 @@ Provides distributed tracing, metrics, and logging integration.
 
 import logging
 import time
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 
 import structlog
 from fastapi import FastAPI, Request, Response
@@ -164,7 +164,9 @@ class OpenTelemetryConfig:
         logger.info("FastAPI instrumented with OpenTelemetry")
 
 
-async def metrics_middleware(request: Request, call_next: Callable) -> Response:
+async def metrics_middleware(
+    request: Request, call_next: Callable[[Request], Awaitable[Response]]
+) -> Response:
     """Middleware to collect request metrics."""
     start_time = time.time()
     path = request.url.path

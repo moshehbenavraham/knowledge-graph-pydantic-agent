@@ -9,7 +9,7 @@ import asyncio
 import hashlib
 import logging
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 import openai
 import structlog
@@ -144,7 +144,7 @@ class EmbeddingGenerator:
     fallback and retry logic.
     """
 
-    def __init__(self, config: dict | None = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         """
         Initialize embedding generator.
 
@@ -553,7 +553,7 @@ async def generate_embeddings(texts: list[str], client: Any) -> list[list[float]
     if hasattr(client, "embed_batch"):
         result = await client.embed_batch(texts)
         structlog_logger.info("generate_embeddings completed", num_embeddings=len(result))
-        return result
+        return cast("list[list[float]]", result)
 
     # Otherwise, create a new generator with default config
     generator = EmbeddingGenerator()

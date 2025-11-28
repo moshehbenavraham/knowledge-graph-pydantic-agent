@@ -4,7 +4,7 @@ PostgreSQL store operations for content storage and vector search.
 
 import json
 import logging
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 import structlog
@@ -44,7 +44,7 @@ class PostgresStore:
             )
 
             structlog_logger.info("store_document completed", doc_id=str(doc_id), title=title)
-            return doc_id
+            return cast("UUID", doc_id)
 
     async def store_chunks(self, document_id: UUID, chunks: list[dict[str, Any]]) -> list[UUID]:
         """Store multiple chunks and return their IDs."""
@@ -333,7 +333,7 @@ class PostgresStore:
                 json.dumps(metadata or {}),
             )
 
-            return session_id
+            return cast("UUID", session_id)
 
     async def add_message(
         self, session_id: UUID, role: str, content: str, metadata: dict[str, Any] | None = None

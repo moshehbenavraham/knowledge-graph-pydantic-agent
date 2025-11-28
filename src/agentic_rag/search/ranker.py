@@ -466,7 +466,9 @@ class ResultRanker:
             # Add content signature
             seen_content.add(content[:100].lower())
 
-    def _ensure_diversity(self, scored_chunks: list[dict], limit: int) -> list[dict]:
+    def _ensure_diversity(
+        self, scored_chunks: list[dict[str, Any]], limit: int
+    ) -> list[dict[str, Any]]:
         """
         Ensure result diversity by penalizing similar content.
 

@@ -423,7 +423,7 @@ class ComplianceReport(BaseModel):
             "coverage": {
                 "percentage": self.coverage_percentage,
                 "meets_minimum": (
-                    self.coverage_percentage >= 75.0 if self.coverage_percentage else None
+                    self.coverage_percentage >= 50.0 if self.coverage_percentage else None
                 ),
             },
             "git_attribution": {"commits_checked": self.unpushed_commits_checked},

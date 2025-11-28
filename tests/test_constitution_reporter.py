@@ -241,7 +241,7 @@ def test_generate_detailed_text_report_coverage_info(sample_compliance_report):
     report = generate_detailed_text_report(sample_compliance_report)
 
     assert "80.5%" in report  # Coverage percentage
-    assert "75.0%" in report  # Minimum required
+    assert "50.0%" in report  # Minimum required
 
 
 def test_generate_detailed_text_report_git_info(sample_compliance_report):

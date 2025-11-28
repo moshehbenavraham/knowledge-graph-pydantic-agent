@@ -5,6 +5,7 @@ Provides secure email verification functionality for new user registrations.
 
 import secrets
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 import structlog
 
@@ -61,7 +62,7 @@ async def create_verification_token(
     return token
 
 
-async def verify_verification_token(token: str) -> dict | None:
+async def verify_verification_token(token: str) -> dict[str, Any] | None:
     """Verify email verification token.
 
     Args:
@@ -90,7 +91,8 @@ async def verify_verification_token(token: str) -> dict | None:
         for token_record in response.data:
             if verify_password(token, token_record["token_hash"]):
                 logger.info("Verification token validated", token_id=token_record["id"])
-                return token_record
+                result: dict[str, Any] = token_record
+                return result
 
         logger.warning("Token verification failed - no matching hash")
         return None

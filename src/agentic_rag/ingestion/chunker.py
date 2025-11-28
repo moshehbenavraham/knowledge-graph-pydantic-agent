@@ -113,7 +113,7 @@ class SemanticChunker:
     coherent chunks that preserve context and meaning.
     """
 
-    def __init__(self, config: dict | None = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         """
         Initialize semantic chunker.
 
@@ -443,7 +443,7 @@ class SimpleChunker:
     and size constraints without using language models.
     """
 
-    def __init__(self, config: dict | None = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         """
         Initialize simple chunker.
 

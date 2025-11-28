@@ -104,7 +104,7 @@ class SearchCache:
         self._cache.clear()
 
     @staticmethod
-    def generate_key(query_embedding: list[float], filters: dict | None = None) -> str:
+    def generate_key(query_embedding: list[float], filters: dict[str, Any] | None = None) -> str:
         """
         Generate cache key from query and filters.
 

@@ -44,7 +44,7 @@ class CircuitBreaker:
         self,
         failure_threshold: int = 5,
         recovery_timeout: float = 60.0,
-        expected_exceptions: tuple = (Exception,),
+        expected_exceptions: tuple[type[BaseException], ...] = (Exception,),
         name: str | None = None,
     ):
         """
@@ -284,7 +284,7 @@ class RetryStrategy:
         max_delay: float = 60.0,
         exponential_base: float = 2.0,
         jitter: bool = True,
-        retriable_exceptions: tuple = (Exception,),
+        retriable_exceptions: tuple[type[BaseException], ...] = (Exception,),
     ):
         """
         Initialize retry strategy.
@@ -351,7 +351,7 @@ class RetryStrategy:
         Raises:
             Last exception if all retries fail
         """
-        last_exception: Exception | None = None
+        last_exception: BaseException | None = None
 
         for attempt in range(self.max_attempts):
             try:
@@ -405,7 +405,7 @@ class RetryStrategy:
         Raises:
             Last exception if all retries fail
         """
-        last_exception: Exception | None = None
+        last_exception: BaseException | None = None
 
         for attempt in range(self.max_attempts):
             try:

@@ -141,11 +141,14 @@ class ObservabilityRule(BaseValidationRule):
         # Skip common utility/accessor patterns
         utility_patterns = [
             "to_dict",  # Serialization
+            "to_json_dict",  # JSON serialization helper
             "from_dict",  # Deserialization
             "get_stats",  # Stats accessors
+            "get_cache_stats",  # Cache stats accessors
             "get_config",  # Config accessors
             "dict",  # Dict conversion (Pydantic)
             "generate_key",  # Key generation utilities
+            "compile_pathspec",  # Pathspec compilation utility
         ]
         if node.name in utility_patterns:
             return True
@@ -156,11 +159,14 @@ class ObservabilityRule(BaseValidationRule):
 
         # Skip simple get/set accessors (cache, config)
         if node.name in ["get", "set"] and node.body:
-            # Only skip if very short (likely cache accessor)
-            first_line = node.body[0].lineno
-            last_line = node.body[-1].end_lineno or node.body[-1].lineno
-            line_count = last_line - first_line + 1
-            if line_count < 8:  # Simple accessors are typically < 8 lines
+            # Count actual executable statements (excluding docstring)
+            executable_stmts = [
+                stmt
+                for stmt in node.body
+                if not isinstance(stmt, ast.Expr) or not isinstance(stmt.value, ast.Constant)
+            ]
+            # Skip if few executable statements (likely simple accessor)
+            if len(executable_stmts) <= 5:  # Simple accessors typically have <= 5 statements
                 return True
 
         # Skip trivial functions (< 5 lines of code)

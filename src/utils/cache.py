@@ -6,7 +6,7 @@ import json
 import pickle  # nosec B403 - Used only for internal cache, not user input
 from collections.abc import Callable
 from functools import wraps
-from typing import Any, ParamSpec, TypeVar
+from typing import Any, ParamSpec, TypeVar, cast
 
 import redis
 import structlog
@@ -43,8 +43,8 @@ class RedisCache:
         """
         self.ttl = ttl
         self.enable_fallback = enable_fallback
-        self._memory_cache: dict = {}
-        self._redis_client: redis.Redis | None = None
+        self._memory_cache: dict[str, Any] = {}
+        self._redis_client: redis.Redis[bytes] | None = None
 
         settings = get_settings()
         redis_url = redis_url or settings.redis_url
@@ -174,7 +174,7 @@ class RedisCache:
         if self.enable_fallback:
             current = self._memory_cache.get(key, 0)
             self._memory_cache[key] = current + amount
-            return self._memory_cache[key]
+            return cast("int", self._memory_cache[key])
         return None
 
     def health_check(self) -> bool:
@@ -254,7 +254,7 @@ def cache(
             cached_value = cache_obj.get(cache_key)
             if cached_value is not None:
                 logger.debug("Cache hit", function=func.__name__, key=cache_key)
-                return cached_value
+                return cast("T", cached_value)
 
             # Execute function
             result = await func(*args, **kwargs)  # type: ignore[misc]
@@ -263,7 +263,7 @@ def cache(
             cache_obj.set(cache_key, result, ttl)
             logger.debug("Cache miss, stored", function=func.__name__, key=cache_key)
 
-            return result
+            return cast("T", result)
 
         @wraps(func)
         def sync_wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
@@ -279,7 +279,7 @@ def cache(
             cached_value = cache_obj.get(cache_key)
             if cached_value is not None:
                 logger.debug("Cache hit", function=func.__name__, key=cache_key)
-                return cached_value
+                return cast("T", cached_value)
 
             # Execute function
             result = func(*args, **kwargs)

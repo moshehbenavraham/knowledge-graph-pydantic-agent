@@ -857,7 +857,7 @@ base_agent/
 - **Analytics System (v1.1.0)**: Persistent event logging to PostgreSQL with search metrics, tool usage, agent interactions, and system health tracking. Dashboard-ready materialized views for performance analysis.
 - **Metrics & Monitoring**: Prometheus metrics (`/metrics`) for API usage, latency, cache hits, and LLM utilisation.
 - **Tracing**: Optional OpenTelemetry tracing with Jaeger integration (`ENABLE_TRACING=true`).
-- **Monitoring Stack**: Optional Prometheus + Grafana + Jaeger via `docker-compose.monitoring.yml` and `make monitoring-*` targets.
+- **Monitoring**: Use Coolify dashboard or external monitoring services for production observability.
 - **Resilience**: Rate limiting, caching, circuit breaker helpers in `src/utils/`.
 
 ## Testing & Quality Assurance
