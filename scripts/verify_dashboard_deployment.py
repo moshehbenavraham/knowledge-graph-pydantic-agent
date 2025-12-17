@@ -166,7 +166,7 @@ def main():
         print("\n✅ Dashboard deployment VERIFIED!")
         print("\n📊 To access the dashboard:")
         print("   1. Run: make run-ui")
-        print("   2. Open: http://localhost:8501")
+        print("   2. Open: http://localhost:8502")
         print("   3. Click '📊 Dashboard' in the sidebar")
         print("\n📖 Quick Start Guide: docs/DASHBOARD_QUICKSTART.md")
         return 0

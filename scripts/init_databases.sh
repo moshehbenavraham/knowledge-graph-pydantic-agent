@@ -105,19 +105,19 @@ if [ "$USE_LOCAL_NEO4J" = "true" ]; then
         -e NEO4J_AUTH=$NEO4J_USER/$NEO4J_PASSWORD \
         -e NEO4J_PLUGINS='["apoc", "graph-data-science"]' \
         -e NEO4J_dbms_security_procedures_unrestricted=apoc.*,gds.* \
-        -p 7474:7474 \
-        -p 7687:7687 \
+        -p 7475:7474 \
+        -p 7688:7687 \
         -v agentic_rag_neodata:/data \
         neo4j:5
 
-    wait_for_service "Neo4j" 7687
+    wait_for_service "Neo4j" 7688
 
     # Wait additional time for Neo4j to fully initialize
     echo "Waiting for Neo4j to fully initialize..."
     sleep 10
 
     # Set Neo4j environment variables
-    export NEO4J_URI="bolt://localhost:7687"
+    export NEO4J_URI="bolt://localhost:7688"
     export NEO4J_USER="neo4j"
     export NEO4J_PASSWORD="$NEO4J_PASSWORD"
 fi
@@ -134,12 +134,12 @@ if [ "$ENABLE_REDIS_CACHE" = "true" ] && [ "$USE_LOCAL_REDIS" = "true" ]; then
 
     docker run -d \
         --name agentic-rag-redis \
-        -p 6379:6379 \
+        -p 6381:6379 \
         redis:7-alpine
 
-    wait_for_service "Redis" 6379
+    wait_for_service "Redis" 6381
 
-    export REDIS_URL="redis://localhost:6379"
+    export REDIS_URL="redis://localhost:6381"
 fi
 
 echo ""
@@ -184,7 +184,7 @@ if [ "$ENABLE_REDIS_CACHE" = "true" ]; then
     echo "  - Redis: ${REDIS_URL}"
 fi
 echo ""
-echo "Neo4j Browser: http://localhost:7474"
+echo "Neo4j Browser: http://localhost:7475"
 echo ""
 echo "You can now run the application with:"
 echo "  python -m src.agentic_rag.api.app"

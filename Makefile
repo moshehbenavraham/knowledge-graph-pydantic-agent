@@ -60,20 +60,20 @@ quality: lint security deadcode complexity docstring-coverage
 
 # Running Services
 run-ui:
-	@lsof -ti :8501 | xargs kill -9 2>/dev/null || true
-	bash -c "source .venv/bin/activate && PYTHONPATH=$(PWD):$$PYTHONPATH UI_MODE=$(or $(MODE),advanced) streamlit run src/ui/streamlit_app.py"
+	@lsof -ti :8502 | xargs kill -9 2>/dev/null || true
+	bash -c "source .venv/bin/activate && PYTHONPATH=$(PWD):$$PYTHONPATH UI_MODE=$(or $(MODE),advanced) streamlit run src/ui/streamlit_app.py --server.port=8502"
 
 run-ui-simple:
-	@lsof -ti :8501 | xargs kill -9 2>/dev/null || true
-	bash -c "source .venv/bin/activate && PYTHONPATH=$(PWD):$$PYTHONPATH UI_MODE=simple streamlit run src/ui/streamlit_app.py"
+	@lsof -ti :8502 | xargs kill -9 2>/dev/null || true
+	bash -c "source .venv/bin/activate && PYTHONPATH=$(PWD):$$PYTHONPATH UI_MODE=simple streamlit run src/ui/streamlit_app.py --server.port=8502"
 
 run-ui-standard:
-	@lsof -ti :8501 | xargs kill -9 2>/dev/null || true
-	bash -c "source .venv/bin/activate && PYTHONPATH=$(PWD):$$PYTHONPATH UI_MODE=standard streamlit run src/ui/streamlit_app.py"
+	@lsof -ti :8502 | xargs kill -9 2>/dev/null || true
+	bash -c "source .venv/bin/activate && PYTHONPATH=$(PWD):$$PYTHONPATH UI_MODE=standard streamlit run src/ui/streamlit_app.py --server.port=8502"
 
 run-ui-advanced:
-	@lsof -ti :8501 | xargs kill -9 2>/dev/null || true
-	bash -c "source .venv/bin/activate && PYTHONPATH=$(PWD):$$PYTHONPATH UI_MODE=advanced streamlit run src/ui/streamlit_app.py"
+	@lsof -ti :8502 | xargs kill -9 2>/dev/null || true
+	bash -c "source .venv/bin/activate && PYTHONPATH=$(PWD):$$PYTHONPATH UI_MODE=advanced streamlit run src/ui/streamlit_app.py --server.port=8502"
 
 run-rag:
 	bash -c "source .venv/bin/activate && PYTHONPATH=$(PWD):$$PYTHONPATH python -m src.rag_pipeline.pipeline"
@@ -88,30 +88,30 @@ run-agentic-rag:
 	bash -c "source .venv/bin/activate && PYTHONPATH=$(PWD):$$PYTHONPATH python -m src.agentic_rag.agent.agent"
 
 dev:
-	@lsof -ti :8501 | xargs kill -9 2>/dev/null || true
-	bash -c "source .venv/bin/activate && PYTHONPATH=$(PWD):$$PYTHONPATH UI_MODE=$(or $(MODE),advanced) streamlit run src/ui/streamlit_app.py --server.runOnSave true"
+	@lsof -ti :8502 | xargs kill -9 2>/dev/null || true
+	bash -c "source .venv/bin/activate && PYTHONPATH=$(PWD):$$PYTHONPATH UI_MODE=$(or $(MODE),advanced) streamlit run src/ui/streamlit_app.py --server.port=8502 --server.runOnSave true"
 
 # ngrok Deployment
 ngrok-start:  ## Start ngrok tunnel manually (foreground)
 	ngrok start base-agent-ui
 
 ngrok-ui:  ## Start Streamlit only (foreground, for manual ngrok)
-	@lsof -ti :8501 | xargs kill -9 2>/dev/null || true
+	@lsof -ti :8502 | xargs kill -9 2>/dev/null || true
 	bash -c "source .venv/bin/activate && \
 	  PYTHONPATH=$(PWD):$$PYTHONPATH UI_MODE=advanced \
-	  streamlit run src/ui/streamlit_app.py --server.port=8501"
+	  streamlit run src/ui/streamlit_app.py --server.port=8502"
 
 deploy-ngrok:  ## Start Streamlit + ngrok (background, persistent) - use deploy-ngrok-stop to stop
 	@echo "Stopping any existing services..."
-	@lsof -ti :8501 | xargs kill -9 2>/dev/null || true
+	@lsof -ti :8502 | xargs kill -9 2>/dev/null || true
 	@lsof -ti :4040 | xargs kill -9 2>/dev/null || true
 	@killall ngrok 2>/dev/null || true
 	@sleep 2
 	@mkdir -p logs
-	@echo "Starting Streamlit on port 8501..."
+	@echo "Starting Streamlit on port 8502..."
 	@bash -c "source .venv/bin/activate && \
 	  PYTHONPATH=$(PWD):$$PYTHONPATH UI_MODE=advanced \
-	  nohup streamlit run src/ui/streamlit_app.py --server.port=8501 > logs/streamlit.log 2>&1 &"
+	  nohup streamlit run src/ui/streamlit_app.py --server.port=8502 > logs/streamlit.log 2>&1 &"
 	@sleep 4
 	@echo "Starting ngrok tunnel..."
 	@bash -c "nohup ngrok start base-agent-ui > logs/ngrok.log 2>&1 &"
@@ -121,7 +121,7 @@ deploy-ngrok:  ## Start Streamlit + ngrok (background, persistent) - use deploy-
 	@echo "  DEPLOYMENT COMPLETE"
 	@echo "=============================================="
 	@echo ""
-	@echo "Local:  http://localhost:8501"
+	@echo "Local:  http://localhost:8502"
 	@curl -s http://localhost:4040/api/tunnels 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); print('Public: ' + d['tunnels'][0]['public_url'])" 2>/dev/null || echo "Public: (ngrok starting...check with 'make ngrok-status')"
 	@echo ""
 	@echo "Logs:   logs/streamlit.log, logs/ngrok.log"
@@ -130,7 +130,7 @@ deploy-ngrok:  ## Start Streamlit + ngrok (background, persistent) - use deploy-
 
 deploy-ngrok-stop:  ## Stop Streamlit + ngrok services
 	@echo "Stopping services..."
-	@lsof -ti :8501 | xargs kill -9 2>/dev/null || true
+	@lsof -ti :8502 | xargs kill -9 2>/dev/null || true
 	@lsof -ti :4040 | xargs kill -9 2>/dev/null || true
 	@killall ngrok 2>/dev/null || true
 	@killall streamlit 2>/dev/null || true
@@ -145,7 +145,7 @@ ngrok-status:  ## Check ngrok tunnel status and URL
 	@echo "Checking ngrok status..."
 	@curl -s http://localhost:4040/api/tunnels 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); t=d.get('tunnels',[]); print('Tunnel: ' + t[0]['public_url'] if t else 'No active tunnels')" 2>/dev/null || echo "ngrok API not responding (is ngrok running?)"
 	@echo ""
-	@echo "Streamlit: $$(lsof -ti :8501 >/dev/null 2>&1 && echo 'Running' || echo 'Not running')"
+	@echo "Streamlit: $$(lsof -ti :8502 >/dev/null 2>&1 && echo 'Running' || echo 'Not running')"
 	@echo "ngrok:     $$(pgrep -f 'ngrok start' >/dev/null 2>&1 && echo 'Running' || echo 'Not running')"
 
 ngrok-logs:  ## View ngrok access logs (via API)
@@ -179,7 +179,7 @@ coolify-test-build:  ## Test build Coolify Docker image locally
 		-t base-agent:coolify-test \
 		--target runtime \
 		. && \
-	echo "Build successful! Test with: docker run -p 8501:8501 --env-file .env base-agent:coolify-test"
+	echo "Build successful! Test with: docker run -p 8502:8502 --env-file .env base-agent:coolify-test"
 
 coolify-compose-up:  ## Start services using Coolify docker-compose (local test)
 	@echo "Starting Coolify services locally..."
@@ -306,7 +306,7 @@ full-stack-up:
 	@echo "Waiting for services to start..."
 	@sleep 10
 	@echo "Stack is ready!"
-	@echo "- UI: http://localhost:8501"
+	@echo "- UI: http://localhost:8502"
 	@echo "- API: http://localhost:8058"
 
 full-stack-down:
@@ -537,12 +537,12 @@ deploy-prod-down:
 
 health-check:
 	@echo "Checking service health..."
-	@curl -f http://localhost:8501/_stcore/health || echo "UI health check failed"
+	@curl -f http://localhost:8502/_stcore/health || echo "UI health check failed"
 	@curl -f http://localhost:8058/health || echo "API health check failed"
 
 health-check-staging:
 	@echo "Checking STAGING health..."
-	@curl -f http://localhost:8501/_stcore/health || echo "Health check failed"
+	@curl -f http://localhost:8502/_stcore/health || echo "Health check failed"
 
 health-check-prod:
 	@echo "Checking PRODUCTION health..."
@@ -572,7 +572,7 @@ logs-all:
 
 metrics-export:
 	@echo "Exporting metrics..."
-	curl http://localhost:8000/metrics > metrics-export.txt
+	curl http://localhost:8002/metrics > metrics-export.txt
 	@echo "Metrics saved to metrics-export.txt"
 
 # ===== Cleanup =====

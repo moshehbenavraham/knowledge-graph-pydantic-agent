@@ -140,9 +140,9 @@ def start_docker_services():
             "-e",
             "NEO4J_dbms_security_procedures_unrestricted=apoc.*,gds.*",
             "-p",
-            "7474:7474",
+            "7475:7474",
             "-p",
-            "7687:7687",
+            "7688:7687",
             "-v",
             "agentic_rag_neodata:/data",
             "neo4j:5",
@@ -152,7 +152,7 @@ def start_docker_services():
             subprocess.run(cmd, check=True, capture_output=True)
             print("Neo4j container started")
 
-            if not wait_for_service("Neo4j", "localhost", 7687):
+            if not wait_for_service("Neo4j", "localhost", 7688):
                 sys.exit(1)
 
             # Extra wait for Neo4j initialization
@@ -189,7 +189,7 @@ def start_docker_services():
             "--name",
             "agentic-rag-redis",
             "-p",
-            "6379:6379",
+            "6381:6379",
             "redis:7-alpine",
         ]
 
@@ -197,7 +197,7 @@ def start_docker_services():
             subprocess.run(cmd, check=True, capture_output=True)
             print("Redis container started")
 
-            if not wait_for_service("Redis", "localhost", 6379):
+            if not wait_for_service("Redis", "localhost", 6381):
                 sys.exit(1)
 
         except subprocess.CalledProcessError as e:
@@ -321,7 +321,7 @@ async def main():
         print(f"  - Neo4j: {config.NEO4J_URI}")
         if config.ENABLE_REDIS_CACHE:
             print(f"  - Redis: {config.REDIS_URL}")
-        print("\nNeo4j Browser: http://localhost:7474")
+        print("\nNeo4j Browser: http://localhost:7475")
         print("\nYou can now run the application with:")
         print("  python -m src.agentic_rag.api.app")
         print("\nTo stop Docker services:")

@@ -34,7 +34,7 @@ def mock_settings():
     """Mock application settings."""
     settings = MagicMock()
     settings.app_version = "1.3.0"
-    settings.metrics_port = 9090
+    settings.metrics_port = 8002
     settings.enable_metrics = True
     settings.log_level = "INFO"
     return settings

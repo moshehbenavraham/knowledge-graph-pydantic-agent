@@ -386,7 +386,7 @@ class Settings(BaseSettings):
         description="API server port",
     )
     cors_origins: str = Field(
-        default="http://localhost:3000",
+        default="http://localhost:3002",
         description="CORS allowed origins (comma-separated)",
     )
 
@@ -396,7 +396,7 @@ class Settings(BaseSettings):
         description="Enable Prometheus metrics",
     )
     metrics_port: int = Field(
-        default=8000,
+        default=8002,
         ge=1,
         le=65535,
         description="Prometheus metrics server port",
@@ -488,11 +488,11 @@ class Settings(BaseSettings):
         description="Email provider (smtp, sendgrid, mailgun, supabase)",
     )
     password_reset_url: str = Field(
-        default="http://localhost:8501",
+        default="http://localhost:8502",
         description="Base URL for password reset page",
     )
     verification_url: str = Field(
-        default="http://localhost:8501",
+        default="http://localhost:8502",
         description="Base URL for email verification page",
     )
     smtp_host: str = Field(

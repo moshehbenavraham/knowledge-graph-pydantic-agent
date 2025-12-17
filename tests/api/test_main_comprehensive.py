@@ -519,7 +519,7 @@ def test_middleware_stack_order(client):
 
 def test_cors_middleware(client):
     """Test CORS middleware configuration."""
-    response = client.options("/", headers={"Origin": "http://localhost:3000"})
+    response = client.options("/", headers={"Origin": "http://localhost:3002"})
 
     # Should handle OPTIONS request (even if 405, it means CORS is configured)
     assert response.status_code in [200, 405]

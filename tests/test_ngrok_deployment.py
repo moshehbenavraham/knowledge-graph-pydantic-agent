@@ -111,7 +111,7 @@ class TestNgrokConfiguration:
 
         tunnel = config["tunnels"]["base-agent-ui"]
         assert tunnel["proto"] == "http", "Tunnel protocol must be http"
-        assert tunnel["addr"] == 8501, "Tunnel must point to port 8501"
+        assert tunnel["addr"] == 8502, "Tunnel must point to port 8502"
         assert "domain" in tunnel, "Tunnel must have domain configured"
         assert tunnel["inspect"] is True, "Tunnel inspection should be enabled"
 
@@ -140,7 +140,7 @@ class TestStreamlitConfiguration:
         assert "server" in config, "Streamlit config must have server section"
         server = config["server"]
 
-        assert server["port"] == 8501, "Server port must be 8501"
+        assert server["port"] == 8502, "Server port must be 8502"
         assert (
             server["address"] == "0.0.0.0"
         ), "Server must bind to 0.0.0.0"  # nosec B104 - Required for ngrok tunnel access
@@ -312,7 +312,7 @@ class TestMakefileConfiguration:
 
         deploy_content = deploy_match.group(0)
         assert "streamlit run" in deploy_content, "deploy-ngrok must start Streamlit"
-        assert "8501" in deploy_content, "deploy-ngrok must use port 8501"
+        assert "8502" in deploy_content, "deploy-ngrok must use port 8502"
 
     def test_deploy_ngrok_target_starts_ngrok(self, makefile_path: Path) -> None:
         """Test that deploy-ngrok target starts ngrok tunnel."""

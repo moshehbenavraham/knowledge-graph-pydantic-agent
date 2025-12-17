@@ -12,7 +12,7 @@ services:
     image: ${REGISTRY:-ghcr.io}/base-agent:staging
     container_name: base-agent-staging
     ports:
-      - "8501:8501"
+      - "8502:8502"
     environment:
       # ===== ENVIRONMENT =====
       - ENVIRONMENT=staging
@@ -64,7 +64,7 @@ services:
 
       # ===== MONITORING =====
       - ENABLE_METRICS=true
-      - METRICS_PORT=8000
+      - METRICS_PORT=8002
       - HEALTH_CHECK_INTERVAL=30
 
       # ===== PERFORMANCE =====
@@ -89,7 +89,7 @@ services:
     restart: always
 
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8502/_stcore/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -166,7 +166,7 @@ services:
     image: searxng/searxng:latest
     container_name: searxng-staging
     ports:
-      - "8080:8080"
+      - "8084:8080"
     environment:
       - SEARXNG_SECRET=${SEARXNG_SECRET}
       - SEARXNG_HOSTNAME=searxng
@@ -187,8 +187,8 @@ services:
     image: neo4j:5-community
     container_name: neo4j-staging
     ports:
-      - "7474:7474"
-      - "7687:7687"
+      - "7475:7474"
+      - "7688:7687"
     environment:
       - NEO4J_AUTH=${NEO4J_USER}/${NEO4J_PASSWORD}
       - NEO4J_apoc_export_file_enabled=true
@@ -219,7 +219,7 @@ services:
     image: redis:7-alpine
     container_name: redis-staging
     ports:
-      - "6379:6379"
+      - "6381:6379"
     volumes:
       - redis_staging_data:/data
     restart: always
@@ -236,7 +236,7 @@ services:
     image: prom/prometheus:latest
     container_name: prometheus-staging
     ports:
-      - "9090:9090"
+      - "9091:9090"
     volumes:
       - ../prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_staging_data:/prometheus
@@ -252,7 +252,7 @@ services:
     image: grafana/grafana:latest
     container_name: grafana-staging
     ports:
-      - "3000:3000"
+      - "3002:3000"
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
       - GF_USERS_ALLOW_SIGN_UP=false

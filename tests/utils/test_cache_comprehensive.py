@@ -59,7 +59,7 @@ class TestRedisCacheInitialization:
         """Test initialization with successful Redis connection."""
         with patch("src.utils.cache.redis.Redis") as mock_redis_class:
             with patch("src.utils.cache.get_settings") as mock_settings:
-                mock_settings.return_value = Mock(redis_url="redis://localhost:6379")
+                mock_settings.return_value = Mock(redis_url="redis://localhost:6381")
                 mock_redis_class.return_value.ping.return_value = True
 
                 cache = RedisCache()
@@ -72,7 +72,7 @@ class TestRedisCacheInitialization:
         """Test initialization with custom TTL."""
         with patch("src.utils.cache.redis.Redis") as mock_redis_class:
             with patch("src.utils.cache.get_settings") as mock_settings:
-                mock_settings.return_value = Mock(redis_url="redis://localhost:6379")
+                mock_settings.return_value = Mock(redis_url="redis://localhost:6381")
                 mock_redis_class.return_value.ping.return_value = True
 
                 cache = RedisCache(ttl=7200)
@@ -83,7 +83,7 @@ class TestRedisCacheInitialization:
         """Test initialization falls back to memory cache on Redis failure."""
         with patch("src.utils.cache.redis.Redis") as mock_redis_class:
             with patch("src.utils.cache.get_settings") as mock_settings:
-                mock_settings.return_value = Mock(redis_url="redis://localhost:6379")
+                mock_settings.return_value = Mock(redis_url="redis://localhost:6381")
                 mock_redis_class.side_effect = Exception("Connection failed")
 
                 cache = RedisCache(enable_fallback=True)
@@ -96,7 +96,7 @@ class TestRedisCacheInitialization:
         """Test initialization raises exception when fallback is disabled."""
         with patch("src.utils.cache.redis.Redis") as mock_redis_class:
             with patch("src.utils.cache.get_settings") as mock_settings:
-                mock_settings.return_value = Mock(redis_url="redis://localhost:6379")
+                mock_settings.return_value = Mock(redis_url="redis://localhost:6381")
                 mock_redis_class.side_effect = Exception("Connection failed")
 
                 with pytest.raises(Exception) as exc_info:

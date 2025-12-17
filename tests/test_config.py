@@ -124,13 +124,13 @@ class TestSettings:
         """Test CORS origins string parsing."""
         with patch.dict(
             os.environ,
-            {"CORS_ORIGINS": "http://localhost:3000,http://localhost:8080,https://app.example.com"},
+            {"CORS_ORIGINS": "http://localhost:3002,http://localhost:8084,https://app.example.com"},
         ):
             settings = Settings()
             origins = settings.get_cors_origins_list()
             assert len(origins) == 3
-            assert "http://localhost:3000" in origins
-            assert "http://localhost:8080" in origins
+            assert "http://localhost:3002" in origins
+            assert "http://localhost:8084" in origins
             assert "https://app.example.com" in origins
 
     def test_enum_values(self):

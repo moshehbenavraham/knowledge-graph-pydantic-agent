@@ -173,7 +173,7 @@ class TestAPISettings:
 
     def test_api_cors_settings(self, clean_env):
         """Test CORS configuration."""
-        os.environ["CORS_ORIGINS"] = "http://localhost:3000,https://app.example.com"
+        os.environ["CORS_ORIGINS"] = "http://localhost:3002,https://app.example.com"
 
         settings = Settings()
 
@@ -384,7 +384,7 @@ class TestSettingsTypes:
 
     def test_list_conversion(self, clean_env):
         """Test list setting conversion."""
-        os.environ["CORS_ORIGINS"] = "http://localhost:3000,https://app.example.com"
+        os.environ["CORS_ORIGINS"] = "http://localhost:3002,https://app.example.com"
 
         settings = Settings()
 

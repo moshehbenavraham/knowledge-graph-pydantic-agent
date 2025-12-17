@@ -59,7 +59,7 @@ APP_NAME="${APP_NAME:-base-agent-ui}"
 APP_DOMAIN="${APP_DOMAIN:-baseagent.aiwithapex.com}"
 DOCKERFILE_PATH="docker/Dockerfile.production"
 BUILD_TARGET="runtime"
-PORT_EXPOSES="8501"
+PORT_EXPOSES="8502"
 
 #######################################################################
 # API Helper Functions
@@ -278,7 +278,7 @@ UPDATE_PAYLOAD=$(jq -n \
         instant_deploy: $instant_deploy,
         health_check_enabled: true,
         health_check_path: "/_stcore/health",
-        health_check_port: "8501",
+        health_check_port: "8502",
         health_check_interval: 30,
         health_check_timeout: 10,
         health_check_retries: 3,

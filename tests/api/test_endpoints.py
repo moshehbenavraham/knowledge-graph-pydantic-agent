@@ -348,7 +348,7 @@ class TestMiddleware:
         """Test CORS headers are present."""
         response = client.options(
             "/",
-            headers={"Origin": "http://localhost:3000"},
+            headers={"Origin": "http://localhost:3002"},
         )
         # CORS preflight should be handled
         assert response.status_code in [200, 405]

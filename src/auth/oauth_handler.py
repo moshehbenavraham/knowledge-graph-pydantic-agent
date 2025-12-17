@@ -150,7 +150,7 @@ class OAuthHandler:
 
         if not self.redirect_uri:
             # Default redirect URI
-            self.redirect_uri = f"http://localhost:8501/oauth/callback/{self.provider}"
+            self.redirect_uri = f"http://localhost:8502/oauth/callback/{self.provider}"
             logger.warning(
                 f"Using default redirect URI for {self.provider}",
                 redirect_uri=self.redirect_uri,

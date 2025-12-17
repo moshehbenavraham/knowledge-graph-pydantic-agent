@@ -126,7 +126,7 @@ UI_MODE=advanced streamlit run src/ui/streamlit_app.py
 make dev MODE=standard
 ```
 
-The application will be available at http://localhost:8501
+The application will be available at http://localhost:8502
 
 ### UI Modes
 

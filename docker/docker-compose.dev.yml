@@ -12,7 +12,7 @@ services:
     image: base-agent:dev
     container_name: base-agent-dev
     ports:
-      - "8501:8501"
+      - "8502:8502"
       - "8058:8058"  # API port
     environment:
       # ===== ENVIRONMENT =====
@@ -65,7 +65,7 @@ services:
 
       # ===== MONITORING =====
       - ENABLE_METRICS=true
-      - METRICS_PORT=8000
+      - METRICS_PORT=8002
 
       # ===== DEVELOPMENT =====
       - STREAMLIT_SERVER_RUN_ON_SAVE=true
@@ -89,7 +89,7 @@ services:
     restart: unless-stopped
 
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8502/_stcore/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -131,7 +131,7 @@ services:
     image: searxng/searxng:latest
     container_name: searxng-dev
     ports:
-      - "8080:8080"
+      - "8084:8080"
     environment:
       - SEARXNG_SECRET=${SEARXNG_SECRET:-dev_secret_key}
       - SEARXNG_HOSTNAME=searxng
@@ -152,8 +152,8 @@ services:
     image: neo4j:5-community
     container_name: neo4j-dev
     ports:
-      - "7474:7474"
-      - "7687:7687"
+      - "7475:7474"
+      - "7688:7687"
     environment:
       - NEO4J_AUTH=${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-dev_password}
       - NEO4J_apoc_export_file_enabled=true
@@ -179,7 +179,7 @@ services:
     image: redis:7-alpine
     container_name: redis-dev
     ports:
-      - "6379:6379"
+      - "6381:6379"
     volumes:
       - redis_dev_data:/data
     restart: unless-stopped

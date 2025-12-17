@@ -46,7 +46,7 @@ class UIConfig:
     @property
     def ui_port(self) -> int:
         """Get UI port."""
-        return getattr(get_settings(), "streamlit_port", 8501)
+        return getattr(get_settings(), "streamlit_port", 8502)
 
     @property
     def enable_memory(self) -> bool:

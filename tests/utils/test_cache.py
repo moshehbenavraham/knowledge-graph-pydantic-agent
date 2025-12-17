@@ -26,7 +26,7 @@ class TestRedisCacheClass:
         mock_redis.return_value = mock_redis_instance
         mock_redis_instance.ping.return_value = True
 
-        cache_obj = RedisCache(redis_url="redis://localhost:6379")
+        cache_obj = RedisCache(redis_url="redis://localhost:6381")
 
         assert cache_obj.ttl == 3600
         assert cache_obj.enable_fallback is True
@@ -42,7 +42,7 @@ class TestRedisCacheClass:
         mock_redis_instance.ping.side_effect = RedisConnectionError("Connection refused")
 
         # Should not raise, fallback to memory cache
-        cache_obj = RedisCache(redis_url="redis://localhost:6379", enable_fallback=True)
+        cache_obj = RedisCache(redis_url="redis://localhost:6381", enable_fallback=True)
 
         assert cache_obj._redis_client is not None
         assert cache_obj._memory_cache == {}
@@ -57,7 +57,7 @@ class TestRedisCacheClass:
 
         # Should raise exception
         with pytest.raises(RedisConnectionError):
-            RedisCache(redis_url="redis://localhost:6379", enable_fallback=False)
+            RedisCache(redis_url="redis://localhost:6381", enable_fallback=False)
 
     @patch("src.utils.cache.redis.Redis")
     @patch("src.utils.cache.ConnectionPool")
@@ -68,7 +68,7 @@ class TestRedisCacheClass:
         mock_redis_instance.ping.return_value = True
 
         cache_obj = RedisCache(
-            redis_url="redis://localhost:6379",
+            redis_url="redis://localhost:6381",
             ttl=7200,
             max_connections=100,
             socket_timeout=10,
