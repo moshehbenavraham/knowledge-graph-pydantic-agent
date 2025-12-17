@@ -36,7 +36,11 @@ security:
 	bash -c "source .venv/bin/activate && pip install -e .[security]"
 	bash -c "source .venv/bin/activate && bandit -r src/"
 	bash -c "source .venv/bin/activate && safety scan"
-	bash -c "source .venv/bin/activate && pip-audit"
+	bash -c "source .venv/bin/activate && pip-audit --ignore-vuln PYSEC-2023-242 --ignore-vuln PYSEC-2022-42969"
+
+# Note: Ignored vulnerabilities above are documented in pyproject.toml and .pip-audit.toml:
+# - PYSEC-2023-242: httpie SSL cert validation in update check - no fix available, dev-only tool
+# - PYSEC-2022-42969: py library ReDoS in SVN handling - disputed, SVN-only, dev-only (via interrogate)
 
 # Code Quality Analysis
 deadcode:

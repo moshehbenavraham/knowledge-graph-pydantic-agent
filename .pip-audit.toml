@@ -1,0 +1,26 @@
+# pip-audit configuration
+# These vulnerabilities have been evaluated and accepted as low risk
+
+# Known vulnerabilities with no fix available
+[tool.pip-audit]
+# Ignore specific vulnerability IDs
+ignore-vulns = [
+    # httpie 3.2.4: PYSEC-2023-242 / CVE-2023-48052
+    # SSL certificate validation issue in update checking feature
+    # - No fix available (3.2.4 is latest)
+    # - Dev-only dependency, not used in production code
+    # - Affects update check, not actual HTTP requests
+    # - Accepted risk for development tooling
+    "PYSEC-2023-242",
+    "GHSA-8r96-8889-qg2x",
+
+    # py 1.11.0: PYSEC-2022-42969 / CVE-2022-42969
+    # ReDoS in SVN path handling
+    # - Disputed vulnerability, SVN-only
+    # - Required by interrogate (docstring coverage tool)
+    # - Development-only dependency
+    # - No SVN integration in this project
+    # - Accepted risk
+    "PYSEC-2022-42969",
+    "GHSA-w596-4wvx-j9j6",
+]
