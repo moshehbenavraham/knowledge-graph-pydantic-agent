@@ -6,7 +6,7 @@
 # -----------------------------------------------
 # Stage 1: Builder - Compile dependencies
 # -----------------------------------------------
-FROM python:3.11-slim AS builder
+FROM python:3.14-slim AS builder
 
 WORKDIR /build
 
@@ -37,7 +37,7 @@ RUN uv pip install --prefix=/build/deps --no-cache .[rag,auth,security]
 # -----------------------------------------------
 # Stage 2: Runtime - Minimal production image
 # -----------------------------------------------
-FROM python:3.11-slim AS runtime
+FROM python:3.14-slim AS runtime
 
 # Image metadata
 LABEL maintainer="aiwithapex@example.com"
