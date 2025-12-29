@@ -114,7 +114,6 @@ jobs:
             "docs/2-getting-started/installation.md"
             "docs/3-architecture/index.md"
             "docs/4-configuration/environment.md"
-            "DOCUMENTATION_AUDIT.md"
           )
 
           missing_files=()
