@@ -94,7 +94,7 @@ jobs:
         severity: 'CRITICAL,HIGH'
 
     - name: Upload Trivy results to GitHub Security
-      uses: github/codeql-action/upload-sarif@v2
+      uses: github/codeql-action/upload-sarif@v3
       if: always()
       with:
         sarif_file: 'trivy-fs-results.sarif'
@@ -146,7 +146,7 @@ jobs:
         exit-code: '0'  # Don't fail on vulnerabilities (report only)
 
     - name: Upload Trivy results to GitHub Security
-      uses: github/codeql-action/upload-sarif@v2
+      uses: github/codeql-action/upload-sarif@v3
       if: always()
       with:
         sarif_file: 'trivy-image-results.sarif'
@@ -279,11 +279,39 @@ jobs:
       run: |
         echo "${TAGS}" | xargs -I {} cosign sign --yes {}@${DIGEST}
 
-    - name: Generate provenance
-      uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@v1.9.0
-      with:
-        image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-        digest: ${{ steps.build-push.outputs.digest }}
+    - name: Generate provenance attestation
+      env:
+        DIGEST: ${{ steps.build-push.outputs.digest }}
+      run: |
+        # Generate SLSA provenance using cosign attest
+        cosign attest --yes \
+          --predicate <(cat <<EOF
+        {
+          "buildType": "https://github.com/slsa-framework/slsa-github-generator/container@v1",
+          "builder": {
+            "id": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          },
+          "invocation": {
+            "configSource": {
+              "uri": "git+https://github.com/${{ github.repository }}@${{ github.ref }}",
+              "digest": {
+                "sha1": "${{ github.sha }}"
+              },
+              "entryPoint": ".github/workflows/security-supply-chain.yml"
+            }
+          },
+          "metadata": {
+            "buildInvocationId": "${{ github.run_id }}",
+            "completeness": {
+              "parameters": true,
+              "environment": false,
+              "materials": false
+            }
+          }
+        }
+        EOF
+        ) \
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${DIGEST}
 
   security-summary:
     name: Security Summary Report
