@@ -18,7 +18,7 @@
       "sessions": {
         "01": {"name": "Document Reference Population", "status": "completed"},
         "02": {"name": "Temporal Metadata Extraction", "status": "completed"},
-        "03": {"name": "Entity Deduplication", "status": "not_started"},
+        "03": {"name": "Entity Deduplication", "status": "completed"},
         "04": {"name": "Numeric Fact Extraction", "status": "not_started"},
         "05": {"name": "Relationship Scoring", "status": "not_started"},
         "06": {"name": "Type Hierarchy and Testing", "status": "not_started"}
@@ -27,7 +27,8 @@
   },
   "completed_sessions": [
     "phase01-session01-document_reference_population",
-    "phase01-session02-temporal_metadata_extraction"
+    "phase01-session02-temporal_metadata_extraction",
+    "phase01-session03-entity_deduplication"
   ],
   "next_session_history": [
     {
@@ -38,6 +39,11 @@
     {
       "date": "2025-12-30",
       "session": "phase01-session02-temporal_metadata_extraction",
+      "status": "completed"
+    },
+    {
+      "date": "2025-12-30",
+      "session": "phase01-session03-entity_deduplication",
       "status": "completed"
     }
   ]

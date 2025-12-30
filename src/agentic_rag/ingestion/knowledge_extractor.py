@@ -19,6 +19,11 @@ from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
 
 from src.agentic_rag.config import get_config
+from src.agentic_rag.entity_resolution.canonical_names import (
+    get_canonical_name,
+    is_excluded_term,
+    normalize_entity_name,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -186,6 +191,42 @@ class KnowledgeExtractor:
             self._llm_agent = Agent(model=model)
         return self._llm_agent
 
+    def _normalize_and_validate_entity_name(self, name: str) -> str | None:
+        """
+        Normalize entity name and validate it for storage.
+
+        Applies canonical name resolution and filtering of excluded terms.
+
+        Args:
+            name: Raw entity name
+
+        Returns:
+            Normalized name or None if entity should be excluded
+        """
+        if not name or not name.strip():
+            return None
+
+        # Check for excluded generic terms
+        if is_excluded_term(name):
+            logger.debug(f"Excluded generic term: {name}")
+            return None
+
+        # Check if this is a ticker symbol that maps to a canonical name
+        canonical = get_canonical_name(name.strip())
+        if canonical:
+            logger.debug(f"Resolved ticker to canonical: {name} -> {canonical}")
+            return canonical
+
+        # Apply standard normalization but preserve display case
+        # (normalization is for comparison, but we keep original for display)
+        normalized = normalize_entity_name(name)
+        if len(normalized) < 2:
+            logger.debug(f"Entity name too short after normalization: {name}")
+            return None
+
+        # Return the original name with cleaned whitespace
+        return name.strip()
+
     async def extract(self, text: str, chunk_id: str | None = None) -> dict[str, Any]:
         """
         Extract all knowledge from text.
@@ -279,6 +320,11 @@ class KnowledgeExtractor:
 
                 for item in entity_data[:10]:  # Limit to 10 entities
                     if isinstance(item, dict) and "name" in item and "type" in item:
+                        # Normalize and validate entity name
+                        normalized_name = self._normalize_and_validate_entity_name(item["name"])
+                        if normalized_name is None:
+                            continue  # Skip excluded or invalid entities
+
                         try:
                             entity_type = EntityType(item["type"].lower())
                         except ValueError:
@@ -286,7 +332,7 @@ class KnowledgeExtractor:
 
                         entities.append(
                             Entity(
-                                name=item["name"][:100],  # Limit name length
+                                name=normalized_name[:100],  # Limit name length
                                 type=entity_type,
                                 confidence=item.get("confidence", 0.8),
                             )
@@ -308,6 +354,8 @@ class KnowledgeExtractor:
         """
         Extract entities using regex patterns.
 
+        Applies canonical name normalization to all extracted entities.
+
         Args:
             text: Text to extract from
 
@@ -320,21 +368,23 @@ class KnowledgeExtractor:
         company_pattern = (
             r"\b([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)*)\s+(?:Inc|Corp|LLC|Ltd|Company|Corporation)\b"
         )
-        entities.extend(
-            [
-                Entity(name=match.group(1), type=EntityType.COMPANY, confidence=0.9)
-                for match in re.finditer(company_pattern, text)
-            ]
-        )
+        for match in re.finditer(company_pattern, text):
+            raw_name = match.group(1)
+            normalized_name = self._normalize_and_validate_entity_name(raw_name)
+            if normalized_name:
+                entities.append(
+                    Entity(name=normalized_name, type=EntityType.COMPANY, confidence=0.9)
+                )
 
         # Technology patterns
         tech_pattern = r"\b(GPT-\d+|DALL-E|LaMDA|PaLM|Claude|Gemini|LLaMA)\b"
-        entities.extend(
-            [
-                Entity(name=match.group(1), type=EntityType.TECHNOLOGY, confidence=0.95)
-                for match in re.finditer(tech_pattern, text, re.IGNORECASE)
-            ]
-        )
+        for match in re.finditer(tech_pattern, text, re.IGNORECASE):
+            raw_name = match.group(1)
+            normalized_name = self._normalize_and_validate_entity_name(raw_name)
+            if normalized_name:
+                entities.append(
+                    Entity(name=normalized_name, type=EntityType.TECHNOLOGY, confidence=0.95)
+                )
 
         return entities
 

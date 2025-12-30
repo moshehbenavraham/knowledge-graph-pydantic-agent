@@ -4,7 +4,7 @@
 **Sessions**: 6
 **Estimated Duration**: 3-5 days
 
-**Progress**: 2/6 sessions (33%)
+**Progress**: 3/6 sessions (50%)
 
 ---
 
@@ -35,7 +35,7 @@ This phase addresses 6 critical improvements to transform the knowledge graph fr
 |---------|------|--------|------------|-----------|
 | 01 | Document Reference Population | Complete | 20 | 2025-12-30 |
 | 02 | Temporal Metadata Extraction | Complete | 20 | 2025-12-30 |
-| 03 | Entity Deduplication | Not Started | ~18-22 | - |
+| 03 | Entity Deduplication | Complete | 21 | 2025-12-30 |
 | 04 | Numeric Fact Extraction | Not Started | ~12-15 | - |
 | 05 | Relationship Scoring | Not Started | ~10-12 | - |
 | 06 | Type Hierarchy and Testing | Not Started | ~15-18 | - |
@@ -60,11 +60,20 @@ This phase addresses 6 critical improvements to transform the knowledge graph fr
 - Ticker-to-company-name mapping configuration (AAPL, MSFT, NVDA, INTC, AMD)
 - 39 new tests, all passing in 3.08 seconds
 
+### Session 03: Entity Deduplication (2025-12-30)
+- Multi-pass entity deduplication: exact match, fuzzy match (90% threshold), context-based disambiguation
+- Canonical name normalization for company suffixes (Inc., Corp., LLC, Ltd., Co.)
+- Ticker symbol to company name mapping (AAPL, INTC, MSFT, GOOGL, AMZN, etc.)
+- Merge script with dry-run, interactive, and batch modes with relationship preservation
+- Merge history logging for rollback capability in JSON format
+- Ingestion pipeline integration for automatic entity normalization
+- 66 new tests, all passing in 3.67 seconds
+
 ---
 
 ## Upcoming Sessions
 
-- Session 03: Entity Deduplication
+- Session 04: Numeric Fact Extraction
 
 ---
 
