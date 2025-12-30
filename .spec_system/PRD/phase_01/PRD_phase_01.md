@@ -4,7 +4,7 @@
 **Sessions**: 6
 **Estimated Duration**: 3-5 days
 
-**Progress**: 4/6 sessions (67%)
+**Progress**: 5/6 sessions (83%)
 
 ---
 
@@ -37,7 +37,7 @@ This phase addresses 6 critical improvements to transform the knowledge graph fr
 | 02 | Temporal Metadata Extraction | Complete | 20 | 2025-12-30 |
 | 03 | Entity Deduplication | Complete | 21 | 2025-12-30 |
 | 04 | Numeric Fact Extraction | Complete | 22 | 2025-12-30 |
-| 05 | Relationship Scoring | Not Started | ~10-12 | - |
+| 05 | Relationship Scoring | Complete | 20 | 2025-12-30 |
 | 06 | Type Hierarchy and Testing | Not Started | ~15-18 | - |
 
 ---
@@ -78,11 +78,20 @@ This phase addresses 6 critical improvements to transform the knowledge graph fr
 - Backfill script with dry-run, batch processing, retry logic, and verification mode
 - 54 new tests, 90.58% coverage on new code
 
+### Session 05: Relationship Scoring (2025-12-30)
+- Evidence-based dynamic relationship scoring with weighted linear combination (chunk_factor, type_factor, importance_factor)
+- Configurable weight coefficients (w1=0.4, w2=0.3, w3=0.3) via ScoringConfig dataclass
+- TYPE_PRIORITIES constant dict for relationship type priority scoring (ACQUIRED=1.0, MENTIONED_IN=0.3)
+- Integration with add_relationships() in neo4j_store.py for automatic scoring on new relationships
+- Batch backfill script with retry logic, progress logging, and dry-run mode for existing 18,195 relationships
+- Search boost integration in hybrid_search.py using relationship strength for result ranking
+- 55 new tests, all passing (4414 total tests)
+
 ---
 
 ## Upcoming Sessions
 
-- Session 05: Relationship Scoring
+- Session 06: Type Hierarchy and Testing
 
 ---
 

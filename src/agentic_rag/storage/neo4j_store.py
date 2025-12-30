@@ -9,6 +9,7 @@ from uuid import uuid4
 
 import structlog
 
+from src.agentic_rag.graph.relationship_scoring import calculate_relationship_strength
 from src.agentic_rag.graph.temporal_parser import extract_temporal_properties
 from src.agentic_rag.models.document_reference import DocumentReference
 
@@ -137,9 +138,11 @@ class Neo4jStore:
     async def add_relationships(
         self, relationships: list[dict[str, Any]], source_chunk_id: str
     ) -> int:
-        """Add relationships between entities.
+        """Add relationships between entities with dynamic strength scoring.
 
         Accepts entity names (source/target) and looks up entity IDs internally.
+        Calculates relationship strength based on chunk count, type priority,
+        and entity importance scores.
         """
         structlog_logger.info(
             "add_relationships called",
@@ -161,13 +164,41 @@ class Neo4jStore:
                     )
                     continue
 
-                # Create relationship using entity names (Neo4j will lookup by name)
+                rel_type = rel.get("type", "RELATED_TO")
+
+                # First, get entity importance scores for strength calculation
+                importance_result = await session.run(
+                    """
+                    MATCH (e1:Entity {name: $entity1_name})
+                    MATCH (e2:Entity {name: $entity2_name})
+                    RETURN e1.importance_score as e1_importance,
+                           e2.importance_score as e2_importance
+                    """,
+                    entity1_name=entity1_name,
+                    entity2_name=entity2_name,
+                )
+                importance_record = await importance_result.single()
+
+                # Calculate initial strength for new relationships (chunk_count=1)
+                e1_importance = None
+                e2_importance = None
+                if importance_record:
+                    e1_importance = importance_record.get("e1_importance")
+                    e2_importance = importance_record.get("e2_importance")
+
+                initial_strength = calculate_relationship_strength(
+                    chunk_count=1,
+                    relationship_type=rel_type,
+                    entity1_importance=e1_importance,
+                    entity2_importance=e2_importance,
+                )
+
+                # Create relationship with dynamic strength scoring
+                # ON MATCH: Recalculate strength with updated chunk count
                 result = await session.run(
                     """
-                    MATCH (e1:Entity)
-                    WHERE e1.name = $entity1_name
-                    MATCH (e2:Entity)
-                    WHERE e2.name = $entity2_name
+                    MATCH (e1:Entity {name: $entity1_name})
+                    MATCH (e2:Entity {name: $entity2_name})
                     MERGE (e1)-[r:RELATED_TO {
                         type: $rel_type,
                         subtype: $rel_subtype
@@ -175,7 +206,7 @@ class Neo4jStore:
                     ON CREATE SET
                         r.id = $rel_id,
                         r.confidence = $confidence,
-                        r.strength = $strength,
+                        r.strength = $initial_strength,
                         r.valid_from = datetime(),
                         r.is_current = true,
                         r.source_chunks = [$chunk_id],
@@ -191,20 +222,50 @@ class Neo4jStore:
                             ELSE r.source_chunks + $chunk_id
                         END,
                         r.last_verified = datetime()
-                    RETURN r.id as rel_id
-                """,
+                    WITH r, e1, e2,
+                         size(r.source_chunks) as chunk_count
+                    RETURN r.id as rel_id,
+                           chunk_count,
+                           e1.importance_score as e1_imp,
+                           e2.importance_score as e2_imp,
+                           r.type as rel_type
+                    """,
                     entity1_name=entity1_name,
                     entity2_name=entity2_name,
-                    rel_type=rel.get("type", "RELATED_TO"),
+                    rel_type=rel_type,
                     rel_subtype=rel.get("subtype", "general"),
                     rel_id=f"rel_{uuid4()}",
                     confidence=rel.get("confidence", 0.8),
-                    strength=rel.get("strength", 0.5),
+                    initial_strength=initial_strength,
                     chunk_id=source_chunk_id,
                 )
 
-                if await result.single():
+                record = await result.single()
+                if record:
                     relationship_count += 1
+
+                    # If relationship existed (ON MATCH), recalculate strength with new chunk count
+                    chunk_count = record.get("chunk_count", 1)
+                    if chunk_count > 1:
+                        updated_strength = calculate_relationship_strength(
+                            chunk_count=chunk_count,
+                            relationship_type=record.get("rel_type", rel_type),
+                            entity1_importance=record.get("e1_imp"),
+                            entity2_importance=record.get("e2_imp"),
+                        )
+                        # Update strength with recalculated value
+                        await session.run(
+                            """
+                            MATCH (e1:Entity {name: $entity1_name})
+                                  -[r:RELATED_TO {type: $rel_type}]-
+                                  (e2:Entity {name: $entity2_name})
+                            SET r.strength = $strength
+                            """,
+                            entity1_name=entity1_name,
+                            entity2_name=entity2_name,
+                            rel_type=rel_type,
+                            strength=updated_strength,
+                        )
 
                 # Update entity relationship counts
                 await session.run(
@@ -212,7 +273,7 @@ class Neo4jStore:
                     MATCH (e:Entity)
                     WHERE e.name IN [$entity1_name, $entity2_name]
                     SET e.relationship_count = COUNT { (e)-[:RELATED_TO]-() }
-                """,
+                    """,
                     entity1_name=entity1_name,
                     entity2_name=entity2_name,
                 )

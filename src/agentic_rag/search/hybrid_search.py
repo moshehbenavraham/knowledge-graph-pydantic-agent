@@ -457,6 +457,12 @@ class HybridSearch:
         """
         Boost vector results using graph context.
 
+        Applies multiple boosting factors:
+        - Chunk reference boost: Chunks referenced in graph results
+        - Entity overlap boost: Chunks containing relevant entities
+        - Relationship strength boost: Based on average strength of related relationships
+        - Intent-based boost: Temporal recency, entity focus
+
         Args:
             vector_results: Vector search results
             graph_results: Graph search results
@@ -468,6 +474,39 @@ class HybridSearch:
         # Extract relevant context from graph
         relevant_chunk_ids = set(graph_results.chunk_refs)
         relevant_entities = {e.name.lower() for e in graph_results.entities}
+
+        # Build entity-to-relationship strength map from graph relationships
+        # Maps entity pairs to their relationship strength for boosting
+        entity_relationship_strengths: dict[frozenset[str], float] = {}
+        for rel in graph_results.relationships:
+            if hasattr(rel, "source") and hasattr(rel, "target"):
+                source = (
+                    rel.source.lower() if hasattr(rel.source, "lower") else str(rel.source).lower()
+                )
+                target = (
+                    rel.target.lower() if hasattr(rel.target, "lower") else str(rel.target).lower()
+                )
+                strength = getattr(rel, "strength", 0.5) or 0.5
+                entity_pair = frozenset([source, target])
+                # Keep the highest strength for each pair
+                if entity_pair not in entity_relationship_strengths:
+                    entity_relationship_strengths[entity_pair] = strength
+                else:
+                    entity_relationship_strengths[entity_pair] = max(
+                        entity_relationship_strengths[entity_pair], strength
+                    )
+            elif isinstance(rel, dict):
+                source = str(rel.get("source", "")).lower()
+                target = str(rel.get("target", "")).lower()
+                strength = rel.get("strength", 0.5) or 0.5
+                if source and target:
+                    entity_pair = frozenset([source, target])
+                    if entity_pair not in entity_relationship_strengths:
+                        entity_relationship_strengths[entity_pair] = strength
+                    else:
+                        entity_relationship_strengths[entity_pair] = max(
+                            entity_relationship_strengths[entity_pair], strength
+                        )
 
         # Apply boosts
         for chunk in vector_results:
@@ -485,6 +524,23 @@ class HybridSearch:
                 boost *= 1.2
                 entity_boosts = cast("int", self._stats["entity_boosts"])
                 self._stats["entity_boosts"] = entity_boosts + 1
+
+            # Boost based on relationship strength
+            # If chunk entities are connected by strong relationships, boost more
+            if len(chunk_entities_lower) >= 2 and entity_relationship_strengths:
+                chunk_entity_list = list(chunk_entities_lower)
+                max_rel_strength = 0.0
+                for i, e1 in enumerate(chunk_entity_list):
+                    for e2 in chunk_entity_list[i + 1 :]:
+                        pair = frozenset([e1, e2])
+                        if pair in entity_relationship_strengths:
+                            max_rel_strength = max(
+                                max_rel_strength, entity_relationship_strengths[pair]
+                            )
+                # Apply relationship strength boost (0.5 default = 1.0x, 1.0 = 1.25x)
+                if max_rel_strength > 0.5:
+                    rel_boost = 1.0 + (max_rel_strength - 0.5) * 0.5  # Maps 0.5-1.0 to 1.0-1.25
+                    boost *= rel_boost
 
             # Boost based on intent match
             if intent_result:

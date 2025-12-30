@@ -135,7 +135,7 @@ async def test_add_relationships_success(neo4j_store, mock_connection_manager):
     count = await neo4j_store.add_relationships(relationships, chunk_id)
 
     assert count == 1
-    assert mock_session.run.call_count == 2  # 1 for rel, 1 for updating counts
+    assert mock_session.run.call_count == 3  # 1 for importance, 1 for rel, 1 for counts
 
 
 @pytest.mark.asyncio
@@ -204,12 +204,12 @@ async def test_add_relationships_default_values(neo4j_store, mock_connection_man
     count = await neo4j_store.add_relationships(relationships, chunk_id)
 
     assert count == 1
-    # Verify defaults were used
-    call_args = mock_session.run.call_args_list[0]
+    # Verify defaults were used (call_args_list[1] is the relationship creation query)
+    # call_args_list[0] is the importance query, [1] is relationship, [2] is count update
+    call_args = mock_session.run.call_args_list[1]
     assert call_args[1]["rel_type"] == "RELATED_TO"
     assert call_args[1]["rel_subtype"] == "general"
     assert call_args[1]["confidence"] == 0.8
-    assert call_args[1]["strength"] == 0.5
 
 
 # =====================================================
