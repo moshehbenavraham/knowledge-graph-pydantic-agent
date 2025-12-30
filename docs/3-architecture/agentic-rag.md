@@ -901,8 +901,145 @@ Phase 01 added 356 new tests across 8 test files:
 
 ---
 
+## Phase 02: Advanced Query Engine (December 2025)
+
+Phase 02 leverages the improved knowledge graph from Phase 01 to deliver advanced query capabilities. Five sessions built multi-hop reasoning, temporal trend analysis, cross-entity comparisons, smart search integration, and query performance optimization.
+
+### Improvements Summary
+
+| Session | Feature | Impact |
+|---------|---------|--------|
+| 01 | Multi-hop Query Engine | Path traversal through 1-3 relationship hops with strength filtering |
+| 02 | Temporal Trend Queries | Time-series analysis with QoQ/YoY comparisons |
+| 03 | Cross-Entity Comparison | Side-by-side entity metrics with ranking |
+| 04 | Smart Search Enhancement | Intent-based routing to Phase 02 engines |
+| 05 | Query Performance and Validation | TTL-based caching with 80%+ latency reduction |
+
+### New Capabilities
+
+#### Multi-hop Path Traversal
+
+Discover indirect connections between entities through relationship chains:
+
+```python
+from src.agentic_rag.graph import execute_multi_hop, MultiHopQuery
+
+# Find acquisition chains
+query = MultiHopQuery(
+    start_entity="Intel",
+    end_entity="Mobileye",
+    max_hops=2,
+    min_strength=0.5,
+)
+paths = await execute_multi_hop(connection_manager, query)
+# Returns: ["Intel --[acquired]--> Mobileye"]
+```
+
+**Agent Tool:** `graph_traverse` - Use for path/connection queries
+
+#### Temporal Trend Analysis
+
+Analyze entity metrics over time using fiscal metadata:
+
+```python
+from src.agentic_rag.graph import execute_temporal_query, TemporalQuery
+
+query = TemporalQuery(
+    entity_name="Intel",
+    metric_type="revenue",
+    start_year=2022,
+    end_year=2023,
+)
+trend = await execute_temporal_query(connection_manager, query)
+# Returns: TrendResult with data_points, trend_direction, growth_rate
+```
+
+**Agent Tool:** `temporal_trend` - Use for trend/over-time queries
+
+#### Cross-Entity Comparison
+
+Compare metrics across multiple entities:
+
+```python
+from src.agentic_rag.graph import execute_comparison, ComparisonQuery
+
+query = ComparisonQuery(
+    entities=["Intel", "AMD", "NVIDIA"],
+    metric_type="revenue",
+    fiscal_quarter="Q3",
+    fiscal_year=2023,
+)
+result = await execute_comparison(connection_manager, query)
+# Returns: EntityComparisonResult with rankings
+```
+
+**Agent Tool:** `compare_entities` - Use for compare/versus queries
+
+### Enhanced Intent Detection
+
+IntentAnalyzer now detects three new Phase 02 intents:
+
+| Intent | Pattern Keywords | Routes To |
+|--------|-----------------|-----------|
+| MULTI_HOP | "connected to", "path from", "linked through" | execute_multi_hop |
+| TEMPORAL_TREND | "trend", "over time", "year over year", "growth" | execute_temporal_query |
+| COMPARISON | "compare", "versus", "vs", "difference between" | execute_comparison |
+
+### Query Caching
+
+New caching layer reduces repeat query latency by 80%+:
+
+```python
+from src.agentic_rag.cache import get_query_cache, CacheType
+
+cache = get_query_cache()
+stats = cache.get_stats(CacheType.MULTI_HOP)
+print(f"Hit rate: {stats['hit_rate_percent']}%")
+```
+
+**Cache Types:** VECTOR_SEARCH, GRAPH_SEARCH, MULTI_HOP, TEMPORAL_TREND, COMPARISON, HYBRID
+
+### New Packages
+
+| Package | Purpose | Key Exports |
+|---------|---------|-------------|
+| `src/agentic_rag/graph/multi_hop.py` | Path traversal | MultiHopQuery, execute_multi_hop, PathResult |
+| `src/agentic_rag/graph/temporal_queries.py` | Time-series | TemporalQuery, execute_temporal_query, TrendResult |
+| `src/agentic_rag/graph/entity_comparison.py` | Entity comparison | ComparisonQuery, execute_comparison |
+| `src/agentic_rag/search/result_merger.py` | Result normalization | ResultMerger, SearchResultItem |
+| `src/agentic_rag/search/unified_ranker.py` | Multi-signal ranking | UnifiedRanker, RankingSignals |
+| `src/agentic_rag/cache/` | Query caching | QueryCache, CacheConfig, with_cache |
+
+### Performance Targets
+
+Phase 02 meets the following performance targets:
+
+| Metric | Target | Actual |
+|--------|--------|--------|
+| 1-hop queries | < 500ms | < 300ms |
+| 2-hop queries | < 1 second | < 700ms |
+| 3-hop queries | < 2 seconds | < 1.5 seconds |
+| Temporal trend queries | < 1 second | < 500ms |
+| Comparison queries | < 1.5 seconds | < 800ms |
+| Cache hit latency | < 50ms | < 10ms |
+
+### Test Coverage
+
+Phase 02 added 334+ new tests across 8 test files:
+
+- `test_multi_hop.py`: 53 tests
+- `test_temporal_queries.py`: 62 tests
+- `test_entity_comparison.py`: 84 tests
+- `test_intent_analyzer_enhanced.py`: 38 tests
+- `test_result_merger.py`: 24 tests
+- `test_unified_ranker.py`: 21 tests
+- `test_smart_search_enhanced.py`: 17 tests
+- `test_cache.py`: 39 tests
+
+---
+
 **Last Updated:** 2025-12-30
-**Version:** 1.1 (Phase 01 Complete)
+**Version:** 1.2 (Phase 02 Complete)
 **Owner:** Platform Architecture Team
 **Review Cadence:** Quarterly
-**Status:** Production Ready - Phase 01 Knowledge Graph Improvements Complete
+**Status:** Production Ready - Phase 02 Advanced Query Engine Complete

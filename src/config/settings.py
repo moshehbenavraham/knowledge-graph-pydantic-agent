@@ -518,6 +518,30 @@ class Settings(BaseSettings):
         description="Jaeger agent port",
     )
 
+    # Performance Monitoring Configuration (Phase 03)
+    memory_monitor_interval: int = Field(
+        default=60,
+        ge=10,
+        le=3600,
+        description="Memory usage logging interval in seconds",
+    )
+    memory_monitor_enabled: bool = Field(
+        default=True,
+        description="Enable periodic memory usage monitoring",
+    )
+    profiling_enabled: bool = Field(
+        default=False,
+        description="Enable development profiling decorators (adds overhead)",
+    )
+    intent_metrics_enabled: bool = Field(
+        default=True,
+        description="Enable intent-specific latency metrics for Prometheus",
+    )
+    cache_metrics_enabled: bool = Field(
+        default=True,
+        description="Enable cache statistics export to Prometheus",
+    )
+
     # Authentication Configuration
     use_database_auth: bool = Field(
         default=False,

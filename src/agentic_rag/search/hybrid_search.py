@@ -16,6 +16,7 @@ import structlog
 
 from src.agentic_rag.cache import CacheType, generate_cache_key, get_query_cache
 from src.agentic_rag.config import get_config
+from src.agentic_rag.metrics import get_intent_metrics
 from src.agentic_rag.resilience import (
     DegradationResult,
     SearchDegradationHandler,
@@ -224,6 +225,11 @@ class HybridSearch:
         result.search_strategy = strategy
         result.intent = intent
         result.query_time = (datetime.now() - start_time).total_seconds()
+
+        # Observe intent-specific latency metrics for Prometheus
+        if intent is not None:
+            intent_metrics = get_intent_metrics()
+            intent_metrics.observe_latency(intent.value, result.query_time)
 
         # Update statistics
         total_latency = cast("float", self._stats["total_latency"])

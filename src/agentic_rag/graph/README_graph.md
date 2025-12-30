@@ -1,12 +1,146 @@
 # Graph Utilities Package
 
-Knowledge graph utilities for temporal parsing, numeric fact extraction, relationship scoring, and type hierarchy management.
+Knowledge graph utilities for temporal parsing, numeric fact extraction, relationship scoring, type hierarchy management, and advanced query engines.
 
 ## Overview
 
 This package provides specialized utilities for processing and enriching the Neo4j knowledge graph. All modules work together to transform raw episode data into a fully queryable temporal knowledge base.
 
-## Modules
+**Phase 02 Additions:** Multi-hop query engine, temporal trend queries, and cross-entity comparison capabilities.
+
+## Phase 02 Query Engines
+
+### multi_hop.py
+
+Multi-hop path traversal for discovering indirect connections between entities.
+
+```python
+from src.agentic_rag.graph import (
+    execute_multi_hop,
+    MultiHopQuery,
+    find_paths_between,
+    explore_entity_neighborhood,
+)
+
+# Build multi-hop query
+query = MultiHopQuery(
+    start_entity="Intel",
+    end_entity="Mobileye",  # Optional
+    min_hops=1,
+    max_hops=3,
+    min_strength=0.5,
+    entity_type_filter="organization",
+    limit=20,
+)
+
+# Execute traversal
+results = await execute_multi_hop(connection_manager, query)
+
+for path in results:
+    print(path.get_path_summary())
+    # Output: "Intel --[acquired]--> Mobileye"
+    print(f"Strength: {path.cumulative_strength}")
+
+# Convenience functions
+paths = await find_paths_between(connection_manager, "Intel", "AMD", max_hops=3)
+paths = await explore_entity_neighborhood(connection_manager, "Intel", hops=2)
+```
+
+**Key Features:**
+- Variable-depth Cypher generation (1-3 hops)
+- Relationship type and strength filtering
+- Entity type filtering with TypeHierarchy expansion
+- Cumulative path strength calculation (product of edge strengths)
+
+**Agent Tool:** `graph_traverse`
+
+### temporal_queries.py
+
+Temporal trend analysis using fiscal quarter/year metadata.
+
+```python
+from src.agentic_rag.graph import (
+    execute_temporal_query,
+    TemporalQuery,
+    get_entity_trend,
+    compare_quarters,
+    compare_years,
+    TrendResult,
+    ComparisonResult,
+)
+
+# Build temporal query
+query = TemporalQuery(
+    entity_name="Intel",
+    metric_type="revenue",
+    start_quarter="Q1",
+    start_year=2023,
+    end_quarter="Q4",
+    end_year=2023,
+)
+
+# Execute query
+trend = await execute_temporal_query(connection_manager, query)
+print(f"Direction: {trend.trend_direction}")
+print(f"Data points: {len(trend.data_points)}")
+
+# Convenience functions
+trend = await get_entity_trend(connection_manager, "Intel", "revenue", 4)
+qoq = await compare_quarters(connection_manager, "Intel", "revenue", "Q3", "Q4", 2023)
+yoy = await compare_years(connection_manager, "Intel", "revenue", "Q3", 2022, 2023)
+```
+
+**Key Features:**
+- Time-series data retrieval from knowledge graph
+- Quarter-over-quarter (QoQ) comparison
+- Year-over-year (YoY) comparison
+- Trend direction detection (UP, DOWN, STABLE)
+- Percent change calculation with negative baseline handling
+
+**Agent Tool:** `temporal_trend`
+
+### entity_comparison.py
+
+Cross-entity comparison across documents and time periods.
+
+```python
+from src.agentic_rag.graph import (
+    execute_comparison,
+    ComparisonQuery,
+    EntityComparisonResult,
+    EntityMetrics,
+)
+
+# Build comparison query
+query = ComparisonQuery(
+    entities=["Intel", "AMD", "NVIDIA"],
+    metric_type="revenue",
+    fiscal_quarter="Q3",
+    fiscal_year=2023,
+    rank_by="value",
+    rank_ascending=False,
+)
+
+# Execute comparison
+result = await execute_comparison(connection_manager, query)
+
+for entity, metrics in result.entity_metrics.items():
+    print(f"{entity}: {metrics.value} {metrics.unit}")
+
+# Ranking
+print(f"Rankings: {result.rankings}")
+# Output: ['NVIDIA', 'Intel', 'AMD']
+```
+
+**Key Features:**
+- Side-by-side entity metric comparison
+- Type hierarchy validation (prevents invalid comparisons)
+- Ranking functionality (ascending/descending)
+- Growth rate calculation (QoQ/YoY)
+
+**Agent Tool:** `compare_entities`
+
+## Phase 01 Modules
 
 ### temporal_parser.py
 
@@ -146,7 +280,12 @@ Located in `scripts/`:
 ## Testing
 
 ```bash
-# Run all graph module tests
+# Phase 02 query engine tests
+pytest tests/agentic_rag/graph/test_multi_hop.py -v          # 53 tests
+pytest tests/agentic_rag/graph/test_temporal_queries.py -v   # 62 tests
+pytest tests/agentic_rag/graph/test_entity_comparison.py -v  # 84 tests
+
+# Phase 01 module tests
 pytest tests/rag_pipeline/test_temporal_metadata.py -v
 pytest tests/rag_pipeline/test_numeric_facts.py -v
 pytest tests/rag_pipeline/test_relationship_scoring.py -v

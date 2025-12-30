@@ -15,6 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
+from src.agentic_rag.metrics import get_memory_monitor
 from src.api.dependencies import (
     check_database_health,
     cleanup_dependencies,
@@ -67,6 +68,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         await init_dependencies()
         logger.info("dependencies_initialized")
 
+        # Start memory monitor (if enabled via settings)
+        memory_monitor = get_memory_monitor()
+        await memory_monitor.start()
+
         # Initialize OpenTelemetry tracing if enabled
         if api_config.enable_tracing:
             _setup_tracing(app)
@@ -81,6 +86,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("shutting_down_agentic_rag_api")
 
     try:
+        # Stop memory monitor
+        memory_monitor = get_memory_monitor()
+        await memory_monitor.stop()
+
         await cleanup_dependencies()
         logger.info("dependencies_cleaned_up")
     except Exception as e:

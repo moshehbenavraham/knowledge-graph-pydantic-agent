@@ -289,6 +289,43 @@ class QueryCache:
             cache = self._caches.get(cache_type)
             return len(cache) if cache else 0
 
+    def get_prometheus_stats(self) -> dict[str, dict[str, Any]]:
+        """
+        Get cache statistics formatted for Prometheus export.
+
+        Returns statistics for all cache types in a format suitable for
+        CacheMetricsCollector.collect().
+
+        Returns:
+            Dictionary mapping cache type names to their stats:
+            {
+                "cache_type_name": {
+                    "hits": int,
+                    "misses": int,
+                    "evictions": int,
+                    "hit_rate_percent": float,
+                    "current_size": int,
+                },
+                ...
+            }
+        """
+        with self._lock:
+            result: dict[str, dict[str, Any]] = {}
+
+            for cache_type, stats in self._stats.items():
+                cache = self._caches.get(cache_type)
+                current_size = len(cache) if cache else 0
+
+                result[cache_type.value] = {
+                    "hits": stats.hits,
+                    "misses": stats.misses,
+                    "evictions": stats.evictions,
+                    "hit_rate_percent": round(stats.hit_rate, 2),
+                    "current_size": current_size,
+                }
+
+            return result
+
     def update_config(self, config: CacheConfig) -> None:
         """
         Update cache configuration (reinitializes caches).
