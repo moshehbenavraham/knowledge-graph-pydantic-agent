@@ -4,7 +4,7 @@
 **Sessions**: 6
 **Estimated Duration**: 3-5 days
 
-**Progress**: 1/6 sessions (17%)
+**Progress**: 2/6 sessions (33%)
 
 ---
 
@@ -34,7 +34,7 @@ This phase addresses 6 critical improvements to transform the knowledge graph fr
 | Session | Name | Status | Est. Tasks | Validated |
 |---------|------|--------|------------|-----------|
 | 01 | Document Reference Population | Complete | 20 | 2025-12-30 |
-| 02 | Temporal Metadata Extraction | Not Started | ~15-18 | - |
+| 02 | Temporal Metadata Extraction | Complete | 20 | 2025-12-30 |
 | 03 | Entity Deduplication | Not Started | ~18-22 | - |
 | 04 | Numeric Fact Extraction | Not Started | ~12-15 | - |
 | 05 | Relationship Scoring | Not Started | ~10-12 | - |
@@ -52,11 +52,19 @@ This phase addresses 6 critical improvements to transform the knowledge graph fr
 - Added cross-document Cypher query patterns to CLAUDE.md
 - 36 new tests, 98.57% coverage on new code, 87.92% overall
 
+### Session 02: Temporal Metadata Extraction (2025-12-30)
+- Implemented filename parser for "YYYY QN TICKER.pdf" format with TemporalMetadata dataclass
+- Added fiscal_quarter, fiscal_year, document_date, company properties to episode creation
+- Created idempotent backfill script with batch processing (500 episodes), retry logic, and dry-run mode
+- Added entity temporal span tracking (first/last document dates)
+- Ticker-to-company-name mapping configuration (AAPL, MSFT, NVDA, INTC, AMD)
+- 39 new tests, all passing in 3.08 seconds
+
 ---
 
 ## Upcoming Sessions
 
-- Session 02: Temporal Metadata Extraction
+- Session 03: Entity Deduplication
 
 ---
 

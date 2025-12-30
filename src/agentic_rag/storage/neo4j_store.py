@@ -9,6 +9,7 @@ from uuid import uuid4
 
 import structlog
 
+from src.agentic_rag.graph.temporal_parser import extract_temporal_properties
 from src.agentic_rag.models.document_reference import DocumentReference
 
 logger = logging.getLogger(__name__)
@@ -229,6 +230,7 @@ class Neo4jStore:
         entity_names: list[str],
         source_chunk_id: str,
         source_document_id: str,
+        source_document_name: str | None = None,
     ) -> list[str]:
         """Add temporal facts/episodes (brief summaries, not full content).
 
@@ -237,15 +239,20 @@ class Neo4jStore:
             entity_names: List of entity names mentioned in the facts
             source_chunk_id: ID of the chunk containing these facts
             source_document_id: ID of the source document
+            source_document_name: Optional filename for temporal metadata extraction
         """
         structlog_logger.info(
             "add_episodes called",
             num_facts=len(facts),
             num_entities=len(entity_names),
             source_chunk_id=source_chunk_id,
+            source_document_name=source_document_name,
         )
 
         episode_ids = []
+
+        # Extract temporal properties from document filename
+        temporal_props = extract_temporal_properties(source_document_name or "")
 
         async with self.connection_manager.get_neo4j_session() as session:
             for fact in facts:
@@ -255,7 +262,7 @@ class Neo4jStore:
 
                 episode_id = f"episode_{uuid4()}"
 
-                # Create episode
+                # Create episode with temporal properties
                 result = await session.run(
                     """
                     CREATE (ep:Episode {
@@ -267,7 +274,11 @@ class Neo4jStore:
                         confidence: 0.8,
                         entities: $entity_names,
                         fact_type: 'extracted',
-                        temporal_type: 'point'
+                        temporal_type: 'point',
+                        fiscal_quarter: $fiscal_quarter,
+                        fiscal_year: $fiscal_year,
+                        document_date: $document_date,
+                        company: $company
                     })
                     RETURN ep.id as episode_id
                 """,
@@ -276,6 +287,10 @@ class Neo4jStore:
                     chunk_id=source_chunk_id,
                     document_id=source_document_id,
                     entity_names=entity_names,
+                    fiscal_quarter=temporal_props["fiscal_quarter"],
+                    fiscal_year=temporal_props["fiscal_year"],
+                    document_date=temporal_props["document_date"],
+                    company=temporal_props["company"],
                 )
 
                 record = await result.single()
@@ -299,6 +314,7 @@ class Neo4jStore:
             "add_episodes completed",
             episodes_added=len(episode_ids),
             source_chunk_id=source_chunk_id,
+            temporal_quarter=temporal_props["fiscal_quarter"],
         )
         return episode_ids
 

@@ -584,6 +584,28 @@ class Settings(BaseSettings):
         description="Apple OAuth redirect URI",
     )
 
+    # Temporal Metadata Configuration
+    # Static mapping of stock tickers to company names for document parsing
+    TICKER_TO_COMPANY_MAP: dict[str, str] = {
+        "AAPL": "Apple Inc.",
+        "MSFT": "Microsoft Corporation",
+        "NVDA": "NVIDIA Corporation",
+        "INTC": "Intel Corporation",
+        "AMD": "Advanced Micro Devices, Inc.",
+    }
+
+    def get_company_name(self, ticker: str) -> str | None:
+        """
+        Get company name from stock ticker.
+
+        Args:
+            ticker: Stock ticker symbol (case-insensitive)
+
+        Returns:
+            Company name or None if ticker not found
+        """
+        return self.TICKER_TO_COMPANY_MAP.get(ticker.upper())
+
     @field_validator("llm_choice")
     @classmethod
     def sync_llm_choice(cls, v: str | None) -> str | None:
