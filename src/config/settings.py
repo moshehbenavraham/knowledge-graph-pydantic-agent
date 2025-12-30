@@ -482,6 +482,32 @@ class Settings(BaseSettings):
         description="Requests allowed in half-open state",
     )
 
+    # Retry Settings
+    retry_max_attempts: int = Field(
+        default=3,
+        ge=1,
+        le=10,
+        description="Maximum retry attempts for transient failures",
+    )
+    retry_base_delay_seconds: float = Field(
+        default=1.0,
+        gt=0,
+        le=30.0,
+        description="Base delay for exponential backoff (seconds)",
+    )
+    retry_max_delay_seconds: float = Field(
+        default=10.0,
+        gt=0,
+        le=60.0,
+        description="Maximum delay between retries (seconds)",
+    )
+
+    # Graceful Degradation Settings
+    graceful_degradation_enabled: bool = Field(
+        default=True,
+        description="Enable fallback to vector-only search when graph unavailable",
+    )
+
     # Tracing Configuration (Jaeger)
     jaeger_host: str = Field(
         default="localhost",

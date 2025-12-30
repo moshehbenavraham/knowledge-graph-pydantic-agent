@@ -30,6 +30,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from src.agentic_rag.cache import CacheType, generate_cache_key, get_query_cache
 from src.agentic_rag.graph.type_hierarchy import get_type_hierarchy
+from src.agentic_rag.resilience import ServiceType, get_circuit_breaker
 from src.config import get_settings
 
 if TYPE_CHECKING:
@@ -647,6 +648,18 @@ async def execute_multi_hop(
 
     logger.debug("execute_multi_hop cypher", cypher_preview=cypher[:200])
 
+    # Get circuit breaker for Neo4j
+    neo4j_breaker = get_circuit_breaker(ServiceType.NEO4J)
+
+    # Check if circuit is open
+    if not await neo4j_breaker.can_execute():
+        logger.warning(
+            "execute_multi_hop circuit open",
+            start_entity=query.start_entity,
+            circuit_state=neo4j_breaker.state.value,
+        )
+        return []
+
     # Execute query with timeout
     try:
         async with asyncio.timeout(timeout_seconds):
@@ -657,7 +670,11 @@ async def execute_multi_hop(
                 async for record in result:
                     records.append(dict(record))
 
+        # Record success in circuit breaker
+        await neo4j_breaker.record_success()
+
     except TimeoutError:
+        await neo4j_breaker.record_failure()
         logger.warning(
             "execute_multi_hop timeout",
             start_entity=query.start_entity,
@@ -666,6 +683,7 @@ async def execute_multi_hop(
         return []
 
     except Exception as e:
+        await neo4j_breaker.record_failure(e)
         logger.exception(
             "execute_multi_hop failed",
             error=str(e),

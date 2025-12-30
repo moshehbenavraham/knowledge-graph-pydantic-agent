@@ -662,7 +662,7 @@ class TestMainSearch:
             ),
             patch.object(hybrid_search, "_log_search_analytics", new=AsyncMock()) as mock_log,
         ):
-            await hybrid_search.search("test query", limit=10)
+            await hybrid_search.search("test query", limit=10, use_cache=False)
 
             mock_log.assert_called_once()
 

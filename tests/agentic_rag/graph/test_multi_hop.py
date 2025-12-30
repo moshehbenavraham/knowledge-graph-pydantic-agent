@@ -585,7 +585,7 @@ class TestExecuteMultiHop:
         )
 
         query = MultiHopQuery(start_entity="NonExistentEntity")
-        results = await execute_multi_hop(mock_connection_manager, query)
+        results = await execute_multi_hop(mock_connection_manager, query, use_cache=False)
 
         assert results == []
 
@@ -638,7 +638,7 @@ class TestExecuteMultiHop:
         )
 
         query = MultiHopQuery(start_entity="Intel")
-        results = await execute_multi_hop(mock_connection_manager, query)
+        results = await execute_multi_hop(mock_connection_manager, query, use_cache=False)
 
         assert len(results) == 1
         assert results[0].nodes[0].name == "Intel"
@@ -653,7 +653,7 @@ class TestExecuteMultiHop:
         )
 
         query = MultiHopQuery(start_entity="Intel")
-        results = await execute_multi_hop(mock_connection_manager, query)
+        results = await execute_multi_hop(mock_connection_manager, query, use_cache=False)
 
         assert results == []
 

@@ -30,6 +30,7 @@ import structlog
 from pydantic import BaseModel, Field, field_validator
 
 from src.agentic_rag.cache import CacheType, generate_cache_key, get_query_cache
+from src.agentic_rag.resilience import ServiceType, get_circuit_breaker
 from src.config import get_settings
 
 if TYPE_CHECKING:
@@ -989,6 +990,22 @@ async def execute_temporal_query(
 
     logger.debug("execute_temporal_query cypher", cypher_preview=cypher[:200])
 
+    # Get circuit breaker for Neo4j
+    neo4j_breaker = get_circuit_breaker(ServiceType.NEO4J)
+
+    # Check if circuit is open
+    if not await neo4j_breaker.can_execute():
+        logger.warning(
+            "execute_temporal_query circuit open",
+            entity=query.entity,
+            circuit_state=neo4j_breaker.state.value,
+        )
+        return TrendResult(
+            entity=query.entity,
+            metric=query.metric or "",
+            direction=TrendDirection.INSUFFICIENT_DATA,
+        )
+
     # Execute query with timeout
     try:
         async with asyncio.timeout(timeout_seconds):
@@ -999,7 +1016,11 @@ async def execute_temporal_query(
                 async for record in result:
                     records.append(dict(record))
 
+        # Record success in circuit breaker
+        await neo4j_breaker.record_success()
+
     except TimeoutError:
+        await neo4j_breaker.record_failure()
         logger.warning(
             "execute_temporal_query timeout",
             entity=query.entity,
@@ -1012,6 +1033,7 @@ async def execute_temporal_query(
         )
 
     except Exception as e:
+        await neo4j_breaker.record_failure(e)
         logger.exception(
             "execute_temporal_query failed",
             error=str(e),

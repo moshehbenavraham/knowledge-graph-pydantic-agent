@@ -919,7 +919,7 @@ class TestExecuteComparison:
         )
 
         query = ComparisonQuery(entity_names=["Intel", "AMD"], metric="revenue")
-        result = await execute_comparison(mock_connection_manager, query)
+        result = await execute_comparison(mock_connection_manager, query, use_cache=False)
 
         assert result.comparison_valid is True
         assert result.entities_compared == 2
@@ -932,16 +932,17 @@ class TestExecuteComparison:
 
     @pytest.mark.asyncio
     async def test_execute_handles_exception(self, mock_connection_manager: MagicMock) -> None:
-        """Test that exceptions are handled gracefully."""
+        """Test that exceptions are handled gracefully with user-friendly message."""
         mock_connection_manager.get_neo4j_session.return_value.__aenter__.side_effect = Exception(
             "Connection failed"
         )
 
         query = ComparisonQuery(entity_names=["Intel", "AMD"], metric="revenue")
-        result = await execute_comparison(mock_connection_manager, query)
+        result = await execute_comparison(mock_connection_manager, query, use_cache=False)
 
         assert result.comparison_valid is False
-        assert "Query execution failed" in result.error_message
+        # User-friendly error message (no internal details exposed)
+        assert "Unable to complete comparison" in result.error_message
 
 
 class TestCompareEntitiesConvenience:

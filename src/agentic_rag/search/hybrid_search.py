@@ -16,6 +16,11 @@ import structlog
 
 from src.agentic_rag.cache import CacheType, generate_cache_key, get_query_cache
 from src.agentic_rag.config import get_config
+from src.agentic_rag.resilience import (
+    DegradationResult,
+    SearchDegradationHandler,
+    format_error_for_user,
+)
 from src.agentic_rag.storage.connection_manager import ConnectionManager
 from src.config import SearchStrategy
 
@@ -91,6 +96,9 @@ class HybridSearch:
         self.graph_search = GraphSearch(self.connection_manager)
         self.intent_analyzer = IntentAnalyzer()
         self.ranker = ResultRanker()
+
+        # Graceful degradation handler for graph failures
+        self._degradation_handler = SearchDegradationHandler()
 
         self._stats: dict[str, int | float | dict[str, int]] = {
             "searches": 0,
@@ -338,7 +346,7 @@ class HybridSearch:
         Returns:
             Search result
         """
-        logger.info("▶ Executing VECTOR_ONLY search strategy")
+        logger.info("[>] Executing VECTOR_ONLY search strategy")
         start = datetime.now()
 
         chunks = await self.vector_search.search(query, limit)
@@ -346,7 +354,7 @@ class HybridSearch:
             chunks = []
 
         elapsed = (datetime.now() - start).total_seconds()
-        logger.info(f"✓ VECTOR_ONLY search completed: {len(chunks)} chunks in {elapsed:.3f}s")
+        logger.info(f"[OK] VECTOR_ONLY search completed: {len(chunks)} chunks in {elapsed:.3f}s")
 
         return HybridSearchResult(chunks=chunks, metadata={"search_type": "vector_only"})
 
@@ -364,7 +372,7 @@ class HybridSearch:
         Returns:
             Search result
         """
-        logger.info("▶ Executing GRAPH_ONLY search strategy")
+        logger.info("[>] Executing GRAPH_ONLY search strategy")
         start = datetime.now()
 
         # Perform graph search
@@ -388,7 +396,7 @@ class HybridSearch:
 
         if graph_results:
             logger.info(
-                f"✓ GRAPH_ONLY search completed in {elapsed:.3f}s: "
+                f"[OK] GRAPH_ONLY search completed in {elapsed:.3f}s: "
                 f"{len(chunks)} chunks, {len(graph_results.facts)} facts, "
                 f"{len(graph_results.entities)} entities, {len(graph_results.relationships)} relationships"
             )
@@ -400,7 +408,7 @@ class HybridSearch:
                 metadata={"search_type": "graph_only", "chunk_refs": graph_results.chunk_refs},
             )
         logger.info(
-            f"✓ GRAPH_ONLY search completed in {elapsed:.3f}s: {len(chunks)} chunks, 0 facts"
+            f"[OK] GRAPH_ONLY search completed in {elapsed:.3f}s: {len(chunks)} chunks, 0 facts"
         )
         return HybridSearchResult(
             chunks=chunks,
@@ -414,7 +422,9 @@ class HybridSearch:
         self, query: str, limit: int, intent_result: IntentAnalysisResult | None
     ) -> HybridSearchResult:
         """
-        Perform combined vector and graph search.
+        Perform combined vector and graph search with graceful degradation.
+
+        If the graph search fails, automatically falls back to vector-only search.
 
         Args:
             query: Search query
@@ -424,22 +434,88 @@ class HybridSearch:
         Returns:
             Search result
         """
-        logger.info("▶ Executing HYBRID search strategy (vector + graph in parallel)")
+        logger.info("Executing HYBRID search strategy (vector + graph in parallel)")
         start = datetime.now()
+        used_fallback = False
+        fallback_reason = None
 
-        # Execute searches in parallel
+        # Execute searches in parallel with graceful degradation for graph
         if self.config.performance.enable_parallel_search:
-            logger.info("  → Launching parallel vector and graph searches...")
+            logger.info("  Launching parallel vector and graph searches...")
             vector_task = asyncio.create_task(self.vector_search.search(query, limit * 2))
-            graph_task = asyncio.create_task(self.graph_search.search(query, limit))
 
-            vector_results, graph_results = await asyncio.gather(vector_task, graph_task)
-            logger.info("  ✓ Parallel searches completed")
+            # Use degradation handler for graph search
+            async def graph_search_with_degradation() -> GraphSearchResult:
+                return await self.graph_search.search(query, limit)
+
+            async def empty_graph_fallback() -> GraphSearchResult:
+                return GraphSearchResult(
+                    entities=[],
+                    facts=[],
+                    relationships=[],
+                    chunk_refs=[],
+                    query_time=0.0,
+                )
+
+            # Execute graph search with degradation handling
+            try:
+                degradation_result: DegradationResult[GraphSearchResult] = (
+                    await self._degradation_handler.execute(
+                        primary_func=graph_search_with_degradation,
+                        fallback_func=empty_graph_fallback,
+                        raise_on_fallback_failure=False,
+                    )
+                )
+                graph_results = degradation_result.value
+                used_fallback = degradation_result.used_fallback
+                fallback_reason = degradation_result.fallback_reason
+
+                if used_fallback:
+                    structlog_logger.warning(
+                        "Graph search degraded to empty result",
+                        reason=fallback_reason,
+                        fallback_count=self._degradation_handler.state.fallback_count,
+                    )
+            except Exception as e:
+                # If degradation handler itself fails, use empty graph result
+                structlog_logger.error(
+                    "Graph search failed completely",
+                    error=str(e),
+                    error_type=type(e).__name__,
+                )
+                graph_results = GraphSearchResult(
+                    entities=[],
+                    facts=[],
+                    relationships=[],
+                    chunk_refs=[],
+                    query_time=0.0,
+                )
+                used_fallback = True
+                fallback_reason = format_error_for_user(e)
+
+            vector_results = await vector_task
+            logger.info("  Parallel searches completed")
         else:
             # Sequential execution
-            logger.info("  → Sequential execution (parallel disabled)")
+            logger.info("  Sequential execution (parallel disabled)")
             vector_results = await self.vector_search.search(query, limit * 2)
-            graph_results = await self.graph_search.search(query, limit)
+
+            try:
+                graph_results = await self.graph_search.search(query, limit)
+            except Exception as e:
+                structlog_logger.warning(
+                    "Graph search failed, using empty result",
+                    error=str(e),
+                )
+                graph_results = GraphSearchResult(
+                    entities=[],
+                    facts=[],
+                    relationships=[],
+                    chunk_refs=[],
+                    query_time=0.0,
+                )
+                used_fallback = True
+                fallback_reason = format_error_for_user(e)
 
         # Boost vector results based on graph context
         boosted_chunks = await self._boost_with_graph_context(
@@ -447,12 +523,12 @@ class HybridSearch:
         )
 
         # Rank and limit results
-        logger.info("  → Ranking and merging results...")
+        logger.info("  -> Ranking and merging results...")
         ranked_chunks = self.ranker.rank_chunks(boosted_chunks, limit)
 
         elapsed = (datetime.now() - start).total_seconds()
         logger.info(
-            f"✓ HYBRID search completed in {elapsed:.3f}s:\n"
+            f"[OK] HYBRID search completed in {elapsed:.3f}s:\n"
             f"  Vector results: {len(vector_results)}\n"
             f"  Graph results: {len(graph_results.facts)} facts, {len(graph_results.entities)} entities\n"
             f"  Final ranked chunks: {len(ranked_chunks)}\n"
@@ -465,10 +541,15 @@ class HybridSearch:
             entities=graph_results.entities[:10],
             relationships=graph_results.relationships[:10],
             metadata={
-                "search_type": "hybrid",
+                "search_type": "hybrid" if not used_fallback else "hybrid_degraded",
                 "vector_count": len(vector_results),
                 "graph_facts": len(graph_results.facts),
                 "boosts_applied": self._stats["graph_boosts"],
+                "used_fallback": used_fallback,
+                "fallback_reason": fallback_reason,
+                "degradation_state": (
+                    self._degradation_handler.state.to_dict() if used_fallback else None
+                ),
             },
         )
 
@@ -486,11 +567,11 @@ class HybridSearch:
         Returns:
             Search result
         """
-        logger.info("▶ Executing ADAPTIVE search strategy")
+        logger.info("[>] Executing ADAPTIVE search strategy")
         start = datetime.now()
 
         # Start with fast vector search
-        logger.info("  → Phase 1: Initial vector search (5 results)")
+        logger.info("  -> Phase 1: Initial vector search (5 results)")
         initial_chunks = await self.vector_search.search(query, 5)
 
         # Check if we need graph search
@@ -508,17 +589,17 @@ class HybridSearch:
             reasons.append(f"{len(intent_result.entities_mentioned)} entities mentioned")
 
         if need_graph and self.config.performance.enable_graph:
-            logger.info(f"  → Phase 2: Switching to HYBRID search (reasons: {', '.join(reasons)})")
+            logger.info(f"  -> Phase 2: Switching to HYBRID search (reasons: {', '.join(reasons)})")
             # Perform full hybrid search
             return await self._hybrid_search(query, limit, intent_result)
 
         # Continue with vector-only
-        logger.info("  → Phase 2: Continuing with vector-only search")
+        logger.info("  -> Phase 2: Continuing with vector-only search")
         more_chunks = await self.vector_search.search(query, limit)
 
         elapsed = (datetime.now() - start).total_seconds()
         logger.info(
-            f"✓ ADAPTIVE search completed in {elapsed:.3f}s: {len(more_chunks)} chunks (vector-only)"
+            f"[OK] ADAPTIVE search completed in {elapsed:.3f}s: {len(more_chunks)} chunks (vector-only)"
         )
 
         return HybridSearchResult(chunks=more_chunks, metadata={"search_type": "adaptive_vector"})

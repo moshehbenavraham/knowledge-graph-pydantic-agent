@@ -20,6 +20,12 @@ from src.agentic_rag.analytics import (
     ToolUsageEvent,
     get_analytics_logger,
 )
+from src.agentic_rag.resilience import (
+    CircuitOpenError,
+    MaxRetriesExceededError,
+    ResilienceError,
+    format_error_for_user,
+)
 
 from .base_handler import BaseHandler
 
@@ -257,6 +263,55 @@ class StreamingHandler(BaseHandler):
                 **event_counts,
             )
 
+        except CircuitOpenError as e:
+            # Circuit breaker is open - service temporarily unavailable
+            logger.warning(
+                "StreamingHandler service unavailable (circuit open)",
+                service=e.service.value,
+                recovery_time=e.recovery_time_seconds,
+                events_before_failure=event_counts,
+            )
+            user_message = format_error_for_user(e)
+            yield {
+                "type": "error",
+                "error_type": "service_unavailable",
+                "message": user_message,
+                "recoverable": True,
+                "retry_after_seconds": int(e.recovery_time_seconds),
+            }
+
+        except MaxRetriesExceededError as e:
+            # All retry attempts exhausted
+            logger.warning(
+                "StreamingHandler max retries exceeded",
+                operation=e.operation,
+                max_attempts=e.max_attempts,
+                events_before_failure=event_counts,
+            )
+            user_message = format_error_for_user(e)
+            yield {
+                "type": "error",
+                "error_type": "retry_exhausted",
+                "message": user_message,
+                "recoverable": True,
+            }
+
+        except ResilienceError as e:
+            # Other resilience-related errors
+            logger.warning(
+                "StreamingHandler resilience error",
+                error=str(e),
+                error_type=type(e).__name__,
+                events_before_failure=event_counts,
+            )
+            user_message = format_error_for_user(e)
+            yield {
+                "type": "error",
+                "error_type": "resilience_error",
+                "message": user_message,
+                "recoverable": True,
+            }
+
         except Exception as e:
             logger.exception(
                 "StreamingHandler agent execution FAILED",
@@ -264,4 +319,12 @@ class StreamingHandler(BaseHandler):
                 error_type=type(e).__name__,
                 events_before_failure=event_counts,
             )
+            # Format user-friendly message for any unexpected error
+            user_message = format_error_for_user(e)
+            yield {
+                "type": "error",
+                "error_type": "unexpected",
+                "message": user_message,
+                "recoverable": False,
+            }
             raise

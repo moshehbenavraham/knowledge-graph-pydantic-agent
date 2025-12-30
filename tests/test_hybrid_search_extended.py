@@ -500,7 +500,7 @@ class TestErrorHandling:
 
     @pytest.mark.asyncio
     async def test_graph_search_failure_fallback(self, mock_connection_manager):
-        """Test fallback when graph search fails."""
+        """Test graceful degradation when graph search fails."""
         search = HybridSearch(mock_connection_manager)
 
         with patch.object(search.vector_search, "search") as mock_vector:
@@ -525,9 +525,14 @@ class TestErrorHandling:
                     relationship_indicators=[],
                 )
 
-                # Should not crash, but may return partial results
-                with pytest.raises(Exception):
-                    await search._hybrid_search("test query", 10, mock_intent)
+                # With graceful degradation, should return vector-only results
+                # instead of raising an exception
+                result = await search._hybrid_search("test query", 10, mock_intent)
+
+                # Should return valid result from vector search fallback
+                assert isinstance(result, HybridSearchResult)
+                assert len(result.chunks) == 1
+                assert result.chunks[0].content == "Test"
 
     @pytest.mark.asyncio
     async def test_invalid_chunk_id_in_graph_results(self, mock_connection_manager):
@@ -885,9 +890,9 @@ class TestPerformanceEdgeCases:
         with patch.object(search.vector_search, "search") as mock_vector:
             mock_vector.return_value = []
 
-            # Perform multiple searches
+            # Perform multiple searches with use_cache=False to ensure stats are tracked
             for _ in range(5):
-                await search.search("test query", limit=10)
+                await search.search("test query", limit=10, use_cache=False)
 
         stats = search.get_stats()
 
