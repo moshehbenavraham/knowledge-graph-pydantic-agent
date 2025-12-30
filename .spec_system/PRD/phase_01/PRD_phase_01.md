@@ -4,7 +4,7 @@
 **Sessions**: 6
 **Estimated Duration**: 3-5 days
 
-**Progress**: 3/6 sessions (50%)
+**Progress**: 4/6 sessions (67%)
 
 ---
 
@@ -36,7 +36,7 @@ This phase addresses 6 critical improvements to transform the knowledge graph fr
 | 01 | Document Reference Population | Complete | 20 | 2025-12-30 |
 | 02 | Temporal Metadata Extraction | Complete | 20 | 2025-12-30 |
 | 03 | Entity Deduplication | Complete | 21 | 2025-12-30 |
-| 04 | Numeric Fact Extraction | Not Started | ~12-15 | - |
+| 04 | Numeric Fact Extraction | Complete | 22 | 2025-12-30 |
 | 05 | Relationship Scoring | Not Started | ~10-12 | - |
 | 06 | Type Hierarchy and Testing | Not Started | ~15-18 | - |
 
@@ -69,11 +69,20 @@ This phase addresses 6 critical improvements to transform the knowledge graph fr
 - Ingestion pipeline integration for automatic entity normalization
 - 66 new tests, all passing in 3.67 seconds
 
+### Session 04: Numeric Fact Extraction (2025-12-30)
+- Regex-based numeric parser for financial text patterns (currency, magnitude, percentage)
+- NumericFact Pydantic model with normalized value, raw value, unit, magnitude, and original text
+- Pattern priority pipeline: currency with magnitude -> plain magnitude -> percentages
+- Currency symbol to ISO code mapping (USD, EUR, GBP, JPY, CNY, CAD, AUD, CHF)
+- Magnitude normalization (million -> 1e6, billion -> 1e9, trillion -> 1e12)
+- Backfill script with dry-run, batch processing, retry logic, and verification mode
+- 54 new tests, 90.58% coverage on new code
+
 ---
 
 ## Upcoming Sessions
 
-- Session 04: Numeric Fact Extraction
+- Session 05: Relationship Scoring
 
 ---
 
