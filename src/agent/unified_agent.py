@@ -39,6 +39,7 @@ from src.tools import (
     web_search_tool,
 )
 from src.tools.rag import (
+    compare_entities_tool,
     graph_query_tool,
     graph_traverse_tool,
     smart_search_tool,
@@ -131,6 +132,13 @@ Tool Selection Strategy:
   - Use for: "How has Intel's revenue changed over time?"
   - Use for: "Compare Apple Q3 2023 vs Q3 2024"
   - Supports trend analysis, QoQ comparisons, and YoY comparisons
+
+- **compare_entities**: Cross-entity comparison for 2-5 entities
+  - Use for: "Compare Microsoft vs Intel revenue"
+  - Use for: "How do Apple and NVIDIA profit margins differ?"
+  - Use for: "Rank Intel, AMD, and NVIDIA by Q3 2024 revenue"
+  - Validates type compatibility (e.g., all must be companies)
+  - Supports growth rate calculations (QoQ, YoY)
 
 - **list_all_documents**: Get inventory of available documents
 - **get_full_document**: Retrieve complete document by ID
@@ -370,6 +378,76 @@ async def temporal_trend(
             "entity": entity,
             "metric": metric,
             "error": str(e),
+        }
+
+
+# ========== Compare Entities Tool ==========
+@super_agent.tool
+async def compare_entities(
+    ctx: RunContext[UnifiedAgentDeps],
+    entity_names: list[str],
+    metric: str,
+    fiscal_quarter: str | None = None,
+    fiscal_year: int | None = None,
+    entity_type_filter: str | None = None,
+    include_growth: bool = False,
+    growth_type: str = "percentage",
+    sort_order: str = "descending",
+) -> dict[str, Any]:
+    """
+    Compare multiple entities on a specific metric from the knowledge graph.
+
+    Use for comparative analysis questions:
+    - "Compare Microsoft vs Intel revenue" (2-entity comparison)
+    - "How do Apple and NVIDIA profit margins differ?" (metric comparison)
+    - "Rank Intel, AMD, and NVIDIA by Q3 2024 revenue" (multi-entity ranking)
+
+    Supports 2-5 entities with type compatibility validation - entities must
+    share the same parent type (e.g., all companies, all products).
+
+    Args:
+        entity_names: List of 2-5 entity names to compare
+        metric: Metric to compare (e.g., "revenue", "profit", "margin")
+        fiscal_quarter: Optional quarter filter (Q1-Q4)
+        fiscal_year: Optional year filter (e.g., 2024)
+        entity_type_filter: Optional entity type for disambiguation
+                           (e.g., "organization", "company")
+        include_growth: Whether to include growth rate calculations
+        growth_type: Type of growth: "percentage", "absolute", "qoq", "yoy"
+        sort_order: Sort results: "ascending" or "descending" (default)
+
+    Returns:
+        Dictionary with side-by-side comparison results:
+        - entities: List of entity metrics with values
+        - ranking: Entities sorted by metric value
+        - comparison_valid: Whether comparison was valid
+        - growth_metrics: Growth calculations if include_growth=True
+    """
+    logger.info(
+        f"Entity comparison for {entity_names}: metric={metric}, "
+        f"quarter={fiscal_quarter}, year={fiscal_year}"
+    )
+
+    try:
+        result = await compare_entities_tool(
+            entity_names=entity_names,
+            metric=metric,
+            fiscal_quarter=fiscal_quarter,
+            fiscal_year=fiscal_year,
+            entity_type_filter=entity_type_filter,
+            include_growth=include_growth,
+            growth_type=growth_type,
+            sort_order=sort_order,
+        )
+        return result
+
+    except Exception as e:
+        logger.error(f"Entity comparison failed: {e}")
+        return {
+            "entity_names": entity_names,
+            "metric": metric,
+            "error": str(e),
+            "comparison_valid": False,
         }
 
 
@@ -781,6 +859,7 @@ __all__ = [
     "UnifiedAgentDeps",
     "add_memories",
     "analyze_image",
+    "compare_entities",
     "comprehensive_search",
     "execute_python_code",
     "execute_sql",

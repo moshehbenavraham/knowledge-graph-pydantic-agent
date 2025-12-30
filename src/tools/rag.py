@@ -650,6 +650,197 @@ async def temporal_trend_tool(
         }
 
 
+async def compare_entities_tool(
+    entity_names: list[str],
+    metric: str,
+    fiscal_quarter: str | None = None,
+    fiscal_year: int | None = None,
+    entity_type_filter: str | None = None,
+    include_growth: bool = False,
+    growth_type: str = "percentage",
+    sort_order: str = "descending",
+) -> dict[str, Any]:
+    """
+    Compare multiple entities on a specific metric from the knowledge graph.
+
+    Use for comparative analysis questions like:
+    - "Compare Microsoft vs Intel revenue"
+    - "How do Apple and NVIDIA profit margins differ?"
+    - "Rank Intel, AMD, and NVIDIA by Q3 2024 revenue"
+
+    Supports 2-5 entities with type compatibility validation - entities must
+    share the same parent type (e.g., all companies, all products).
+
+    Args:
+        entity_names: List of 2-5 entity names to compare
+        metric: Metric to compare (e.g., "revenue", "profit", "margin")
+        fiscal_quarter: Optional quarter filter (Q1-Q4)
+        fiscal_year: Optional year filter (e.g., 2024)
+        entity_type_filter: Optional entity type for disambiguation
+                           (e.g., "organization", "company")
+        include_growth: Whether to include growth rate calculations
+        growth_type: Type of growth calculation: "percentage", "absolute",
+                    "qoq" (quarter-over-quarter), "yoy" (year-over-year)
+        sort_order: Sort results: "ascending" or "descending" (default)
+
+    Returns:
+        Dictionary with comparison results:
+        - entities: List of entity metrics with values and metadata
+        - ranking: Entities sorted by metric value
+        - comparison_valid: Whether comparison was valid (same entity types)
+        - error_message: Error details if comparison invalid
+        - growth_metrics: Growth calculations if include_growth=True
+        - query_time_ms: Query execution time
+    """
+    logger.info(
+        "compare_entities_tool called",
+        entity_names=entity_names,
+        metric=metric,
+        fiscal_quarter=fiscal_quarter,
+        fiscal_year=fiscal_year,
+        include_growth=include_growth,
+    )
+
+    try:
+        config = get_config()
+
+        # Check if graph is enabled
+        if not config.performance.enable_graph:
+            logger.warning("Entity comparison attempted but graph is disabled")
+            return {
+                "error": "Knowledge graph is not enabled. Set ENABLE_GRAPH=true in .env",
+                "entity_names": entity_names,
+                "comparison_valid": False,
+            }
+
+        # Validate entity count
+        if len(entity_names) < 2:
+            return {
+                "error": "At least 2 entity names required for comparison",
+                "entity_names": entity_names,
+                "comparison_valid": False,
+            }
+
+        if len(entity_names) > 5:
+            return {
+                "error": "At most 5 entity names allowed for comparison",
+                "entity_names": entity_names,
+                "comparison_valid": False,
+            }
+
+        # Get connection manager
+        global _connection_manager
+
+        if _connection_manager is None:
+            from src.agentic_rag.storage.connection_manager import get_connection_manager
+
+            _connection_manager = await get_connection_manager()
+
+        # Import entity comparison module
+        from src.agentic_rag.graph.entity_comparison import (
+            ComparisonQuery,
+            GrowthType,
+            SortOrder,
+            execute_comparison,
+        )
+
+        # Map growth type string to enum
+        growth_type_map = {
+            "percentage": GrowthType.PERCENTAGE,
+            "absolute": GrowthType.ABSOLUTE,
+            "qoq": GrowthType.QOQ,
+            "yoy": GrowthType.YOY,
+        }
+        growth_enum = growth_type_map.get(growth_type.lower(), GrowthType.PERCENTAGE)
+
+        # Map sort order string to enum
+        sort_enum = (
+            SortOrder.ASCENDING if sort_order.lower() == "ascending" else SortOrder.DESCENDING
+        )
+
+        # Build query
+        query = ComparisonQuery(
+            entity_names=entity_names,
+            metric=metric,
+            entity_type_filter=entity_type_filter,
+            fiscal_quarter=fiscal_quarter,
+            fiscal_year=fiscal_year,
+            include_growth=include_growth,
+            growth_type=growth_enum,
+            sort_order=sort_enum,
+        )
+
+        # Execute comparison
+        result = await execute_comparison(_connection_manager, query)
+
+        # Format result
+        result_dict: dict[str, Any] = {
+            "entity_names": entity_names,
+            "metric": result.metric,
+            "comparison_valid": result.comparison_valid,
+            "error_message": result.error_message,
+            "entities_compared": result.entities_compared,
+            "entities_with_data": result.entities_with_data,
+            "ranking": result.ranking,
+            "query_time_ms": result.query_time_ms,
+            "summary": result.get_summary(),
+            "entities": [
+                {
+                    "entity_name": e.entity_name,
+                    "entity_type": e.entity_type,
+                    "value": e.value,
+                    "unit": e.unit,
+                    "metric_type": e.metric_type,
+                    "fiscal_quarter": e.fiscal_quarter,
+                    "fiscal_year": e.fiscal_year,
+                    "fact_count": e.fact_count,
+                    "source_documents": e.source_documents,
+                }
+                for e in result.entities
+            ],
+        }
+
+        # Add growth metrics if requested
+        if include_growth and result.growth_metrics:
+            result_dict["growth_metrics"] = [
+                {
+                    "entity_name": g.entity_name,
+                    "baseline_value": g.baseline_value,
+                    "current_value": g.current_value,
+                    "absolute_delta": g.absolute_delta,
+                    "percent_change": g.percent_change,
+                    "growth_type": g.growth_type.value,
+                    "baseline_period": g.baseline_period,
+                    "current_period": g.current_period,
+                    "summary": g.get_summary(),
+                }
+                for g in result.growth_metrics
+            ]
+
+        logger.info(
+            "Entity comparison completed",
+            entities_compared=result.entities_compared,
+            entities_with_data=result.entities_with_data,
+            comparison_valid=result.comparison_valid,
+            query_time_ms=result.query_time_ms,
+        )
+        return result_dict
+
+    except Exception as e:
+        logger.exception(
+            "Entity comparison failed",
+            entity_names=entity_names,
+            metric=metric,
+            error=str(e),
+        )
+        return {
+            "entity_names": entity_names,
+            "metric": metric,
+            "error": str(e),
+            "comparison_valid": False,
+        }
+
+
 async def list_documents_tool(supabase: Client) -> list[str]:
     """
     List all available documents in the knowledge base.
@@ -818,6 +1009,7 @@ async def cleanup_rag_tools() -> None:
 
 __all__ = [
     "cleanup_rag_tools",
+    "compare_entities_tool",
     "get_document_content_tool",
     "get_hybrid_search",
     "graph_query_tool",

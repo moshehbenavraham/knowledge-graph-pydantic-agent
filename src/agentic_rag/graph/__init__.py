@@ -10,6 +10,24 @@ This module provides utilities for working with the Neo4j knowledge graph:
 - temporal_queries: Temporal trend analysis and time-series comparisons
 """
 
+from .entity_comparison import (
+    ComparisonQuery,
+    ComparisonQueryBuilder,
+    ComparisonResultParser,
+    EntityComparisonResult,
+    EntityMetrics,
+    GrowthMetrics,
+    GrowthType,
+    SortOrder,
+    TypeCompatibilityError,
+    calculate_absolute_delta,
+    calculate_percent_change,
+    calculate_qoq_growth,
+    calculate_yoy_growth,
+    compare_entities,
+    execute_comparison,
+    validate_type_compatibility,
+)
 from .multi_hop import (
     MultiHopQuery,
     MultiHopQueryBuilder,
@@ -70,6 +88,7 @@ from .type_hierarchy import (
 )
 
 __all__ = [
+    # Constants
     "CURRENCY_SYMBOL_MAP",
     "DEFAULT_IMPORTANCE_SCORE",
     "DEFAULT_MAX_CHUNKS",
@@ -78,9 +97,18 @@ __all__ = [
     "MAGNITUDE_MAP",
     "TYPE_HIERARCHY",
     "TYPE_PRIORITIES",
+    # Models and Classes
+    "ComparisonQuery",
+    "ComparisonQueryBuilder",
     "ComparisonResult",
+    "ComparisonResultParser",
+    # Enums
     "ComparisonType",
     "DataPoint",
+    "EntityComparisonResult",
+    "EntityMetrics",
+    "GrowthMetrics",
+    "GrowthType",
     "MultiHopQuery",
     "MultiHopQueryBuilder",
     "NumericFact",
@@ -89,22 +117,34 @@ __all__ = [
     "PathResultParser",
     "PathStep",
     "ScoringConfig",
+    "SortOrder",
     "TemporalMetadata",
     "TemporalQuery",
     "TemporalQueryBuilder",
     "TrendDirection",
     "TrendResult",
     "TrendResultParser",
+    "TypeCompatibilityError",
     "TypeHierarchy",
+    # Functions - Comparison
+    "calculate_absolute_delta",
+    "calculate_percent_change",
+    # Functions - Temporal
     "calculate_qoq_comparison",
+    "calculate_qoq_growth",
     "calculate_relationship_strength",
     "calculate_relationship_strength_from_dict",
     "calculate_yoy_comparison",
+    "calculate_yoy_growth",
+    "compare_entities",
     "compare_quarters",
     "compare_years",
+    "execute_comparison",
+    # Functions - Multi-hop
     "execute_multi_hop",
     "execute_temporal_query",
     "explore_entity_neighborhood",
+    # Functions - Parsing
     "extract_numeric_facts_json",
     "extract_temporal_properties",
     "find_paths_between",
@@ -116,4 +156,5 @@ __all__ = [
     "parse_numeric_facts",
     "quarter_sort_key",
     "quarter_to_int",
+    "validate_type_compatibility",
 ]
