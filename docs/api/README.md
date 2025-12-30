@@ -226,7 +226,7 @@ CACHE_TTL=600
 
 ## Related Documentation
 
-- [CLAUDE.md](../../CLAUDE.md) - Full system documentation
+- [CONVENTIONS.md](../../.spec_system/CONVENTIONS.md) - Project coding conventions
 - [Developer Setup](../developer/setup_guide.md) - Development environment
 - [Troubleshooting](../troubleshooting/README.md) - Common issues
 

@@ -29,7 +29,7 @@ Guidelines for contributing to the Agentic GraphRAG project.
 ## Getting Started
 
 1. Read the [Setup Guide](setup_guide.md) to configure your environment
-2. Review [CLAUDE.md](../../CLAUDE.md) for architecture understanding
+2. Review [CONVENTIONS.md](../../.spec_system/CONVENTIONS.md) for architecture understanding
 3. Check existing issues and PRs before starting work
 4. Create an issue for significant changes before implementation
 

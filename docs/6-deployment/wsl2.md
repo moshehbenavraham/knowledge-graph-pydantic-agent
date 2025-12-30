@@ -1110,4 +1110,4 @@ neo4j.exceptions.AuthError: {neo4j_code: Neo.ClientError.Security.Unauthorized}
 
 - Main deployment guide: [Deployment Guide](./general.md)
 - Installation guide: [Installation Guide](../2-getting-started/installation.md)
-- Project instructions: [CLAUDE.md](../../CLAUDE.md)
+- Project instructions: [CONVENTIONS.md](../../.spec_system/CONVENTIONS.md)

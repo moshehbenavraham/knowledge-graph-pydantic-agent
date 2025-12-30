@@ -207,7 +207,7 @@ Sample quarterly earnings PDFs (2022-2023) for AAPL, AMZN, INTC, MSFT, NVDA.
 
 ### External Resources
 - [GitHub Repository](https://github.com/yourusername/base_agent)
-- [CLAUDE.md](../CLAUDE.md) - Project guidance for Claude Code
+- [CONVENTIONS.md](../.spec_system/CONVENTIONS.md) - Project coding conventions
 - [Makefile](../Makefile) - All development commands
 
 ---

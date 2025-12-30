@@ -342,7 +342,7 @@ INGESTION_BATCH_SIZE=3
 ## Next Steps
 
 - Read [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines
-- Review [CLAUDE.md](../../CLAUDE.md) for architecture details
+- Review [CONVENTIONS.md](../../.spec_system/CONVENTIONS.md) for architecture details
 - Check [API Documentation](../api/README.md) for endpoint reference
 
 ---

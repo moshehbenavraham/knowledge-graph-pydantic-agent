@@ -352,4 +352,4 @@ Example dashboard JSON snippets for common panels:
 
 - Analytics System (see CLAUDE.md section 7) - PostgreSQL-based event logging
 - [Alerts Configuration](./alerts.md) - Alerting rules
-- [CLAUDE.md](../../../CLAUDE.md) - Project guidelines
+- [CONVENTIONS.md](../../../.spec_system/CONVENTIONS.md) - Project guidelines
