@@ -5,6 +5,7 @@ This module provides utilities for working with the Neo4j knowledge graph:
 - temporal_parser: Extract temporal metadata from document filenames
 - numeric_parser: Extract numeric facts (currency, percentages) from episode text
 - relationship_scoring: Calculate dynamic relationship strength scores
+- type_hierarchy: Semantic entity type grouping for hierarchical queries
 """
 
 from .numeric_parser import (
@@ -30,6 +31,11 @@ from .temporal_parser import (
     get_company_name,
     parse_filename,
 )
+from .type_hierarchy import (
+    TYPE_HIERARCHY,
+    TypeHierarchy,
+    get_type_hierarchy,
+)
 
 __all__ = [
     "CURRENCY_SYMBOL_MAP",
@@ -38,15 +44,18 @@ __all__ = [
     "DEFAULT_TYPE_PRIORITY",
     "FILENAME_PATTERN",
     "MAGNITUDE_MAP",
+    "TYPE_HIERARCHY",
     "TYPE_PRIORITIES",
     "NumericFact",
     "ScoringConfig",
     "TemporalMetadata",
+    "TypeHierarchy",
     "calculate_relationship_strength",
     "calculate_relationship_strength_from_dict",
     "extract_numeric_facts_json",
     "extract_temporal_properties",
     "get_company_name",
+    "get_type_hierarchy",
     "parse_filename",
     "parse_numeric_facts",
-]  # noqa: RUF022
+]

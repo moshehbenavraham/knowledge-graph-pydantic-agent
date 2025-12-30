@@ -14,6 +14,7 @@ from typing import Any, cast
 import structlog
 
 from src.agentic_rag.config import get_config
+from src.agentic_rag.graph.type_hierarchy import get_type_hierarchy
 from src.agentic_rag.storage.connection_manager import ConnectionManager
 from src.agentic_rag.storage.graphiti_client import GraphitiClient
 from src.agentic_rag.storage.neo4j_store import Neo4jStore
@@ -135,6 +136,7 @@ class GraphSearch:
         self.connection_manager = connection_manager
         self.neo4j_store = Neo4jStore(self.connection_manager)
         self.graphiti_client = GraphitiClient(self.neo4j_store)
+        self.type_hierarchy = get_type_hierarchy()
 
         self._stats: dict[str, Any] = {
             "searches": 0,
@@ -500,6 +502,180 @@ class GraphSearch:
                 chunk_refs.add(rel.properties["source_chunk"])
 
         return list(chunk_refs)
+
+    async def search_entities_by_type(
+        self,
+        entity_type: str,
+        query: str | None = None,
+        limit: int = 20,
+    ) -> list[GraphEntity]:
+        """
+        Search for entities by type with hierarchy expansion.
+
+        Uses type hierarchy to expand parent types to include all subtypes.
+        For example, searching for type "organization" will match entities
+        of type "company", "department", "subsidiary", etc.
+
+        Args:
+            entity_type: Entity type to search (can be parent or specific type)
+            query: Optional name filter query
+            limit: Maximum results
+
+        Returns:
+            List of matching entities
+
+        Example:
+            >>> entities = await graph_search.search_entities_by_type("organization")
+            >>> # Returns entities of type company, department, subsidiary, etc.
+        """
+        try:
+            # Expand type using hierarchy
+            expanded_types = self.type_hierarchy.expand_type_filter(entity_type)
+
+            structlog_logger.info(
+                "search_entities_by_type",
+                entity_type=entity_type,
+                expanded_types=expanded_types,
+                query=query,
+                limit=limit,
+            )
+
+            # Build Cypher query with type filter
+            if query:
+                cypher = """
+                MATCH (e:Entity)
+                WHERE toLower(e.type) IN $types
+                  AND toLower(e.name) CONTAINS toLower($query)
+                RETURN e.id as id,
+                       e.name as name,
+                       e.type as type,
+                       e.chunk_refs as chunk_refs,
+                       e.confidence as confidence
+                ORDER BY e.confidence DESC
+                LIMIT $limit
+                """
+                params = {"types": expanded_types, "query": query, "limit": limit}
+            else:
+                cypher = """
+                MATCH (e:Entity)
+                WHERE toLower(e.type) IN $types
+                RETURN e.id as id,
+                       e.name as name,
+                       e.type as type,
+                       e.chunk_refs as chunk_refs,
+                       e.confidence as confidence
+                ORDER BY e.confidence DESC
+                LIMIT $limit
+                """
+                params = {"types": expanded_types, "limit": limit}
+
+            results = await self.neo4j_store.execute_query(cypher, params)
+
+            entities = []
+            for record in results:
+                chunk_refs = record.get("chunk_refs") or []
+                entities.append(
+                    GraphEntity(
+                        id=record["id"],
+                        name=record["name"],
+                        type=record["type"],
+                        chunk_refs=chunk_refs,
+                        confidence=record.get("confidence", 1.0),
+                    )
+                )
+
+            structlog_logger.info(
+                "search_entities_by_type completed",
+                entity_type=entity_type,
+                entities_found=len(entities),
+            )
+
+            return entities
+
+        except Exception as e:
+            logger.warning(f"Entity type search failed: {e}")
+            return []
+
+    async def search_entities_with_type_filter(
+        self,
+        query: str,
+        entity_type: str | None = None,
+        limit: int = 20,
+    ) -> list[GraphEntity]:
+        """
+        Search entities by name with optional type filtering.
+
+        Combines name-based search with type hierarchy expansion for flexible
+        entity discovery. If entity_type is provided, results are filtered
+        to entities matching that type or any of its subtypes.
+
+        Args:
+            query: Search query for entity name
+            entity_type: Optional type filter (supports hierarchy expansion)
+            limit: Maximum results
+
+        Returns:
+            List of matching entities
+        """
+        try:
+            if entity_type:
+                # Use type hierarchy expansion
+                expanded_types = self.type_hierarchy.expand_type_filter(entity_type)
+                cypher = """
+                MATCH (e:Entity)
+                WHERE toLower(e.name) CONTAINS toLower($query)
+                  AND toLower(e.type) IN $types
+                RETURN e.id as id,
+                       e.name as name,
+                       e.type as type,
+                       e.chunk_refs as chunk_refs,
+                       e.confidence as confidence
+                ORDER BY e.confidence DESC
+                LIMIT $limit
+                """
+                params = {"query": query, "types": expanded_types, "limit": limit}
+
+                structlog_logger.debug(
+                    "search_entities_with_type_filter",
+                    query=query,
+                    entity_type=entity_type,
+                    expanded_types=expanded_types,
+                )
+            else:
+                # Standard name-only search
+                cypher = """
+                MATCH (e:Entity)
+                WHERE toLower(e.name) CONTAINS toLower($query)
+                RETURN e.id as id,
+                       e.name as name,
+                       e.type as type,
+                       e.chunk_refs as chunk_refs,
+                       e.confidence as confidence
+                ORDER BY e.confidence DESC
+                LIMIT $limit
+                """
+                params = {"query": query, "limit": limit}
+
+            results = await self.neo4j_store.execute_query(cypher, params)
+
+            entities = []
+            for record in results:
+                chunk_refs = record.get("chunk_refs") or []
+                entities.append(
+                    GraphEntity(
+                        id=record["id"],
+                        name=record["name"],
+                        type=record["type"],
+                        chunk_refs=chunk_refs,
+                        confidence=record.get("confidence", 1.0),
+                    )
+                )
+
+            return entities
+
+        except Exception as e:
+            logger.warning(f"Entity search with type filter failed: {e}")
+            return []
 
     def get_stats(self) -> dict[str, Any]:
         """

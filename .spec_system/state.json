@@ -2,7 +2,7 @@
   "version": "2.0",
   "project_name": "Agentic GraphRAG System",
   "description": "Unified AI assistant with Agentic RAG (Retrieval Augmented Generation) capabilities, combining vector search (PostgreSQL/Supabase + pgvector), knowledge graph (Neo4j + Graphiti), and intelligent routing. Built with Pydantic AI.",
-  "current_phase": 1,
+  "current_phase": 0,
   "current_session": null,
   "phases": {
     "0": {
@@ -13,7 +13,7 @@
     "1": {
       "name": "Knowledge Graph Improvements",
       "description": "Transform the knowledge graph from a disconnected entity index into a fully queryable temporal knowledge base with document references, temporal metadata, entity deduplication, numeric facts, relationship scoring, and type hierarchy.",
-      "status": "in_progress",
+      "status": "complete",
       "session_count": 6,
       "sessions": {
         "01": {"name": "Document Reference Population", "status": "completed"},
@@ -21,7 +21,7 @@
         "03": {"name": "Entity Deduplication", "status": "completed"},
         "04": {"name": "Numeric Fact Extraction", "status": "completed"},
         "05": {"name": "Relationship Scoring", "status": "completed"},
-        "06": {"name": "Type Hierarchy and Testing", "status": "not_started"}
+        "06": {"name": "Type Hierarchy and Testing", "status": "completed"}
       }
     }
   },
@@ -30,7 +30,8 @@
     "phase01-session02-temporal_metadata_extraction",
     "phase01-session03-entity_deduplication",
     "phase01-session04-numeric_fact_extraction",
-    "phase01-session05-relationship_scoring"
+    "phase01-session05-relationship_scoring",
+    "phase01-session06-type_hierarchy_and_testing"
   ],
   "next_session_history": [
     {
@@ -56,6 +57,11 @@
     {
       "date": "2025-12-30",
       "session": "phase01-session05-relationship_scoring",
+      "status": "completed"
+    },
+    {
+      "date": "2025-12-30",
+      "session": "phase01-session06-type_hierarchy_and_testing",
       "status": "completed"
     }
   ]
