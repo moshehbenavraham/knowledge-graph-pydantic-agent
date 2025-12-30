@@ -108,12 +108,12 @@ jobs:
 
           required_files=(
             "README.md"
-            "CLAUDE.md"
             "CONTRIBUTING.md"
             "docs/README.md"
             "docs/2-getting-started/installation.md"
             "docs/3-architecture/index.md"
             "docs/4-configuration/environment.md"
+            ".spec_system/CONVENTIONS.md"
           )
 
           missing_files=()
