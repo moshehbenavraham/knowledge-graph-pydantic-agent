@@ -489,6 +489,167 @@ async def graph_traverse_tool(
         }
 
 
+async def temporal_trend_tool(
+    entity: str,
+    metric: str | None = None,
+    start_year: int = 2020,
+    end_year: int = 2025,
+    target_quarter: str | None = None,
+    comparison_type: str = "none",
+    limit: int = 50,
+) -> dict[str, Any]:
+    """
+    Query temporal trends and time-series data from the knowledge graph.
+
+    Use for time-based questions like:
+    - "How has Intel's revenue changed over time?"
+    - "Compare Apple Q3 2023 vs Q3 2024"
+    - "Show AMD revenue year-over-year"
+
+    Args:
+        entity: Entity name to query (e.g., "Intel", "Apple", "AMD")
+        metric: Optional metric filter (e.g., "revenue", "profit", "margin")
+        start_year: Start of time range (default 2020)
+        end_year: End of time range (default 2025)
+        target_quarter: Quarter for comparison (Q1-Q4), required for QoQ/YoY
+        comparison_type: "none" for trend, "qoq" for quarter-over-quarter,
+                        "yoy" for year-over-year
+        limit: Maximum data points to return (default 50)
+
+    Returns:
+        Dictionary with trend or comparison data:
+        - For trend: data_points, direction, percent_change, time_span
+        - For comparison: baseline, current, delta, percent_change
+    """
+    logger.info(
+        "temporal_trend_tool called",
+        entity=entity,
+        metric=metric,
+        year_range=f"{start_year}-{end_year}",
+        comparison_type=comparison_type,
+        target_quarter=target_quarter,
+    )
+
+    try:
+        config = get_config()
+
+        # Check if graph is enabled
+        if not config.performance.enable_graph:
+            logger.warning("Temporal trend attempted but graph is disabled")
+            return {
+                "error": "Knowledge graph is not enabled. Set ENABLE_GRAPH=true in .env",
+                "entity": entity,
+            }
+
+        # Get connection manager
+        global _connection_manager
+
+        if _connection_manager is None:
+            from src.agentic_rag.storage.connection_manager import get_connection_manager
+
+            _connection_manager = await get_connection_manager()
+
+        # Import temporal query module
+        from src.agentic_rag.graph.temporal_queries import (
+            ComparisonType,
+            TemporalQuery,
+            compare_quarters,
+            execute_temporal_query,
+        )
+
+        # Handle comparison types
+        if comparison_type.lower() in ("qoq", "yoy"):
+            if not target_quarter:
+                return {
+                    "error": "target_quarter is required for QoQ/YoY comparisons",
+                    "entity": entity,
+                    "comparison_type": comparison_type,
+                }
+
+            comp_type = (
+                ComparisonType.QOQ if comparison_type.lower() == "qoq" else ComparisonType.YOY
+            )
+
+            comparison = await compare_quarters(
+                connection_manager=_connection_manager,
+                entity=entity,
+                target_year=end_year,
+                target_quarter=target_quarter,
+                comparison_type=comp_type,
+                metric=metric,
+            )
+
+            result_dict = {
+                "type": "comparison",
+                "comparison_type": comparison.comparison_type.value,
+                "entity": comparison.entity,
+                "metric": comparison.metric,
+                "summary": comparison.get_summary(),
+                "baseline": comparison.baseline.to_dict() if comparison.baseline else None,
+                "current": comparison.current.to_dict() if comparison.current else None,
+                "delta": comparison.delta,
+                "percent_change": comparison.percent_change,
+                "baseline_missing": comparison.baseline_missing,
+                "current_missing": comparison.current_missing,
+            }
+
+            logger.info(
+                "Temporal comparison completed",
+                entity=entity,
+                comparison_type=comparison_type,
+                has_baseline=not comparison.baseline_missing,
+                has_current=not comparison.current_missing,
+            )
+            return result_dict
+
+        # Standard trend query
+        query = TemporalQuery(
+            entity=entity,
+            metric=metric,
+            start_year=start_year,
+            end_year=end_year,
+            limit=limit,
+        )
+
+        trend = await execute_temporal_query(_connection_manager, query)
+
+        trend_result: dict[str, Any] = {
+            "type": "trend",
+            "entity": trend.entity,
+            "metric": trend.metric,
+            "summary": trend.get_summary(),
+            "direction": trend.direction.value,
+            "percent_change": trend.percent_change,
+            "time_span": trend.time_span,
+            "start_period": trend.start_period,
+            "end_period": trend.end_period,
+            "data_points": [dp.to_dict() for dp in trend.data_points],
+            "data_point_count": len(trend.data_points),
+            "missing_periods": trend.missing_periods,
+        }
+
+        logger.info(
+            "Temporal trend completed",
+            entity=entity,
+            data_points=len(trend.data_points),
+            direction=trend.direction.value,
+        )
+        return trend_result
+
+    except Exception as e:
+        logger.exception(
+            "Temporal trend failed",
+            entity=entity,
+            metric=metric,
+            error=str(e),
+        )
+        return {
+            "entity": entity,
+            "metric": metric,
+            "error": str(e),
+        }
+
+
 async def list_documents_tool(supabase: Client) -> list[str]:
     """
     List all available documents in the knowledge base.
@@ -664,4 +825,5 @@ __all__ = [
     "list_documents_tool",
     "retrieve_relevant_documents_tool",
     "smart_search_tool",
+    "temporal_trend_tool",
 ]

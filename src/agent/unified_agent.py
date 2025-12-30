@@ -38,7 +38,12 @@ from src.tools import (
     retrieve_relevant_documents_tool,
     web_search_tool,
 )
-from src.tools.rag import graph_query_tool, graph_traverse_tool, smart_search_tool
+from src.tools.rag import (
+    graph_query_tool,
+    graph_traverse_tool,
+    smart_search_tool,
+    temporal_trend_tool,
+)
 
 # Load environment
 load_dotenv()
@@ -121,6 +126,11 @@ Tool Selection Strategy:
   - Use for: "What products did companies acquired by Intel release?"
   - Use for: "Which executives are connected through shared board memberships?"
   - Finds paths through 1-3 relationship hops with strength filtering
+
+- **temporal_trend**: Time-series queries and comparisons
+  - Use for: "How has Intel's revenue changed over time?"
+  - Use for: "Compare Apple Q3 2023 vs Q3 2024"
+  - Supports trend analysis, QoQ comparisons, and YoY comparisons
 
 - **list_all_documents**: Get inventory of available documents
 - **get_full_document**: Retrieve complete document by ID
@@ -300,6 +310,66 @@ async def graph_traverse(
             "end_entity": end_entity,
             "error": str(e),
             "paths": [],
+        }
+
+
+# ========== Temporal Trend Tool ==========
+@super_agent.tool
+async def temporal_trend(
+    ctx: RunContext[UnifiedAgentDeps],
+    entity: str,
+    metric: str | None = None,
+    start_year: int = 2020,
+    end_year: int = 2025,
+    target_quarter: str | None = None,
+    comparison_type: str = "none",
+    limit: int = 50,
+) -> dict[str, Any]:
+    """
+    Query temporal trends and time-series data from the knowledge graph.
+
+    Use for time-based financial questions:
+    - "How has Intel's revenue changed over time?" (trend analysis)
+    - "Compare Apple Q3 2023 vs Q3 2024" (YoY comparison)
+    - "Show AMD revenue quarter-over-quarter" (QoQ comparison)
+
+    Args:
+        entity: Entity name to query (e.g., "Intel", "Apple", "AMD")
+        metric: Optional metric filter (e.g., "revenue", "profit", "margin")
+        start_year: Start of time range (default 2020)
+        end_year: End of time range (default 2025)
+        target_quarter: Quarter for comparison (Q1-Q4), required for QoQ/YoY
+        comparison_type: "none" for trend, "qoq" for quarter-over-quarter,
+                        "yoy" for year-over-year
+        limit: Maximum data points (default 50)
+
+    Returns:
+        For trend: data_points, direction, percent_change, time_span
+        For comparison: baseline, current, delta, percent_change
+    """
+    logger.info(
+        f"Temporal trend for {entity}: metric={metric}, "
+        f"years={start_year}-{end_year}, comparison={comparison_type}"
+    )
+
+    try:
+        result = await temporal_trend_tool(
+            entity=entity,
+            metric=metric,
+            start_year=start_year,
+            end_year=end_year,
+            target_quarter=target_quarter,
+            comparison_type=comparison_type,
+            limit=limit,
+        )
+        return result
+
+    except Exception as e:
+        logger.error(f"Temporal trend failed: {e}")
+        return {
+            "entity": entity,
+            "metric": metric,
+            "error": str(e),
         }
 
 
@@ -725,4 +795,5 @@ __all__ = [
     "search_web",
     "smart_search",
     "super_agent",
+    "temporal_trend",
 ]

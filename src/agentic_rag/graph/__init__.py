@@ -7,6 +7,7 @@ This module provides utilities for working with the Neo4j knowledge graph:
 - relationship_scoring: Calculate dynamic relationship strength scores
 - type_hierarchy: Semantic entity type grouping for hierarchical queries
 - multi_hop: Multi-hop query engine for relationship traversal
+- temporal_queries: Temporal trend analysis and time-series comparisons
 """
 
 from .multi_hop import (
@@ -43,6 +44,25 @@ from .temporal_parser import (
     get_company_name,
     parse_filename,
 )
+from .temporal_queries import (
+    ComparisonResult,
+    ComparisonType,
+    DataPoint,
+    TemporalQuery,
+    TemporalQueryBuilder,
+    TrendDirection,
+    TrendResult,
+    TrendResultParser,
+    calculate_qoq_comparison,
+    calculate_yoy_comparison,
+    compare_quarters,
+    compare_years,
+    execute_temporal_query,
+    get_entity_trend,
+    int_to_quarter,
+    quarter_sort_key,
+    quarter_to_int,
+)
 from .type_hierarchy import (
     TYPE_HIERARCHY,
     TypeHierarchy,
@@ -58,7 +78,9 @@ __all__ = [
     "MAGNITUDE_MAP",
     "TYPE_HIERARCHY",
     "TYPE_PRIORITIES",
-    # Multi-hop query engine
+    "ComparisonResult",
+    "ComparisonType",
+    "DataPoint",
     "MultiHopQuery",
     "MultiHopQueryBuilder",
     "NumericFact",
@@ -68,16 +90,30 @@ __all__ = [
     "PathStep",
     "ScoringConfig",
     "TemporalMetadata",
+    "TemporalQuery",
+    "TemporalQueryBuilder",
+    "TrendDirection",
+    "TrendResult",
+    "TrendResultParser",
     "TypeHierarchy",
+    "calculate_qoq_comparison",
     "calculate_relationship_strength",
     "calculate_relationship_strength_from_dict",
+    "calculate_yoy_comparison",
+    "compare_quarters",
+    "compare_years",
     "execute_multi_hop",
+    "execute_temporal_query",
     "explore_entity_neighborhood",
     "extract_numeric_facts_json",
     "extract_temporal_properties",
     "find_paths_between",
     "get_company_name",
+    "get_entity_trend",
     "get_type_hierarchy",
+    "int_to_quarter",
     "parse_filename",
     "parse_numeric_facts",
+    "quarter_sort_key",
+    "quarter_to_int",
 ]
