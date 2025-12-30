@@ -154,18 +154,32 @@ class HybridSearch:
             f"{'=' * 80}"
         )
 
-        # Execute search based on strategy
-        if strategy == SearchStrategy.VECTOR_ONLY:
-            result = await self._vector_only_search(query, limit)
+        # Route to specialized Phase 02 engines for new intents (when graph enabled)
+        if intent is not None and self.config.performance.enable_graph:
+            if intent == SearchIntent.MULTI_HOP:
+                result = await self._execute_multi_hop_search(query, limit, intent_result)
+            elif intent == SearchIntent.TEMPORAL_TREND:
+                result = await self._execute_temporal_trend_search(query, limit, intent_result)
+            elif intent == SearchIntent.COMPARISON:
+                result = await self._execute_comparison_search(query, limit, intent_result)
+            else:
+                result = None  # Fall through to standard routing
+        else:
+            result = None
 
-        elif strategy == SearchStrategy.GRAPH_ONLY:
-            result = await self._graph_only_search(query, limit, intent_result)
+        # Execute search based on strategy (standard routing)
+        if result is None:
+            if strategy == SearchStrategy.VECTOR_ONLY:
+                result = await self._vector_only_search(query, limit)
 
-        elif strategy == SearchStrategy.HYBRID:
-            result = await self._hybrid_search(query, limit, intent_result)
+            elif strategy == SearchStrategy.GRAPH_ONLY:
+                result = await self._graph_only_search(query, limit, intent_result)
 
-        else:  # ADAPTIVE
-            result = await self._adaptive_search(query, limit, intent_result)
+            elif strategy == SearchStrategy.HYBRID:
+                result = await self._hybrid_search(query, limit, intent_result)
+
+            else:  # ADAPTIVE
+                result = await self._adaptive_search(query, limit, intent_result)
 
         # Set metadata
         result.search_strategy = strategy
@@ -231,6 +245,32 @@ class HybridSearch:
             else:
                 selected = SearchStrategy.VECTOR_ONLY
                 reason = f"Intent is {intent.value} but graph is DISABLED - using vector search"
+        elif intent == SearchIntent.MULTI_HOP:
+            # Multi-hop requires graph for path traversal
+            if self.config.performance.enable_graph:
+                selected = SearchStrategy.GRAPH_ONLY
+                reason = "Intent is MULTI_HOP - requires graph traversal for path discovery"
+            else:
+                selected = SearchStrategy.VECTOR_ONLY
+                reason = "Intent is MULTI_HOP but graph is DISABLED - falling back to vector search"
+        elif intent == SearchIntent.TEMPORAL_TREND:
+            # Temporal trends need graph for time-series data
+            if self.config.performance.enable_graph:
+                selected = SearchStrategy.GRAPH_ONLY
+                reason = "Intent is TEMPORAL_TREND - requires graph for time-series analysis"
+            else:
+                selected = SearchStrategy.VECTOR_ONLY
+                reason = "Intent is TEMPORAL_TREND but graph is DISABLED - falling back to vector"
+        elif intent == SearchIntent.COMPARISON:
+            # Comparison needs graph for entity metrics
+            if self.config.performance.enable_graph:
+                selected = SearchStrategy.GRAPH_ONLY
+                reason = "Intent is COMPARISON - requires graph for cross-entity comparison"
+            else:
+                selected = SearchStrategy.VECTOR_ONLY
+                reason = (
+                    "Intent is COMPARISON but graph is DISABLED - falling back to vector search"
+                )
         elif self.config.performance.enable_graph:
             selected = SearchStrategy.ADAPTIVE
             reason = "Intent is HYBRID - using adaptive strategy (graph enabled)"
@@ -447,6 +487,228 @@ class HybridSearch:
         )
 
         return HybridSearchResult(chunks=more_chunks, metadata={"search_type": "adaptive_vector"})
+
+    async def _execute_multi_hop_search(
+        self, query: str, limit: int, intent_result: IntentAnalysisResult | None
+    ) -> HybridSearchResult:
+        """
+        Execute multi-hop path traversal search using Phase 02 engine.
+
+        Routes to the multi-hop query engine for path discovery between entities.
+
+        Args:
+            query: Search query
+            limit: Maximum results
+            intent_result: Intent analysis result
+
+        Returns:
+            Hybrid search result with path data
+        """
+        from src.agentic_rag.graph.multi_hop import MultiHopQuery, execute_multi_hop
+        from src.agentic_rag.search.result_merger import ResultMerger
+
+        logger.info("Executing MULTI_HOP search via Phase 02 engine")
+        start = datetime.now()
+
+        # Extract entities from intent analysis
+        entities = intent_result.entities_mentioned if intent_result else []
+        start_entity = entities[0] if len(entities) >= 1 else query.split()[0]
+        end_entity = entities[1] if len(entities) >= 2 else None
+
+        try:
+            # Build multi-hop query
+            multi_hop_query = MultiHopQuery(
+                start_entity=start_entity,
+                end_entity=end_entity,
+                min_hops=1,
+                max_hops=2,
+                min_strength=0.3,
+                limit=limit,
+            )
+
+            # Execute multi-hop traversal
+            path_results = await execute_multi_hop(self.connection_manager, multi_hop_query)
+
+            # Normalize results using ResultMerger
+            merger = ResultMerger()
+            normalized_items = merger.normalize_paths(path_results)
+
+            # Convert to HybridSearchResult format
+            elapsed = (datetime.now() - start).total_seconds()
+            logger.info(
+                f"MULTI_HOP search completed in {elapsed:.3f}s: {len(path_results)} paths found"
+            )
+
+            # Also get vector chunks for content context
+            vector_chunks = await self.vector_search.search(query, limit // 2)
+
+            return HybridSearchResult(
+                chunks=vector_chunks or [],
+                facts=[],
+                entities=[item for item in normalized_items if item.entities],
+                relationships=[],
+                metadata={
+                    "search_type": "multi_hop",
+                    "paths_found": len(path_results),
+                    "normalized_items": len(normalized_items),
+                    "path_summaries": (
+                        [p.get_path_summary() for p in path_results[:5]] if path_results else []
+                    ),
+                },
+            )
+
+        except Exception as e:
+            logger.warning(f"Multi-hop search failed, falling back to vector: {e}")
+            return await self._vector_only_search(query, limit)
+
+    async def _execute_temporal_trend_search(
+        self, query: str, limit: int, intent_result: IntentAnalysisResult | None
+    ) -> HybridSearchResult:
+        """
+        Execute temporal trend analysis using Phase 02 engine.
+
+        Routes to the temporal query engine for time-series analysis.
+
+        Args:
+            query: Search query
+            limit: Maximum results
+            intent_result: Intent analysis result
+
+        Returns:
+            Hybrid search result with trend data
+        """
+        from src.agentic_rag.graph.temporal_queries import TemporalQuery, execute_temporal_query
+
+        logger.info("Executing TEMPORAL_TREND search via Phase 02 engine")
+        start = datetime.now()
+
+        # Extract entity from intent analysis
+        entities = intent_result.entities_mentioned if intent_result else []
+        entity = entities[0] if entities else query.split()[0]
+
+        try:
+            # Build temporal query
+            temporal_query = TemporalQuery(
+                entity=entity,
+                metric=None,  # Auto-detect from query
+                start_year=2020,
+                end_year=2025,
+                limit=limit,
+            )
+
+            # Execute temporal query
+            trend_result = await execute_temporal_query(self.connection_manager, temporal_query)
+
+            elapsed = (datetime.now() - start).total_seconds()
+            logger.info(
+                f"TEMPORAL_TREND search completed in {elapsed:.3f}s: "
+                f"{len(trend_result.data_points)} data points"
+            )
+
+            # Also get vector chunks for content context
+            vector_chunks = await self.vector_search.search(query, limit // 2)
+
+            return HybridSearchResult(
+                chunks=vector_chunks or [],
+                facts=[],
+                entities=[],
+                relationships=[],
+                metadata={
+                    "search_type": "temporal_trend",
+                    "data_points": len(trend_result.data_points),
+                    "direction": trend_result.direction.value if trend_result.direction else None,
+                    "percent_change": trend_result.percent_change,
+                    "summary": (
+                        trend_result.get_summary() if hasattr(trend_result, "get_summary") else ""
+                    ),
+                },
+            )
+
+        except Exception as e:
+            logger.warning(f"Temporal trend search failed, falling back to vector: {e}")
+            return await self._vector_only_search(query, limit)
+
+    async def _execute_comparison_search(
+        self, query: str, limit: int, intent_result: IntentAnalysisResult | None
+    ) -> HybridSearchResult:
+        """
+        Execute cross-entity comparison using Phase 02 engine.
+
+        Routes to the entity comparison engine for metrics comparison.
+
+        Args:
+            query: Search query
+            limit: Maximum results
+            intent_result: Intent analysis result
+
+        Returns:
+            Hybrid search result with comparison data
+        """
+        from src.agentic_rag.graph.entity_comparison import ComparisonQuery, execute_comparison
+
+        logger.info("Executing COMPARISON search via Phase 02 engine")
+        start = datetime.now()
+
+        # Extract entities from intent analysis
+        entities = intent_result.entities_mentioned if intent_result else []
+        if len(entities) < 2:
+            # Need at least 2 entities for comparison
+            logger.warning("Comparison requires at least 2 entities, falling back to vector")
+            return await self._vector_only_search(query, limit)
+
+        # Try to extract metric from query
+        metric = None
+        metric_keywords = ["revenue", "profit", "margin", "growth", "income", "sales"]
+        query_lower = query.lower()
+        for kw in metric_keywords:
+            if kw in query_lower:
+                metric = kw
+                break
+
+        if metric is None:
+            metric = "revenue"  # Default metric
+
+        try:
+            # Build comparison query
+            comparison_query = ComparisonQuery(
+                entity_names=entities[:5],  # Max 5 entities
+                metric=metric,
+            )
+
+            # Execute comparison
+            comparison_result = await execute_comparison(self.connection_manager, comparison_query)
+
+            elapsed = (datetime.now() - start).total_seconds()
+            logger.info(
+                f"COMPARISON search completed in {elapsed:.3f}s: "
+                f"{comparison_result.entities_compared} entities compared"
+            )
+
+            # Also get vector chunks for content context
+            vector_chunks = await self.vector_search.search(query, limit // 2)
+
+            return HybridSearchResult(
+                chunks=vector_chunks or [],
+                facts=[],
+                entities=[],
+                relationships=[],
+                metadata={
+                    "search_type": "comparison",
+                    "entities_compared": comparison_result.entities_compared,
+                    "entities_with_data": comparison_result.entities_with_data,
+                    "metric": comparison_result.metric,
+                    "ranking": comparison_result.ranking,
+                    "summary": (
+                        comparison_result.get_summary()
+                        if hasattr(comparison_result, "get_summary")
+                        else ""
+                    ),
+                },
+            )
+
+        except Exception as e:
+            logger.warning(f"Comparison search failed, falling back to vector: {e}")
+            return await self._vector_only_search(query, limit)
 
     async def _boost_with_graph_context(
         self,

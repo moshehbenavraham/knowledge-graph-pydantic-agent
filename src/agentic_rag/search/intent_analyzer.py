@@ -24,6 +24,9 @@ class SearchIntent(Enum):
     HYBRID = "hybrid"  # Combined search
     TEMPORAL = "temporal"  # Timeline/history search
     ENTITY_FOCUSED = "entity_focused"  # Specific entity search
+    MULTI_HOP = "multi_hop"  # Path/connection traversal search
+    TEMPORAL_TREND = "temporal_trend"  # Time-series trend analysis
+    COMPARISON = "comparison"  # Cross-entity comparison
 
 
 @dataclass
@@ -136,6 +139,72 @@ class IntentAnalyzer:
         r"\b(?:GPT-\d+|Claude|Gemini|LaMDA|PaLM|DALL-E|Stable Diffusion)\b",  # AI models
     ]
 
+    # Multi-hop path/connection keywords
+    MULTI_HOP_KEYWORDS = [
+        "connected to",
+        "connection between",
+        "path from",
+        "path to",
+        "linked to",
+        "linked through",
+        "through",
+        "via",
+        "indirectly",
+        "hops",
+        "degrees of separation",
+        "chain",
+        "network",
+        "leads to",
+        "reaches",
+        "how is",
+        "how are",
+    ]
+
+    # Temporal trend keywords (beyond basic temporal)
+    TEMPORAL_TREND_KEYWORDS = [
+        "trend",
+        "trends",
+        "trending",
+        "over time",
+        "changed over",
+        "growth",
+        "decline",
+        "increase",
+        "decrease",
+        "trajectory",
+        "pattern",
+        "year over year",
+        "yoy",
+        "quarter over quarter",
+        "qoq",
+        "historically",
+        "progression",
+        "performance over",
+    ]
+
+    # Comparison keywords
+    COMPARISON_KEYWORDS = [
+        "compare",
+        "comparison",
+        "versus",
+        "vs",
+        "vs.",
+        "difference between",
+        "differ",
+        "different from",
+        "better than",
+        "worse than",
+        "more than",
+        "less than",
+        "higher than",
+        "lower than",
+        "rank",
+        "ranking",
+        "outperform",
+        "underperform",
+        "against",
+    ]
+
     def __init__(self) -> None:
         """Initialize intent analyzer."""
         structlog_logger.info("IntentAnalyzer initializing")
@@ -165,6 +234,9 @@ class IntentAnalyzer:
         temporal_markers = self._find_temporal_markers(query_lower)
         relationship_indicators = self._find_relationship_indicators(query_lower)
         fact_indicators = self._find_fact_indicators(query_lower)
+        multi_hop_indicators = self._find_multi_hop_indicators(query_lower)
+        temporal_trend_indicators = self._find_temporal_trend_indicators(query_lower)
+        comparison_indicators = self._find_comparison_indicators(query_lower)
 
         # Score different intents
         scores = {
@@ -177,6 +249,11 @@ class IntentAnalyzer:
                 query_lower, relationship_indicators, temporal_markers
             ),
             SearchIntent.HYBRID: 0.5,  # Default moderate score
+            SearchIntent.MULTI_HOP: self._score_multi_hop_intent(multi_hop_indicators, entities),
+            SearchIntent.TEMPORAL_TREND: self._score_temporal_trend_intent(
+                temporal_trend_indicators, temporal_markers, entities
+            ),
+            SearchIntent.COMPARISON: self._score_comparison_intent(comparison_indicators, entities),
         }
 
         # Determine primary intent
@@ -456,6 +533,192 @@ class IntentAnalyzer:
                 break
 
         return max(0.0, min(score, 1.0))
+
+    def _find_multi_hop_indicators(self, query_lower: str) -> list[str]:
+        """
+        Find multi-hop path/connection indicators in query.
+
+        Args:
+            query_lower: Lowercase query
+
+        Returns:
+            List of multi-hop indicators found
+        """
+        indicators = []
+        for keyword in self.MULTI_HOP_KEYWORDS:
+            if keyword in query_lower:
+                indicators.append(keyword)
+        return indicators
+
+    def _find_temporal_trend_indicators(self, query_lower: str) -> list[str]:
+        """
+        Find temporal trend indicators in query.
+
+        Args:
+            query_lower: Lowercase query
+
+        Returns:
+            List of temporal trend indicators found
+        """
+        indicators = []
+        for keyword in self.TEMPORAL_TREND_KEYWORDS:
+            if keyword in query_lower:
+                indicators.append(keyword)
+        return indicators
+
+    def _find_comparison_indicators(self, query_lower: str) -> list[str]:
+        """
+        Find comparison indicators in query.
+
+        Args:
+            query_lower: Lowercase query
+
+        Returns:
+            List of comparison indicators found
+        """
+        indicators = []
+        for keyword in self.COMPARISON_KEYWORDS:
+            if keyword in query_lower:
+                indicators.append(keyword)
+        return indicators
+
+    def _score_multi_hop_intent(
+        self, multi_hop_indicators: list[str], entities: list[str]
+    ) -> float:
+        """
+        Score likelihood of multi-hop path/connection search intent.
+
+        High scores when query asks about paths, connections, or
+        indirect relationships between entities.
+
+        Args:
+            multi_hop_indicators: Multi-hop keywords found
+            entities: Entities mentioned
+
+        Returns:
+            Score between 0 and 1
+        """
+        score = 0.0
+
+        # Strong multi-hop indicators
+        strong_indicators = [
+            "connected to",
+            "connection between",
+            "path from",
+            "path to",
+            "degrees of separation",
+            "hops",
+        ]
+        if any(ind in strong_indicators for ind in multi_hop_indicators):
+            score += 0.6
+
+        # Multiple multi-hop keywords
+        if len(multi_hop_indicators) >= 2:
+            score += 0.3
+        elif len(multi_hop_indicators) == 1:
+            score += 0.2
+
+        # Two entities suggest path query (A to B)
+        if len(entities) >= 2:
+            score += 0.2
+
+        return min(score, 1.0)
+
+    def _score_temporal_trend_intent(
+        self, trend_indicators: list[str], temporal_markers: list[str], entities: list[str]
+    ) -> float:
+        """
+        Score likelihood of temporal trend analysis intent.
+
+        High scores when query asks about trends, changes over time,
+        or time-series patterns.
+
+        Args:
+            trend_indicators: Temporal trend keywords found
+            temporal_markers: Basic temporal markers found
+            entities: Entities mentioned
+
+        Returns:
+            Score between 0 and 1
+        """
+        score = 0.0
+
+        # Strong trend indicators
+        strong_indicators = [
+            "trend",
+            "trends",
+            "over time",
+            "year over year",
+            "yoy",
+            "quarter over quarter",
+            "qoq",
+            "growth",
+            "decline",
+        ]
+        if any(ind in strong_indicators for ind in trend_indicators):
+            score += 0.6
+
+        # Multiple trend indicators
+        if len(trend_indicators) >= 2:
+            score += 0.2
+        elif len(trend_indicators) == 1:
+            score += 0.1
+
+        # Temporal markers boost trend score
+        if temporal_markers:
+            score += 0.1
+
+        # Single entity with trend keywords (entity performance over time)
+        if entities and trend_indicators:
+            score += 0.1
+
+        return min(score, 1.0)
+
+    def _score_comparison_intent(
+        self, comparison_indicators: list[str], entities: list[str]
+    ) -> float:
+        """
+        Score likelihood of cross-entity comparison intent.
+
+        High scores when query asks to compare, rank, or contrast
+        multiple entities.
+
+        Args:
+            comparison_indicators: Comparison keywords found
+            entities: Entities mentioned
+
+        Returns:
+            Score between 0 and 1
+        """
+        score = 0.0
+
+        # Strong comparison indicators
+        strong_indicators = [
+            "compare",
+            "comparison",
+            "versus",
+            "vs",
+            "vs.",
+            "difference between",
+            "rank",
+            "ranking",
+        ]
+        if any(ind in strong_indicators for ind in comparison_indicators):
+            score += 0.5
+
+        # Multiple comparison keywords
+        if len(comparison_indicators) >= 2:
+            score += 0.2
+        elif len(comparison_indicators) == 1:
+            score += 0.1
+
+        # Multiple entities strongly suggest comparison
+        if len(entities) >= 2:
+            score += 0.3
+        elif len(entities) >= 3:
+            score += 0.4
+
+        return min(score, 1.0)
 
     def get_stats(self) -> dict[str, Any]:
         """

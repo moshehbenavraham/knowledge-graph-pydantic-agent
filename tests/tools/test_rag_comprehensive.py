@@ -91,6 +91,7 @@ def mock_search_result():
     result.relationships = []
     result.search_strategy = SearchStrategy.HYBRID
     result.query_time = 0.125
+    result.metadata = {}  # Required for Phase 02 enhanced smart_search metadata access
     return result
 
 

@@ -33,7 +33,7 @@
         "01": {"name": "Multi-hop Query Engine", "status": "completed"},
         "02": {"name": "Temporal Trend Queries", "status": "completed"},
         "03": {"name": "Cross-Entity Comparison", "status": "completed"},
-        "04": {"name": "Smart Search Enhancement", "status": "not_started"},
+        "04": {"name": "Smart Search Enhancement", "status": "completed"},
         "05": {"name": "Query Performance and Validation", "status": "not_started"}
       }
     }
@@ -47,7 +47,8 @@
     "phase01-session06-type_hierarchy_and_testing",
     "phase02-session01-multi_hop_query_engine",
     "phase02-session02-temporal_trend_queries",
-    "phase02-session03-cross_entity_comparison"
+    "phase02-session03-cross_entity_comparison",
+    "phase02-session04-smart_search_enhancement"
   ],
   "next_session_history": [
     {
@@ -93,6 +94,11 @@
     {
       "date": "2025-12-30",
       "session": "phase02-session03-cross_entity_comparison",
+      "status": "completed"
+    },
+    {
+      "date": "2025-12-30",
+      "session": "phase02-session04-smart_search_enhancement",
       "status": "completed"
     }
   ]

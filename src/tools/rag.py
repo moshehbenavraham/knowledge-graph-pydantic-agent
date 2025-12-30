@@ -194,7 +194,7 @@ async def smart_search_tool(
         result = await hybrid_search.search(query=user_query, limit=limit, strategy=strategy)
 
         # Return rich structured data
-        result_dict = {
+        result_dict: dict[str, Any] = {
             "query": user_query,
             "chunks": [
                 {
@@ -234,6 +234,29 @@ async def smart_search_tool(
             "query_time_ms": result.query_time * 1000,
             "total_results": len(result.chunks),
         }
+
+        # Include enhanced Phase 02 metadata when available
+        search_type = result.metadata.get("search_type", "")
+        if search_type == "multi_hop":
+            result_dict["multi_hop_data"] = {
+                "paths_found": result.metadata.get("paths_found", 0),
+                "path_summaries": result.metadata.get("path_summaries", []),
+            }
+        elif search_type == "temporal_trend":
+            result_dict["temporal_trend_data"] = {
+                "data_points": result.metadata.get("data_points", 0),
+                "direction": result.metadata.get("direction"),
+                "percent_change": result.metadata.get("percent_change"),
+                "summary": result.metadata.get("summary", ""),
+            }
+        elif search_type == "comparison":
+            result_dict["comparison_data"] = {
+                "entities_compared": result.metadata.get("entities_compared", 0),
+                "entities_with_data": result.metadata.get("entities_with_data", 0),
+                "metric": result.metadata.get("metric", ""),
+                "ranking": result.metadata.get("ranking", []),
+                "summary": result.metadata.get("summary", ""),
+            }
 
         logger.info(
             "Smart search completed",
