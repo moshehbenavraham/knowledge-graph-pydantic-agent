@@ -2,7 +2,6 @@
 Integration test fixtures and configuration.
 """
 
-import asyncio
 import uuid
 from collections.abc import AsyncGenerator
 
@@ -16,15 +15,7 @@ from src.agentic_rag.storage.postgres_store import PostgresStore
 from src.config import get_settings
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    """Create event loop for async tests."""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
-
-
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def test_settings():
     """Get test settings from environment."""
     import os
@@ -44,7 +35,7 @@ def test_settings():
     return settings
 
 
-@pytest_asyncio.fixture(scope="session")
+@pytest_asyncio.fixture(scope="module")
 async def connection_manager(
     test_settings,
 ) -> AsyncGenerator[ConnectionManager, None]:

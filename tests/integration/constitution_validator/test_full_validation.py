@@ -14,6 +14,10 @@ import pytest
 from src.constitution_validator.loader import ConstitutionLoader, IgnoreConfigurationLoader
 from src.constitution_validator.models import ComplianceReport
 
+# Check if constitution file exists for tests that require it
+CONSTITUTION_PATH = Path(".specify/memory/constitution.md")
+CONSTITUTION_EXISTS = CONSTITUTION_PATH.exists()
+
 
 class TestFullValidationFlow:
     """Integration tests for complete validation workflow."""
@@ -33,6 +37,10 @@ class TestFullValidationFlow:
         """Get path to valid/compliant codebase."""
         return fixtures_dir / "valid_codebase"
 
+    @pytest.mark.skipif(
+        not CONSTITUTION_EXISTS,
+        reason="Constitution file not found at .specify/memory/constitution.md",
+    )
     def test_loads_constitution_successfully(self):
         """Test that constitution file loads without errors."""
         loader = ConstitutionLoader()
@@ -43,6 +51,10 @@ class TestFullValidationFlow:
         assert constitution.version is not None
         assert constitution.checksum is not None
 
+    @pytest.mark.skipif(
+        not CONSTITUTION_EXISTS,
+        reason="Constitution file not found at .specify/memory/constitution.md",
+    )
     def test_validates_violation_samples_and_detects_all_principles(
         self, violation_samples_dir: Path
     ):

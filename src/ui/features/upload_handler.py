@@ -11,7 +11,6 @@ import pandas as pd
 import streamlit as st
 import structlog
 from streamlit.runtime.uploaded_file_manager import UploadedFile
-
 from supabase import Client
 
 logger = structlog.get_logger(__name__)

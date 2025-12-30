@@ -40,11 +40,14 @@ def client():
     mock_cache.set.return_value = None
     mock_cache.flush.return_value = None
 
+    # Valid UUID for testing
+    TEST_DOC_UUID = "12345678-1234-5678-1234-567812345678"
+
     mock_postgres = AsyncMock()
     mock_postgres.search_similar = AsyncMock(return_value=[])
     mock_postgres.get_document = AsyncMock(
         return_value={
-            "id": "test-doc-id",
+            "id": TEST_DOC_UUID,
             "title": "Test Document",
             "source": "test",
             "content": "Test content",
@@ -311,11 +314,14 @@ class TestDocumentEndpoints:
         # Should return 200 or 503
         assert response.status_code in [200, 503]
 
+    # Valid UUID for testing
+    TEST_DOC_UUID = "12345678-1234-5678-1234-567812345678"
+
     @pytest.mark.asyncio
     async def test_get_document(self, client, mock_postgres_store):
         """Test retrieving specific document."""
         mock_postgres_store.get_document.return_value = {
-            "id": "test-doc-id",
+            "id": self.TEST_DOC_UUID,
             "title": "Test Document",
             "source": "test",
             "content": "Test content",
@@ -323,7 +329,7 @@ class TestDocumentEndpoints:
             "metadata": {},
         }
 
-        response = client.get("/api/v1/documents/test-doc-id")
+        response = client.get(f"/api/v1/documents/{self.TEST_DOC_UUID}")
         # Should return 200, 404, or 503
         assert response.status_code in [200, 404, 503]
 
@@ -331,12 +337,12 @@ class TestDocumentEndpoints:
     async def test_delete_document(self, client, mock_postgres_store):
         """Test document deletion."""
         mock_postgres_store.get_document.return_value = {
-            "id": "test-doc-id",
+            "id": self.TEST_DOC_UUID,
             "title": "Test",
         }
         mock_postgres_store.delete_document.return_value = None
 
-        response = client.delete("/api/v1/documents/test-doc-id")
+        response = client.delete(f"/api/v1/documents/{self.TEST_DOC_UUID}")
         # Should return 200, 404, or 503
         assert response.status_code in [200, 404, 503]
 

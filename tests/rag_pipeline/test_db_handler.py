@@ -1,9 +1,7 @@
-import base64
-import json
 import os
 import sys
 from pathlib import Path
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -49,30 +47,13 @@ class TestDbHandler:
 
         # Set return values for execute
         mock_execute.data = [{"id": "doc1"}, {"id": "doc2"}]  # For documents table
-        mock_execute_rows = MagicMock()
-        mock_execute_rows.data = [{"row_id": "row1"}]  # For document_rows table
-        mock_eq.execute.side_effect = [
-            mock_execute,
-            mock_execute_rows,
-            MagicMock(data=[{"id": "metadata1"}]),
-        ]  # Added mock for document_metadata
 
         delete_document_by_file_id(file_id)
 
-        # Assert calls for documents table
-        mock_supabase_client.table.assert_any_call("documents")
-        mock_table.delete.assert_any_call()
-        mock_delete.eq.assert_any_call("metadata->>file_id", file_id)
-
-        # Assert calls for document_rows table
-        mock_supabase_client.table.assert_any_call("document_rows")
-        mock_table.delete.assert_any_call()
-        mock_delete.eq.assert_any_call("dataset_id", file_id)
-
-        # Assert calls for document_metadata table
-        mock_supabase_client.table.assert_any_call("document_metadata")
-        mock_table.delete.assert_any_call()
-        mock_delete.eq.assert_any_call("id", file_id)
+        # Assert calls for documents table only (cascades to chunks)
+        mock_supabase_client.table.assert_called_once_with("documents")
+        mock_table.delete.assert_called_once()
+        mock_delete.eq.assert_called_once_with("metadata->>file_id", file_id)
 
     def test_insert_document_chunks(self, mock_supabase_client):
         chunks = ["chunk1", "chunk2"]
@@ -83,122 +64,71 @@ class TestDbHandler:
         mime_type = "text/plain"
         file_content = b"some content"
 
+        # Mock the table calls
         mock_table = MagicMock()
         mock_supabase_client.table.return_value = mock_table
         mock_insert = MagicMock()
         mock_table.insert.return_value = mock_insert
         mock_execute = MagicMock()
+        mock_execute.data = [{"id": "doc-uuid-123"}]  # Document ID returned
         mock_insert.execute.return_value = mock_execute
 
         insert_document_chunks(
             chunks, embeddings, file_id, file_url, file_title, mime_type, file_content
         )
 
-        expected_calls = [
-            call(
-                {
-                    "content": "chunk1",
-                    "metadata": {
-                        "file_id": file_id,
-                        "file_url": file_url,
-                        "file_title": file_title,
-                        "mime_type": mime_type,
-                        "chunk_index": 0,
-                        "file_contents": base64.b64encode(file_content).decode("utf-8"),
-                    },
-                    "embedding": [0.1, 0.2],
-                }
-            ),
-            call(
-                {
-                    "content": "chunk2",
-                    "metadata": {
-                        "file_id": file_id,
-                        "file_url": file_url,
-                        "file_title": file_title,
-                        "mime_type": mime_type,
-                        "chunk_index": 1,
-                        "file_contents": base64.b64encode(file_content).decode("utf-8"),
-                    },
-                    "embedding": [0.3, 0.4],
-                }
-            ),
-        ]
-        mock_table.insert.assert_has_calls(expected_calls, any_order=True)
-        assert mock_insert.execute.call_count == len(chunks)
+        # Verify documents table insert was called (first call)
+        mock_supabase_client.table.assert_any_call("documents")
+
+        # Verify chunks table insert was called (second call)
+        mock_supabase_client.table.assert_any_call("chunks")
+
+        # Verify insert was called twice (once for documents, once for chunks)
+        assert mock_table.insert.call_count == 2
 
     def test_insert_or_update_document_metadata_insert(self, mock_supabase_client):
+        """Test that insert_or_update_document_metadata is a no-op (metadata is now in documents table)."""
         file_id = "meta1"
         file_title = "Metadata Title"
         file_url = "http://example.com/meta1"
         schema = ["col1", "col2"]
 
-        mock_table = MagicMock()
-        mock_supabase_client.table.return_value = mock_table
-        mock_select = MagicMock()
-        mock_table.select.return_value = mock_select
-        mock_eq = MagicMock()
-        mock_select.eq.return_value = mock_eq
-        mock_execute = MagicMock()
-        mock_eq.execute.return_value = mock_execute
-
-        # Simulate no existing data for insert
-        mock_execute.data = []
-
-        mock_insert = MagicMock()
-        mock_table.insert.return_value = mock_insert
-        mock_insert_execute = MagicMock()
-        mock_insert.execute.return_value = mock_insert_execute
-
+        # Function is now a no-op - should not make any database calls
         insert_or_update_document_metadata(file_id, file_title, file_url, schema)
 
-        expected_data = {
-            "id": file_id,
-            "title": file_title,
-            "url": file_url,
-            "schema": json.dumps(schema),
-        }
-        mock_table.insert.assert_called_once_with(expected_data)
-        mock_insert.execute.assert_called_once()
-        mock_table.update.assert_not_called()
+        # Verify no table operations were called (function is a no-op)
+        mock_supabase_client.table.assert_not_called()
 
     def test_insert_or_update_document_metadata_update(self, mock_supabase_client):
+        """Test that insert_or_update_document_metadata is a no-op for updates too."""
         file_id = "meta1"
         file_title = "Updated Metadata Title"
         file_url = "http://example.com/meta1/updated"
 
-        mock_table = MagicMock()
-        mock_supabase_client.table.return_value = mock_table
-        mock_select = MagicMock()
-        mock_table.select.return_value = mock_select
-        mock_eq = MagicMock()
-        mock_select.eq.return_value = mock_eq
-        mock_execute = MagicMock()
-        mock_eq.execute.return_value = mock_execute
-
-        # Simulate existing data for update
-        mock_execute.data = [{"id": file_id, "title": "Old Title"}]
-
-        mock_update = MagicMock()
-        mock_table.update.return_value = mock_update
-        mock_update_execute = MagicMock()
-        mock_update.execute.return_value = mock_update_execute
-
+        # Function is now a no-op - should not make any database calls
         insert_or_update_document_metadata(file_id, file_title, file_url)
 
-        expected_data = {"id": file_id, "title": file_title, "url": file_url}
-        mock_table.update.assert_called_once_with(expected_data)
-        mock_update.eq.assert_called_once_with("id", file_id)
-        # Since update().eq() returns a mock, check that execute was called on that return value
-        mock_update.eq.return_value.execute.assert_called_once()
-        mock_table.insert.assert_not_called()
+        # Verify no table operations were called (function is a no-op)
+        mock_supabase_client.table.assert_not_called()
 
     def test_insert_document_rows(self, mock_supabase_client):
         file_id = "rows123"
         rows = [{"col1": "val1", "col2": 1}, {"col1": "val2", "col2": 2}]
+        document_uuid = "doc-uuid-456"
 
         mock_table = MagicMock()
         mock_supabase_client.table.return_value = mock_table
+
+        # Mock select to find document UUID
+        mock_select = MagicMock()
+        mock_table.select.return_value = mock_select
+        mock_eq_select = MagicMock()
+        mock_select.eq.return_value = mock_eq_select
+        mock_execute_select = MagicMock()
+        mock_execute_select.data = [{"id": document_uuid}]
+        mock_eq_select.execute.return_value = mock_execute_select
+
+        # Mock delete
         mock_delete = MagicMock()
         mock_table.delete.return_value = mock_delete
         mock_eq_delete = MagicMock()
@@ -206,6 +136,7 @@ class TestDbHandler:
         mock_execute_delete = MagicMock()
         mock_eq_delete.execute.return_value = mock_execute_delete
 
+        # Mock insert
         mock_insert = MagicMock()
         mock_table.insert.return_value = mock_insert
         mock_insert_execute = MagicMock()
@@ -213,14 +144,13 @@ class TestDbHandler:
 
         insert_document_rows(file_id, rows)
 
-        # Verify existing rows are deleted
-        mock_table.delete.assert_called_once()
-        mock_delete.eq.assert_called_once_with("dataset_id", file_id)
+        # Verify document lookup was done
+        mock_supabase_client.table.assert_any_call("documents")
+        mock_select.eq.assert_called_once_with("metadata->>file_id", file_id)
 
-        # Verify new rows are inserted
-        expected_calls = [
-            call({"dataset_id": file_id, "row_data": {"col1": "val1", "col2": 1}}),
-            call({"dataset_id": file_id, "row_data": {"col1": "val2", "col2": 2}}),
-        ]
-        mock_table.insert.assert_has_calls(expected_calls, any_order=True)
-        assert mock_insert.execute.call_count == len(rows)
+        # Verify existing rows are deleted using document UUID (not file_id)
+        mock_supabase_client.table.assert_any_call("document_rows")
+        mock_delete.eq.assert_called_once_with("dataset_id", document_uuid)
+
+        # Verify new rows are inserted with row_index
+        mock_table.insert.assert_called_once()  # Batch insert call

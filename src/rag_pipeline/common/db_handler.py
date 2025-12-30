@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Any
 
 import structlog
-
 from supabase import create_client
 from supabase.client import Client
 

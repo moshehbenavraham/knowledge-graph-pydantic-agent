@@ -130,10 +130,20 @@ class TestRender2FASetupRequired:
     @patch("src.auth.enforce_2fa.get_user_by_username")
     def test_render_setup_qr_code(self, mock_get_user, mock_get_totp, mock_get_backup, mock_st):
         """Test rendering 2FA setup with QR code."""
+        import base64
+
         from src.auth.enforce_2fa import render_2fa_setup_required
 
-        # Mock session state
-        mock_st.session_state = {"username": "testuser"}
+        # Mock session state as dict-like object
+        mock_session_dict = {"username": "testuser"}
+        mock_session = MagicMock()
+        mock_session.get.side_effect = lambda key, default=None: mock_session_dict.get(key, default)
+        mock_session.__getitem__.side_effect = lambda key: mock_session_dict[key]
+        mock_session.__contains__.side_effect = lambda key: key in mock_session_dict
+        mock_session.__setitem__.side_effect = lambda key, value: mock_session_dict.__setitem__(
+            key, value
+        )
+        mock_st.session_state = mock_session
 
         # Mock user
         mock_get_user.return_value = {
@@ -141,10 +151,11 @@ class TestRender2FASetupRequired:
             "username": "testuser",
         }
 
-        # Mock TOTP manager
+        # Mock TOTP manager - setup_2fa returns dict with secret and qr_code
         mock_totp = MagicMock()
-        mock_totp.generate_and_store_secret.return_value = "SECRET123"
-        mock_totp.generate_qr_code.return_value = b"qr_code_image"
+        # qr_code is base64-encoded PNG
+        qr_code_base64 = base64.b64encode(b"qr_code_image").decode()
+        mock_totp.setup_2fa.return_value = {"secret": "SECRET123", "qr_code": qr_code_base64}
         mock_get_totp.return_value = mock_totp
 
         # Mock backup code manager
@@ -156,9 +167,8 @@ class TestRender2FASetupRequired:
         # Verify warning shown
         mock_st.warning.assert_called_once()
 
-        # Verify QR code generated
-        mock_totp.generate_and_store_secret.assert_called_once_with("user-123")
-        mock_totp.generate_qr_code.assert_called_once_with("SECRET123", "testuser")
+        # Verify setup_2fa called
+        mock_totp.setup_2fa.assert_called_once_with("user-123", "testuser")
 
         # Verify QR code displayed
         mock_st.image.assert_called()
@@ -308,6 +318,8 @@ class TestIntegration:
     @patch("src.auth.enforce_2fa.get_user_by_username")
     def test_full_setup_flow(self, mock_get_user, mock_get_totp, mock_get_backup, mock_st):
         """Test complete 2FA setup flow."""
+        import base64
+
         from src.auth.enforce_2fa import check_2fa_requirement, render_2fa_setup_required
 
         # Step 1: Check requirement
@@ -325,10 +337,20 @@ class TestIntegration:
         assert requires is True
         assert enabled is False
 
-        # Step 2: Render setup UI
-        mock_st.session_state = {"username": "testuser"}
-        mock_totp.generate_and_store_secret.return_value = "SECRET123"
-        mock_totp.generate_qr_code.return_value = b"qr_code"
+        # Step 2: Render setup UI with proper session mock
+        mock_session_dict = {"username": "testuser"}
+        mock_session = MagicMock()
+        mock_session.get.side_effect = lambda key, default=None: mock_session_dict.get(key, default)
+        mock_session.__getitem__.side_effect = lambda key: mock_session_dict[key]
+        mock_session.__contains__.side_effect = lambda key: key in mock_session_dict
+        mock_session.__setitem__.side_effect = lambda key, value: mock_session_dict.__setitem__(
+            key, value
+        )
+        mock_st.session_state = mock_session
+
+        # Mock setup_2fa return
+        qr_code_base64 = base64.b64encode(b"qr_code").decode()
+        mock_totp.setup_2fa.return_value = {"secret": "SECRET123", "qr_code": qr_code_base64}
 
         mock_backup = MagicMock()
         mock_get_backup.return_value = mock_backup
@@ -336,7 +358,7 @@ class TestIntegration:
         render_2fa_setup_required()
 
         # Verify setup initiated
-        mock_totp.generate_and_store_secret.assert_called()
+        mock_totp.setup_2fa.assert_called()
 
 
 class TestLogging:
@@ -419,6 +441,7 @@ class TestRender2FASetupVerification:
         mock_session.__getitem__.side_effect = lambda key: mock_session_dict[key]
         mock_session.__contains__.side_effect = lambda key: key in mock_session_dict
         mock_session.pop = MagicMock()
+        mock_session.__setitem__ = MagicMock()
         mock_st.session_state = mock_session
 
         mock_get_user.return_value = {
@@ -427,12 +450,13 @@ class TestRender2FASetupVerification:
         }
 
         mock_totp = MagicMock()
-        mock_totp.verify_totp.return_value = True
-        mock_totp.enable_2fa.return_value = True
+        # verify_and_enable_2fa combines verify and enable
+        mock_totp.verify_and_enable_2fa.return_value = True
         mock_get_totp.return_value = mock_totp
 
         mock_backup = MagicMock()
-        mock_backup.generate_backup_codes.return_value = ["CODE1", "CODE2", "CODE3"]
+        # create_backup_codes is the actual method name
+        mock_backup.create_backup_codes.return_value = ["CODE1", "CODE2", "CODE3"]
         mock_get_backup.return_value = mock_backup
 
         # Mock text_input to return valid code
@@ -444,10 +468,9 @@ class TestRender2FASetupVerification:
 
         render_2fa_setup_required()
 
-        # Verify 2FA was enabled
-        mock_totp.verify_totp.assert_called_once()
-        mock_totp.enable_2fa.assert_called_once()
-        mock_backup.generate_backup_codes.assert_called_once()
+        # Verify 2FA was enabled using the combined method
+        mock_totp.verify_and_enable_2fa.assert_called_once()
+        mock_backup.create_backup_codes.assert_called_once()
 
     @patch("src.auth.enforce_2fa.st")
     @patch("src.auth.enforce_2fa.get_totp_manager")
@@ -613,12 +636,14 @@ class TestRender2FAVerificationFlow:
         mock_session_dict = {"username": "testuser"}
         mock_session = MagicMock()
         mock_session.get.side_effect = lambda key, default=None: mock_session_dict.get(key, default)
+        mock_session.__setitem__ = MagicMock()
         mock_st.session_state = mock_session
 
         mock_get_user.return_value = {"id": "user-123", "username": "testuser"}
 
         mock_totp = MagicMock()
-        mock_totp.verify_totp.return_value = True
+        # The actual method is verify_login_code
+        mock_totp.verify_login_code.return_value = True
         mock_get_totp.return_value = mock_totp
 
         mock_backup = MagicMock()
@@ -631,7 +656,7 @@ class TestRender2FAVerificationFlow:
         result = render_2fa_verification()
 
         assert result is True
-        mock_totp.verify_totp.assert_called_once()
+        mock_totp.verify_login_code.assert_called_once()
 
     @patch("src.auth.enforce_2fa.st")
     @patch("src.auth.enforce_2fa.get_totp_manager")
@@ -643,11 +668,15 @@ class TestRender2FAVerificationFlow:
         """Test invalid TOTP verification."""
         from src.auth.enforce_2fa import render_2fa_verification
 
-        mock_st.session_state = {"username": "testuser"}
+        mock_session_dict = {"username": "testuser"}
+        mock_session = MagicMock()
+        mock_session.get.side_effect = lambda key, default=None: mock_session_dict.get(key, default)
+        mock_st.session_state = mock_session
+
         mock_get_user.return_value = {"id": "user-123", "username": "testuser"}
 
         mock_totp = MagicMock()
-        mock_totp.verify_totp.return_value = False
+        mock_totp.verify_login_code.return_value = False
         mock_get_totp.return_value = mock_totp
 
         mock_backup = MagicMock()
@@ -674,6 +703,7 @@ class TestRender2FAVerificationFlow:
         mock_session_dict = {"username": "testuser"}
         mock_session = MagicMock()
         mock_session.get.side_effect = lambda key, default=None: mock_session_dict.get(key, default)
+        mock_session.__setitem__ = MagicMock()
         mock_st.session_state = mock_session
 
         mock_get_user.return_value = {"id": "user-123", "username": "testuser"}
@@ -682,17 +712,19 @@ class TestRender2FAVerificationFlow:
         mock_get_totp.return_value = mock_totp
 
         mock_backup = MagicMock()
-        mock_backup.verify_backup_code.return_value = True
+        # The actual method is verify_and_use_backup_code
+        mock_backup.verify_and_use_backup_code.return_value = True
         mock_get_backup.return_value = mock_backup
 
-        mock_st.text_input.return_value = "ABCD-EFGH"
+        # Input should be 8 characters for backup code
+        mock_st.text_input.return_value = "ABCDEFGH"
         mock_st.button.side_effect = [True]
         mock_st.columns.return_value = [MagicMock(), MagicMock()]
 
         result = render_2fa_verification()
 
         assert result is True
-        mock_backup.verify_backup_code.assert_called_once()
+        mock_backup.verify_and_use_backup_code.assert_called_once()
 
     @patch("src.auth.enforce_2fa.st")
     @patch("src.auth.enforce_2fa.get_backup_code_manager")
@@ -704,17 +736,23 @@ class TestRender2FAVerificationFlow:
         """Test invalid backup code verification."""
         from src.auth.enforce_2fa import render_2fa_verification
 
-        mock_st.session_state = {"username": "testuser"}
+        mock_session_dict = {"username": "testuser"}
+        mock_session = MagicMock()
+        mock_session.get.side_effect = lambda key, default=None: mock_session_dict.get(key, default)
+        mock_st.session_state = mock_session
+
         mock_get_user.return_value = {"id": "user-123", "username": "testuser"}
 
         mock_totp = MagicMock()
         mock_get_totp.return_value = mock_totp
 
         mock_backup = MagicMock()
-        mock_backup.verify_backup_code.return_value = False
+        # The actual method is verify_and_use_backup_code
+        mock_backup.verify_and_use_backup_code.return_value = False
         mock_get_backup.return_value = mock_backup
 
-        mock_st.text_input.return_value = "XXXX-YYYY"
+        # Input should be 8 characters for backup code (without dash)
+        mock_st.text_input.return_value = "XXXXYYYY"
         mock_st.button.side_effect = [True]
         mock_st.columns.return_value = [MagicMock(), MagicMock()]
 
@@ -775,18 +813,27 @@ class TestRender2FAVerificationFlow:
         assert result is False
 
     @patch("src.auth.enforce_2fa.st")
+    @patch("src.auth.enforce_2fa.get_backup_code_manager")
     @patch("src.auth.enforce_2fa.get_totp_manager")
     @patch("src.auth.enforce_2fa.get_user_by_username")
-    def test_verification_exception(self, mock_get_user, mock_get_totp, mock_st):
+    def test_verification_exception(self, mock_get_user, mock_get_totp, mock_get_backup, mock_st):
         """Test exception during verification."""
         from src.auth.enforce_2fa import render_2fa_verification
 
-        mock_st.session_state = {"username": "testuser"}
+        mock_session_dict = {"username": "testuser"}
+        mock_session = MagicMock()
+        mock_session.get.side_effect = lambda key, default=None: mock_session_dict.get(key, default)
+        mock_st.session_state = mock_session
+
         mock_get_user.return_value = {"id": "user-123", "username": "testuser"}
 
         mock_totp = MagicMock()
-        mock_totp.verify_totp.side_effect = Exception("Verification error")
+        # The actual method is verify_login_code
+        mock_totp.verify_login_code.side_effect = Exception("Verification error")
         mock_get_totp.return_value = mock_totp
+
+        mock_backup = MagicMock()
+        mock_get_backup.return_value = mock_backup
 
         mock_st.text_input.return_value = "123456"
         mock_st.button.side_effect = [True]

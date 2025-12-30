@@ -21,6 +21,10 @@ from src.agentic_rag.ingestion.chunker import (
 )
 from src.agentic_rag.ingestion.embedder import EmbeddingGenerator, get_embedding_config
 from src.agentic_rag.ingestion.knowledge_extractor import KnowledgeExtractor
+from src.agentic_rag.models.document_reference import (
+    DocumentReference,
+    extract_document_metadata,
+)
 from src.agentic_rag.storage.connection_manager import ConnectionManager
 from src.agentic_rag.storage.graphiti_client import GraphitiClient
 from src.agentic_rag.storage.neo4j_store import Neo4jStore
@@ -147,7 +151,7 @@ class DocumentIngestionPipeline:
 
             # CRITICAL FIX: Initialize the ConnectionManager!
             await self.connection_manager.initialize()
-            logger.info("✅ ConnectionManager initialized successfully")
+            logger.info("ConnectionManager initialized successfully")
 
             self.pg_store = PostgresStore(self.connection_manager)
 
@@ -155,7 +159,7 @@ class DocumentIngestionPipeline:
         if not self.use_rest_api and self.config.performance.enable_graph:
             self.neo4j_store = Neo4jStore(self.connection_manager)
             self.graphiti_client = GraphitiClient(self.neo4j_store)
-            logger.info("✅ Neo4j and Graphiti initialized")
+            logger.info("Neo4j and Graphiti initialized")
         else:
             if self.use_rest_api:
                 logger.info("Skipping Neo4j initialization (REST API mode)")
@@ -165,7 +169,7 @@ class DocumentIngestionPipeline:
             self.graphiti_client = None
 
         self._initialized = True
-        logger.info("✅ Ingestion pipeline fully initialized")
+        logger.info("Ingestion pipeline fully initialized")
 
     async def close(self) -> None:
         """Close all connections gracefully."""
@@ -243,7 +247,14 @@ class DocumentIngestionPipeline:
             # Step 5: Store knowledge in Neo4j (if enabled and available)
             if self.config.performance.enable_graph and self.neo4j_store is not None:
                 logger.debug("Updating knowledge graph...")
-                await self._update_knowledge_graph(extraction_results, doc_id, chunk_ids)
+                await self._update_knowledge_graph(
+                    extraction_results,
+                    doc_id,
+                    chunk_ids,
+                    source=source,
+                    title=title,
+                    metadata=metadata,
+                )
             elif self.use_rest_api:
                 logger.debug("Skipping knowledge graph update (REST API mode)")
 
@@ -442,7 +453,13 @@ class DocumentIngestionPipeline:
         return extraction_results
 
     async def _update_knowledge_graph(
-        self, extraction_results: list[dict[str, Any]], document_id: UUID, chunk_ids: list[UUID]
+        self,
+        extraction_results: list[dict[str, Any]],
+        document_id: UUID,
+        chunk_ids: list[UUID],
+        source: str | None = None,
+        title: str | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         """
         Update Neo4j knowledge graph with extracted knowledge.
@@ -451,7 +468,20 @@ class DocumentIngestionPipeline:
             extraction_results: Extraction results for each chunk
             document_id: Document ID
             chunk_ids: Chunk IDs
+            source: Document source path/filename for document_refs extraction
+            title: Document title for document_refs extraction
+            metadata: Additional metadata for document_refs extraction
         """
+        # Extract document metadata for entity document_refs population
+        document_ref: DocumentReference | None = None
+        if source:
+            document_ref = extract_document_metadata(source, title, metadata)
+            logger.debug(
+                f"Extracted document metadata: filename={document_ref.filename}, "
+                f"company={document_ref.company}, quarter={document_ref.quarter}, "
+                f"year={document_ref.year}"
+            )
+
         try:
             # Process each chunk's extractions
             for idx, (result, chunk_id) in enumerate(
@@ -471,10 +501,12 @@ class DocumentIngestionPipeline:
                             }
                             for entity in result["entities"]
                         ]
-                        # Add entities in batch (neo4j_store checked in parent scope)
+                        # Add entities in batch with document metadata
                         assert self.neo4j_store is not None
                         await self.neo4j_store.add_entities(
-                            entities=entity_dicts, source_chunk_id=str(chunk_id)
+                            entities=entity_dicts,
+                            source_chunk_id=str(chunk_id),
+                            document_metadata=document_ref,
                         )
                         logger.debug(
                             f"Added {len(entity_dicts)} entities for chunk {idx+1}/{len(chunk_ids)}"

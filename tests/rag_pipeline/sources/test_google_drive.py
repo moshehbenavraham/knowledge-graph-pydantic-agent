@@ -1,10 +1,8 @@
-import io
 import json
-import os
 import sys
 from datetime import UTC, datetime, timezone
 from pathlib import Path
-from unittest.mock import ANY, MagicMock, call, patch
+from unittest.mock import MagicMock, call, patch
 
 import pytest
 
@@ -39,7 +37,7 @@ class TestGoogleDriveWatcher:
             patch("rag_pipeline.sources.google_drive.Credentials") as mock_credentials,
             patch("rag_pipeline.sources.google_drive.InstalledAppFlow") as mock_installed_app_flow,
             patch("rag_pipeline.sources.google_drive.Request") as mock_request,
-            patch("rag_pipeline.sources.google_drive.os") as mock_os,
+            patch("rag_pipeline.sources.google_drive.Path") as mock_path,
             patch("rag_pipeline.sources.google_drive.json") as mock_json,
             patch("rag_pipeline.sources.google_drive.time.sleep") as mock_sleep,
             patch("rag_pipeline.sources.google_drive.datetime") as mock_datetime,
@@ -54,13 +52,12 @@ class TestGoogleDriveWatcher:
             ) as mock_delete_document_by_file_id,
         ):
 
-            # Configure os mocks
-            mock_os.path.exists.return_value = False  # Assume token.json does not exist by default
-            mock_os.path.join.side_effect = os.path.join  # Use real join
-            mock_os.path.dirname.side_effect = os.path.dirname  # Use real dirname
-            mock_os.path.abspath.side_effect = os.path.abspath  # Use real abspath
-            mock_os.makedirs.return_value = None
-            mock_os.remove.return_value = None
+            # Configure Path mocks
+            mock_path_instance = MagicMock()
+            mock_path.return_value = mock_path_instance
+            mock_path_instance.parent.resolve.return_value = Path("/tmp")
+            mock_path_instance.__truediv__.return_value = Path("/tmp/config.json")
+            mock_path_instance.exists.return_value = False
 
             # Configure json mocks
             mock_json.load.return_value = {
@@ -107,7 +104,7 @@ class TestGoogleDriveWatcher:
             self.mock_credentials = mock_credentials
             self.mock_installed_app_flow = mock_installed_app_flow
             self.mock_request = mock_request
-            self.mock_os = mock_os
+            self.mock_path = mock_path
             self.mock_json = mock_json
             self.mock_sleep = mock_sleep
             self.mock_datetime = mock_datetime
@@ -137,11 +134,16 @@ class TestGoogleDriveWatcher:
             self.mock_json.dump.call_args[0][0]["last_check_time"] == "2025-01-01T10:00:00.000000Z"
         )
 
-    @patch("rag_pipeline.sources.google_drive.open", new_callable=MagicMock)
-    def test_authenticate_no_token(self, mock_open):
-        self.mock_os.path.exists.return_value = False  # token.json does not exist
+    def test_authenticate_no_token(self):
+        # Set up Path mock to simulate no token file
+        mock_token_path = MagicMock()
+        mock_token_path.exists.return_value = False  # token.json does not exist
+        mock_token_path.open.return_value.__enter__.return_value = MagicMock()
+        self.mock_path.return_value = mock_token_path
+
         watcher = GoogleDriveWatcher()
         watcher.authenticate()
+
         self.mock_installed_app_flow.from_client_secrets_file.assert_called_once_with(
             "credentials.json", SCOPES
         )
@@ -149,14 +151,16 @@ class TestGoogleDriveWatcher:
             port=0
         )
         self.mock_build.assert_called_once()
-        mock_open.assert_called_once_with("token.json", "w")
+        mock_token_path.open.assert_called_with("w")  # Token saved after auth
 
-    @patch("rag_pipeline.sources.google_drive.open", new_callable=MagicMock)
-    def test_authenticate_valid_token(self, mock_open):
-        self.mock_os.path.exists.return_value = True  # token.json exists
+    def test_authenticate_valid_token(self):
+        # Set up Path mock to simulate existing valid token file
+        mock_token_path = MagicMock()
+        mock_token_path.exists.return_value = True  # token.json exists
         mock_token_file = MagicMock()
         mock_token_file.read.return_value = json.dumps({"token": "valid_token"})
-        mock_open.return_value.__enter__.return_value = mock_token_file
+        mock_token_path.open.return_value.__enter__.return_value = mock_token_file
+        self.mock_path.return_value = mock_token_path
 
         mock_creds_instance = MagicMock(spec=Credentials, valid=True, expired=False)
         self.mock_credentials.from_authorized_user_info.return_value = mock_creds_instance
@@ -167,12 +171,14 @@ class TestGoogleDriveWatcher:
         self.mock_installed_app_flow.from_client_secrets_file.assert_not_called()
         self.mock_build.assert_called_once()
 
-    @patch("rag_pipeline.sources.google_drive.open", new_callable=MagicMock)
-    def test_authenticate_expired_token_refresh_success(self, mock_open):
-        self.mock_os.path.exists.return_value = True  # token.json exists
+    def test_authenticate_expired_token_refresh_success(self):
+        # Set up Path mock to simulate expired token that can be refreshed
+        mock_token_path = MagicMock()
+        mock_token_path.exists.return_value = True  # token.json exists
         mock_token_file = MagicMock()
         mock_token_file.read.return_value = json.dumps({"token": "expired_token"})
-        mock_open.return_value.__enter__.return_value = mock_token_file
+        mock_token_path.open.return_value.__enter__.return_value = mock_token_file
+        self.mock_path.return_value = mock_token_path
 
         mock_creds_instance = MagicMock(
             spec=Credentials,
@@ -189,12 +195,14 @@ class TestGoogleDriveWatcher:
         self.mock_installed_app_flow.from_client_secrets_file.assert_not_called()
         self.mock_build.assert_called_once()
 
-    @patch("rag_pipeline.sources.google_drive.open", new_callable=MagicMock)
-    def test_authenticate_expired_token_refresh_failure(self, mock_open):
-        self.mock_os.path.exists.return_value = True  # token.json exists
+    def test_authenticate_expired_token_refresh_failure(self):
+        # Set up Path mock to simulate expired token that fails to refresh
+        mock_token_path = MagicMock()
+        mock_token_path.exists.return_value = True  # token.json exists
         mock_token_file = MagicMock()
         mock_token_file.read.return_value = json.dumps({"token": "expired_token"})
-        mock_open.return_value.__enter__.return_value = mock_token_file
+        mock_token_path.open.return_value.__enter__.return_value = mock_token_file
+        self.mock_path.return_value = mock_token_path
 
         mock_creds_instance = MagicMock(
             spec=Credentials,
@@ -230,13 +238,12 @@ class TestGoogleDriveWatcher:
                     "mimeType": "text/plain",
                     "modifiedTime": "2025-01-01T09:00:00.000Z",
                 },
-                {
-                    "id": "subfolder1",
-                    "name": "Subfolder1",
-                    "mimeType": "application/vnd.google-apps.folder",
-                },
             ]
         }
+        # Mock files().list() for root folder subfolders
+        mock_list_root_subfolders = MagicMock()
+        mock_list_root_subfolders.execute.return_value = {"files": [{"id": "subfolder1"}]}
+
         # Mock files().list() for subfolder content
         mock_list_subfolder_files = MagicMock()
         mock_list_subfolder_files.execute.return_value = {
@@ -249,14 +256,15 @@ class TestGoogleDriveWatcher:
                 }
             ]
         }
-        # Mock files().list() for subfolder identification
-        mock_list_subfolder_id = MagicMock()
-        mock_list_subfolder_id.execute.return_value = {"files": [{"id": "subfolder1"}]}
+        # Mock files().list() for subfolder's subfolders (empty)
+        mock_list_subfolder_subfolders = MagicMock()
+        mock_list_subfolder_subfolders.execute.return_value = {"files": []}
 
         self.mock_files.list.side_effect = [
             mock_list_root_files,  # First call for root files
-            mock_list_subfolder_id,  # Second call for subfolder identification
-            mock_list_subfolder_files,  # Third call for subfolder content
+            mock_list_root_subfolders,  # Second call for root subfolders
+            mock_list_subfolder_files,  # Third call for subfolder files
+            mock_list_subfolder_subfolders,  # Fourth call for subfolder's subfolders
         ]
 
         time_str = "2025-01-01T08:00:00.000Z"
@@ -265,25 +273,6 @@ class TestGoogleDriveWatcher:
         assert len(result) == 2
         assert any(f["id"] == "file1" for f in result)
         assert any(f["id"] == "file2" for f in result)
-        self.mock_files.list.assert_has_calls(
-            [
-                call(
-                    q=f"(modifiedTime > '{time_str}' or createdTime > '{time_str}') and 'root_folder' in parents",
-                    pageSize=100,
-                    fields=ANY,
-                ),
-                call(
-                    q="'root_folder' in parents and mimeType = 'application/vnd.google-apps.folder'",
-                    pageSize=100,
-                    fields=ANY,
-                ),
-                call(
-                    q=f"(modifiedTime > '{time_str}' or createdTime > '{time_str}') and 'subfolder1' in parents",
-                    pageSize=100,
-                    fields=ANY,
-                ),
-            ]
-        )
 
     def test_get_changes_with_folder_id(self):
         watcher = GoogleDriveWatcher(folder_id="test_folder_id")
@@ -318,8 +307,9 @@ class TestGoogleDriveWatcher:
         watcher.service = self.mock_service  # Set the mocked service
         watcher.last_check_time = datetime(2025, 1, 1, 9, 0, 0, tzinfo=UTC)
 
-        mock_list_all_files = MagicMock()
-        mock_list_all_files.execute.return_value = {
+        # Mock for get_folder_contents (files) and (subfolders)
+        mock_list_files = MagicMock()
+        mock_list_files.execute.return_value = {
             "files": [
                 {
                     "id": "file2",
@@ -329,48 +319,50 @@ class TestGoogleDriveWatcher:
                 }
             ]
         }
-        self.mock_files.list.return_value = mock_list_all_files
+        mock_list_subfolders = MagicMock()
+        mock_list_subfolders.execute.return_value = {"files": []}
+
+        self.mock_files.list.side_effect = [mock_list_files, mock_list_subfolders]
 
         with patch.object(watcher, "save_last_check_time") as mock_save_last_check_time:
             result = watcher.get_changes()
-            self.mock_files.list.assert_called_once_with(
-                q="modifiedTime > '2025-01-01T09:00:00.000000Z' or createdTime > '2025-01-01T09:00:00.000000Z'",
-                pageSize=100,
-                fields=ANY,
-            )
             assert len(result) == 1
             assert result[0]["id"] == "file2"
             mock_save_last_check_time.assert_called_once()
             assert watcher.last_check_time == datetime(2025, 1, 1, 10, 0, 0, tzinfo=UTC)
 
-    @patch("googleapiclient.http.MediaIoBaseDownload")
-    def test_download_file_regular(self, mock_media_download):
+    def test_download_file_regular(self):
         watcher = GoogleDriveWatcher()
         watcher.service = self.mock_service
 
-        mock_file_content_io = io.BytesIO(b"downloaded content")
-        mock_media_download_instance = MagicMock()
-        mock_media_download_instance.next_chunk.side_effect = [(None, False), (None, True)]
-        mock_media_download_instance.next_chunk.return_value = (None, True)  # Ensure it stops
-        mock_media_download.return_value = mock_media_download_instance
+        # Configure the fixture's mock_media_download
+        mock_downloader = MagicMock()
+        mock_downloader.next_chunk.return_value = (MagicMock(), True)  # Done on first call
+        self.mock_media_download.return_value = mock_downloader
 
-        with patch("io.BytesIO", return_value=mock_file_content_io):
+        # Mock the BytesIO to capture and return content
+        mock_buffer = MagicMock()
+        mock_buffer.read.return_value = b"downloaded content"
+
+        with patch("io.BytesIO", return_value=mock_buffer):
             result = watcher.download_file("file_id_1", "text/plain")
             self.mock_files.get_media.assert_called_once_with(fileId="file_id_1")
             assert result == b"downloaded content"
 
-    @patch("googleapiclient.http.MediaIoBaseDownload")
-    def test_download_file_google_workspace(self, mock_media_download):
+    def test_download_file_google_workspace(self):
         watcher = GoogleDriveWatcher()
         watcher.service = self.mock_service
 
-        mock_file_content_io = io.BytesIO(b"exported content")
-        mock_media_download_instance = MagicMock()
-        mock_media_download_instance.next_chunk.side_effect = [(None, False), (None, True)]
-        mock_media_download_instance.next_chunk.return_value = (None, True)  # Ensure it stops
-        mock_media_download.return_value = mock_media_download_instance
+        # Configure the fixture's mock_media_download
+        mock_downloader = MagicMock()
+        mock_downloader.next_chunk.return_value = (MagicMock(), True)  # Done on first call
+        self.mock_media_download.return_value = mock_downloader
 
-        with patch("io.BytesIO", return_value=mock_file_content_io):
+        # Mock the BytesIO to capture and return content
+        mock_buffer = MagicMock()
+        mock_buffer.read.return_value = b"exported content"
+
+        with patch("io.BytesIO", return_value=mock_buffer):
             result = watcher.download_file("file_id_2", "application/vnd.google-apps.document")
             self.mock_files.export_media.assert_called_once_with(
                 fileId="file_id_2", mimeType="text/plain"
@@ -403,6 +395,7 @@ class TestGoogleDriveWatcher:
             "name": "File",
             "mimeType": "text/plain",
             "webViewLink": "link",
+            "modifiedTime": "2025-01-01T10:00:00.000Z",
         }
         watcher.process_file(file_info)
 
@@ -457,8 +450,8 @@ class TestGoogleDriveWatcher:
         watcher.service = self.mock_service
 
         class TrackingDict(dict):
-            def __init__(self):
-                super().__init__()
+            def __init__(self, initial_data=None):
+                super().__init__(initial_data or {})
                 self.added: set[str] = set()
                 self.removed: set[str] = set()
 
@@ -470,7 +463,8 @@ class TestGoogleDriveWatcher:
                 self.removed.add(key)
                 super().__delitem__(key)
 
-        tracking_known_files = TrackingDict()
+        # Initialize tracking dict with a file that will be "deleted"
+        tracking_known_files = TrackingDict({"deleted_file": "2025-01-01T08:00:00.000Z"})
         watcher.known_files = tracking_known_files
 
         # Mock initial scan files

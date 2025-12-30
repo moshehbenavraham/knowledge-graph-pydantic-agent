@@ -80,6 +80,29 @@ def sample_principle_compliance(sample_violation_group):
 
 
 @pytest.fixture
+def all_principle_summaries():
+    """Create all 6 principle summaries for schema validation."""
+    principles = [
+        ("I", "Unified Agent Architecture"),
+        ("II", "Type-Safe Centralized Configuration"),
+        ("III", "Dual-Database Agentic RAG"),
+        ("IV", "Test-Driven Quality Assurance"),
+        ("V", "Production-Ready Observability"),
+        ("VI", "Git Attribution & Contribution Standards"),
+    ]
+    return [
+        PrincipleViolationSummary(
+            principle_id=pid,
+            principle_name=name,
+            compliant=True,
+            violation_count=0,
+            violation_groups=[],
+        )
+        for pid, name in principles
+    ]
+
+
+@pytest.fixture
 def sample_compliance_report(sample_principle_compliance, sample_violation_record):
     """Sample compliance report."""
     return ComplianceReport(
@@ -96,6 +119,59 @@ def sample_compliance_report(sample_principle_compliance, sample_violation_recor
         warning_count=0,
         info_count=0,
         principle_summaries=[sample_principle_compliance],
+        suppressed_violations=[],
+        coverage_percentage=80.5,
+        unpushed_commits_checked=5,
+    )
+
+
+@pytest.fixture
+def valid_compliance_report_for_schema(sample_violation_record, sample_violation_group):
+    """Sample compliance report with all 6 principles for schema validation."""
+    principles = [
+        ("I", "Unified Agent Architecture"),
+        ("II", "Type-Safe Centralized Configuration"),
+        ("III", "Dual-Database Agentic RAG"),
+        ("IV", "Test-Driven Quality Assurance"),
+        ("V", "Production-Ready Observability"),
+        ("VI", "Git Attribution & Contribution Standards"),
+    ]
+    principle_summaries = []
+    for idx, (pid, name) in enumerate(principles):
+        if idx == 0:  # Principle I has a violation
+            principle_summaries.append(
+                PrincipleViolationSummary(
+                    principle_id=pid,
+                    principle_name=name,
+                    compliant=False,
+                    violation_count=1,
+                    violation_groups=[sample_violation_group],
+                )
+            )
+        else:
+            principle_summaries.append(
+                PrincipleViolationSummary(
+                    principle_id=pid,
+                    principle_name=name,
+                    compliant=True,
+                    violation_count=0,
+                    violation_groups=[],
+                )
+            )
+    return ComplianceReport(
+        report_id=str(uuid4()),
+        generated_at=datetime.now(UTC),
+        validator_version="1.0.0",
+        constitution_version="1.0.0",
+        scanned_files=[Path("/home/user/project/src/test.py")],
+        excluded_files=[],
+        scan_duration_ms=1500,
+        violations=[sample_violation_record],
+        passed=False,
+        error_count=1,
+        warning_count=0,
+        info_count=0,
+        principle_summaries=principle_summaries,
         suppressed_violations=[],
         coverage_percentage=80.5,
         unpushed_commits_checked=5,
@@ -266,10 +342,10 @@ def test_generate_detailed_text_report_suppressed_violations():
     suppressed_violation = ViolationRecord(
         rule_id="CONST-I-001",
         principle_id="I",
-        message="Test violation",
+        message="Test violation message that is long enough",
         severity="warning",
         location=ViolationLocation(file_path=Path("/test.py"), line_number=10),
-        remediation="Fix it",
+        remediation="Fix this issue by addressing the root cause",
         confidence=ConfidenceLevel.HIGH,
         suppression_reason="False positive",
     )
@@ -328,12 +404,12 @@ def test_generate_detailed_text_report_passed_status():
 # =====================================================
 
 
-def test_validate_report_schema_valid(sample_compliance_report):
+def test_validate_report_schema_valid(valid_compliance_report_for_schema):
     """Test schema validation with valid report."""
-    report_dict = sample_compliance_report.to_json_dict()
+    report_dict = valid_compliance_report_for_schema.to_json_dict()
     is_valid, errors = validate_report_schema(report_dict)
 
-    assert is_valid is True
+    assert is_valid is True, f"Schema validation failed: {errors}"
     assert len(errors) == 0
 
 
@@ -487,11 +563,11 @@ def test_report_generator_generate_text_summary(report_generator, sample_complia
     assert isinstance(text_output, str)
 
 
-def test_report_generator_validate_schema(report_generator, sample_compliance_report):
+def test_report_generator_validate_schema(report_generator, valid_compliance_report_for_schema):
     """Test ReportGenerator.validate_schema method."""
-    is_valid, errors = report_generator.validate_schema(sample_compliance_report)
+    is_valid, errors = report_generator.validate_schema(valid_compliance_report_for_schema)
 
-    assert is_valid is True
+    assert is_valid is True, f"Schema validation failed: {errors}"
     assert len(errors) == 0
 
 
@@ -515,7 +591,7 @@ def test_compliance_reporter_group_violations(compliance_reporter, sample_violat
     groups = compliance_reporter.group_violations(violations)
 
     assert len(groups) == 1
-    assert groups[0].rule_id == "I-001"
+    assert groups[0].rule_id == "CONST-I-001"
     assert groups[0].count == 1
 
 
@@ -527,37 +603,37 @@ def test_compliance_reporter_group_multiple_violations(compliance_reporter):
         ViolationRecord(
             rule_id="CONST-I-001",
             principle_id="I",
-            message="Violation 1",
+            message="Violation type 1 detected in code",
             severity="error",
             location=ViolationLocation(
                 file_path=Path("/test1.py"),
                 line_number=10,
             ),
-            remediation="Fix 1",
+            remediation="Fix the issue by applying the proper pattern",
             confidence=ConfidenceLevel.HIGH,
         ),
         ViolationRecord(
             rule_id="CONST-I-001",
             principle_id="I",
-            message="Violation 1",
+            message="Violation type 1 detected in code",
             severity="error",
             location=ViolationLocation(
                 file_path=Path("/test2.py"),
                 line_number=20,
             ),
-            remediation="Fix 1",
+            remediation="Fix the issue by applying the proper pattern",
             confidence=ConfidenceLevel.HIGH,
         ),
         ViolationRecord(
             rule_id="CONST-II-001",
             principle_id="II",
-            message="Violation 2",
+            message="Violation type 2 detected in code",
             severity="warning",
             location=ViolationLocation(
                 file_path=Path("/test3.py"),
                 line_number=30,
             ),
-            remediation="Fix 2",
+            remediation="Fix by using centralized configuration",
             confidence=ConfidenceLevel.HIGH,
         ),
     ]
@@ -577,25 +653,25 @@ def test_compliance_reporter_group_violations_deduplicate_locations(compliance_r
         ViolationRecord(
             rule_id="CONST-I-001",
             principle_id="I",
-            message="Violation",
+            message="Violation detected in code file",
             severity="error",
             location=ViolationLocation(
                 file_path=Path("/test.py"),
                 line_number=10,
             ),
-            remediation="Fix",
+            remediation="Fix this by updating the code structure",
             confidence=ConfidenceLevel.HIGH,
         ),
         ViolationRecord(
             rule_id="CONST-I-001",
             principle_id="I",
-            message="Violation",
+            message="Violation detected in code file",
             severity="error",
             location=ViolationLocation(
                 file_path=Path("/test.py"),
                 line_number=10,
             ),
-            remediation="Fix",
+            remediation="Fix this by updating the code structure",
             confidence=ConfidenceLevel.HIGH,
         ),
     ]
@@ -646,25 +722,25 @@ def test_compliance_reporter_create_principle_summaries(compliance_reporter):
         ViolationRecord(
             rule_id="CONST-I-001",
             principle_id="I",
-            message="Violation I",
+            message="Violation for principle I detected",
             severity="error",
             location=ViolationLocation(
                 file_path=Path("/test.py"),
                 line_number=10,
             ),
-            remediation="Fix I",
+            remediation="Fix by consolidating agent implementations",
             confidence=ConfidenceLevel.HIGH,
         ),
         ViolationRecord(
             rule_id="CONST-II-001",
             principle_id="II",
-            message="Violation II",
+            message="Violation for principle II detected",
             severity="warning",
             location=ViolationLocation(
                 file_path=Path("/test.py"),
                 line_number=20,
             ),
-            remediation="Fix II",
+            remediation="Fix by using centralized configuration",
             confidence=ConfidenceLevel.HIGH,
         ),
     ]

@@ -1,0 +1,38 @@
+{
+  "version": "2.0",
+  "project_name": "Agentic GraphRAG System",
+  "description": "Unified AI assistant with Agentic RAG (Retrieval Augmented Generation) capabilities, combining vector search (PostgreSQL/Supabase + pgvector), knowledge graph (Neo4j + Graphiti), and intelligent routing. Built with Pydantic AI.",
+  "current_phase": 1,
+  "current_session": null,
+  "phases": {
+    "0": {
+      "name": "Mature/Late MVP",
+      "status": "not_started",
+      "session_count": 0
+    },
+    "1": {
+      "name": "Knowledge Graph Improvements",
+      "description": "Transform the knowledge graph from a disconnected entity index into a fully queryable temporal knowledge base with document references, temporal metadata, entity deduplication, numeric facts, relationship scoring, and type hierarchy.",
+      "status": "in_progress",
+      "session_count": 6,
+      "sessions": {
+        "01": {"name": "Document Reference Population", "status": "completed"},
+        "02": {"name": "Temporal Metadata Extraction", "status": "not_started"},
+        "03": {"name": "Entity Deduplication", "status": "not_started"},
+        "04": {"name": "Numeric Fact Extraction", "status": "not_started"},
+        "05": {"name": "Relationship Scoring", "status": "not_started"},
+        "06": {"name": "Type Hierarchy and Testing", "status": "not_started"}
+      }
+    }
+  },
+  "completed_sessions": [
+    "phase01-session01-document_reference_population"
+  ],
+  "next_session_history": [
+    {
+      "date": "2025-12-30",
+      "session": "phase01-session01-document_reference_population",
+      "status": "completed"
+    }
+  ]
+}

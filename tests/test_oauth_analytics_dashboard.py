@@ -25,16 +25,22 @@ from src.auth.oauth_analytics_dashboard import (
 
 @pytest.fixture
 def mock_supabase_client():
-    """Mock Supabase client."""
+    """Mock Supabase client with proper method chaining support."""
     mock_client = MagicMock()
 
-    # Mock RPC calls
-    mock_rpc = MagicMock()
-    mock_client.rpc.return_value = mock_rpc
+    # Create a mock that supports method chaining: rpc(name).execute()
+    # Use spec to avoid accessing rpc() during setup
+    mock_execute_result = MagicMock()
+    mock_execute_result.data = []
 
-    mock_execute = MagicMock()
-    mock_rpc.execute.return_value = mock_execute
-    mock_execute.data = []
+    # Set up the chain: rpc(name) returns an object with execute() method
+    def rpc_side_effect(name, params=None):
+        mock_rpc_call = MagicMock()
+        mock_rpc_call.execute.return_value = mock_execute_result
+        return mock_rpc_call
+
+    mock_client.rpc.side_effect = rpc_side_effect
+    mock_client._execute_result = mock_execute_result  # Store for test access
 
     return mock_client
 
@@ -154,14 +160,28 @@ def mock_streamlit():
     """Mock Streamlit components."""
     with patch("src.auth.oauth_analytics_dashboard.st") as mock_st:
         mock_st.session_state = {"username": "admin"}
-        mock_st.columns = MagicMock(return_value=[MagicMock() for _ in range(4)])
+
+        # Make columns return the right number of mocks based on input
+        def columns_side_effect(spec):
+            if isinstance(spec, list):
+                return [MagicMock() for _ in spec]
+            return [MagicMock() for _ in range(spec)]
+
+        mock_st.columns = MagicMock(side_effect=columns_side_effect)
         mock_st.container = MagicMock()
         mock_st.button = MagicMock(return_value=False)
         mock_st.selectbox = MagicMock(return_value=30)
         mock_st.expander = MagicMock()
-        mock_st.spinner = MagicMock()
+
+        # Properly mock spinner context manager
+        mock_spinner = MagicMock()
+        mock_spinner.__enter__ = MagicMock(return_value=None)
+        mock_spinner.__exit__ = MagicMock(return_value=False)
+        mock_st.spinner = MagicMock(return_value=mock_spinner)
+
         mock_st.dataframe = MagicMock()
         mock_st.plotly_chart = MagicMock()
+        mock_st.rerun = MagicMock()
         yield mock_st
 
 
@@ -173,7 +193,7 @@ def mock_streamlit():
 @pytest.mark.asyncio
 async def test_refresh_analytics_views_success(mock_supabase_client):
     """Test successful refresh of analytics views."""
-    mock_supabase_client.rpc().execute.return_value.data = True
+    mock_supabase_client._execute_result.data = True
 
     with patch(
         "src.auth.oauth_analytics_dashboard.get_supabase_client",
@@ -186,13 +206,16 @@ async def test_refresh_analytics_views_success(mock_supabase_client):
 
 
 @pytest.mark.asyncio
-async def test_refresh_analytics_views_failure(mock_supabase_client):
+async def test_refresh_analytics_views_failure():
     """Test handling of refresh failure."""
-    mock_supabase_client.rpc().execute.side_effect = Exception("Database error")
+    mock_client = MagicMock()
+    mock_rpc_call = MagicMock()
+    mock_rpc_call.execute.side_effect = Exception("Database error")
+    mock_client.rpc.return_value = mock_rpc_call
 
     with patch(
         "src.auth.oauth_analytics_dashboard.get_supabase_client",
-        return_value=mock_supabase_client,
+        return_value=mock_client,
     ):
         result = await refresh_analytics_views()
 
@@ -207,7 +230,7 @@ async def test_refresh_analytics_views_failure(mock_supabase_client):
 @pytest.mark.asyncio
 async def test_get_provider_summary_success(mock_supabase_client, sample_provider_summary):
     """Test successful retrieval of provider summary."""
-    mock_supabase_client.rpc().execute.return_value.data = sample_provider_summary
+    mock_supabase_client._execute_result.data = sample_provider_summary
 
     with patch(
         "src.auth.oauth_analytics_dashboard.get_supabase_client",
@@ -233,13 +256,16 @@ async def test_get_provider_summary_empty():
 
 
 @pytest.mark.asyncio
-async def test_get_provider_summary_error(mock_supabase_client):
+async def test_get_provider_summary_error():
     """Test error handling in provider summary."""
-    mock_supabase_client.rpc().execute.side_effect = Exception("Database error")
+    mock_client = MagicMock()
+    mock_rpc_call = MagicMock()
+    mock_rpc_call.execute.side_effect = Exception("Database error")
+    mock_client.rpc.return_value = mock_rpc_call
 
     with patch(
         "src.auth.oauth_analytics_dashboard.get_supabase_client",
-        return_value=mock_supabase_client,
+        return_value=mock_client,
     ):
         result = await get_provider_summary()
 
@@ -254,7 +280,7 @@ async def test_get_provider_summary_error(mock_supabase_client):
 @pytest.mark.asyncio
 async def test_get_login_activity_success(mock_supabase_client, sample_login_activity):
     """Test successful retrieval of login activity."""
-    mock_supabase_client.rpc().execute.return_value.data = sample_login_activity
+    mock_supabase_client._execute_result.data = sample_login_activity
 
     with patch(
         "src.auth.oauth_analytics_dashboard.get_supabase_client",
@@ -270,7 +296,7 @@ async def test_get_login_activity_success(mock_supabase_client, sample_login_act
 @pytest.mark.asyncio
 async def test_get_login_activity_custom_days(mock_supabase_client):
     """Test login activity with custom day range."""
-    mock_supabase_client.rpc().execute.return_value.data = []
+    mock_supabase_client._execute_result.data = []
 
     with patch(
         "src.auth.oauth_analytics_dashboard.get_supabase_client",
@@ -282,13 +308,16 @@ async def test_get_login_activity_custom_days(mock_supabase_client):
 
 
 @pytest.mark.asyncio
-async def test_get_login_activity_error(mock_supabase_client):
+async def test_get_login_activity_error():
     """Test error handling in login activity."""
-    mock_supabase_client.rpc().execute.side_effect = Exception("Database error")
+    mock_client = MagicMock()
+    mock_rpc_call = MagicMock()
+    mock_rpc_call.execute.side_effect = Exception("Database error")
+    mock_client.rpc.return_value = mock_rpc_call
 
     with patch(
         "src.auth.oauth_analytics_dashboard.get_supabase_client",
-        return_value=mock_supabase_client,
+        return_value=mock_client,
     ):
         result = await get_login_activity()
 
@@ -303,7 +332,7 @@ async def test_get_login_activity_error(mock_supabase_client):
 @pytest.mark.asyncio
 async def test_get_account_growth_success(mock_supabase_client, sample_account_growth):
     """Test successful retrieval of account growth."""
-    mock_supabase_client.rpc().execute.return_value.data = sample_account_growth
+    mock_supabase_client._execute_result.data = sample_account_growth
 
     with patch(
         "src.auth.oauth_analytics_dashboard.get_supabase_client",
@@ -329,13 +358,16 @@ async def test_get_account_growth_empty():
 
 
 @pytest.mark.asyncio
-async def test_get_account_growth_error(mock_supabase_client):
+async def test_get_account_growth_error():
     """Test error handling in account growth."""
-    mock_supabase_client.rpc().execute.side_effect = Exception("Database error")
+    mock_client = MagicMock()
+    mock_rpc_call = MagicMock()
+    mock_rpc_call.execute.side_effect = Exception("Database error")
+    mock_client.rpc.return_value = mock_rpc_call
 
     with patch(
         "src.auth.oauth_analytics_dashboard.get_supabase_client",
-        return_value=mock_supabase_client,
+        return_value=mock_client,
     ):
         result = await get_account_growth()
 
@@ -350,7 +382,7 @@ async def test_get_account_growth_error(mock_supabase_client):
 @pytest.mark.asyncio
 async def test_get_multi_provider_users_success(mock_supabase_client, sample_multi_provider_users):
     """Test successful retrieval of multi-provider users."""
-    mock_supabase_client.rpc().execute.return_value.data = sample_multi_provider_users
+    mock_supabase_client._execute_result.data = sample_multi_provider_users
 
     with patch(
         "src.auth.oauth_analytics_dashboard.get_supabase_client",
@@ -376,13 +408,16 @@ async def test_get_multi_provider_users_empty():
 
 
 @pytest.mark.asyncio
-async def test_get_multi_provider_users_error(mock_supabase_client):
+async def test_get_multi_provider_users_error():
     """Test error handling in multi-provider users."""
-    mock_supabase_client.rpc().execute.side_effect = Exception("Database error")
+    mock_client = MagicMock()
+    mock_rpc_call = MagicMock()
+    mock_rpc_call.execute.side_effect = Exception("Database error")
+    mock_client.rpc.return_value = mock_rpc_call
 
     with patch(
         "src.auth.oauth_analytics_dashboard.get_supabase_client",
-        return_value=mock_supabase_client,
+        return_value=mock_client,
     ):
         result = await get_multi_provider_users()
 
@@ -397,7 +432,7 @@ async def test_get_multi_provider_users_error(mock_supabase_client):
 @pytest.mark.asyncio
 async def test_get_adoption_rate_success(mock_supabase_client, sample_adoption_rate):
     """Test successful retrieval of adoption rate."""
-    mock_supabase_client.rpc().execute.return_value.data = sample_adoption_rate
+    mock_supabase_client._execute_result.data = sample_adoption_rate
 
     with patch(
         "src.auth.oauth_analytics_dashboard.get_supabase_client",
@@ -423,13 +458,16 @@ async def test_get_adoption_rate_empty():
 
 
 @pytest.mark.asyncio
-async def test_get_adoption_rate_error(mock_supabase_client):
+async def test_get_adoption_rate_error():
     """Test error handling in adoption rate."""
-    mock_supabase_client.rpc().execute.side_effect = Exception("Database error")
+    mock_client = MagicMock()
+    mock_rpc_call = MagicMock()
+    mock_rpc_call.execute.side_effect = Exception("Database error")
+    mock_client.rpc.return_value = mock_rpc_call
 
     with patch(
         "src.auth.oauth_analytics_dashboard.get_supabase_client",
-        return_value=mock_supabase_client,
+        return_value=mock_client,
     ):
         result = await get_adoption_rate()
 
@@ -462,37 +500,46 @@ def test_render_oauth_analytics_dashboard_admin_access(
     mock_streamlit, sample_provider_summary, sample_adoption_rate
 ):
     """Test dashboard rendering with admin access."""
-    with patch("src.auth.oauth_analytics_dashboard.asyncio.run") as mock_run:
-        mock_run.side_effect = [
-            True,  # is_admin
-            sample_provider_summary,  # get_provider_summary
-            sample_adoption_rate,  # get_adoption_rate
-            [],  # get_login_activity
-            [],  # get_account_growth
-            [],  # get_multi_provider_users
-        ]
+    # Mock is_admin as a sync function
+    with patch("src.auth.admin_2fa_management.is_admin", return_value=True):
+        with patch("src.auth.oauth_analytics_dashboard.asyncio.run") as mock_run:
+            mock_run.side_effect = [
+                sample_provider_summary,  # get_provider_summary
+                sample_adoption_rate,  # get_adoption_rate
+                [],  # get_login_activity
+                [],  # get_account_growth
+                [],  # get_multi_provider_users
+            ]
 
-        with patch("src.auth.oauth_analytics_dashboard.pd.DataFrame"):
-            render_oauth_analytics_dashboard()
+            # Mock Plotly components to avoid data validation
+            with patch("src.auth.oauth_analytics_dashboard.go.Figure"):
+                with patch("src.auth.oauth_analytics_dashboard.go.Bar"):
+                    with patch("src.auth.oauth_analytics_dashboard.px.pie"):
+                        render_oauth_analytics_dashboard()
 
-            # Should render dashboard
-            mock_streamlit.markdown.assert_called()
+                        # Should render dashboard
+                        mock_streamlit.markdown.assert_called()
 
 
 def test_render_oauth_analytics_dashboard_refresh_button(mock_streamlit):
     """Test refresh button functionality."""
     mock_streamlit.button = MagicMock(return_value=True)
 
-    with patch("src.auth.oauth_analytics_dashboard.asyncio.run") as mock_run:
-        mock_run.side_effect = [
-            True,  # is_admin
-            True,  # refresh_analytics_views
-        ]
+    # Mock is_admin as a sync function
+    with patch("src.auth.admin_2fa_management.is_admin", return_value=True):
+        with patch("src.auth.oauth_analytics_dashboard.asyncio.run") as mock_run:
+            mock_run.side_effect = [
+                True,  # refresh_analytics_views (button clicked)
+                [],  # get_provider_summary
+                [],  # get_adoption_rate
+                [],  # get_login_activity
+                [],  # get_account_growth
+                [],  # get_multi_provider_users
+            ]
 
-        with patch("src.auth.oauth_analytics_dashboard.st.spinner") as mock_spinner:
-            mock_spinner_context = MagicMock()
-            mock_spinner.return_value.__enter__ = MagicMock(return_value=mock_spinner_context)
-            mock_spinner.return_value.__exit__ = MagicMock(return_value=False)
+            # Need to handle spinner context manager
+            mock_streamlit.spinner.return_value.__enter__ = MagicMock()
+            mock_streamlit.spinner.return_value.__exit__ = MagicMock(return_value=False)
 
             render_oauth_analytics_dashboard()
 
@@ -503,139 +550,140 @@ def test_render_oauth_analytics_dashboard_with_provider_data(
     mock_streamlit, sample_provider_summary
 ):
     """Test dashboard with provider summary data."""
-    with patch("src.auth.oauth_analytics_dashboard.asyncio.run") as mock_run:
-        mock_run.side_effect = [
-            True,  # is_admin
-            sample_provider_summary,  # get_provider_summary
-            [],  # get_adoption_rate
-            [],  # get_login_activity
-            [],  # get_account_growth
-            [],  # get_multi_provider_users
-        ]
+    # Mock is_admin as a sync function
+    with patch("src.auth.admin_2fa_management.is_admin", return_value=True):
+        with patch("src.auth.oauth_analytics_dashboard.asyncio.run") as mock_run:
+            mock_run.side_effect = [
+                sample_provider_summary,  # get_provider_summary
+                [],  # get_adoption_rate
+                [],  # get_login_activity
+                [],  # get_account_growth
+                [],  # get_multi_provider_users
+            ]
 
-        with patch("src.auth.oauth_analytics_dashboard.pd.DataFrame") as mock_df:
-            mock_df_instance = MagicMock()
-            mock_df.return_value = mock_df_instance
+            # Mock Plotly components to avoid data validation
+            with patch("src.auth.oauth_analytics_dashboard.go.Figure"):
+                with patch("src.auth.oauth_analytics_dashboard.go.Bar"):
+                    render_oauth_analytics_dashboard()
 
-            render_oauth_analytics_dashboard()
-
-            # Should display metrics
-            mock_streamlit.metric.assert_called()
+                    # Should display metrics
+                    mock_streamlit.metric.assert_called()
 
 
 def test_render_oauth_analytics_dashboard_with_login_activity(
     mock_streamlit, sample_login_activity
 ):
     """Test dashboard with login activity data."""
-    with patch("src.auth.oauth_analytics_dashboard.asyncio.run") as mock_run:
-        mock_run.side_effect = [
-            True,  # is_admin
-            [],  # get_provider_summary
-            [],  # get_adoption_rate
-            sample_login_activity,  # get_login_activity
-            [],  # get_account_growth
-            [],  # get_multi_provider_users
-        ]
+    import pandas as pd
 
-        with patch("src.auth.oauth_analytics_dashboard.pd.DataFrame") as mock_df:
-            mock_df_instance = MagicMock()
-            mock_df_instance.groupby.return_value.sum.return_value.reset_index.return_value = (
-                mock_df_instance
-            )
-            mock_df.return_value = mock_df_instance
+    # Create real DataFrames for Plotly compatibility
+    df_logins = pd.DataFrame(sample_login_activity)
+    df_logins["login_date"] = pd.to_datetime(df_logins["login_date"])  # noqa: F841
 
-            render_oauth_analytics_dashboard()
+    # Mock is_admin as a sync function
+    with patch("src.auth.admin_2fa_management.is_admin", return_value=True):
+        with patch("src.auth.oauth_analytics_dashboard.asyncio.run") as mock_run:
+            mock_run.side_effect = [
+                [],  # get_provider_summary
+                [],  # get_adoption_rate
+                sample_login_activity,  # get_login_activity
+                [],  # get_account_growth
+                [],  # get_multi_provider_users
+            ]
 
-            # Should display charts
-            mock_streamlit.plotly_chart.assert_called()
+            # Mock Plotly components to avoid data validation
+            with patch("src.auth.oauth_analytics_dashboard.px.line"):
+                with patch("src.auth.oauth_analytics_dashboard.px.bar"):
+                    render_oauth_analytics_dashboard()
+
+                    # Should display charts
+                    mock_streamlit.plotly_chart.assert_called()
 
 
 def test_render_oauth_analytics_dashboard_with_account_growth(
     mock_streamlit, sample_account_growth
 ):
     """Test dashboard with account growth data."""
-    with patch("src.auth.oauth_analytics_dashboard.asyncio.run") as mock_run:
-        mock_run.side_effect = [
-            True,  # is_admin
-            [],  # get_provider_summary
-            [],  # get_adoption_rate
-            [],  # get_login_activity
-            sample_account_growth,  # get_account_growth
-            [],  # get_multi_provider_users
-        ]
+    # Mock is_admin as a sync function
+    with patch("src.auth.admin_2fa_management.is_admin", return_value=True):
+        with patch("src.auth.oauth_analytics_dashboard.asyncio.run") as mock_run:
+            mock_run.side_effect = [
+                [],  # get_provider_summary
+                [],  # get_adoption_rate
+                [],  # get_login_activity
+                sample_account_growth,  # get_account_growth
+                [],  # get_multi_provider_users
+            ]
 
-        with patch("src.auth.oauth_analytics_dashboard.pd.DataFrame") as mock_df:
-            mock_df_instance = MagicMock()
-            mock_df.return_value = mock_df_instance
+            # Mock Plotly components to avoid data validation
+            with patch("src.auth.oauth_analytics_dashboard.px.area"):
+                render_oauth_analytics_dashboard()
 
-            render_oauth_analytics_dashboard()
-
-            # Should display growth charts
-            mock_streamlit.plotly_chart.assert_called()
+                # Should display growth charts
+                mock_streamlit.plotly_chart.assert_called()
 
 
 def test_render_oauth_analytics_dashboard_with_multi_provider(
     mock_streamlit, sample_multi_provider_users
 ):
     """Test dashboard with multi-provider users data."""
-    with patch("src.auth.oauth_analytics_dashboard.asyncio.run") as mock_run:
-        mock_run.side_effect = [
-            True,  # is_admin
-            [],  # get_provider_summary
-            [],  # get_adoption_rate
-            [],  # get_login_activity
-            [],  # get_account_growth
-            sample_multi_provider_users,  # get_multi_provider_users
-        ]
+    # Mock is_admin as a sync function
+    with patch("src.auth.admin_2fa_management.is_admin", return_value=True):
+        with patch("src.auth.oauth_analytics_dashboard.asyncio.run") as mock_run:
+            mock_run.side_effect = [
+                [],  # get_provider_summary
+                [],  # get_adoption_rate
+                [],  # get_login_activity
+                [],  # get_account_growth
+                sample_multi_provider_users,  # get_multi_provider_users
+            ]
 
-        with patch("src.auth.oauth_analytics_dashboard.pd.DataFrame") as mock_df:
-            mock_df_instance = MagicMock()
-            mock_df_instance.__getitem__ = MagicMock(return_value=mock_df_instance)
-            mock_df_instance.value_counts.return_value.reset_index.return_value = mock_df_instance
-            mock_df.return_value = mock_df_instance
+            # Mock Plotly components to avoid data validation
+            with patch("src.auth.oauth_analytics_dashboard.px.bar"):
+                render_oauth_analytics_dashboard()
 
-            render_oauth_analytics_dashboard()
-
-            # Should display multi-provider info
-            mock_streamlit.dataframe.assert_called()
+                # Should display multi-provider info
+                mock_streamlit.dataframe.assert_called()
 
 
 def test_render_oauth_analytics_dashboard_no_data(mock_streamlit):
     """Test dashboard rendering with no data."""
-    with patch("src.auth.oauth_analytics_dashboard.asyncio.run") as mock_run:
-        mock_run.side_effect = [
-            True,  # is_admin
-            [],  # get_provider_summary
-            [],  # get_adoption_rate
-            [],  # get_login_activity
-            [],  # get_account_growth
-            [],  # get_multi_provider_users
-        ]
+    # Mock is_admin as a sync function
+    with patch("src.auth.admin_2fa_management.is_admin", return_value=True):
+        with patch("src.auth.oauth_analytics_dashboard.asyncio.run") as mock_run:
+            mock_run.side_effect = [
+                [],  # get_provider_summary
+                [],  # get_adoption_rate
+                [],  # get_login_activity
+                [],  # get_account_growth
+                [],  # get_multi_provider_users
+            ]
 
-        render_oauth_analytics_dashboard()
+            render_oauth_analytics_dashboard()
 
-        # Should display info messages for no data
-        mock_streamlit.info.assert_called()
+            # Should display info messages for no data
+            mock_streamlit.info.assert_called()
 
 
 def test_render_oauth_analytics_dashboard_time_range_selector(mock_streamlit):
     """Test time range selector functionality."""
     mock_streamlit.selectbox = MagicMock(return_value=7)
 
-    with patch("src.auth.oauth_analytics_dashboard.asyncio.run") as mock_run:
-        mock_run.side_effect = [
-            True,  # is_admin
-            [],  # get_provider_summary
-            [],  # get_adoption_rate
-            [],  # get_login_activity (7 days)
-            [],  # get_account_growth (7 days)
-            [],  # get_multi_provider_users
-        ]
+    # Mock is_admin as a sync function
+    with patch("src.auth.admin_2fa_management.is_admin", return_value=True):
+        with patch("src.auth.oauth_analytics_dashboard.asyncio.run") as mock_run:
+            mock_run.side_effect = [
+                [],  # get_provider_summary
+                [],  # get_adoption_rate
+                [],  # get_login_activity (7 days)
+                [],  # get_account_growth (7 days)
+                [],  # get_multi_provider_users
+            ]
 
-        render_oauth_analytics_dashboard()
+            render_oauth_analytics_dashboard()
 
-        # Should call functions with selected time range
-        mock_streamlit.selectbox.assert_called()
+            # Should call functions with selected time range
+            mock_streamlit.selectbox.assert_called()
 
 
 # =====================================================

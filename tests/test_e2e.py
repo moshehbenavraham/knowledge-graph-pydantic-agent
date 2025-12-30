@@ -2,6 +2,10 @@
 
 These tests verify complete user workflows from UI interaction to final response,
 including Streamlit UI functionality, error handling, and real user scenarios.
+
+IMPORTANT: This module uses lazy initialization for streamlit mocks. The mock is
+only installed when test functions actually run, not at module collection time.
+This prevents contamination of other test modules during pytest collection.
 """
 
 import asyncio
@@ -11,6 +15,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from pydantic_ai.messages import ModelRequest, ModelResponse
 
 # Import tools that are currently imported within functions
 try:
@@ -47,7 +52,84 @@ TEST_ENV_VARS = {
     "ENABLE_IMAGE_ANALYSIS": "true",
 }
 
-with patch.dict(os.environ, TEST_ENV_VARS):
+# Store original streamlit modules for restoration
+_original_streamlit_modules = {}
+_streamlit_modules_to_mock = [
+    "streamlit",
+    "streamlit.components",
+    "streamlit.components.v1",
+    "streamlit.components.v1.components",
+    "streamlit.runtime",
+    "streamlit.runtime.uploaded_file_manager",
+]
+
+# Module-level cache for lazy-loaded imports
+_agent = None
+_display_message_part = None
+_ModelRequest = None
+_ModelResponse = None
+_mock_installed = False
+
+
+def _save_original_streamlit_modules():
+    """Save references to original streamlit modules before mocking."""
+    global _original_streamlit_modules
+    for module_name in _streamlit_modules_to_mock:
+        if module_name in sys.modules:
+            _original_streamlit_modules[module_name] = sys.modules[module_name]
+
+
+def _restore_streamlit_modules():
+    """Restore original streamlit modules after tests complete."""
+    global _original_streamlit_modules, _mock_installed
+
+    if not _mock_installed:
+        return
+
+    # First, restore any original modules we saved
+    for module_name, original in _original_streamlit_modules.items():
+        sys.modules[module_name] = original
+
+    # Remove mock modules that weren't originally present
+    for name in _streamlit_modules_to_mock:
+        if name not in _original_streamlit_modules and name in sys.modules:
+            # Check if it's a mock (not the real streamlit)
+            module = sys.modules[name]
+            if isinstance(module, MagicMock) or (
+                hasattr(module, "__class__") and "MagicMock" in str(type(module))
+            ):
+                del sys.modules[name]
+
+    # Also remove dependent modules so they get fresh imports
+    dependent_modules = [
+        name
+        for name in list(sys.modules.keys())
+        if (
+            name.startswith("src.auth.")
+            or name.startswith("src.ui.")
+            or name in {"src.auth", "src.ui"}
+            or name.startswith("agent.")
+            or name.startswith("ui.")
+        )
+    ]
+    for name in dependent_modules:
+        if name in sys.modules:
+            del sys.modules[name]
+
+    _original_streamlit_modules.clear()
+    _mock_installed = False
+
+
+def _install_streamlit_mock():
+    """Install streamlit mock for E2E testing."""
+    global _agent, _display_message_part, _ModelRequest, _ModelResponse, _mock_installed
+
+    if _mock_installed:
+        return
+
+    # Save original modules before mocking
+    _save_original_streamlit_modules()
+
     # Mock Streamlit before importing UI modules
     streamlit_mock = MagicMock()
     streamlit_mock.session_state = MagicMock()
@@ -67,30 +149,85 @@ with patch.dict(os.environ, TEST_ENV_VARS):
     streamlit_components_mock.v1 = streamlit_components_v1_mock
     streamlit_components_v1_mock.components = streamlit_components_v1_components_mock
 
+    # Mock runtime modules
+    streamlit_runtime_mock = MagicMock()
+    streamlit_uploaded_file_mock = MagicMock()
+    streamlit_runtime_mock.uploaded_file_manager = streamlit_uploaded_file_mock
+
+    streamlit_mock.runtime = streamlit_runtime_mock
+
     sys.modules["streamlit"] = streamlit_mock
     sys.modules["streamlit.components"] = streamlit_components_mock
     sys.modules["streamlit.components.v1"] = streamlit_components_v1_mock
     sys.modules["streamlit.components.v1.components"] = streamlit_components_v1_components_mock
+    sys.modules["streamlit.runtime"] = streamlit_runtime_mock
+    sys.modules["streamlit.runtime.uploaded_file_manager"] = streamlit_uploaded_file_mock
 
     # Add src directory to path to import modules
-    sys.path.append(str(Path(__file__).parent.parent.resolve() / "src"))
+    src_path = str(Path(__file__).parent.parent.resolve() / "src")
+    if src_path not in sys.path:
+        sys.path.append(src_path)
 
     # Import components for E2E testing
     from pydantic_ai.messages import ModelRequest, ModelResponse
 
-    from agent.unified_agent import super_agent as agent
+    from agent.unified_agent import super_agent
     from ui.streamlit_app import display_message_part
+
+    _agent = super_agent
+    _display_message_part = display_message_part
+    _ModelRequest = ModelRequest
+    _ModelResponse = ModelResponse
+    _mock_installed = True
+
+
+def get_agent():
+    """Get the agent instance, installing mock if needed."""
+    if not _mock_installed:
+        _install_streamlit_mock()
+    return _agent
+
+
+def get_display_message_part():
+    """Get the display_message_part function, installing mock if needed."""
+    if not _mock_installed:
+        _install_streamlit_mock()
+    return _display_message_part
+
+
+# Module-scoped fixture that ensures cleanup happens after all tests in this module
+@pytest.fixture(scope="module", autouse=True)
+def setup_and_cleanup_e2e_mocks():
+    """
+    Module-scoped fixture to set up and clean up streamlit mocks.
+
+    This fixture installs the mock when the first test runs and cleans up
+    after all tests in this module complete.
+    """
+    # Set flag to tell conftest.py fixture to skip streamlit restoration
+    os.environ["_PYTEST_E2E_MODULE_ACTIVE"] = "true"
+
+    # Install the mock before tests run
+    _install_streamlit_mock()
+
+    yield
+
+    # Cleanup runs after all tests in this module
+    os.environ.pop("_PYTEST_E2E_MODULE_ACTIVE", None)
+    _restore_streamlit_modules()
 
 
 # Test helper functions to simulate removed/refactored functionality
 async def run_agent(query: str) -> str:
     """Test helper to simulate agent execution."""
+    agent = get_agent()
     result = await agent.run(query)
     return result.output
 
 
 async def run_agent_with_streaming(query: str):
     """Test helper to simulate streaming agent execution."""
+    agent = get_agent()
     async with agent.iter(query) as run:
         async for message in run:
             if hasattr(message, "content"):
@@ -153,7 +290,7 @@ class TestCompleteUserWorkflows:
         user_query = "How do I learn Python programming effectively?"
 
         # Mock agent response
-        with patch.object(agent, "run") as mock_agent_run:
+        with patch.object(get_agent(), "run") as mock_agent_run:
             # Create mock result
             mock_result = MagicMock()
             mock_result.output = (
@@ -178,7 +315,7 @@ class TestCompleteUserWorkflows:
     async def test_simple_ui_workflow(self):
         """Test simple UI workflow without streaming."""
         # Mock agent response
-        with patch.object(agent, "run") as mock_agent_run:
+        with patch.object(get_agent(), "run") as mock_agent_run:
             # Setup mock response
             mock_result = MagicMock()
             mock_result.output = "This is a simple response to your query."
@@ -292,7 +429,7 @@ class TestStreamlitUIFunctionality:
             mock_chat_message.return_value.__exit__ = MagicMock(return_value=None)
 
             # Test display function
-            display_message_part(mock_part)
+            get_display_message_part()(mock_part)
 
             # Verify UI calls
             mock_chat_message.assert_called_once_with("user")
@@ -316,7 +453,7 @@ class TestStreamlitUIFunctionality:
             mock_chat_message.return_value.__exit__ = MagicMock(return_value=None)
 
             # Test display function
-            display_message_part(mock_part)
+            get_display_message_part()(mock_part)
 
             # Verify UI calls
             mock_chat_message.assert_called_once_with("assistant")
@@ -374,7 +511,7 @@ class TestStreamlitUIFunctionality:
 
         # Should handle gracefully without crashing
         try:
-            display_message_part(mock_part)
+            get_display_message_part()(mock_part)
         except Exception as e:
             pytest.fail(f"UI should handle missing content gracefully, but raised: {e}")
 
@@ -460,7 +597,7 @@ class TestErrorHandlingWorkflows:
     async def test_partial_response_handling(self):
         """Test handling of partial or incomplete responses."""
         # Mock agent that returns partial response
-        with patch.object(agent, "run") as mock_agent_run:
+        with patch.object(get_agent(), "run") as mock_agent_run:
             mock_result = MagicMock()
             mock_result.output = "Partial response due to"  # Incomplete
             mock_result.new_messages.return_value = []
@@ -491,7 +628,7 @@ class TestEdgeCaseWorkflows:
     async def test_empty_query_workflow(self):
         """Test workflow with empty or whitespace-only queries."""
         # Test empty query
-        with patch.object(agent, "run") as mock_agent_run:
+        with patch.object(get_agent(), "run") as mock_agent_run:
             mock_result = MagicMock()
             mock_result.output = "Please provide a valid query."
             mock_result.new_messages.return_value = []
@@ -506,7 +643,7 @@ class TestEdgeCaseWorkflows:
         # Create very long query
         long_query = "What is " + "very " * 1000 + "long question?"
 
-        with patch.object(agent, "run") as mock_agent_run:
+        with patch.object(get_agent(), "run") as mock_agent_run:
             mock_result = MagicMock()
             mock_result.output = "I understand your detailed question."
             mock_result.new_messages.return_value = []
@@ -520,7 +657,7 @@ class TestEdgeCaseWorkflows:
         """Test workflow with special characters and unicode."""
         special_query = "What about C++ & Python? 🐍 (2024) [updated] 中文"
 
-        with patch.object(agent, "run") as mock_agent_run:
+        with patch.object(get_agent(), "run") as mock_agent_run:
             mock_result = MagicMock()
             mock_result.output = (
                 "I can help with programming languages including special characters."
@@ -545,7 +682,7 @@ class TestEdgeCaseWorkflows:
         async def simulate_session(session_id):
             with (
                 patch("streamlit.session_state", sessions[session_id]),
-                patch.object(agent, "run") as mock_agent_run,
+                patch.object(get_agent(), "run") as mock_agent_run,
             ):
                 mock_result = MagicMock()
                 mock_result.output = f"Response for session {session_id}"
@@ -569,7 +706,7 @@ class TestEdgeCaseWorkflows:
         # Mock large response
         large_response = "This is a very detailed response. " * 1000
 
-        with patch.object(agent, "run") as mock_agent_run:
+        with patch.object(get_agent(), "run") as mock_agent_run:
             mock_result = MagicMock()
             mock_result.output = large_response
             mock_result.new_messages.return_value = []
@@ -611,7 +748,7 @@ class TestPerformanceWorkflows:
 
         # Simulate high load with many concurrent requests
         async def simulate_load():
-            with patch.object(agent, "run") as mock_agent_run:
+            with patch.object(get_agent(), "run") as mock_agent_run:
                 mock_result = MagicMock()
                 mock_result.output = "Response under load"
                 mock_result.new_messages.return_value = []

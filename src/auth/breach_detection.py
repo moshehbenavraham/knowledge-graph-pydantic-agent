@@ -18,9 +18,9 @@ from datetime import UTC, datetime
 
 import httpx
 import structlog
+from supabase import Client
 
 from src.clients.database import get_supabase_client
-from supabase import Client
 
 logger = structlog.get_logger(__name__)
 

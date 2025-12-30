@@ -23,8 +23,9 @@ except ImportError:
     AnthropicModel = None  # type: ignore
     AnthropicProvider = None  # type: ignore
 
-from src.config import get_settings
 from supabase.client import Client
+
+from src.config import get_settings
 
 
 async def image_analysis_tool(supabase: Client, document_id: str, query: str) -> str:

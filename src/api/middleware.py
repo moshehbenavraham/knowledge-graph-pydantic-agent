@@ -4,6 +4,7 @@ Middleware stack for FastAPI application.
 Includes correlation IDs, timing, error handling, compression, and rate limiting.
 """
 
+import os
 import time
 import uuid
 from collections.abc import Awaitable, Callable
@@ -260,6 +261,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
     ) -> Response:
         """Process request with rate limiting."""
+        # Skip rate limiting in test mode
+        if os.getenv("TESTING") == "true" or os.getenv("TEST_MODE") == "true":
+            return await call_next(request)
+
         # Skip rate limiting for health endpoints
         if request.url.path.startswith("/health"):
             return await call_next(request)

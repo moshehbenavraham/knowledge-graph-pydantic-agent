@@ -244,7 +244,8 @@ def test_oauth_handler_default_redirect_uri():
 
     with patch("src.auth.oauth_handler.get_settings", return_value=mock_settings):
         handler = OAuthHandler("google")
-        assert handler.redirect_uri == "http://localhost:8501/oauth/callback/google"
+        # Default port is 8502 (as specified in Makefile and project config)
+        assert handler.redirect_uri == "http://localhost:8502/oauth/callback/google"
 
 
 # =====================================================

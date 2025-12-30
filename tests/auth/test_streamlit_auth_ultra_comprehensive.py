@@ -114,19 +114,21 @@ class TestLoadCredentialsFromDatabase:
                 "email": "user1@example.com",
                 "full_name": "User One",
                 "is_active": True,
+                "password_hash": "hashed1",
             },
             {
                 "username": "user2",
                 "email": "user2@example.com",
                 "full_name": "User Two",
                 "is_active": True,
+                "password_hash": "hashed2",
             },
         ]
 
         with patch("src.auth.db.list_users") as mock_list_users:
             mock_list_users.return_value = mock_users
 
-            with patch("src.auth.db.get_supabase_client") as mock_get_client:
+            with patch("src.clients.database.get_supabase_client") as mock_get_client:
                 mock_client = Mock()
                 mock_table = Mock()
                 mock_select = Mock()
@@ -158,19 +160,21 @@ class TestLoadCredentialsFromDatabase:
                 "email": "active@example.com",
                 "full_name": "Active User",
                 "is_active": True,
+                "password_hash": "hashed_active",
             },
             {
                 "username": "inactive_user",
                 "email": "inactive@example.com",
                 "full_name": "Inactive User",
                 "is_active": False,
+                "password_hash": "hashed_inactive",
             },
         ]
 
         with patch("src.auth.db.list_users") as mock_list_users:
             mock_list_users.return_value = mock_users
 
-            with patch("src.auth.db.get_supabase_client") as mock_get_client:
+            with patch("src.clients.database.get_supabase_client") as mock_get_client:
                 mock_client = Mock()
                 mock_table = Mock()
                 mock_client.table.return_value = mock_table
@@ -270,19 +274,26 @@ class TestLoadAuthConfig:
     def test_load_auth_config_no_file_database_mode(self):
         from src.auth.streamlit_auth import load_auth_config
 
+        mock_credentials = {"usernames": {"test_user": {"email": "test@test.com", "name": "Test"}}}
+
         with patch("src.auth.streamlit_auth.get_settings") as mock_get_settings:
             mock_settings = Mock()
             mock_settings.use_database_auth = True
             mock_settings.auth_cookie_key = "test_key"
             mock_get_settings.return_value = mock_settings
 
-            with patch("src.auth.streamlit_auth.Path") as mock_path:
-                mock_path.return_value.exists.return_value = False
+            with patch("pathlib.Path.exists", return_value=False):
+                with patch(
+                    "src.auth.streamlit_auth.load_credentials_from_database",
+                    return_value=mock_credentials,
+                ):
+                    with patch(
+                        "src.auth.streamlit_auth.asyncio.run", return_value=mock_credentials
+                    ):
+                        result = load_auth_config()
 
-                result = load_auth_config()
-
-                assert "cookie" in result
-                assert result["cookie"]["key"] == "test_key"
+                        assert "cookie" in result
+                        assert result["cookie"]["key"] == "test_key"
 
 
 class TestGetAuthenticator:

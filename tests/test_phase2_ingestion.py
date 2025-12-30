@@ -246,16 +246,28 @@ class TestIngestionPipeline:
     """Test complete ingestion pipeline."""
 
     @pytest.mark.asyncio
-    async def test_pipeline_initialization(self):
+    async def test_pipeline_initialization(self, mock_connection_manager):
         """Test pipeline initialization."""
-        pipeline = DocumentIngestionPipeline()
-        await pipeline.initialize()
+        # Mock the ConnectionManager to avoid real database connections
+        mock_cm_instance = AsyncMock()
+        mock_cm_instance.initialize = AsyncMock()
+        mock_cm_instance.close = AsyncMock()
 
-        assert pipeline.pg_store is not None
-        assert pipeline.neo4j_store is not None
-        assert pipeline.chunker is not None
-        assert pipeline.embedder is not None
-        assert pipeline.extractor is not None
+        with patch(
+            "src.agentic_rag.ingestion.pipeline.ConnectionManager",
+            return_value=mock_cm_instance,
+        ):
+            with patch("src.agentic_rag.ingestion.pipeline.PostgresStore"):
+                with patch("src.agentic_rag.ingestion.pipeline.Neo4jStore"):
+                    with patch("src.agentic_rag.ingestion.pipeline.GraphitiClient"):
+                        pipeline = DocumentIngestionPipeline()
+                        await pipeline.initialize()
+
+                        assert pipeline.pg_store is not None
+                        assert pipeline.chunker is not None
+                        assert pipeline.embedder is not None
+                        assert pipeline.extractor is not None
+                        mock_cm_instance.initialize.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_ingestion_result(self):

@@ -95,8 +95,8 @@ class TestRootEndpoints:
 class TestStatusEndpoint:
     """Test status endpoint functionality."""
 
-    @patch("src.api.dependencies.check_database_health", new_callable=AsyncMock)
-    @patch("src.api.dependencies.get_api_settings", new_callable=AsyncMock)
+    @patch("src.api.main.check_database_health", new_callable=AsyncMock)
+    @patch("src.api.main.get_api_settings", new_callable=AsyncMock)
     def test_status_endpoint_healthy(self, mock_settings, mock_health, test_client):
         """Test status endpoint when all components healthy."""
         # Mock health check
@@ -169,7 +169,7 @@ class TestMetricsEndpoint:
 class TestCacheEndpoint:
     """Test cache management endpoint."""
 
-    @patch("src.api.dependencies.get_cache_manager", new_callable=AsyncMock)
+    @patch("src.api.main.get_cache_manager", new_callable=AsyncMock)
     def test_clear_cache_all(self, mock_cache, test_client):
         """Test clearing all cache entries."""
         # Mock cache manager
@@ -185,7 +185,7 @@ class TestCacheEndpoint:
         assert "cache entries cleared" in data["message"].lower()
         mock_cache_instance.flush.assert_called_once()
 
-    @patch("src.api.dependencies.get_cache_manager", new_callable=AsyncMock)
+    @patch("src.api.main.get_cache_manager", new_callable=AsyncMock)
     def test_clear_cache_pattern(self, mock_cache, test_client):
         """Test clearing cache with pattern."""
         mock_cache_instance = MagicMock()
@@ -539,7 +539,7 @@ class TestEndpointPaths:
 class TestCacheClearing:
     """Test cache clearing functionality."""
 
-    @patch("src.api.dependencies.get_cache_manager", new_callable=AsyncMock)
+    @patch("src.api.main.get_cache_manager", new_callable=AsyncMock)
     def test_cache_flush_called(self, mock_cache, test_client):
         """Test cache flush is called when pattern is wildcard."""
         mock_cache_instance = MagicMock()
@@ -551,7 +551,7 @@ class TestCacheClearing:
         assert response.status_code == 200
         mock_cache_instance.flush.assert_called_once()
 
-    @patch("src.api.dependencies.get_cache_manager", new_callable=AsyncMock)
+    @patch("src.api.main.get_cache_manager", new_callable=AsyncMock)
     def test_cache_pattern_clearing(self, mock_cache, test_client):
         """Test cache clearing with specific pattern."""
         mock_cache_instance = MagicMock()
@@ -583,8 +583,8 @@ class TestStatusComponentDetails:
                 assert "name" in component
                 assert "healthy" in component
 
-    @patch("src.api.dependencies.check_database_health", new_callable=AsyncMock)
-    @patch("src.api.dependencies.get_api_settings", new_callable=AsyncMock)
+    @patch("src.api.main.check_database_health", new_callable=AsyncMock)
+    @patch("src.api.main.get_api_settings", new_callable=AsyncMock)
     def test_status_metrics_included(self, mock_settings, mock_health, test_client):
         """Test status includes metrics information."""
         mock_health.return_value = {"postgres": True, "neo4j": True, "cache": True}

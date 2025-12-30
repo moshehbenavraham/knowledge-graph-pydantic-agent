@@ -13,6 +13,7 @@ Tests cover:
 
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, Mock, patch
+from uuid import UUID
 
 import pytest
 from fastapi import FastAPI
@@ -20,6 +21,11 @@ from fastapi.testclient import TestClient
 
 from src.api.dependencies import get_graphiti_client, get_postgres_store
 from src.api.endpoints.documents import router
+
+# Valid UUID strings for tests
+TEST_DOC_ID_1 = "11111111-1111-1111-1111-111111111111"
+TEST_DOC_ID_2 = "22222222-2222-2222-2222-222222222222"
+NONEXISTENT_DOC_ID = "99999999-9999-9999-9999-999999999999"
 
 
 @pytest.fixture
@@ -275,7 +281,7 @@ class TestGetDocument:
         now = datetime.now(UTC).isoformat()
 
         mock_document = {
-            "id": "doc1",
+            "id": TEST_DOC_ID_1,
             "title": "Test Document",
             "source": "test",
             "content": "Full document content here",
@@ -287,12 +293,12 @@ class TestGetDocument:
 
         mock_postgres_store.get_document.return_value = mock_document
 
-        response = client.get("/api/v1/documents/doc1")
+        response = client.get(f"/api/v1/documents/{TEST_DOC_ID_1}")
 
         assert response.status_code == 200
         data = response.json()
 
-        assert data["metadata"]["id"] == "doc1"
+        assert data["metadata"]["id"] == TEST_DOC_ID_1
         assert data["metadata"]["title"] == "Test Document"
         assert data["content"] == "Full document content here"
         assert data["chunks"] is None
@@ -302,7 +308,7 @@ class TestGetDocument:
         now = datetime.now(UTC).isoformat()
 
         mock_document = {
-            "id": "doc1",
+            "id": TEST_DOC_ID_1,
             "title": "Test Document",
             "source": "test",
             "content": "Full content",
@@ -319,7 +325,7 @@ class TestGetDocument:
         mock_postgres_store.get_document.return_value = mock_document
         mock_postgres_store.get_document_chunks.return_value = mock_chunks
 
-        response = client.get("/api/v1/documents/doc1?include_chunks=true")
+        response = client.get(f"/api/v1/documents/{TEST_DOC_ID_1}?include_chunks=true")
 
         assert response.status_code == 200
         data = response.json()
@@ -332,7 +338,7 @@ class TestGetDocument:
         """Test get non-existent document."""
         mock_postgres_store.get_document.return_value = None
 
-        response = client.get("/api/v1/documents/nonexistent")
+        response = client.get(f"/api/v1/documents/{NONEXISTENT_DOC_ID}")
 
         assert response.status_code == 404
         assert "not found" in response.json()["detail"].lower()
@@ -341,7 +347,7 @@ class TestGetDocument:
         """Test document retrieval failure."""
         mock_postgres_store.get_document.side_effect = RuntimeError("Database error")
 
-        response = client.get("/api/v1/documents/doc1")
+        response = client.get(f"/api/v1/documents/{TEST_DOC_ID_1}")
 
         assert response.status_code == 500
         assert "failed to retrieve document" in response.json()["detail"].lower()
@@ -360,7 +366,7 @@ class TestDeleteDocument:
         now = datetime.now(UTC).isoformat()
 
         mock_document = {
-            "id": "doc1",
+            "id": TEST_DOC_ID_1,
             "title": "Test Document",
             "source": "test",
             "created_at": now,
@@ -369,22 +375,22 @@ class TestDeleteDocument:
         mock_postgres_store.get_document.return_value = mock_document
         mock_postgres_store.delete_document.return_value = True
 
-        response = client.delete("/api/v1/documents/doc1")
+        response = client.delete(f"/api/v1/documents/{TEST_DOC_ID_1}")
 
         assert response.status_code == 200
         data = response.json()
 
         assert data["status"] == "deleted"
-        assert data["document_id"] == "doc1"
+        assert data["document_id"] == TEST_DOC_ID_1
 
-        # Verify deletion was called
-        mock_postgres_store.delete_document.assert_called_once_with("doc1")
+        # Verify deletion was called with UUID object
+        mock_postgres_store.delete_document.assert_called_once_with(UUID(TEST_DOC_ID_1))
 
     def test_delete_document_not_found(self, client, mock_postgres_store, mock_graphiti_client):
         """Test deleting non-existent document."""
         mock_postgres_store.get_document.return_value = None
 
-        response = client.delete("/api/v1/documents/nonexistent")
+        response = client.delete(f"/api/v1/documents/{NONEXISTENT_DOC_ID}")
 
         assert response.status_code == 404
         assert "not found" in response.json()["detail"].lower()
@@ -393,11 +399,11 @@ class TestDeleteDocument:
         """Test document deletion failure."""
         now = datetime.now(UTC).isoformat()
 
-        mock_document = {"id": "doc1", "created_at": now}
+        mock_document = {"id": TEST_DOC_ID_1, "created_at": now}
         mock_postgres_store.get_document.return_value = mock_document
         mock_postgres_store.delete_document.side_effect = RuntimeError("Deletion failed")
 
-        response = client.delete("/api/v1/documents/doc1")
+        response = client.delete(f"/api/v1/documents/{TEST_DOC_ID_1}")
 
         assert response.status_code == 500
         assert "failed to delete document" in response.json()["detail"].lower()
@@ -416,7 +422,7 @@ class TestUpdateDocument:
         now = datetime.now(UTC).isoformat()
 
         mock_document = {
-            "id": "doc1",
+            "id": TEST_DOC_ID_1,
             "title": "Old Title",
             "source": "test",
             "created_at": now,
@@ -425,7 +431,7 @@ class TestUpdateDocument:
         mock_postgres_store.get_document.return_value = mock_document
         mock_postgres_store.update_document.return_value = True
 
-        response = client.patch("/api/v1/documents/doc1?title=New Title")
+        response = client.patch(f"/api/v1/documents/{TEST_DOC_ID_1}?title=New Title")
 
         assert response.status_code == 200
         data = response.json()
@@ -437,7 +443,7 @@ class TestUpdateDocument:
         """Test updating non-existent document."""
         mock_postgres_store.get_document.return_value = None
 
-        response = client.patch("/api/v1/documents/nonexistent?title=New Title")
+        response = client.patch(f"/api/v1/documents/{NONEXISTENT_DOC_ID}?title=New Title")
 
         assert response.status_code == 404
 
@@ -445,10 +451,10 @@ class TestUpdateDocument:
         """Test update with no fields provided."""
         now = datetime.now(UTC).isoformat()
 
-        mock_document = {"id": "doc1", "created_at": now}
+        mock_document = {"id": TEST_DOC_ID_1, "created_at": now}
         mock_postgres_store.get_document.return_value = mock_document
 
-        response = client.patch("/api/v1/documents/doc1")
+        response = client.patch(f"/api/v1/documents/{TEST_DOC_ID_1}")
 
         assert response.status_code == 400
         assert "no updates provided" in response.json()["detail"].lower()
@@ -466,22 +472,22 @@ class TestReindexDocument:
         """Test successful document reindexing."""
         now = datetime.now(UTC).isoformat()
 
-        mock_document = {"id": "doc1", "created_at": now}
+        mock_document = {"id": TEST_DOC_ID_1, "created_at": now}
         mock_postgres_store.get_document.return_value = mock_document
 
-        response = client.post("/api/v1/documents/doc1/reindex")
+        response = client.post(f"/api/v1/documents/{TEST_DOC_ID_1}/reindex")
 
         assert response.status_code == 200
         data = response.json()
 
         assert data["status"] == "reindexed"
-        assert data["document_id"] == "doc1"
+        assert data["document_id"] == TEST_DOC_ID_1
 
     def test_reindex_document_not_found(self, client, mock_postgres_store, mock_graphiti_client):
         """Test reindexing non-existent document."""
         mock_postgres_store.get_document.return_value = None
 
-        response = client.post("/api/v1/documents/nonexistent/reindex")
+        response = client.post(f"/api/v1/documents/{NONEXISTENT_DOC_ID}/reindex")
 
         assert response.status_code == 404
 
@@ -498,16 +504,16 @@ class TestDocumentStats:
         """Test successful document stats retrieval."""
         now = datetime.now(UTC).isoformat()
 
-        mock_document = {"id": "doc1", "created_at": now}
+        mock_document = {"id": TEST_DOC_ID_1, "created_at": now}
         mock_postgres_store.get_document.return_value = mock_document
         mock_postgres_store.count_chunks.return_value = 5
 
-        response = client.get("/api/v1/documents/doc1/stats")
+        response = client.get(f"/api/v1/documents/{TEST_DOC_ID_1}/stats")
 
         assert response.status_code == 200
         data = response.json()
 
-        assert data["document_id"] == "doc1"
+        assert data["document_id"] == TEST_DOC_ID_1
         assert data["chunk_count"] == 5
         assert "entity_count" in data
         assert "relationship_count" in data
@@ -516,6 +522,6 @@ class TestDocumentStats:
         """Test stats for non-existent document."""
         mock_postgres_store.get_document.return_value = None
 
-        response = client.get("/api/v1/documents/nonexistent/stats")
+        response = client.get(f"/api/v1/documents/{NONEXISTENT_DOC_ID}/stats")
 
         assert response.status_code == 404

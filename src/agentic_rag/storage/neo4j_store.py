@@ -9,6 +9,8 @@ from uuid import uuid4
 
 import structlog
 
+from src.agentic_rag.models.document_reference import DocumentReference
+
 logger = logging.getLogger(__name__)
 structlog_logger = structlog.get_logger(__name__)
 
@@ -22,19 +24,52 @@ class Neo4jStore:
         self.connection_manager = connection_manager
         structlog_logger.info("Neo4jStore initialized")
 
-    async def add_entities(self, entities: list[dict[str, Any]], source_chunk_id: str) -> list[str]:
-        """Add entities to Neo4j (only names and types, no content)."""
+    async def add_entities(
+        self,
+        entities: list[dict[str, Any]],
+        source_chunk_id: str,
+        document_metadata: DocumentReference | None = None,
+    ) -> list[str]:
+        """
+        Add entities to Neo4j (only names and types, no content).
+
+        Args:
+            entities: List of entity dicts with 'name' and 'type' keys
+            source_chunk_id: ID of the source chunk
+            document_metadata: Optional document reference for populating document_refs
+
+        Returns:
+            List of entity IDs
+        """
         structlog_logger.info(
-            "add_entities called", num_entities=len(entities), source_chunk_id=source_chunk_id
+            "add_entities called",
+            num_entities=len(entities),
+            source_chunk_id=source_chunk_id,
+            has_document_metadata=document_metadata is not None,
         )
 
         entity_ids = []
+
+        # Prepare document reference data for Neo4j with error handling
+        doc_ref_dict = None
+        if document_metadata is not None:
+            try:
+                doc_ref_dict = document_metadata.to_dict()
+            except Exception as e:
+                structlog_logger.warning(
+                    "Failed to convert document metadata to dict, proceeding without",
+                    error=str(e),
+                    document_metadata=str(document_metadata),
+                )
+                doc_ref_dict = None
 
         async with self.connection_manager.get_neo4j_session() as session:
             for entity in entities:
                 entity_id = f"entity_{uuid4()}"
 
-                # Create or merge entity
+                # Create or merge entity with document reference handling
+                # ON CREATE: Initialize document_refs with the new reference (if provided)
+                # ON MATCH: Append new reference if filename not already present
                 result = await session.run(
                     """
                     MERGE (e:Entity {name: $name, type: $type})
@@ -47,13 +82,35 @@ class Neo4jStore:
                         e.relationship_count = 0,
                         e.importance_score = 0.5,
                         e.chunk_refs = [$chunk_id],
-                        e.document_refs = []
+                        e.document_refs = CASE
+                            WHEN $doc_ref IS NULL THEN []
+                            ELSE [$doc_ref]
+                        END
                     ON MATCH SET
                         e.last_updated = datetime(),
                         e.mention_count = e.mention_count + 1,
                         e.chunk_refs = CASE
                             WHEN $chunk_id IN e.chunk_refs THEN e.chunk_refs
                             ELSE e.chunk_refs + $chunk_id
+                        END,
+                        e.document_refs = CASE
+                            WHEN $doc_ref IS NULL THEN e.document_refs
+                            WHEN ANY(existing IN e.document_refs
+                                     WHERE existing.filename = $doc_ref.filename) THEN
+                                [ref IN e.document_refs |
+                                    CASE
+                                        WHEN ref.filename = $doc_ref.filename THEN
+                                            {
+                                                filename: ref.filename,
+                                                company: COALESCE(ref.company, $doc_ref.company),
+                                                quarter: COALESCE(ref.quarter, $doc_ref.quarter),
+                                                year: COALESCE(ref.year, $doc_ref.year),
+                                                mention_count: ref.mention_count + 1
+                                            }
+                                        ELSE ref
+                                    END
+                                ]
+                            ELSE e.document_refs + $doc_ref
                         END
                     RETURN e.id as entity_id
                 """,
@@ -61,6 +118,7 @@ class Neo4jStore:
                     type=entity["type"],
                     entity_id=entity_id,
                     chunk_id=source_chunk_id,
+                    doc_ref=doc_ref_dict,
                 )
 
                 record = await result.single()

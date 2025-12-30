@@ -83,9 +83,31 @@ class TestUnifiedAgent:
     @pytest.mark.asyncio
     async def test_smart_search_tool(self, unified_deps):
         """Test the smart search tool with intent routing."""
-        # Mock the tool function
-        with patch("src.agent.unified_agent.retrieve_relevant_documents_tool") as mock_retrieve:
-            mock_retrieve.return_value = "Found 3 relevant documents about AI"
+        # Mock the smart_search_tool function which is the actual function called
+        mock_result = {
+            "query": "Find similar documents about machine learning",
+            "chunks": [
+                {
+                    "chunk_id": "123",
+                    "content": "ML content",
+                    "document_id": "doc1",
+                    "document_title": "ML Guide",
+                    "source": "test",
+                    "similarity": 0.9,
+                    "entities": [],
+                }
+            ],
+            "entities": [],
+            "facts": [],
+            "intent": "vector_heavy",
+            "strategy_used": "vector_heavy",
+            "query_time_ms": 50.0,
+            "total_results": 1,
+        }
+        with patch(
+            "src.agent.unified_agent.smart_search_tool", new_callable=AsyncMock
+        ) as mock_search:
+            mock_search.return_value = mock_result
 
             # Create a mock context
             ctx = MagicMock()

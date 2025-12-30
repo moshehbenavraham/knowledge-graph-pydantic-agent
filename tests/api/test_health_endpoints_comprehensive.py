@@ -217,7 +217,8 @@ async def test_get_metrics_prometheus_endpoint(
 
     result = await get_metrics()
 
-    assert "http://localhost:9090/metrics" in result["prometheus_endpoint"]
+    # URL uses metrics_port from settings (8002 in mock)
+    assert f"http://localhost:{mock_settings.metrics_port}/metrics" == result["prometheus_endpoint"]
 
 
 @pytest.mark.asyncio

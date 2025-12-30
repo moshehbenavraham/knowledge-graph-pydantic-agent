@@ -172,12 +172,14 @@ class BaseValidationRule(ABC):
 
     def _check_suppression(self, line_number: int) -> tuple[bool, str | None]:
         """
-        Check if violation on this line is suppressed via # Constitution exception comment.
+        Check if violation on this line is suppressed via inline comments.
 
         Supports formats:
         - # Constitution exception: CONST-II-001
         - # Constitution exception: CONST-II-001 - reason for suppression
         - # Constitution exception: CONSTITUTION-II (principle-level suppression)
+        - # noqa: CONST-II-001
+        - # noqa: CONST-II-001 - reason for suppression
 
         Args:
             line_number: Line number to check (1-indexed)
@@ -192,10 +194,30 @@ class BaseValidationRule(ABC):
         line = self.source_lines[line_number - 1]  # Convert to 0-indexed
 
         # Check for Constitution exception comments: CONST-X-YYY or CONSTITUTION-X format
-        noqa_pattern = r"#\s*Constitution exception:\s*(CONST|CONSTITUTION)-([IVX]+)(?:-(\d+))?\s*(?:-\s*(.+))?"
-        match = re.search(noqa_pattern, line, re.IGNORECASE)
+        const_pattern = r"#\s*Constitution exception:\s*(CONST|CONSTITUTION)-([IVX]+)(?:-(\d+))?\s*(?:-\s*(.+))?"
+        match = re.search(const_pattern, line, re.IGNORECASE)
 
+        # Also check for noqa format: noqa: CONST-X-YYY (e.g. "# noqa: CONST-II-001")
         if not match:
+            noqa_pattern = r"#\s*noqa:\s*CONST-([IVX]+)-(\d+)\s*(?:-\s*(.+))?"
+            match = re.search(noqa_pattern, line, re.IGNORECASE)
+            if match:
+                principle_id, rule_number, reason = match.groups()
+                # Check if suppression applies to this rule
+                if principle_id != self.principle_id:
+                    return False, None
+
+                # Check if specific rule number matches
+                if rule_number:
+                    expected_rule_id = f"CONST-{principle_id}-{rule_number.zfill(3)}"
+                    if expected_rule_id != self.rule_id:
+                        return False, None
+
+                suppression_reason = reason.strip() if reason else "Suppressed via noqa comment"
+                logger.debug(
+                    "Suppression found (noqa)", line_number=line_number, reason=suppression_reason
+                )
+                return True, suppression_reason
             return False, None
 
         _prefix, principle_id, rule_number, reason = match.groups()

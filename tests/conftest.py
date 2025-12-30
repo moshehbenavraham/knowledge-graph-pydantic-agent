@@ -1,8 +1,91 @@
 import asyncio
 import os
+import sys
 from unittest.mock import MagicMock
 
 import pytest
+
+
+def _ensure_real_streamlit():
+    """
+    Ensure the real streamlit module is loaded, not a mock.
+
+    This handles cases where test_e2e.py (or other tests) replace streamlit
+    with a MagicMock. We detect this and reload the real module.
+    """
+    needs_reload = False
+
+    # Check if streamlit is a mock
+    if "streamlit" in sys.modules:
+        st = sys.modules["streamlit"]
+        if isinstance(st, MagicMock) or "MagicMock" in str(type(st)):
+            needs_reload = True
+
+    if needs_reload:
+        # Remove all streamlit-related modules from sys.modules
+        modules_to_remove = [
+            name
+            for name in list(sys.modules.keys())
+            if name == "streamlit" or name.startswith("streamlit.")
+        ]
+        for name in modules_to_remove:
+            del sys.modules[name]
+
+        # Also remove modules that import streamlit at module level
+        # so they get re-imported with the real streamlit
+        dependent_modules = [
+            name
+            for name in list(sys.modules.keys())
+            if (
+                name.startswith("src.auth.")
+                or name.startswith("src.ui.")
+                or name in {"src.auth", "src.ui"}
+            )
+        ]
+        for name in dependent_modules:
+            del sys.modules[name]
+
+        # Re-import the real streamlit
+        import streamlit  # noqa: F401
+
+
+def pytest_collection_modifyitems(items):
+    """
+    Reorder tests to ensure test_e2e.py runs last.
+
+    test_e2e.py installs streamlit mocks at module import time, which can
+    contaminate other tests if they're collected afterward. By moving
+    test_e2e.py tests to the end, we ensure all other tests run with the
+    real streamlit module.
+    """
+    e2e_tests = []
+    other_tests = []
+
+    for item in items:
+        if "test_e2e" in str(item.fspath):
+            e2e_tests.append(item)
+        else:
+            other_tests.append(item)
+
+    # Clear and repopulate the items list with other tests first, e2e tests last
+    items[:] = other_tests + e2e_tests
+
+
+@pytest.fixture(scope="function", autouse=True)
+def ensure_streamlit_not_mocked():
+    """
+    Function-scoped autouse fixture to ensure streamlit is not a mock.
+
+    This fixture runs before each test to ensure the real streamlit module
+    is available, handling cases where test_e2e.py replaced it with a mock.
+    """
+    # Skip this check for tests in test_e2e.py which intentionally mock streamlit
+    if os.environ.get("_PYTEST_E2E_MODULE_ACTIVE") == "true":
+        yield
+        return
+
+    _ensure_real_streamlit()
+    yield
 
 
 # Set required environment variables for tests
@@ -196,5 +279,26 @@ def disable_rate_limiting(request, monkeypatch):
         """Mock rate limiter that always allows requests."""
         pass
 
+    def mock_is_rate_limited(*args, **kwargs):
+        """Mock rate limiter that never limits."""
+        return False
+
     # Patch the rate limiter's enforce_limits method
     monkeypatch.setattr("src.utils.rate_limiting.rate_limiter.enforce_limits", mock_enforce_limits)
+
+    # Also patch is_rate_limited if it exists
+    try:
+        monkeypatch.setattr(
+            "src.utils.rate_limiting.rate_limiter.is_rate_limited", mock_is_rate_limited
+        )
+    except AttributeError:
+        pass
+
+    # Reset rate limiter state
+    try:
+        import src.utils.rate_limiting as rl_module
+
+        if hasattr(rl_module, "rate_limiter") and hasattr(rl_module.rate_limiter, "requests"):
+            rl_module.rate_limiter.requests.clear()
+    except Exception:
+        pass

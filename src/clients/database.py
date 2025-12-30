@@ -1,8 +1,8 @@
 import structlog
-
-from src.config.clients import clients_config
 from supabase import create_client
 from supabase.client import Client, ClientOptions
+
+from src.config.clients import clients_config
 
 logger = structlog.get_logger(__name__)
 

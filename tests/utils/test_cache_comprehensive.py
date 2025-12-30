@@ -436,8 +436,11 @@ class TestHealthCheck:
 
     def test_health_check_redis_down(self, mock_redis_client):
         """Test health check with Redis down."""
-        cache = RedisCache(enable_fallback=False)
+        # Use enable_fallback=True initially so constructor succeeds
+        # Then test health_check failure scenario
+        cache = RedisCache(enable_fallback=True)
         cache._redis_client = mock_redis_client
+        cache.enable_fallback = False  # Disable fallback for this test
         mock_redis_client.ping.side_effect = Exception("Connection failed")
 
         result = cache.health_check()

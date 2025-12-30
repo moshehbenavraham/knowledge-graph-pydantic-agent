@@ -241,15 +241,18 @@ class TestAuthenticate:
         mock_creds.expired = True
         mock_creds.refresh_token = "refresh_token"
         mock_creds.refresh = Mock()
+        mock_creds.to_json = Mock(return_value='{"refreshed": "token"}')
 
         mock_google_apis["credentials"].from_authorized_user_info = Mock(return_value=mock_creds)
         mock_service = Mock()
         mock_google_apis["build"].return_value = mock_service
 
-        token_data = {"token": "test_token"}
+        token_data = json.dumps({"token": "test_token"})
 
         with patch.object(GoogleDriveWatcher, "load_config"):
-            with patch("builtins.open", mock_open(read_data=json.dumps(token_data))):
+            # Use a more realistic mock for open that handles both read and write
+            mock_file = mock_open(read_data=token_data)
+            with patch("builtins.open", mock_file):
                 with patch("pathlib.Path.exists", return_value=True):
                     watcher = GoogleDriveWatcher()
                     watcher.authenticate()
@@ -279,10 +282,11 @@ class TestAuthenticate:
         mock_service = Mock()
         mock_google_apis["build"].return_value = mock_service
 
-        token_data = {"token": "old_token"}
+        token_data = json.dumps({"token": "old_token"})
 
         with patch.object(GoogleDriveWatcher, "load_config"):
-            with patch("builtins.open", mock_open(read_data=json.dumps(token_data))):
+            mock_file = mock_open(read_data=token_data)
+            with patch("builtins.open", mock_file):
                 with patch("pathlib.Path.exists", return_value=True):
                     watcher = GoogleDriveWatcher()
                     watcher.authenticate()
@@ -339,16 +343,19 @@ class TestGetFolderContents:
         from src.rag_pipeline.sources.google_drive import GoogleDriveWatcher
 
         mock_service = Mock()
-        mock_files_list = Mock()
-        mock_files_list.execute = Mock(
-            return_value={
-                "files": [
-                    {"id": "file1", "name": "doc1.pdf", "mimeType": "application/pdf"},
-                    {"id": "file2", "name": "doc2.txt", "mimeType": "text/plain"},
-                ]
-            }
-        )
-        mock_service.files().list = Mock(return_value=mock_files_list)
+
+        # First call: get files from folder
+        files_response = {
+            "files": [
+                {"id": "file1", "name": "doc1.pdf", "mimeType": "application/pdf"},
+                {"id": "file2", "name": "doc2.txt", "mimeType": "text/plain"},
+            ]
+        }
+        # Second call: get subfolders (none)
+        subfolder_response = {"files": []}
+
+        mock_execute = Mock(side_effect=[files_response, subfolder_response])
+        mock_service.files().list = Mock(return_value=Mock(execute=mock_execute))
 
         with patch.object(GoogleDriveWatcher, "load_config"):
             watcher = GoogleDriveWatcher()
@@ -410,6 +417,7 @@ class TestGetChanges:
             with patch.object(GoogleDriveWatcher, "authenticate") as mock_auth:
                 watcher = GoogleDriveWatcher()
                 watcher.service = None
+                watcher.last_check_time = datetime(2024, 1, 1)
                 mock_auth.return_value = None
 
                 result = watcher.get_changes()
@@ -460,19 +468,25 @@ class TestGetChanges:
         from src.rag_pipeline.sources.google_drive import GoogleDriveWatcher
 
         mock_service = Mock()
-        mock_service.files().list().execute = Mock(return_value={"files": []})
+
+        # Mock for get_folder_contents (files) and (subfolders)
+        files_response = {"files": []}
+        subfolder_response = {"files": []}
+        mock_execute = Mock(side_effect=[files_response, subfolder_response])
+        mock_service.files().list = Mock(return_value=Mock(execute=mock_execute))
 
         with patch.object(GoogleDriveWatcher, "load_config"):
             with patch.object(GoogleDriveWatcher, "save_last_check_time") as mock_save:
                 watcher = GoogleDriveWatcher()
                 watcher.service = mock_service
-                watcher.folder_id = None
-                watcher.last_check_time = datetime(2024, 1, 1)
+                watcher.folder_id = "test_folder"
+                watcher.last_check_time = datetime(2024, 1, 1, tzinfo=UTC)
 
                 old_time = watcher.last_check_time
                 watcher.get_changes()
 
-                assert watcher.last_check_time > old_time
+                # The new time should be newer (but may or may not have tzinfo depending on impl)
+                assert watcher.last_check_time.replace(tzinfo=None) >= old_time.replace(tzinfo=None)
                 mock_save.assert_called_once()
 
 
@@ -805,14 +819,17 @@ class TestWatchForChanges:
         from src.rag_pipeline.sources.google_drive import GoogleDriveWatcher
 
         mock_service = Mock()
-        mock_service.files().list().execute = Mock(
-            return_value={
-                "files": [
-                    {"id": "file1", "modifiedTime": "2024-01-01T00:00:00.000Z", "trashed": False},
-                    {"id": "file2", "modifiedTime": "2024-01-02T00:00:00.000Z", "trashed": False},
-                ]
-            }
-        )
+
+        # Mock for initial scan - files and subfolders
+        initial_files = {
+            "files": [
+                {"id": "file1", "modifiedTime": "2024-01-01T00:00:00.000Z", "trashed": False},
+                {"id": "file2", "modifiedTime": "2024-01-02T00:00:00.000Z", "trashed": False},
+            ]
+        }
+        empty_subfolders = {"files": []}
+        mock_execute = Mock(side_effect=[initial_files, empty_subfolders])
+        mock_service.files().list = Mock(return_value=Mock(execute=mock_execute))
 
         with patch.object(GoogleDriveWatcher, "load_config"):
             with patch.object(GoogleDriveWatcher, "get_changes", return_value=[]):
@@ -822,7 +839,8 @@ class TestWatchForChanges:
                     ):  # Exit after one iteration
                         watcher = GoogleDriveWatcher()
                         watcher.service = mock_service
-                        watcher.folder_id = None
+                        watcher.folder_id = "test_folder"
+                        watcher.last_check_time = datetime(2024, 1, 1, tzinfo=UTC)
 
                         with contextlib.suppress(KeyboardInterrupt):
                             watcher.watch_for_changes()

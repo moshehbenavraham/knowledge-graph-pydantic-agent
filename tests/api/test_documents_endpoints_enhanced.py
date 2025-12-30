@@ -213,12 +213,15 @@ class TestListDocuments:
 class TestGetDocument:
     """Test get document endpoint."""
 
+    # Valid UUID for testing
+    TEST_DOC_UUID = "12345678-1234-5678-1234-567812345678"
+
     @pytest.mark.asyncio
     async def test_get_document_without_chunks(self):
         """Test getting document without chunk breakdown."""
         mock_store = AsyncMock()
         mock_store.get_document.return_value = {
-            "id": "doc-123",
+            "id": self.TEST_DOC_UUID,
             "title": "Test Document",
             "source": "test",
             "content": "Full document content",
@@ -227,10 +230,10 @@ class TestGetDocument:
         }
 
         response = await get_document(
-            document_id="doc-123", include_chunks=False, postgres_store=mock_store
+            document_id=self.TEST_DOC_UUID, include_chunks=False, postgres_store=mock_store
         )
 
-        assert response.metadata.id == "doc-123"
+        assert response.metadata.id == self.TEST_DOC_UUID
         assert response.content == "Full document content"
         assert response.chunks is None
 
@@ -239,7 +242,7 @@ class TestGetDocument:
         """Test getting document with chunk breakdown."""
         mock_store = AsyncMock()
         mock_store.get_document.return_value = {
-            "id": "doc-123",
+            "id": self.TEST_DOC_UUID,
             "title": "Test",
             "source": "test",
             "content": "Full content",
@@ -252,10 +255,10 @@ class TestGetDocument:
         ]
 
         response = await get_document(
-            document_id="doc-123", include_chunks=True, postgres_store=mock_store
+            document_id=self.TEST_DOC_UUID, include_chunks=True, postgres_store=mock_store
         )
 
-        assert response.metadata.id == "doc-123"
+        assert response.metadata.id == self.TEST_DOC_UUID
         assert response.chunks is not None
         assert len(response.chunks) == 2
         assert response.chunks[0] == "Chunk 1 content"  # Chunks are now list[str] per model spec
@@ -267,7 +270,7 @@ class TestGetDocument:
         mock_store.get_document.return_value = None
 
         with pytest.raises(HTTPException) as exc_info:
-            await get_document(document_id="nonexistent", postgres_store=mock_store)
+            await get_document(document_id=self.TEST_DOC_UUID, postgres_store=mock_store)
 
         assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
         assert "Document not found" in exc_info.value.detail
@@ -279,7 +282,7 @@ class TestGetDocument:
         mock_store.get_document.side_effect = Exception("Database error")
 
         with pytest.raises(HTTPException) as exc_info:
-            await get_document(document_id="doc-123", postgres_store=mock_store)
+            await get_document(document_id=self.TEST_DOC_UUID, postgres_store=mock_store)
 
         assert exc_info.value.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
 
@@ -287,22 +290,27 @@ class TestGetDocument:
 class TestDeleteDocument:
     """Test delete document endpoint."""
 
+    # Valid UUID for testing
+    TEST_DOC_UUID = "12345678-1234-5678-1234-567812345678"
+
     @pytest.mark.asyncio
     async def test_delete_document_success(self):
         """Test successful document deletion."""
+        from uuid import UUID
+
         mock_store = AsyncMock()
-        mock_store.get_document.return_value = {"id": "doc-123", "title": "Test"}
+        mock_store.get_document.return_value = {"id": self.TEST_DOC_UUID, "title": "Test"}
         mock_store.delete_document.return_value = True
 
         mock_graphiti = AsyncMock()
 
         response = await delete_document(
-            document_id="doc-123", postgres_store=mock_store, graphiti_client=mock_graphiti
+            document_id=self.TEST_DOC_UUID, postgres_store=mock_store, graphiti_client=mock_graphiti
         )
 
         assert response["status"] == "deleted"
-        assert response["document_id"] == "doc-123"
-        mock_store.delete_document.assert_called_once_with("doc-123")
+        assert response["document_id"] == self.TEST_DOC_UUID
+        mock_store.delete_document.assert_called_once_with(UUID(self.TEST_DOC_UUID))
 
     @pytest.mark.asyncio
     async def test_delete_document_not_found(self):
@@ -312,7 +320,7 @@ class TestDeleteDocument:
 
         with pytest.raises(HTTPException) as exc_info:
             await delete_document(
-                document_id="nonexistent",
+                document_id=self.TEST_DOC_UUID,
                 postgres_store=mock_store,
                 graphiti_client=AsyncMock(),
             )
@@ -323,12 +331,12 @@ class TestDeleteDocument:
     async def test_delete_document_error(self):
         """Test document deletion with error."""
         mock_store = AsyncMock()
-        mock_store.get_document.return_value = {"id": "doc-123"}
+        mock_store.get_document.return_value = {"id": self.TEST_DOC_UUID}
         mock_store.delete_document.side_effect = Exception("Delete failed")
 
         with pytest.raises(HTTPException) as exc_info:
             await delete_document(
-                document_id="doc-123",
+                document_id=self.TEST_DOC_UUID,
                 postgres_store=mock_store,
                 graphiti_client=AsyncMock(),
             )
@@ -339,15 +347,18 @@ class TestDeleteDocument:
 class TestUpdateDocument:
     """Test update document endpoint."""
 
+    # Valid UUID for testing
+    TEST_DOC_UUID = "12345678-1234-5678-1234-567812345678"
+
     @pytest.mark.asyncio
     async def test_update_document_title(self):
         """Test updating document title."""
         mock_store = AsyncMock()
-        mock_store.get_document.return_value = {"id": "doc-123", "title": "Old Title"}
+        mock_store.get_document.return_value = {"id": self.TEST_DOC_UUID, "title": "Old Title"}
         mock_store.update_document.return_value = True
 
         response = await update_document(
-            document_id="doc-123", title="New Title", postgres_store=mock_store
+            document_id=self.TEST_DOC_UUID, title="New Title", postgres_store=mock_store
         )
 
         assert response["status"] == "updated"
@@ -358,12 +369,12 @@ class TestUpdateDocument:
     async def test_update_document_metadata(self):
         """Test updating document metadata."""
         mock_store = AsyncMock()
-        mock_store.get_document.return_value = {"id": "doc-123"}
+        mock_store.get_document.return_value = {"id": self.TEST_DOC_UUID}
         mock_store.update_document.return_value = True
 
         new_metadata = {"author": "New Author", "tags": ["test"]}
         response = await update_document(
-            document_id="doc-123", metadata=new_metadata, postgres_store=mock_store
+            document_id=self.TEST_DOC_UUID, metadata=new_metadata, postgres_store=mock_store
         )
 
         assert response["status"] == "updated"
@@ -373,11 +384,11 @@ class TestUpdateDocument:
     async def test_update_document_both_fields(self):
         """Test updating both title and metadata."""
         mock_store = AsyncMock()
-        mock_store.get_document.return_value = {"id": "doc-123"}
+        mock_store.get_document.return_value = {"id": self.TEST_DOC_UUID}
         mock_store.update_document.return_value = True
 
         response = await update_document(
-            document_id="doc-123",
+            document_id=self.TEST_DOC_UUID,
             title="New Title",
             metadata={"key": "value"},
             postgres_store=mock_store,
@@ -389,10 +400,10 @@ class TestUpdateDocument:
     async def test_update_document_no_updates(self):
         """Test update with no fields provided."""
         mock_store = AsyncMock()
-        mock_store.get_document.return_value = {"id": "doc-123"}
+        mock_store.get_document.return_value = {"id": self.TEST_DOC_UUID}
 
         with pytest.raises(HTTPException) as exc_info:
-            await update_document(document_id="doc-123", postgres_store=mock_store)
+            await update_document(document_id=self.TEST_DOC_UUID, postgres_store=mock_store)
 
         assert exc_info.value.status_code == status.HTTP_400_BAD_REQUEST
         assert "No updates provided" in exc_info.value.detail
@@ -405,7 +416,7 @@ class TestUpdateDocument:
 
         with pytest.raises(HTTPException) as exc_info:
             await update_document(
-                document_id="nonexistent", title="New Title", postgres_store=mock_store
+                document_id=self.TEST_DOC_UUID, title="New Title", postgres_store=mock_store
             )
 
         assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
@@ -414,12 +425,12 @@ class TestUpdateDocument:
     async def test_update_document_update_failed(self):
         """Test update when database operation fails."""
         mock_store = AsyncMock()
-        mock_store.get_document.return_value = {"id": "doc-123"}
+        mock_store.get_document.return_value = {"id": self.TEST_DOC_UUID}
         mock_store.update_document.return_value = False
 
         with pytest.raises(HTTPException) as exc_info:
             await update_document(
-                document_id="doc-123", title="New Title", postgres_store=mock_store
+                document_id=self.TEST_DOC_UUID, title="New Title", postgres_store=mock_store
             )
 
         assert exc_info.value.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -428,18 +439,21 @@ class TestUpdateDocument:
 class TestReindexDocument:
     """Test reindex document endpoint."""
 
+    # Valid UUID for testing
+    TEST_DOC_UUID = "12345678-1234-5678-1234-567812345678"
+
     @pytest.mark.asyncio
     async def test_reindex_document_success(self):
         """Test successful document reindexing."""
         mock_store = AsyncMock()
-        mock_store.get_document.return_value = {"id": "doc-123", "title": "Test"}
+        mock_store.get_document.return_value = {"id": self.TEST_DOC_UUID, "title": "Test"}
 
         response = await reindex_document(
-            document_id="doc-123", postgres_store=mock_store, graphiti_client=AsyncMock()
+            document_id=self.TEST_DOC_UUID, postgres_store=mock_store, graphiti_client=AsyncMock()
         )
 
         assert response["status"] == "reindexed"
-        assert response["document_id"] == "doc-123"
+        assert response["document_id"] == self.TEST_DOC_UUID
 
     @pytest.mark.asyncio
     async def test_reindex_document_not_found(self):
@@ -449,7 +463,7 @@ class TestReindexDocument:
 
         with pytest.raises(HTTPException) as exc_info:
             await reindex_document(
-                document_id="nonexistent",
+                document_id=self.TEST_DOC_UUID,
                 postgres_store=mock_store,
                 graphiti_client=AsyncMock(),
             )
@@ -464,7 +478,7 @@ class TestReindexDocument:
 
         with pytest.raises(HTTPException) as exc_info:
             await reindex_document(
-                document_id="doc-123",
+                document_id=self.TEST_DOC_UUID,
                 postgres_store=mock_store,
                 graphiti_client=AsyncMock(),
             )
@@ -475,22 +489,25 @@ class TestReindexDocument:
 class TestGetDocumentStats:
     """Test get document stats endpoint."""
 
+    # Valid UUID for testing
+    TEST_DOC_UUID = "12345678-1234-5678-1234-567812345678"
+
     @pytest.mark.asyncio
     async def test_get_document_stats_success(self):
         """Test getting document statistics."""
         mock_store = AsyncMock()
         mock_store.get_document.return_value = {
-            "id": "doc-123",
+            "id": self.TEST_DOC_UUID,
             "title": "Test",
             "created_at": "2024-01-01T00:00:00Z",
         }
         mock_store.count_chunks.return_value = 10
 
         response = await get_document_stats(
-            document_id="doc-123", postgres_store=mock_store, graphiti_client=AsyncMock()
+            document_id=self.TEST_DOC_UUID, postgres_store=mock_store, graphiti_client=AsyncMock()
         )
 
-        assert response["document_id"] == "doc-123"
+        assert response["document_id"] == self.TEST_DOC_UUID
         assert response["chunk_count"] == 10
         assert response["entity_count"] == 0  # Not implemented yet
         assert response["relationship_count"] == 0  # Not implemented yet
@@ -503,7 +520,7 @@ class TestGetDocumentStats:
 
         with pytest.raises(HTTPException) as exc_info:
             await get_document_stats(
-                document_id="nonexistent",
+                document_id=self.TEST_DOC_UUID,
                 postgres_store=mock_store,
                 graphiti_client=AsyncMock(),
             )
@@ -518,7 +535,7 @@ class TestGetDocumentStats:
 
         with pytest.raises(HTTPException) as exc_info:
             await get_document_stats(
-                document_id="doc-123",
+                document_id=self.TEST_DOC_UUID,
                 postgres_store=mock_store,
                 graphiti_client=AsyncMock(),
             )
