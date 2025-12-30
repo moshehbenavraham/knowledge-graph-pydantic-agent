@@ -455,14 +455,20 @@ def render_sidebar() -> None:
 
         # Page Navigation (only show in Standard/Advanced mode)
         if st.session_state.config.mode != UIMode.SIMPLE:
+            nav_options = ["Chat", "Dashboard", "Graph Explorer"]
+            nav_labels = ["Chat", "Dashboard", "Graph Explorer"]
+            current_idx = (
+                nav_options.index(st.session_state.current_page)
+                if st.session_state.current_page in nav_options
+                else 0
+            )
             page = st.radio(
                 "Navigation",
-                options=["💬 Chat", "📊 Dashboard"],
-                index=0 if st.session_state.current_page == "Chat" else 1,
+                options=nav_labels,
+                index=current_idx,
                 label_visibility="collapsed",
             )
-            # Extract page name (remove emoji)
-            selected_page = page.split(" ", 1)[1]
+            selected_page = page
             if selected_page != st.session_state.current_page:
                 logger.info(
                     "Page navigation triggered",
@@ -1548,8 +1554,17 @@ async def main() -> None:
         if st.session_state.config.mode != UIMode.SIMPLE:
             await render_dashboard()
         else:
-            st.warning("📊 Dashboard is only available in Standard and Advanced modes")
+            st.warning("Dashboard is only available in Standard and Advanced modes")
             st.info("Switch to Standard or Advanced mode to access the dashboard")
+    elif current_page == "Graph Explorer":
+        # Graph Explorer page (only available in Standard/Advanced modes)
+        if st.session_state.config.mode != UIMode.SIMPLE:
+            from src.ui.pages.graph_explorer import render_page as render_graph_explorer
+
+            render_graph_explorer()
+        else:
+            st.warning("Graph Explorer is only available in Standard and Advanced modes")
+            st.info("Switch to Standard or Advanced mode to access the Graph Explorer")
     else:
         # Main chat interface
         st.title("🤖 AI with Apex Advanced RAG Agent")
