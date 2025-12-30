@@ -26,6 +26,8 @@ from src.agentic_rag.resilience import (
     ResilienceError,
     format_error_for_user,
 )
+from src.ui.components.loading_states import get_operation_from_tool
+from src.ui.components.progress_indicators import ToolExecutionState, ToolStatus
 
 from .base_handler import BaseHandler
 
@@ -62,8 +64,9 @@ class StreamingHandler(BaseHandler):
         interaction_start_time = datetime.now()
         session_id = kwargs.get("session_id", uuid4())
         user_id = kwargs.get("user_id")
-        tools_called = []
-        tool_timings = {}  # Track tool execution times
+        tools_called: list[str] = []
+        tool_timings: dict[str, dict[str, Any]] = {}  # Track tool execution times
+        tool_states: dict[str, ToolExecutionState] = {}  # Track tool execution states
         rag_used = False
         response_text = ""
 
@@ -111,13 +114,30 @@ class StreamingHandler(BaseHandler):
                                     elif event.part.part_kind == "tool-call":
                                         event_counts["tool_call"] += 1
                                         tool_name = event.part.tool_name
+                                        tool_start_time = datetime.now()
 
                                         # Track tool timing
                                         tool_timings[tool_name] = {
-                                            "start": datetime.now(),
+                                            "start": tool_start_time,
                                             "args": event.part.args,
                                         }
                                         tools_called.append(tool_name)
+
+                                        # Create tool execution state for UI tracking
+                                        tool_states[tool_name] = ToolExecutionState(
+                                            tool_name=tool_name,
+                                            status=ToolStatus.EXECUTING,
+                                            start_time=tool_start_time,
+                                            args=(
+                                                event.part.args
+                                                if isinstance(event.part.args, dict)
+                                                else {}
+                                            ),
+                                        )
+
+                                        # Get contextual loading message
+                                        operation = get_operation_from_tool(tool_name)
+                                        loading_message = f"Executing {tool_name}..."
 
                                         # Check if RAG tool is being used
                                         if tool_name in [
@@ -130,6 +150,7 @@ class StreamingHandler(BaseHandler):
                                         logger.info(
                                             "Tool call event",
                                             tool_name=tool_name,
+                                            operation=operation.value,
                                             args_keys=(
                                                 list(event.part.args.keys())
                                                 if isinstance(event.part.args, dict)
@@ -140,12 +161,15 @@ class StreamingHandler(BaseHandler):
                                             "type": "tool-call",
                                             "tool_name": tool_name,
                                             "args": event.part.args,
+                                            "operation": operation.value,
+                                            "loading_message": loading_message,
                                         }
 
                                     elif event.part.part_kind == "tool-return":  # type: ignore[comparison-overlap]
                                         event_counts["tool_return"] += 1
                                         tool_name = event.part.tool_name
                                         content_str = str(event.part.content)
+                                        execution_ms = 0.0
 
                                         # Calculate execution time and log tool usage
                                         if tool_name in tool_timings:
@@ -154,6 +178,16 @@ class StreamingHandler(BaseHandler):
                                             execution_ms = (
                                                 end_time - start_time
                                             ).total_seconds() * 1000
+
+                                            # Update tool execution state
+                                            if tool_name in tool_states:
+                                                tool_states[tool_name].status = ToolStatus.COMPLETED
+                                                tool_states[tool_name].end_time = end_time
+                                                tool_states[tool_name].result_summary = (
+                                                    content_str[:100] + "..."
+                                                    if len(content_str) > 100
+                                                    else content_str
+                                                )
 
                                             # Log tool usage to analytics
                                             try:
@@ -193,12 +227,14 @@ class StreamingHandler(BaseHandler):
                                             "Tool return event",
                                             tool_name=tool_name,
                                             content_length=len(content_str),
+                                            execution_ms=execution_ms,
                                             content_preview=content_preview,
                                         )
                                         yield {
                                             "type": "tool-return",
                                             "tool_name": tool_name,
                                             "content": event.part.content,
+                                            "execution_ms": execution_ms,
                                         }
 
                                 elif isinstance(event, PartDeltaEvent) and isinstance(
@@ -251,10 +287,21 @@ class StreamingHandler(BaseHandler):
                 **event_counts,
             )
 
+            # Build response metadata for UI display
+            response_metadata = {
+                "total_latency_ms": response_time_ms,
+                "tools_called": tools_called,
+                "tool_count": len(tools_called),
+                "rag_used": rag_used,
+                "event_counts": event_counts,
+            }
+
             yield {
                 "type": "complete",
                 "new_messages": run.result.new_messages() if run.result else [],
                 "streaming": True,
+                "tool_states": list(tool_states.values()),
+                "response_metadata": response_metadata,
             }
 
             logger.info(

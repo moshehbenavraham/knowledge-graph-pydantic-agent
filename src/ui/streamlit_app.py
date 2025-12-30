@@ -38,6 +38,12 @@ from src.auth.streamlit_auth import (
 from src.auth.user_profile import render_user_profile, render_user_profile_simple
 from src.config import UIMode
 from src.config.ui import ui_config as config
+from src.ui.components import (
+    ResponseMetadata,
+    render_error_from_event,
+    render_response_metadata,
+)
+from src.ui.components.progress_indicators import get_tool_display_name
 from src.ui.features import (
     BaseHandler,
     DashboardHandler,
@@ -1371,41 +1377,55 @@ async def handle_user_input(user_input: str) -> None:
 
                     elif chunk_type == "tool-call":
                         chunk_counts["tool_call"] += 1
+                        tool_name = chunk.get("tool_name", "unknown")
+                        display_name = get_tool_display_name(tool_name)
+                        loading_msg = chunk.get("loading_message", f"Executing {display_name}...")
                         logger.info(
                             "Tool call chunk received",
-                            tool_name=chunk.get("tool_name"),
+                            tool_name=tool_name,
+                            display_name=display_name,
                             args_type=type(chunk.get("args")).__name__,
                         )
-                        # Display tool call in real-time
+                        # Display tool call in real-time with enhanced status
                         if config.features["tools_visibility"]:
-                            with st.expander(f"🔧 Tool: {chunk['tool_name']}", expanded=True):
-                                st.info(
-                                    "⏳ Tool executing... (result will appear below when complete)"
-                                )
+                            with st.expander(f"[>>>] {display_name}", expanded=True):
+                                st.info(f"{loading_msg}")
                                 logger.debug(
-                                    f"Tool {chunk['tool_name']} executing, args will be available in final results"
+                                    f"Tool {tool_name} executing, args will be available in final results"
                                 )
 
                     elif chunk_type == "tool-return":
                         chunk_counts["tool_return"] += 1
+                        tool_name = chunk.get("tool_name", "unknown")
+                        display_name = get_tool_display_name(tool_name)
                         content_str = str(chunk.get("content", ""))
+                        exec_ms = chunk.get("execution_ms", 0)
+                        exec_display = (
+                            f"{exec_ms:.0f}ms" if exec_ms < 1000 else f"{exec_ms/1000:.1f}s"
+                        )
                         logger.info(
                             "Tool return chunk received",
-                            tool_name=chunk.get("tool_name", "unknown"),
+                            tool_name=tool_name,
                             content_length=len(content_str),
+                            execution_ms=exec_ms,
                         )
-                        # Display tool return in real-time
+                        # Display tool return in real-time with timing
                         if config.features["tools_visibility"]:
-                            with st.expander("📥 Tool Result", expanded=False):
+                            with st.expander(
+                                f"[OK] {display_name} ({exec_display})", expanded=False
+                            ):
                                 st.code(str(chunk["content"])[:500])
 
                     elif chunk_type == "complete":
                         chunk_counts["complete"] += 1
                         new_messages_count = len(chunk.get("new_messages", []))
+                        response_meta = chunk.get("response_metadata", {})
+                        tool_states_data = chunk.get("tool_states", [])
                         logger.info(
                             "Stream COMPLETE chunk received",
                             new_messages_count=new_messages_count,
                             full_response_length=len(full_response),
+                            tool_count=len(tool_states_data),
                         )
 
                         status_placeholder.empty()
@@ -1418,8 +1438,9 @@ async def handle_user_input(user_input: str) -> None:
                                     for part in msg.parts:
                                         if part.part_kind == "tool-return":
                                             chunk_counts["tool_return"] += 1
+                                            part_display = get_tool_display_name(part.tool_name)
                                             with st.expander(
-                                                f"📥 Tool Result: {part.tool_name}", expanded=False
+                                                f"[OK] {part_display}", expanded=False
                                             ):
                                                 content_str = str(part.content)
                                                 # Show preview if content is very long
@@ -1433,6 +1454,15 @@ async def handle_user_input(user_input: str) -> None:
                                                 else:
                                                     st.code(content_str)
 
+                        # Display response metadata if metrics enabled
+                        if config.features.get("metrics") and response_meta:
+                            metadata = ResponseMetadata(
+                                total_latency_ms=response_meta.get("total_latency_ms", 0),
+                                tools_called=response_meta.get("tools_called", []),
+                                tool_states=tool_states_data,
+                            )
+                            render_response_metadata(metadata, compact=True, show_tools=False)
+
                         st.session_state.messages.extend(chunk["new_messages"])
 
                         logger.info(
@@ -1442,6 +1472,16 @@ async def handle_user_input(user_input: str) -> None:
 
                         # Set flag to update metrics on next render
                         st.session_state.needs_metrics_update = True
+
+                    elif chunk_type == "error":
+                        # Handle error events with user-friendly display
+                        logger.warning(
+                            "Error chunk received",
+                            error_type=chunk.get("error_type"),
+                            recoverable=chunk.get("recoverable"),
+                        )
+                        status_placeholder.empty()
+                        render_error_from_event(chunk)
 
             logger.info(
                 "handle_user_input() COMPLETE - streaming finished",
