@@ -6,8 +6,20 @@ This module provides utilities for working with the Neo4j knowledge graph:
 - numeric_parser: Extract numeric facts (currency, percentages) from episode text
 - relationship_scoring: Calculate dynamic relationship strength scores
 - type_hierarchy: Semantic entity type grouping for hierarchical queries
+- multi_hop: Multi-hop query engine for relationship traversal
 """
 
+from .multi_hop import (
+    MultiHopQuery,
+    MultiHopQueryBuilder,
+    PathNode,
+    PathResult,
+    PathResultParser,
+    PathStep,
+    execute_multi_hop,
+    explore_entity_neighborhood,
+    find_paths_between,
+)
 from .numeric_parser import (
     CURRENCY_SYMBOL_MAP,
     MAGNITUDE_MAP,
@@ -46,14 +58,24 @@ __all__ = [
     "MAGNITUDE_MAP",
     "TYPE_HIERARCHY",
     "TYPE_PRIORITIES",
+    # Multi-hop query engine
+    "MultiHopQuery",
+    "MultiHopQueryBuilder",
     "NumericFact",
+    "PathNode",
+    "PathResult",
+    "PathResultParser",
+    "PathStep",
     "ScoringConfig",
     "TemporalMetadata",
     "TypeHierarchy",
     "calculate_relationship_strength",
     "calculate_relationship_strength_from_dict",
+    "execute_multi_hop",
+    "explore_entity_neighborhood",
     "extract_numeric_facts_json",
     "extract_temporal_properties",
+    "find_paths_between",
     "get_company_name",
     "get_type_hierarchy",
     "parse_filename",

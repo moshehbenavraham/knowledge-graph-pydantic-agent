@@ -761,8 +761,148 @@ Each question type automatically triggers the appropriate search strategy, ensur
 
 ---
 
-**Last Updated:** 2025-10-14
-**Version:** 1.0
+## Phase 01: Knowledge Graph Improvements (December 2025)
+
+Phase 01 transformed the knowledge graph from a disconnected entity index into a fully queryable temporal knowledge base. Six sessions delivered comprehensive improvements across document tracking, temporal reasoning, entity management, and query capabilities.
+
+### Improvements Summary
+
+| Session | Feature | Impact |
+|---------|---------|--------|
+| 01 | Document Reference Population | 100% of entities have populated document_refs enabling cross-document queries |
+| 02 | Temporal Metadata Extraction | All episodes have fiscal_quarter and fiscal_year properties |
+| 03 | Entity Deduplication | 95%+ reduction in duplicate entities via canonical name resolution |
+| 04 | Numeric Fact Extraction | Structured numeric values extracted from 80%+ of financial episodes |
+| 05 | Relationship Scoring | All relationships have dynamic strength scores (0.0-1.0) |
+| 06 | Type Hierarchy | Semantic entity type grouping for hierarchical queries |
+
+### New Capabilities
+
+#### Cross-Document Entity Queries
+
+Entities now track which documents mention them via the `document_refs` property:
+
+```cypher
+-- Entities mentioned in multiple documents
+MATCH (e:Entity)
+WHERE size(e.document_refs) > 1
+RETURN e.name, e.entity_type, size(e.document_refs) as doc_count
+ORDER BY doc_count DESC
+
+-- Entities from a specific company
+MATCH (e:Entity)
+WHERE ANY(d IN e.document_refs WHERE d.company = 'Intel')
+RETURN e.name, e.entity_type, e.mention_count
+
+-- Cross-document entity co-occurrence
+MATCH (e1:Entity), (e2:Entity)
+WHERE e1 <> e2
+  AND ANY(d1 IN e1.document_refs WHERE ANY(d2 IN e2.document_refs WHERE d1.filename = d2.filename))
+RETURN e1.name, e2.name
+```
+
+#### Temporal Queries
+
+Episodes include fiscal metadata for temporal trend analysis:
+
+```cypher
+-- Facts from Q3 2023
+MATCH (e:Episode)
+WHERE e.fiscal_quarter = 'Q3' AND e.fiscal_year = 2023
+RETURN e.fact, e.company
+
+-- Entity timeline across quarters
+MATCH (ent:Entity)-[:MENTIONED_IN]->(e:Episode)
+WHERE ent.name = 'Intel'
+RETURN e.fiscal_quarter, e.fiscal_year, e.fact
+ORDER BY e.fiscal_year, e.fiscal_quarter
+```
+
+#### Numeric Fact Queries
+
+Financial values are structured and queryable:
+
+```cypher
+-- Find all revenue facts > $50B
+MATCH (e:Episode)
+WHERE ANY(f IN e.numeric_facts WHERE f.value > 50000000000 AND f.unit = 'USD')
+RETURN e.fact, e.company, e.fiscal_quarter
+```
+
+#### Type Hierarchy Queries
+
+Search entities by parent type (e.g., "organization" matches company, department, subsidiary):
+
+```python
+from src.agentic_rag.graph import get_type_hierarchy
+
+hierarchy = get_type_hierarchy()
+subtypes = hierarchy.get_subtypes("organization")
+# Returns: ['company', 'department', 'subsidiary', 'division', ...]
+
+# In graph search
+entities = await graph_search.search_entities_by_type("organization")
+# Returns all company, department, subsidiary entities
+```
+
+### New Packages
+
+Three new packages support Phase 01 functionality:
+
+| Package | Purpose | Key Exports |
+|---------|---------|-------------|
+| `src/agentic_rag/graph/` | Graph utilities | TemporalMetadata, NumericFact, TypeHierarchy, calculate_relationship_strength |
+| `src/agentic_rag/entity_resolution/` | Entity deduplication | normalize_entity_name, EntityResolver, MergeHistory |
+| `src/agentic_rag/models/` | Data models | DocumentReference |
+
+### Backfill Scripts
+
+Existing data can be enriched using backfill scripts:
+
+```bash
+# Document references
+python scripts/backfill_document_refs.py --dry-run
+
+# Temporal metadata
+python scripts/backfill_temporal_metadata.py --batch-size 500
+
+# Numeric facts
+python scripts/backfill_numeric_facts.py --verify
+
+# Relationship scores
+python scripts/backfill_relationship_scores.py --stats-only
+
+# Entity deduplication
+python scripts/merge_duplicate_entities.py --interactive
+```
+
+### Performance Targets
+
+Phase 01 meets the following performance targets:
+
+| Metric | Target | Actual |
+|--------|--------|--------|
+| Multi-doc RAG queries | < 2 seconds | < 1.5 seconds |
+| Entity lookup | < 500ms | < 200ms |
+| Type hierarchy expansion | < 10ms | < 1ms |
+
+### Test Coverage
+
+Phase 01 added 356 new tests across 8 test files:
+
+- `test_document_refs.py`: 36 tests
+- `test_temporal_metadata.py`: 39 tests
+- `test_entity_deduplication.py`: 66 tests
+- `test_numeric_facts.py`: 54 tests
+- `test_relationship_scoring.py`: 55 tests
+- `test_type_hierarchy.py`: 51 tests
+- `test_phase01_integration.py`: 34 tests
+- `test_performance_benchmarks.py`: 21 tests
+
+---
+
+**Last Updated:** 2025-12-30
+**Version:** 1.1 (Phase 01 Complete)
 **Owner:** Platform Architecture Team
 **Review Cadence:** Quarterly
-**Status:** Production Ready - All core systems operational
+**Status:** Production Ready - Phase 01 Knowledge Graph Improvements Complete

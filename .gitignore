@@ -169,7 +169,8 @@ sessions/
 # Backup files
 *.backup
 *.old
-backups/
+backups/*
+!backups/.gitkeep
 CLAUDE.md
 config/auth_config.yaml
 

@@ -685,6 +685,43 @@ except Exception as e:
 
 ---
 
+## Infrastructure Configuration
+
+| Component | Provider | Status | Details |
+|-----------|----------|--------|---------|
+| CDN/DNS | Cloudflare | configured | Domain management via Cloudflare |
+| Hosting | Coolify/Docker | configured | docker-compose.coolify.yml, 8GB VPS |
+| Database | PostgreSQL | configured | Supabase (managed), daily backups included |
+| Knowledge Graph | Neo4j Aura | configured | Managed service, automatic daily backups |
+| Cache | In-memory/Redis | configured | Optional Redis, in-memory fallback |
+| Health | FastAPI | configured | /health/*, Kubernetes probes |
+| Security | Middleware | configured | RateLimitMiddleware (60/min), SecurityHeadersMiddleware |
+| Backup | Custom script | configured | scripts/backup.sh, 7-day retention, R2 optional |
+| Deploy | GitHub Actions | configured | release.yml (tag-based), GHCR container registry |
+
+### Infrastructure Bundles (4/4 Configured)
+
+| Bundle | Components | Verification |
+|--------|------------|--------------|
+| Health | /health endpoint, /health/detailed, readiness/liveness/startup probes | `curl /health` returns 200 + JSON |
+| Security | Rate limiting (60 req/min), security headers, CORS | Rapid requests get 429 |
+| Backup | PostgreSQL dump, Neo4j export, cloud upload (R2) | `make backup` creates ./backups/*.gz |
+| Deploy | Release workflow, container build, GHCR push | Tags (v*) trigger release.yml |
+
+### Backup Strategy
+
+**Managed Services (Automatic)**:
+- Supabase: Daily backups, PITR on Pro plan
+- Neo4j Aura: Automatic daily backups, 7-day retention
+
+**Custom Backups (On-Demand)**:
+- Script: `scripts/backup.sh`
+- Commands: `make backup`, `make backup-postgres`, `make backup-neo4j`, `make backup-upload`
+- Retention: 7 days local (configurable via BACKUP_RETENTION_DAYS)
+- Cloud storage: Cloudflare R2 (optional, configure R2_* env vars)
+
+---
+
 ## CI/CD Configuration
 
 | Bundle | Status | Workflow |
@@ -714,4 +751,4 @@ Configured for:
 
 ---
 
-*Last updated: 2025-12-29 | Agentic GraphRAG System v1.8.0*
+*Last updated: 2025-12-30 | Agentic GraphRAG System v1.8.0*

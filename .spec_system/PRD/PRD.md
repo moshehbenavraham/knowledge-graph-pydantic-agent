@@ -93,7 +93,8 @@ Unified AI assistant with Agentic RAG (Retrieval Augmented Generation) capabilit
 | Phase | Name | Sessions | Status |
 |-------|------|----------|--------|
 | 00 | Mature/Late MVP | TBD | Not Started |
-| 01 | Knowledge Graph Improvements | 6 | Not Started |
+| 01 | Knowledge Graph Improvements | 6 | Complete |
+| 02 | Advanced Query Engine | 5 | Not Started |
 
 ## Phase 00: Mature/Late MVP
 
@@ -234,6 +235,106 @@ This phase addresses 6 critical improvements to transform the knowledge graph fr
 - Type hierarchy queries work correctly
 - All 46 multi-doc temporal questions from QnA dataset answerable
 - Query performance meets targets (multi-doc < 2s, entity lookup < 500ms)
+
+## Phase 02: Advanced Query Engine
+
+### Overview
+
+This phase leverages the improved knowledge graph from Phase 01 to deliver advanced query capabilities. Building on document references, temporal metadata, entity deduplication, numeric facts, relationship scoring, and type hierarchy, Phase 02 enables the key use cases: multi-document temporal queries, cross-entity comparisons, entity-based fact retrieval, segment tracking, and multi-hop reasoning.
+
+### Objectives
+
+1. Enable multi-hop reasoning queries that traverse multiple relationships
+2. Support temporal trend analysis using Phase 01 temporal metadata
+3. Provide cross-entity comparison capabilities across documents and time periods
+4. Integrate all Phase 01 improvements into the unified search pipeline
+5. Optimize query performance to meet production targets
+
+### Sessions
+
+| Session | Name | Focus | Estimated Tasks |
+|---------|------|-------|-----------------|
+| 01 | Multi-hop Query Engine | Relationship traversal | 18-22 |
+| 02 | Temporal Trend Queries | Time-series analysis | 15-18 |
+| 03 | Cross-Entity Comparison | Entity comparisons | 15-18 |
+| 04 | Smart Search Enhancement | Search integration | 18-22 |
+| 05 | Query Performance and Validation | Caching and validation | 12-15 |
+
+### Session 01: Multi-hop Query Engine
+
+**Goal:** Enable multi-hop reasoning queries that traverse multiple relationships.
+
+**Key Deliverables:**
+- Multi-hop Cypher query builder with configurable depth (1-3 hops)
+- Path traversal with relationship type and strength filtering
+- Result ranking by cumulative path strength
+- New agent tool: `graph_traverse`
+
+**Success Criteria:**
+- 2-3 hop queries return correct paths
+- 3-hop queries complete in under 2 seconds
+- Relationship strength filtering excludes weak paths
+
+### Session 02: Temporal Trend Queries
+
+**Goal:** Enable temporal trend analysis using fiscal_quarter and fiscal_year metadata.
+
+**Key Deliverables:**
+- Temporal aggregation query builder
+- Time-series result formatting
+- Quarter-over-quarter and year-over-year comparison helpers
+- New agent tool: `temporal_trend`
+
+**Success Criteria:**
+- Time-series queries return chronologically ordered results
+- QoQ/YoY comparisons calculate correct deltas
+- Temporal queries complete in under 1 second
+
+### Session 03: Cross-Entity Comparison
+
+**Goal:** Enable cross-entity comparison queries across documents and time periods.
+
+**Key Deliverables:**
+- Entity comparison query builder
+- Side-by-side result formatting
+- Type hierarchy filtering for comparable entities
+- New agent tool: `compare_entities`
+
+**Success Criteria:**
+- Entity comparisons return side-by-side metrics
+- Type hierarchy prevents invalid comparisons
+- Comparison queries complete in under 1.5 seconds
+
+### Session 04: Smart Search Enhancement
+
+**Goal:** Integrate all Phase 01 and Phase 02 improvements into unified search.
+
+**Key Deliverables:**
+- Enhanced intent analyzer with new intent types
+- Smart routing to appropriate query engine
+- Result merging from multiple query types
+- Unified ranking using all signals
+
+**Success Criteria:**
+- Intent analyzer correctly identifies query types
+- Smart routing selects appropriate engine
+- End-to-end search latency under 2 seconds
+
+### Session 05: Query Performance and Validation
+
+**Goal:** Optimize performance and validate against 46 multi-doc temporal QnA questions.
+
+**Key Deliverables:**
+- Query result caching with TTL
+- Neo4j index optimization
+- Performance benchmark suite
+- QnA validation against 46 questions
+
+**Success Criteria:**
+- Caching reduces repeat query latency by 80%+
+- Multi-doc queries under 2 seconds
+- 46 QnA questions pass validation
+- All existing tests still pass
 
 ## Technical Stack
 

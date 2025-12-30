@@ -584,6 +584,31 @@ class Settings(BaseSettings):
         description="Apple OAuth redirect URI",
     )
 
+    # Multi-Hop Query Settings
+    multi_hop_max_depth: int = Field(
+        default=3,
+        ge=1,
+        le=3,
+        description="Maximum depth for multi-hop graph traversal",
+    )
+    multi_hop_default_strength_threshold: float = Field(
+        default=0.3,
+        ge=0.0,
+        le=1.0,
+        description="Default minimum relationship strength for multi-hop queries",
+    )
+    multi_hop_default_limit: int = Field(
+        default=50,
+        ge=1,
+        le=100,
+        description="Default maximum paths returned by multi-hop queries",
+    )
+    multi_hop_query_timeout: float = Field(
+        default=5.0,
+        gt=0,
+        description="Multi-hop query timeout in seconds",
+    )
+
     # Temporal Metadata Configuration
     # Static mapping of stock tickers to company names for document parsing
     TICKER_TO_COMPANY_MAP: dict[str, str] = {

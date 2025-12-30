@@ -348,6 +348,147 @@ async def graph_query_tool(
         }
 
 
+async def graph_traverse_tool(
+    start_entity: str,
+    end_entity: str | None = None,
+    max_hops: int = 2,
+    min_strength: float = 0.3,
+    entity_type_filter: str | None = None,
+    limit: int = 20,
+) -> dict[str, Any]:
+    """
+    Traverse the knowledge graph to find multi-hop relationships between entities.
+
+    Use for discovering indirect connections like:
+    - "What products did companies acquired by Intel release?"
+    - "Which executives are connected through shared board memberships?"
+    - "How is entity A connected to entity B?"
+
+    Args:
+        start_entity: Starting entity name or search pattern
+        end_entity: Optional ending entity (if searching for specific connection)
+        max_hops: Maximum path length (1-3, default 2)
+        min_strength: Minimum relationship strength threshold (0.0-1.0, default 0.3)
+        entity_type_filter: Optional filter for entity types (e.g., "organization", "person")
+        limit: Maximum number of paths to return (default 20)
+
+    Returns:
+        Dictionary with paths found, including:
+        - paths: List of discovered paths with nodes and relationships
+        - path_summaries: Human-readable path descriptions
+        - total_paths: Number of paths found
+        - query_info: Query parameters used
+    """
+    logger.info(
+        "graph_traverse_tool called",
+        start_entity=start_entity,
+        end_entity=end_entity,
+        max_hops=max_hops,
+        min_strength=min_strength,
+        entity_type_filter=entity_type_filter,
+        limit=limit,
+    )
+
+    try:
+        config = get_config()
+
+        # Check if graph is enabled
+        if not config.performance.enable_graph:
+            logger.warning("Graph traverse attempted but graph is disabled")
+            return {
+                "error": "Knowledge graph is not enabled. Set ENABLE_GRAPH=true in .env",
+                "start_entity": start_entity,
+                "paths": [],
+            }
+
+        # Get connection manager
+        global _connection_manager
+
+        if _connection_manager is None:
+            from src.agentic_rag.storage.connection_manager import get_connection_manager
+
+            _connection_manager = await get_connection_manager()
+
+        # Import multi-hop module
+        from src.agentic_rag.graph.multi_hop import MultiHopQuery, execute_multi_hop
+
+        # Build query
+        query = MultiHopQuery(
+            start_entity=start_entity,
+            end_entity=end_entity,
+            min_hops=1,
+            max_hops=min(3, max(1, max_hops)),
+            min_strength=min(1.0, max(0.0, min_strength)),
+            entity_type_filter=entity_type_filter,
+            limit=min(100, max(1, limit)),
+        )
+
+        # Execute multi-hop traversal
+        path_results = await execute_multi_hop(_connection_manager, query)
+
+        # Format results
+        paths = []
+        summaries = []
+
+        for path in path_results:
+            path_data = {
+                "nodes": [
+                    {
+                        "name": node.name,
+                        "type": node.type,
+                    }
+                    for node in path.nodes
+                ],
+                "relationships": [
+                    {
+                        "from": step.source_id,
+                        "to": step.target_id,
+                        "type": step.subtype,
+                        "strength": step.strength,
+                    }
+                    for step in path.steps
+                ],
+                "cumulative_strength": path.cumulative_strength,
+                "hop_count": path.hop_count,
+            }
+            paths.append(path_data)
+            summaries.append(path.get_path_summary())
+
+        result_dict = {
+            "start_entity": start_entity,
+            "end_entity": end_entity,
+            "paths": paths,
+            "path_summaries": summaries,
+            "total_paths": len(path_results),
+            "query_info": {
+                "max_hops": query.max_hops,
+                "min_strength": query.min_strength,
+                "entity_type_filter": entity_type_filter,
+            },
+        }
+
+        logger.info(
+            "Graph traverse completed",
+            start_entity=start_entity,
+            paths_found=len(path_results),
+        )
+        return result_dict
+
+    except Exception as e:
+        logger.exception(
+            "Graph traverse failed",
+            start_entity=start_entity,
+            end_entity=end_entity,
+            error=str(e),
+        )
+        return {
+            "start_entity": start_entity,
+            "end_entity": end_entity,
+            "error": str(e),
+            "paths": [],
+        }
+
+
 async def list_documents_tool(supabase: Client) -> list[str]:
     """
     List all available documents in the knowledge base.
@@ -519,6 +660,7 @@ __all__ = [
     "get_document_content_tool",
     "get_hybrid_search",
     "graph_query_tool",
+    "graph_traverse_tool",
     "list_documents_tool",
     "retrieve_relevant_documents_tool",
     "smart_search_tool",

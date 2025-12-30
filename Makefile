@@ -226,6 +226,23 @@ ingest:
 ingest-clean:
 	bash -c "source .venv/bin/activate && PYTHONPATH=$(PWD):$$PYTHONPATH python -m src.agentic_rag.ingestion.pipeline --clean"
 
+# Database Backup
+backup:  ## Run full database backup (PostgreSQL + Neo4j)
+	bash -c "source .venv/bin/activate && ./scripts/backup.sh"
+
+backup-postgres:  ## Backup PostgreSQL (Supabase) only
+	bash -c "source .venv/bin/activate && ./scripts/backup.sh --postgres-only"
+
+backup-neo4j:  ## Backup Neo4j knowledge graph only
+	bash -c "source .venv/bin/activate && ./scripts/backup.sh --neo4j-only"
+
+backup-upload:  ## Run backup and upload to cloud storage (R2/S3)
+	bash -c "source .venv/bin/activate && ./scripts/backup.sh --upload"
+
+backup-list:  ## List available backup files
+	@echo "Available backups in ./backups:"
+	@ls -lh ./backups/*.gz 2>/dev/null || echo "No backup files found"
+
 # Development utilities
 clean:
 	find . -type f -name "*.pyc" -delete

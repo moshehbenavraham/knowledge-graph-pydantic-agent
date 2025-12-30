@@ -2,7 +2,7 @@
   "version": "2.0",
   "project_name": "Agentic GraphRAG System",
   "description": "Unified AI assistant with Agentic RAG (Retrieval Augmented Generation) capabilities, combining vector search (PostgreSQL/Supabase + pgvector), knowledge graph (Neo4j + Graphiti), and intelligent routing. Built with Pydantic AI.",
-  "current_phase": 0,
+  "current_phase": 2,
   "current_session": null,
   "phases": {
     "0": {
@@ -23,6 +23,19 @@
         "05": {"name": "Relationship Scoring", "status": "completed"},
         "06": {"name": "Type Hierarchy and Testing", "status": "completed"}
       }
+    },
+    "2": {
+      "name": "Advanced Query Engine",
+      "description": "Leverage the improved knowledge graph from Phase 01 to deliver advanced query capabilities including multi-hop reasoning, temporal trend analysis, cross-entity comparisons, and smart search integration.",
+      "status": "in_progress",
+      "session_count": 5,
+      "sessions": {
+        "01": {"name": "Multi-hop Query Engine", "status": "completed"},
+        "02": {"name": "Temporal Trend Queries", "status": "not_started"},
+        "03": {"name": "Cross-Entity Comparison", "status": "not_started"},
+        "04": {"name": "Smart Search Enhancement", "status": "not_started"},
+        "05": {"name": "Query Performance and Validation", "status": "not_started"}
+      }
     }
   },
   "completed_sessions": [
@@ -31,7 +44,8 @@
     "phase01-session03-entity_deduplication",
     "phase01-session04-numeric_fact_extraction",
     "phase01-session05-relationship_scoring",
-    "phase01-session06-type_hierarchy_and_testing"
+    "phase01-session06-type_hierarchy_and_testing",
+    "phase02-session01-multi_hop_query_engine"
   ],
   "next_session_history": [
     {
@@ -62,6 +76,11 @@
     {
       "date": "2025-12-30",
       "session": "phase01-session06-type_hierarchy_and_testing",
+      "status": "completed"
+    },
+    {
+      "date": "2025-12-30",
+      "session": "phase02-session01-multi_hop_query_engine",
       "status": "completed"
     }
   ]

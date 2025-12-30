@@ -38,7 +38,7 @@ from src.tools import (
     retrieve_relevant_documents_tool,
     web_search_tool,
 )
-from src.tools.rag import graph_query_tool, smart_search_tool
+from src.tools.rag import graph_query_tool, graph_traverse_tool, smart_search_tool
 
 # Load environment
 load_dotenv()
@@ -116,6 +116,11 @@ Tool Selection Strategy:
   - Use for: "How is X related to Y?", "What facts do we have about Z?"
   - Requires entity names, returns facts and relationships
   - Only works when knowledge graph is enabled
+
+- **graph_traverse**: Multi-hop path traversal for discovering indirect connections
+  - Use for: "What products did companies acquired by Intel release?"
+  - Use for: "Which executives are connected through shared board memberships?"
+  - Finds paths through 1-3 relationship hops with strength filtering
 
 - **list_all_documents**: Get inventory of available documents
 - **get_full_document**: Retrieve complete document by ID
@@ -236,6 +241,65 @@ async def query_knowledge_graph(
             "entity": entity_name,
             "query_type": query_type,
             "error": str(e),
+        }
+
+
+# ========== Graph Traverse Tool (Multi-Hop) ==========
+@super_agent.tool
+async def graph_traverse(
+    ctx: RunContext[UnifiedAgentDeps],
+    start_entity: str,
+    end_entity: str | None = None,
+    max_hops: int = 2,
+    min_strength: float = 0.3,
+    entity_type_filter: str | None = None,
+    limit: int = 20,
+) -> dict[str, Any]:
+    """
+    Traverse the knowledge graph to find multi-hop relationships.
+
+    Use for discovering indirect connections:
+    - "What products did companies acquired by Intel release?" (Company -> Acquisition -> Products)
+    - "Which executives are connected through shared board memberships?"
+    - "How is entity A connected to entity B through intermediaries?"
+
+    The tool finds paths through 1-3 relationship hops, filtering by
+    relationship strength to ensure quality connections.
+
+    Args:
+        start_entity: Starting entity name or search pattern
+        end_entity: Optional ending entity (for specific connections)
+        max_hops: Maximum path length 1-3 (default 2)
+        min_strength: Minimum relationship strength 0.0-1.0 (default 0.3)
+        entity_type_filter: Filter by entity type (e.g., "organization", "person")
+        limit: Maximum paths to return (default 20)
+
+    Returns:
+        Dictionary with discovered paths, summaries, and metadata
+    """
+    logger.info(
+        f"Graph traverse from {start_entity} "
+        f"(end={end_entity}, hops={max_hops}, strength>={min_strength})"
+    )
+
+    try:
+        result = await graph_traverse_tool(
+            start_entity=start_entity,
+            end_entity=end_entity,
+            max_hops=max_hops,
+            min_strength=min_strength,
+            entity_type_filter=entity_type_filter,
+            limit=limit,
+        )
+        return result
+
+    except Exception as e:
+        logger.error(f"Graph traverse failed: {e}")
+        return {
+            "start_entity": start_entity,
+            "end_entity": end_entity,
+            "error": str(e),
+            "paths": [],
         }
 
 
@@ -651,6 +715,7 @@ __all__ = [
     "execute_python_code",
     "execute_sql",
     "get_full_document",
+    "graph_traverse",
     "iterative_search",
     "list_all_documents",
     "query_knowledge_graph",
