@@ -2,7 +2,7 @@
 
 **Enterprise-grade documentation for the Luminari Agent Agentic Graph RAG System**
 
-Version 1.1.0 | Last Updated: October 2025
+Version 1.8.0 | Last Updated: December 2025
 
 ---
 
@@ -118,9 +118,31 @@ Version 1.1.0 | Last Updated: October 2025
 
 ---
 
+### Phase 03 Documentation (New)
+
+#### API Documentation
+- [API Overview](api/README.md) - API introduction and quick start
+- [Endpoint Reference](api/endpoints.md) - Complete endpoint documentation
+
+#### Developer Documentation
+- [Setup Guide](developer/setup_guide.md) - Development environment setup
+- [Contributing Guidelines](developer/CONTRIBUTING.md) - How to contribute
+
+#### Architecture Decision Records
+- [ADR-001: Error Handling Strategy](adr/ADR-001-error-handling-strategy.md)
+- [ADR-002: Performance Monitoring Approach](adr/ADR-002-performance-monitoring-approach.md)
+- [ADR-003: UI Component Library](adr/ADR-003-ui-component-library.md)
+- [ADR-004: Graph Visualization Design](adr/ADR-004-graph-visualization-design.md)
+
+#### Additional Troubleshooting
+- [Troubleshooting Index](troubleshooting/README.md)
+- [Error Patterns Guide](troubleshooting/error_patterns.md) - Phase 03 error handling
+
+---
+
 ### Supporting Documentation
 
-#### 📋 [Changelogs](a-changelogs/index.md)
+#### Changelogs
 Version history and release notes.
 
 - [Current Changelog](a-changelogs/changelog_current.md) - Latest changes

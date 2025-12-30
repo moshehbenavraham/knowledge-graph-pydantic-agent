@@ -254,6 +254,31 @@ clean-all: clean
 	rm -rf .coverage htmlcov/ .pytest_cache/ .mypy_cache/ .ruff_cache/
 	rm -rf build/ dist/
 
+# Debug Scripts (Phase 03)
+debug-connections:  ## Test connectivity to all external services (PostgreSQL, Neo4j, OpenAI, Supabase)
+	bash scripts/debug/check_connections.sh
+
+debug-connections-verbose:  ## Test connectivity with verbose output
+	bash scripts/debug/check_connections.sh --verbose
+
+debug-logs:  ## Analyze recent application logs for errors and warnings
+	bash scripts/debug/analyze_logs.sh --errors --warnings
+
+debug-logs-search:  ## Search logs for a pattern (usage: make debug-logs-search PATTERN="error")
+	bash scripts/debug/analyze_logs.sh --search "$(PATTERN)"
+
+debug-logs-tail:  ## Tail and analyze logs in real-time
+	bash scripts/debug/analyze_logs.sh --tail
+
+debug-health:  ## Run comprehensive system health check
+	bash scripts/debug/health_check.sh
+
+debug-health-quick:  ## Run quick health check (skip slow checks)
+	bash scripts/debug/health_check.sh --quick
+
+debug-health-json:  ## Run health check with JSON output
+	bash scripts/debug/health_check.sh --json
+
 requirements:
 	pip-compile pyproject.toml --output-file requirements.txt --resolver=backtracking
 
@@ -607,4 +632,4 @@ deploy-clean-all:
 	docker-compose -f docker/docker-compose.staging.yml down -v
 	docker-compose -f docker/docker-compose.prod.yml down -v
 
-.PHONY: setup check format test test-coverage lint security run-ui run-ui-simple run-ui-standard run-ui-advanced run-rag run-mcp run-api run-agentic-rag dev ngrok-start ngrok-ui deploy-ngrok deploy-ngrok-stop deploy-ngrok-restart ngrok-status ngrok-logs ngrok-monitor coolify-check coolify-env coolify-build coolify-test-build coolify-compose-up coolify-compose-down coolify-compose-logs docker-build docker-run docker-stop db-setup neo4j-init ingest ingest-clean clean clean-all requirements install-dev load-test load-test-headless stress-test profile profile-memory redis-cli redis-flush redis-stats redis-monitor api-test api-search api-metrics api-status full-stack-up full-stack-down benchmark poetry-install poetry-update poetry-lock poetry-export poetry-build poetry-shell poetry-check poetry-show http-test http-chat http-search http-status http-metrics profile-api profile-ui profile-rag profile-tests profile-top profile-memory-api profile-memory-ui dev-setup dev-check dev-format dev-clean pre-commit-install pre-commit-run pre-commit-update full-test full-profile image-build image-build-api image-push image-push-api image-tag-release image-scan image-scan-full image-sbom image-sign image-verify deploy-dev deploy-dev-down deploy-staging deploy-staging-down deploy-prod deploy-prod-down health-check health-check-staging health-check-prod ci-supply-chain ci-deploy logs-app logs-api logs-all metrics-export image-clean deploy-clean-all
+.PHONY: setup check format test test-coverage lint security run-ui run-ui-simple run-ui-standard run-ui-advanced run-rag run-mcp run-api run-agentic-rag dev ngrok-start ngrok-ui deploy-ngrok deploy-ngrok-stop deploy-ngrok-restart ngrok-status ngrok-logs ngrok-monitor coolify-check coolify-env coolify-build coolify-test-build coolify-compose-up coolify-compose-down coolify-compose-logs docker-build docker-run docker-stop db-setup neo4j-init ingest ingest-clean clean clean-all requirements install-dev load-test load-test-headless stress-test profile profile-memory redis-cli redis-flush redis-stats redis-monitor api-test api-search api-metrics api-status full-stack-up full-stack-down benchmark poetry-install poetry-update poetry-lock poetry-export poetry-build poetry-shell poetry-check poetry-show http-test http-chat http-search http-status http-metrics profile-api profile-ui profile-rag profile-tests profile-top profile-memory-api profile-memory-ui dev-setup dev-check dev-format dev-clean pre-commit-install pre-commit-run pre-commit-update full-test full-profile image-build image-build-api image-push image-push-api image-tag-release image-scan image-scan-full image-sbom image-sign image-verify deploy-dev deploy-dev-down deploy-staging deploy-staging-down deploy-prod deploy-prod-down health-check health-check-staging health-check-prod ci-supply-chain ci-deploy logs-app logs-api logs-all metrics-export image-clean deploy-clean-all debug-connections debug-connections-verbose debug-logs debug-logs-search debug-logs-tail debug-health debug-health-quick debug-health-json
