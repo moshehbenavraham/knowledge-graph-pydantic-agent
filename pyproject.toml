@@ -1,6 +1,6 @@
 [project]
 name = "luminari-ai-agent"
-version = "1.2.15"
+version = "1.2.16"
 description = "Unified Super AI Agent with intelligent routing, comprehensive tooling, configurable UI, interactive GraphRAG analytics dashboard with draggable knowledge graph, persistent analytics system, and enterprise monitoring"
 requires-python = ">=3.11"
 dependencies = [

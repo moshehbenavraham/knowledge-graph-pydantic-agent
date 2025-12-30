@@ -14,6 +14,7 @@ from uuid import UUID
 
 import structlog
 
+from src.agentic_rag.cache import CacheType, generate_cache_key, get_query_cache
 from src.agentic_rag.config import get_config
 from src.agentic_rag.storage.connection_manager import ConnectionManager
 from src.config import SearchStrategy
@@ -106,27 +107,57 @@ class HybridSearch:
         )
 
     async def search(
-        self, query: str, limit: int = 10, strategy: SearchStrategy | None = None
+        self,
+        query: str,
+        limit: int = 10,
+        strategy: SearchStrategy | None = None,
+        use_cache: bool = True,
     ) -> HybridSearchResult:
         """
         Perform hybrid search with intelligent strategy selection.
 
         Workflow:
-        1. Analyze query intent
-        2. Determine search strategy
-        3. Execute parallel searches
-        4. Merge and rank results
+        1. Check cache for existing result
+        2. Analyze query intent
+        3. Determine search strategy
+        4. Execute parallel searches
+        5. Merge and rank results
+        6. Cache result
 
         Args:
             query: Search query
             limit: Maximum number of results
             strategy: Force specific strategy (optional)
+            use_cache: Whether to use query result caching (default True)
 
         Returns:
             Hybrid search result
         """
-        structlog_logger.info("search called", query_preview=query[:100], limit=limit)
+        structlog_logger.info(
+            "search called", query_preview=query[:100], limit=limit, use_cache=use_cache
+        )
         start_time = datetime.now()
+
+        # Check cache first (only if strategy not forced)
+        cache = get_query_cache()
+        cache_key = generate_cache_key(
+            query=query,
+            params={
+                "limit": limit,
+                "strategy": strategy.value if strategy else None,
+            },
+            prefix="hybrid_search",
+        )
+
+        if use_cache:
+            hit, cached_result = cache.get(CacheType.HYBRID, cache_key)
+            if hit and cached_result is not None:
+                structlog_logger.info(
+                    "search cache hit",
+                    query_preview=query[:50],
+                    cache_key=cache_key[:16],
+                )
+                return cached_result  # type: ignore[no-any-return]
         searches_count = cast("int", self._stats["searches"])
         self._stats["searches"] = searches_count + 1
 
@@ -207,6 +238,10 @@ class HybridSearch:
         await self._log_search_analytics(
             query, strategy, intent, result, start_time, datetime.now()
         )
+
+        # Cache result
+        if use_cache:
+            cache.set(CacheType.HYBRID, cache_key, result)
 
         return result
 

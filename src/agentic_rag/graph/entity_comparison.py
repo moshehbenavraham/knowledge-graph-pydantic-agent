@@ -20,6 +20,7 @@ Performance targets:
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
@@ -28,7 +29,9 @@ from typing import TYPE_CHECKING, Any
 import structlog
 from pydantic import BaseModel, Field, field_validator
 
+from src.agentic_rag.cache import CacheType, generate_cache_key, get_query_cache
 from src.agentic_rag.graph.type_hierarchy import get_type_hierarchy
+from src.config import get_settings
 
 if TYPE_CHECKING:
     from src.agentic_rag.storage.connection_manager import ConnectionManager
@@ -883,17 +886,22 @@ class ComparisonResultParser:
 async def execute_comparison(
     connection_manager: ConnectionManager,
     query: ComparisonQuery,
+    use_cache: bool = True,
+    timeout_seconds: float | None = None,
 ) -> EntityComparisonResult:
     """
     Execute a cross-entity comparison query against Neo4j.
 
     This is the main entry point for comparison queries. It validates
     type compatibility, builds the Cypher query, executes it, and
-    parses the results with ranking.
+    parses the results with ranking. Results are cached for improved
+    performance on repeated queries.
 
     Args:
         connection_manager: Initialized database connection manager
         query: ComparisonQuery parameters
+        use_cache: Whether to use query result caching (default True)
+        timeout_seconds: Query timeout (default from settings)
 
     Returns:
         EntityComparisonResult with side-by-side comparison data
@@ -914,6 +922,11 @@ async def execute_comparison(
     if connection_manager is None:
         raise ValueError("connection_manager is required")
 
+    # Get timeout from settings if not specified
+    if timeout_seconds is None:
+        settings = get_settings()
+        timeout_seconds = settings.query_timeout_seconds
+
     start_time = datetime.now()
 
     logger.info(
@@ -923,7 +936,34 @@ async def execute_comparison(
         entity_type_filter=query.entity_type_filter,
         fiscal_quarter=query.fiscal_quarter,
         fiscal_year=query.fiscal_year,
+        use_cache=use_cache,
     )
+
+    # Check cache first
+    cache = get_query_cache()
+    cache_key = generate_cache_key(
+        query=",".join(sorted(query.entity_names)),
+        params={
+            "metric": query.metric,
+            "entity_type_filter": query.entity_type_filter,
+            "fiscal_quarter": query.fiscal_quarter,
+            "fiscal_year": query.fiscal_year,
+            "include_growth": query.include_growth,
+            "growth_type": query.growth_type.value,
+            "limit": query.limit,
+        },
+        prefix="comparison",
+    )
+
+    if use_cache:
+        hit, cached_result = cache.get(CacheType.COMPARISON, cache_key)
+        if hit:
+            logger.info(
+                "execute_comparison cache hit",
+                entity_names=query.entity_names,
+                cache_key=cache_key[:16],
+            )
+            return cached_result  # type: ignore[no-any-return]
 
     # Build query
     builder = ComparisonQueryBuilder().from_query(query)
@@ -931,14 +971,29 @@ async def execute_comparison(
 
     logger.debug("execute_comparison cypher", cypher_preview=cypher[:200])
 
-    # Execute query
+    # Execute query with timeout
     try:
-        async with connection_manager.get_neo4j_session() as session:
-            result = await session.run(cypher, params)
+        async with asyncio.timeout(timeout_seconds):
+            async with connection_manager.get_neo4j_session() as session:
+                result = await session.run(cypher, params)
 
-            records = []
-            async for record in result:
-                records.append(dict(record))
+                records = []
+                async for record in result:
+                    records.append(dict(record))
+
+    except TimeoutError:
+        logger.warning(
+            "execute_comparison timeout",
+            entity_names=query.entity_names,
+            timeout_seconds=timeout_seconds,
+        )
+        query_time = (datetime.now() - start_time).total_seconds() * 1000
+        return EntityComparisonResult(
+            comparison_valid=False,
+            error_message=f"Query timed out after {timeout_seconds}s",
+            entities_compared=len(query.entity_names),
+            query_time_ms=query_time,
+        )
 
     except Exception as e:
         logger.exception(
@@ -994,14 +1049,8 @@ async def execute_comparison(
 
     query_time = (datetime.now() - start_time).total_seconds() * 1000
 
-    logger.info(
-        "execute_comparison completed",
-        entities_found=len(aggregated),
-        entities_with_data=sum(1 for m in aggregated if m.has_value),
-        query_time_ms=query_time,
-    )
-
-    return EntityComparisonResult(
+    # Build result
+    comparison_result = EntityComparisonResult(
         entities=aggregated,
         metric=query.metric,
         comparison_valid=True,
@@ -1011,6 +1060,20 @@ async def execute_comparison(
         growth_metrics=growth_metrics,
         query_time_ms=query_time,
     )
+
+    # Cache results
+    if use_cache:
+        cache.set(CacheType.COMPARISON, cache_key, comparison_result)
+
+    logger.info(
+        "execute_comparison completed",
+        entities_found=len(aggregated),
+        entities_with_data=sum(1 for m in aggregated if m.has_value),
+        query_time_ms=query_time,
+        cached=use_cache,
+    )
+
+    return comparison_result
 
 
 def _calculate_growth_for_entities(

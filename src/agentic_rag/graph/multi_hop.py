@@ -19,6 +19,7 @@ Performance targets:
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass, field
 from datetime import datetime
 from functools import reduce
@@ -27,12 +28,17 @@ from typing import TYPE_CHECKING, Any
 import structlog
 from pydantic import BaseModel, Field, field_validator
 
+from src.agentic_rag.cache import CacheType, generate_cache_key, get_query_cache
 from src.agentic_rag.graph.type_hierarchy import get_type_hierarchy
+from src.config import get_settings
 
 if TYPE_CHECKING:
     from src.agentic_rag.storage.connection_manager import ConnectionManager
 
 logger = structlog.get_logger(__name__)
+
+# Query timeout from settings
+MULTI_HOP_TIMEOUT_SECONDS = 5.0
 
 
 # =============================================================================
@@ -557,16 +563,21 @@ class PathResultParser:
 async def execute_multi_hop(
     connection_manager: ConnectionManager,
     query: MultiHopQuery,
+    use_cache: bool = True,
+    timeout_seconds: float | None = None,
 ) -> list[PathResult]:
     """
     Execute a multi-hop traversal query against Neo4j.
 
     This is the main entry point for multi-hop queries. It builds the
     Cypher query, executes it against Neo4j, and parses the results.
+    Results are cached for improved performance on repeated queries.
 
     Args:
         connection_manager: Initialized database connection manager
         query: MultiHopQuery parameters
+        use_cache: Whether to use query result caching (default True)
+        timeout_seconds: Query timeout (default from settings)
 
     Returns:
         List of PathResults sorted by cumulative strength (strongest first)
@@ -587,6 +598,11 @@ async def execute_multi_hop(
     if connection_manager is None:
         raise ValueError("connection_manager is required")
 
+    # Get timeout from settings if not specified
+    if timeout_seconds is None:
+        settings = get_settings()
+        timeout_seconds = settings.query_timeout_seconds
+
     start_time = datetime.now()
 
     logger.info(
@@ -597,7 +613,33 @@ async def execute_multi_hop(
         min_strength=query.min_strength,
         entity_type_filter=query.entity_type_filter,
         limit=query.limit,
+        use_cache=use_cache,
     )
+
+    # Check cache first
+    cache = get_query_cache()
+    cache_key = generate_cache_key(
+        query=query.start_entity,
+        params={
+            "end_entity": query.end_entity,
+            "min_hops": query.min_hops,
+            "max_hops": query.max_hops,
+            "min_strength": query.min_strength,
+            "entity_type_filter": query.entity_type_filter,
+            "limit": query.limit,
+        },
+        prefix="multi_hop",
+    )
+
+    if use_cache:
+        hit, cached_result = cache.get(CacheType.MULTI_HOP, cache_key)
+        if hit:
+            logger.info(
+                "execute_multi_hop cache hit",
+                start_entity=query.start_entity,
+                cache_key=cache_key[:16],
+            )
+            return cached_result  # type: ignore[no-any-return]
 
     # Build query
     builder = MultiHopQueryBuilder().from_query(query)
@@ -605,14 +647,23 @@ async def execute_multi_hop(
 
     logger.debug("execute_multi_hop cypher", cypher_preview=cypher[:200])
 
-    # Execute query
+    # Execute query with timeout
     try:
-        async with connection_manager.get_neo4j_session() as session:
-            result = await session.run(cypher, params)
+        async with asyncio.timeout(timeout_seconds):
+            async with connection_manager.get_neo4j_session() as session:
+                result = await session.run(cypher, params)
 
-            records = []
-            async for record in result:
-                records.append(dict(record))
+                records = []
+                async for record in result:
+                    records.append(dict(record))
+
+    except TimeoutError:
+        logger.warning(
+            "execute_multi_hop timeout",
+            start_entity=query.start_entity,
+            timeout_seconds=timeout_seconds,
+        )
+        return []
 
     except Exception as e:
         logger.exception(
@@ -625,6 +676,10 @@ async def execute_multi_hop(
     # Parse results
     path_results = PathResultParser.parse_records(records)
 
+    # Cache results
+    if use_cache:
+        cache.set(CacheType.MULTI_HOP, cache_key, path_results)
+
     query_time = (datetime.now() - start_time).total_seconds()
 
     logger.info(
@@ -632,6 +687,7 @@ async def execute_multi_hop(
         paths_found=len(path_results),
         query_time_ms=query_time * 1000,
         start_entity=query.start_entity,
+        cached=use_cache,
     )
 
     return path_results

@@ -94,7 +94,7 @@ Unified AI assistant with Agentic RAG (Retrieval Augmented Generation) capabilit
 |-------|------|----------|--------|
 | 00 | Mature/Late MVP | TBD | Not Started |
 | 01 | Knowledge Graph Improvements | 6 | Complete |
-| 02 | Advanced Query Engine | 5 | Not Started |
+| 02 | Advanced Query Engine | 5 | Complete |
 
 ## Phase 00: Mature/Late MVP
 

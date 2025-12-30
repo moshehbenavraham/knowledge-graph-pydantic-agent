@@ -20,6 +20,7 @@ Performance targets:
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
@@ -27,6 +28,9 @@ from typing import TYPE_CHECKING, Any
 
 import structlog
 from pydantic import BaseModel, Field, field_validator
+
+from src.agentic_rag.cache import CacheType, generate_cache_key, get_query_cache
+from src.config import get_settings
 
 if TYPE_CHECKING:
     from src.agentic_rag.storage.connection_manager import ConnectionManager
@@ -902,16 +906,21 @@ def _build_comparison_result(
 async def execute_temporal_query(
     connection_manager: ConnectionManager,
     query: TemporalQuery,
+    use_cache: bool = True,
+    timeout_seconds: float | None = None,
 ) -> TrendResult:
     """
     Execute a temporal query against Neo4j and return trend results.
 
     This is the main entry point for temporal queries. It builds the
     Cypher query, executes it against Neo4j, and parses the results.
+    Results are cached for improved performance on repeated queries.
 
     Args:
         connection_manager: Initialized database connection manager
         query: TemporalQuery parameters
+        use_cache: Whether to use query result caching (default True)
+        timeout_seconds: Query timeout (default from settings)
 
     Returns:
         TrendResult with data points and trend analysis
@@ -932,6 +941,11 @@ async def execute_temporal_query(
     if connection_manager is None:
         raise ValueError("connection_manager is required")
 
+    # Get timeout from settings if not specified
+    if timeout_seconds is None:
+        settings = get_settings()
+        timeout_seconds = settings.query_timeout_seconds
+
     start_time = datetime.now()
 
     logger.info(
@@ -940,7 +954,34 @@ async def execute_temporal_query(
         metric=query.metric,
         year_range=f"{query.start_year}-{query.end_year}",
         comparison_type=query.comparison_type.value,
+        use_cache=use_cache,
     )
+
+    # Check cache first
+    cache = get_query_cache()
+    cache_key = generate_cache_key(
+        query=query.entity,
+        params={
+            "metric": query.metric,
+            "start_year": query.start_year,
+            "end_year": query.end_year,
+            "start_quarter": query.start_quarter,
+            "end_quarter": query.end_quarter,
+            "comparison_type": query.comparison_type.value,
+            "limit": query.limit,
+        },
+        prefix="temporal_trend",
+    )
+
+    if use_cache:
+        hit, cached_result = cache.get(CacheType.TEMPORAL_TREND, cache_key)
+        if hit:
+            logger.info(
+                "execute_temporal_query cache hit",
+                entity=query.entity,
+                cache_key=cache_key[:16],
+            )
+            return cached_result  # type: ignore[no-any-return]
 
     # Build query
     builder = TemporalQueryBuilder().from_query(query)
@@ -948,14 +989,27 @@ async def execute_temporal_query(
 
     logger.debug("execute_temporal_query cypher", cypher_preview=cypher[:200])
 
-    # Execute query
+    # Execute query with timeout
     try:
-        async with connection_manager.get_neo4j_session() as session:
-            result = await session.run(cypher, params)
+        async with asyncio.timeout(timeout_seconds):
+            async with connection_manager.get_neo4j_session() as session:
+                result = await session.run(cypher, params)
 
-            records = []
-            async for record in result:
-                records.append(dict(record))
+                records = []
+                async for record in result:
+                    records.append(dict(record))
+
+    except TimeoutError:
+        logger.warning(
+            "execute_temporal_query timeout",
+            entity=query.entity,
+            timeout_seconds=timeout_seconds,
+        )
+        return TrendResult(
+            entity=query.entity,
+            metric=query.metric or "",
+            direction=TrendDirection.INSUFFICIENT_DATA,
+        )
 
     except Exception as e:
         logger.exception(
@@ -977,6 +1031,10 @@ async def execute_temporal_query(
         metric=query.metric or "",
     )
 
+    # Cache results
+    if use_cache:
+        cache.set(CacheType.TEMPORAL_TREND, cache_key, trend_result)
+
     query_time = (datetime.now() - start_time).total_seconds()
 
     logger.info(
@@ -985,6 +1043,7 @@ async def execute_temporal_query(
         direction=trend_result.direction.value,
         query_time_ms=query_time * 1000,
         entity=query.entity,
+        cached=use_cache,
     )
 
     return trend_result

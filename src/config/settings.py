@@ -321,6 +321,30 @@ class Settings(BaseSettings):
         description="Graph cache TTL (seconds)",
     )
 
+    # Query Cache Settings (Phase 02)
+    query_cache_ttl_seconds: int = Field(
+        default=300,
+        ge=10,
+        le=3600,
+        description="Query cache TTL in seconds (5 minutes default)",
+    )
+    query_cache_max_size: int = Field(
+        default=500,
+        ge=10,
+        le=10000,
+        description="Maximum query cache entries",
+    )
+    query_cache_empty_results: bool = Field(
+        default=True,
+        description="Whether to cache empty query results",
+    )
+    query_timeout_seconds: float = Field(
+        default=5.0,
+        gt=0,
+        le=60.0,
+        description="Default query timeout in seconds",
+    )
+
     # Feature Flags
     enable_graph: bool = Field(
         default=True,
