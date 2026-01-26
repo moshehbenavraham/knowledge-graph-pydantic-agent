@@ -157,10 +157,10 @@ jobs:
         context: .
         file: docker/Dockerfile
         push: false
-        tags: luminari-ai-agent:test
+        tags: knowledge-graph-pydantic-agent:test
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
     - name: Test Docker image
       run: |
-        docker run --rm luminari-ai-agent:test python -c "import src; print('Import successful')"
+        docker run --rm knowledge-graph-pydantic-agent:test python -c "import src; print('Import successful')"

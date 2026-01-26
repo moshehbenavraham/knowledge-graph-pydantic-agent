@@ -175,7 +175,7 @@ class GoogleDriveWatcher:
         if Path(self.token_path).exists():
             structlog_logger.info("Loading existing token", token_path=self.token_path)
             with Path(self.token_path).open() as token_file:
-                creds = Credentials.from_authorized_user_info(json.loads(token_file.read()), SCOPES)  # type: ignore[no-untyped-call]
+                creds = Credentials.from_authorized_user_info(json.loads(token_file.read()), SCOPES)
             structlog_logger.info("Token loaded successfully")
 
         # If there are no valid credentials, let the user log in
@@ -183,7 +183,7 @@ class GoogleDriveWatcher:
             if creds and creds.expired and creds.refresh_token:
                 structlog_logger.info("Token expired, attempting refresh")
                 try:
-                    creds.refresh(Request())  # type: ignore[no-untyped-call]
+                    creds.refresh(Request())
                     structlog_logger.info("Token refreshed successfully")
                 except RefreshError:
                     # If refresh fails, re-authenticate

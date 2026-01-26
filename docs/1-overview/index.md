@@ -1,6 +1,6 @@
-# Luminari Agent - Overview
+# Knowledge Graph Pydantic Agent - Overview
 
-## What is Luminari Agent?
+## What is Knowledge Graph Pydantic Agent?
 
 Enterprise-grade unified AI platform built on [Pydantic AI](https://ai.pydantic.dev/). Consolidates multiple AI capabilities into a single intelligent agent with intelligent routing, parallel execution, and enterprise-grade resilience.
 
@@ -71,7 +71,7 @@ Access via Streamlit UI (interactive dashboard), FastAPI (REST + WebSocket), and
 ### Quick Start (5 minutes)
 ```bash
 git clone <repository-url>
-cd base_agent
+cd knowledge-graph-pydantic-agent
 make setup
 cp .env.example .env
 # Edit .env with your credentials

@@ -1,5 +1,5 @@
 """
-OpenTelemetry instrumentation for the Luminari Agent API.
+OpenTelemetry instrumentation for the Knowledge Graph Pydantic Agent API.
 
 Provides distributed tracing, metrics, and logging integration.
 """
@@ -93,7 +93,7 @@ class OpenTelemetryConfig:
 
     def __init__(
         self,
-        service_name: str = "base-agent-api",
+        service_name: str = "kgpa-api",
         service_version: str = "1.0.0",
         otlp_endpoint: str | None = None,
         enable_console_export: bool = False,

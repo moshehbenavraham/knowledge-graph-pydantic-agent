@@ -79,7 +79,7 @@
 1. **Clone and Setup Environment**
    ```bash
    git clone <repository-url>
-   cd base_agent
+   cd knowledge-graph-pydantic-agent
    python3 -m venv .venv
    source .venv/bin/activate  # On Windows: .venv\Scripts\activate
    ```

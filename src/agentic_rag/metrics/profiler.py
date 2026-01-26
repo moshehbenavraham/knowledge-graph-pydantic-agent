@@ -109,7 +109,7 @@ def profile_async(
         @functools.wraps(func)
         async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
             if not _check_profiling_enabled():
-                return await func(*args, **kwargs)  # type: ignore[no-any-return]
+                return await func(*args, **kwargs)
 
             start_time = time.perf_counter()
             error_msg: str | None = None
@@ -135,7 +135,7 @@ def profile_async(
                         result_preview=result_preview,
                     )
 
-                return result  # type: ignore[no-any-return]
+                return result
 
             except Exception as e:
                 success = False

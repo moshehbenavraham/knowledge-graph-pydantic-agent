@@ -97,7 +97,7 @@ dev:
 
 # ngrok Deployment
 ngrok-start:  ## Start ngrok tunnel manually (foreground)
-	ngrok start base-agent-ui
+	ngrok start kgpa-ui
 
 ngrok-ui:  ## Start Streamlit only (foreground, for manual ngrok)
 	@lsof -ti :8502 | xargs kill -9 2>/dev/null || true
@@ -118,7 +118,7 @@ deploy-ngrok:  ## Start Streamlit + ngrok (background, persistent) - use deploy-
 	  nohup streamlit run src/ui/streamlit_app.py --server.port=8502 > logs/streamlit.log 2>&1 &"
 	@sleep 4
 	@echo "Starting ngrok tunnel..."
-	@bash -c "nohup ngrok start base-agent-ui > logs/ngrok.log 2>&1 &"
+	@bash -c "nohup ngrok start kgpa-ui > logs/ngrok.log 2>&1 &"
 	@sleep 4
 	@echo ""
 	@echo "=============================================="
@@ -172,7 +172,7 @@ coolify-build:  ## Build production Docker image for Coolify
 	@echo "Building Coolify production image..."
 	docker build \
 		-f docker/Dockerfile.production \
-		-t base-agent:latest \
+		-t knowledge-graph-pydantic-agent:latest \
 		--target runtime \
 		.
 
@@ -180,10 +180,10 @@ coolify-test-build:  ## Test build Coolify Docker image locally
 	@echo "Testing Coolify Docker build..."
 	docker build \
 		-f docker/Dockerfile.production \
-		-t base-agent:coolify-test \
+		-t knowledge-graph-pydantic-agent:coolify-test \
 		--target runtime \
 		. && \
-	echo "Build successful! Test with: docker run -p 8502:8502 --env-file .env base-agent:coolify-test"
+	echo "Build successful! Test with: docker run -p 8502:8502 --env-file .env knowledge-graph-pydantic-agent:coolify-test"
 
 coolify-compose-up:  ## Start services using Coolify docker-compose (local test)
 	@echo "Starting Coolify services locally..."
@@ -477,7 +477,7 @@ full-profile: profile-api profile-ui profile-rag
 
 # Registry and Image Configuration
 REGISTRY ?= ghcr.io/aiwithapex
-IMAGE_NAME ?= base-agent
+IMAGE_NAME ?= knowledge-graph-pydantic-agent
 IMAGE_TAG ?= $(shell git rev-parse --short HEAD)
 IMAGE_FULL = $(REGISTRY)/$(IMAGE_NAME):$(IMAGE_TAG)
 
@@ -608,10 +608,10 @@ ci-deploy: ci-supply-chain image-sign image-push
 # ===== Monitoring & Observability =====
 
 logs-app:
-	docker logs -f base-agent-prod
+	docker logs -f kgpa-prod
 
 logs-api:
-	docker logs -f base-agent-api-prod
+	docker logs -f kgpa-api-prod
 
 logs-all:
 	docker-compose -f docker/docker-compose.prod.yml logs -f

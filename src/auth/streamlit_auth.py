@@ -171,8 +171,8 @@ def load_auth_config(config_path: str = "config/auth_config.yaml") -> dict[str, 
             logger.info("Using default configuration for database mode")
             config = {
                 "cookie": {
-                    "name": "luminari_agent_auth_cookie",
-                    "key": settings.auth_cookie_key or "luminari_agent_secret_key_2025",
+                    "name": "kgpa_auth_cookie",
+                    "key": settings.auth_cookie_key or "kgpa_secret_key_2025",
                     "expiry_days": 30,
                 },
                 "preauthorized": {"emails": []},
@@ -331,10 +331,10 @@ def render_login_page() -> tuple[str | None, str | None, bool | None]:
                 }
                 originalWarn.apply(console, arguments);
             };
-        })();Luminari Agent
+        })();Knowledge Graph Pydantic Agent
         </script>
         <div class="auth-container">
-            <div class="auth-title">🤖 Luminari Agent</div>
+            <div class="auth-title">🤖 Knowledge Graph Pydantic Agent</div>
             <div class="auth-subtitle">Advanced RAG AI Assistant</div>
         </div>
         """,
@@ -342,7 +342,7 @@ def render_login_page() -> tuple[str | None, str | None, bool | None]:
     )
 
     st.markdown("### 🔐 Authentication Required")
-    st.info("Please log in to access the Luminari Agent interface.")
+    st.info("Please log in to access the Knowledge Graph Pydantic Agent interface.")
 
     # Get rate limiter
     rate_limiter = get_rate_limiter()

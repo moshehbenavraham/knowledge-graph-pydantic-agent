@@ -1,6 +1,6 @@
 # Coolify Deployment - Quick Start Guide
 
-This is a quick reference guide for deploying Base Agent to Coolify. For the complete guide with troubleshooting, see [coolify-deploy-full.md](../6-deployment/coolify-deploy-full.md).
+This is a quick reference guide for deploying Knowledge Graph Pydantic Agent (KGPA) to Coolify. For the complete guide with troubleshooting, see [coolify-deploy-full.md](../6-deployment/coolify-deploy-full.md).
 
 ## Prerequisites
 
@@ -97,8 +97,8 @@ Fix any errors before proceeding.
 1. **Create Resource**: Coolify Dashboard → New → Resource → Docker Compose
 
 2. **Configure**:
-   - **Name**: `base-agent-ui`
-   - **Domain**: `baseagent.yourdomain.com`
+   - **Name**: `kgpa-ui`
+   - **Domain**: `kgpa.yourdomain.com`
    - **Build Pack**: Dockerfile
    - **Dockerfile**: `docker/Dockerfile.production`
    - **Build Context**: `.` (root)
@@ -130,7 +130,7 @@ python -m src.auth.db_cli create \
 
 ### Verify Deployment
 
-1. Access your domain: `https://baseagent.yourdomain.com`
+1. Access your domain: `https://kgpa.yourdomain.com`
 2. Login with admin credentials
 3. Test core features:
    - Upload a document

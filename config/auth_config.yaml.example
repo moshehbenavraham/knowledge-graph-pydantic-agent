@@ -10,7 +10,7 @@
 
 # Cookie configuration for session management
 cookie:
-  name: "luminari_agent_auth_cookie"
+  name: "kgpa_auth_cookie"
   # REQUIRED: Generate a random key for production
   # Run: python -c "import secrets; print(secrets.token_urlsafe(32))"
   key: "CHANGE_ME_TO_RANDOM_STRING_32_CHARS"

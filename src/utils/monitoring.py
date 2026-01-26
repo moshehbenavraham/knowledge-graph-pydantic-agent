@@ -140,14 +140,14 @@ def _get_or_create_metric(
 # Prometheus metrics
 REQUEST_COUNT = _get_or_create_metric(
     Counter,
-    "luminari_requests_total",
+    "kgpa_requests_total",
     "Total requests",
     ["method", "endpoint", "status", "user_id"],
 )
 
 REQUEST_DURATION = _get_or_create_metric(
     Histogram,
-    "luminari_request_duration_seconds",
+    "kgpa_request_duration_seconds",
     "Request duration in seconds",
     ["method", "endpoint", "user_id"],
     buckets=[0.1, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0],
@@ -155,14 +155,14 @@ REQUEST_DURATION = _get_or_create_metric(
 
 TOOL_EXECUTION_COUNT = _get_or_create_metric(
     Counter,
-    "luminari_tool_executions_total",
+    "kgpa_tool_executions_total",
     "Total tool executions",
     ["tool_name", "status", "user_id"],
 )
 
 TOOL_EXECUTION_DURATION = _get_or_create_metric(
     Histogram,
-    "luminari_tool_execution_duration_seconds",
+    "kgpa_tool_execution_duration_seconds",
     "Tool execution duration in seconds",
     ["tool_name", "user_id"],
     buckets=[0.1, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0],
@@ -170,36 +170,36 @@ TOOL_EXECUTION_DURATION = _get_or_create_metric(
 
 LLM_TOKEN_COUNT = _get_or_create_metric(
     Counter,
-    "luminari_llm_tokens_total",
+    "kgpa_llm_tokens_total",
     "Total LLM tokens used",
     ["model", "type", "user_id"],
 )
 
 DATABASE_QUERY_COUNT = _get_or_create_metric(
     Counter,
-    "luminari_database_queries_total",
+    "kgpa_database_queries_total",
     "Total database queries",
     ["operation", "table", "status"],
 )
 
 DATABASE_QUERY_DURATION = _get_or_create_metric(
     Histogram,
-    "luminari_database_query_duration_seconds",
+    "kgpa_database_query_duration_seconds",
     "Database query duration in seconds",
     ["operation", "table"],
     buckets=[0.01, 0.05, 0.1, 0.5, 1.0, 2.5, 5.0],
 )
 
 MEMORY_USAGE = _get_or_create_metric(
-    Gauge, "luminari_memory_usage_bytes", "Current memory usage in bytes"
+    Gauge, "kgpa_memory_usage_bytes", "Current memory usage in bytes"
 )
 
 ACTIVE_SESSIONS = _get_or_create_metric(
-    Gauge, "luminari_active_sessions", "Number of active user sessions"
+    Gauge, "kgpa_active_sessions", "Number of active user sessions"
 )
 
 ERROR_COUNT = _get_or_create_metric(
-    Counter, "luminari_errors_total", "Total errors", ["error_type", "component", "severity"]
+    Counter, "kgpa_errors_total", "Total errors", ["error_type", "component", "severity"]
 )
 
 

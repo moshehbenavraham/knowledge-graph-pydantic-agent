@@ -640,7 +640,7 @@ async def execute_multi_hop(
                 start_entity=query.start_entity,
                 cache_key=cache_key[:16],
             )
-            return cached_result  # type: ignore[no-any-return]
+            return cached_result
 
     # Build query
     builder = MultiHopQueryBuilder().from_query(query)

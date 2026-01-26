@@ -44,7 +44,7 @@ make run-ui
 **Option 2: Direct Command**
 ```bash
 source .venv/bin/activate
-PYTHONPATH=/home/aiwithapex/projects/base_agent:$PYTHONPATH streamlit run src/ui/streamlit_app.py
+PYTHONPATH=/home/aiwithapex/projects/knowledge-graph-pydantic-agent:$PYTHONPATH streamlit run src/ui/streamlit_app.py
 ```
 
 **Then:**
@@ -175,7 +175,7 @@ All **10/10 success criteria met:**
 ```bash
 # Verify dependencies
 source .venv/bin/activate
-PYTHONPATH=/home/aiwithapex/projects/base_agent:$PYTHONPATH python3 scripts/verify_dashboard_deployment.py
+PYTHONPATH=/home/aiwithapex/projects/knowledge-graph-pydantic-agent:$PYTHONPATH python3 scripts/verify_dashboard_deployment.py
 ```
 
 ### No Data Showing
@@ -187,7 +187,7 @@ PYTHONPATH=/home/aiwithapex/projects/base_agent:$PYTHONPATH python3 scripts/veri
 ```bash
 # Test database connections
 source .venv/bin/activate
-PYTHONPATH=/home/aiwithapex/projects/base_agent:$PYTHONPATH python3 -c "
+PYTHONPATH=/home/aiwithapex/projects/knowledge-graph-pydantic-agent:$PYTHONPATH python3 -c "
 import asyncio
 from src.agentic_rag.storage.connection_manager import ConnectionManager
 
@@ -215,7 +215,7 @@ asyncio.run(test())
 ```bash
 # Run anytime to verify dashboard status
 source .venv/bin/activate
-PYTHONPATH=/home/aiwithapex/projects/base_agent:$PYTHONPATH python3 scripts/verify_dashboard_deployment.py
+PYTHONPATH=/home/aiwithapex/projects/knowledge-graph-pydantic-agent:$PYTHONPATH python3 scripts/verify_dashboard_deployment.py
 ```
 
 ---
@@ -237,5 +237,5 @@ Your GraphRAG Analytics Dashboard is **fully deployed and operational** on WSL2!
 
 **Last Updated:** 2025-10-15
 **Dashboard Version:** 1.0.0
-**Luminari Agent Version:** 1.0.1
+**Knowledge Graph Pydantic Agent Version:** 1.0.1
 **Environment:** WSL2 Ubuntu with Python 3.12.3

@@ -1,6 +1,6 @@
 # Deployment
 
-Production deployment guides and best practices for Luminari Agent.
+Production deployment guides and best practices for Knowledge Graph Pydantic Agent.
 
 ## Deployment Guides
 

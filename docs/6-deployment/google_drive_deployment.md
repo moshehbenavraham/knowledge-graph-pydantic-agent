@@ -123,20 +123,20 @@ Browser opens -> Grant permissions -> `token.json` saved -> Subsequent runs auto
 ### Production: Systemd (Linux)
 
 ```bash
-sudo nano /etc/systemd/system/luminari-gdrive.service
+sudo nano /etc/systemd/system/kgpa-gdrive.service
 ```
 
 ```ini
 [Unit]
-Description=Luminari Agent Google Drive Watcher
+Description=Knowledge Graph Pydantic Agent Google Drive Watcher
 After=network.target
 
 [Service]
 Type=simple
-User=luminari
-WorkingDirectory=/opt/luminari-agent
-Environment="PATH=/opt/luminari-agent/.venv/bin"
-ExecStart=/opt/luminari-agent/.venv/bin/python -m src.rag_pipeline.pipeline --source google_drive --interval 300
+User=kgpa
+WorkingDirectory=/opt/kgpa
+Environment="PATH=/opt/kgpa/.venv/bin"
+ExecStart=/opt/kgpa/.venv/bin/python -m src.rag_pipeline.pipeline --source google_drive --interval 300
 Restart=on-failure
 RestartSec=60
 
@@ -146,9 +146,9 @@ WantedBy=multi-user.target
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable luminari-gdrive
-sudo systemctl start luminari-gdrive
-sudo journalctl -u luminari-gdrive -f
+sudo systemctl enable kgpa-gdrive
+sudo systemctl start kgpa-gdrive
+sudo journalctl -u kgpa-gdrive -f
 ```
 
 ### Production: Docker
@@ -162,14 +162,14 @@ CMD ["python", "-m", "src.rag_pipeline.pipeline", "--source", "google_drive", "-
 ```
 
 ```bash
-docker build -t luminari-gdrive -f Dockerfile.gdrive .
+docker build -t kgpa-gdrive -f Dockerfile.gdrive .
 docker run -d \
-  --name luminari-gdrive \
+  --name kgpa-gdrive \
   -v /path/to/credentials.json:/app/config/google_credentials.json:ro \
   -v /path/to/token.json:/app/config/token.json \
   -v /path/to/.env:/app/.env:ro \
   --restart unless-stopped \
-  luminari-gdrive
+  kgpa-gdrive
 ```
 
 ---
@@ -206,10 +206,10 @@ docker run -d \
 
 ```bash
 # Systemd
-sudo journalctl -u luminari-gdrive -n 100
+sudo journalctl -u kgpa-gdrive -n 100
 
 # Docker
-docker logs luminari-gdrive --tail 100 -f
+docker logs kgpa-gdrive --tail 100 -f
 ```
 
 ### Verify Ingestion
@@ -348,7 +348,7 @@ python -m src.rag_pipeline.pipeline --source google_drive --interval 60
 GOOGLE_DRIVE_FOLDER_ID=1a2b3c4d python -m src.rag_pipeline.pipeline --source google_drive
 
 # Check logs
-sudo journalctl -u luminari-gdrive -f
+sudo journalctl -u kgpa-gdrive -f
 
 # Test import
 python -c "from src.rag_pipeline.sources.google_drive import GoogleDriveWatcher; print('OK')"

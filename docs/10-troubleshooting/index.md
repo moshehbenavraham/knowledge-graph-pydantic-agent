@@ -1,6 +1,6 @@
 # Troubleshooting Guide
 
-This guide helps you diagnose and resolve common issues with the Luminari Agent system, including Phase 3 Agent Intelligence Layer components.
+This guide helps you diagnose and resolve common issues with the Knowledge Graph Pydantic Agent system, including Phase 3 Agent Intelligence Layer components.
 
 ## Table of Contents
 
@@ -1019,8 +1019,8 @@ pyenv install 3.11.0
 pyenv local 3.11.0
 
 # Or use conda
-conda create -n luminari python=3.11
-conda activate luminari
+conda create -n kgpa python=3.11
+conda activate kgpa
 ```
 
 #### 2. Dependency Conflicts

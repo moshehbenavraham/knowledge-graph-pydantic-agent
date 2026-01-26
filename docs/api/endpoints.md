@@ -603,7 +603,7 @@ Basic health check.
 {
   "status": "healthy",
   "timestamp": "2025-12-30T12:00:00Z",
-  "service": "luminari-ai-agent",
+  "service": "kgpa-ai-agent",
   "version": "1.8.0"
 }
 ```

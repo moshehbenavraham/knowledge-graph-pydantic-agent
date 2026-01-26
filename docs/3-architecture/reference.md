@@ -2,7 +2,7 @@
 
 ## System Overview
 
-The Luminari Agent architecture features a **Unified Super Agent** that combines ALL capabilities into a single, powerful implementation. This agent intelligently routes queries, executes tools in parallel, and provides comprehensive responses.
+The Knowledge Graph Pydantic Agent architecture features a **Unified Super Agent** that combines ALL capabilities into a single, powerful implementation. This agent intelligently routes queries, executes tools in parallel, and provides comprehensive responses.
 
 ### Key Architectural Principles
 - **Unified Design**: One agent (`src/agent/unified_agent.py`) handles all capabilities
@@ -57,7 +57,7 @@ The Luminari Agent architecture features a **Unified Super Agent** that combines
 
 ## Directory Structure
 ```
-base_agent/
+knowledge-graph-pydantic-agent/
 ├── src/                       # Core agent implementation
 │   ├── __init__.py            # Package initialization
 │   ├── __main__.py            # Main entry point

@@ -21,7 +21,7 @@ async def basic_health_check() -> dict[str, Any]:
     return {
         "status": "healthy",
         "timestamp": datetime.now(UTC).isoformat(),
-        "service": "luminari-ai-agent",
+        "service": "knowledge-graph-pydantic-agent",
         "version": settings.app_version,
     }
 

@@ -1,6 +1,6 @@
 # Development
 
-Documentation for contributors and developers working on Luminari Agent.
+Documentation for contributors and developers working on Knowledge Graph Pydantic Agent.
 
 ## Development Documentation
 

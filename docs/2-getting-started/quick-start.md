@@ -1,6 +1,6 @@
 # 5-Minute Quick Start
 
-Get Luminari Agent running in under 5 minutes.
+Get Knowledge Graph Pydantic Agent running in under 5 minutes.
 
 ## Prerequisites
 
@@ -8,11 +8,11 @@ Get Luminari Agent running in under 5 minutes.
 - **OpenAI API key** ([platform.openai.com](https://platform.openai.com))
 - **Supabase project** ([supabase.com](https://supabase.com))
 
-## Step 1: Install Luminari Agent
+## Step 1: Install Knowledge Graph Pydantic Agent
 
 ```bash
 git clone <repository-url>
-cd base_agent
+cd knowledge-graph-pydantic-agent
 make setup
 ```
 

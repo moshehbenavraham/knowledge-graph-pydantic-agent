@@ -1,5 +1,5 @@
 #!/bin/bash
-# Database Backup Script for Base Agent
+# Database Backup Script for Knowledge Graph Pydantic Agent
 # Supports PostgreSQL (Supabase) and Neo4j Aura exports
 # Usage: ./scripts/backup.sh [--postgres-only|--neo4j-only] [--upload]
 
@@ -253,7 +253,7 @@ upload_to_cloud() {
         return 1
     fi
 
-    local bucket="${R2_BUCKET:-base-agent-backups}"
+    local bucket="${R2_BUCKET:-kgpa-backups}"
 
     # Configure AWS CLI for R2
     export AWS_ACCESS_KEY_ID="$R2_ACCESS_KEY_ID"
@@ -286,7 +286,7 @@ cleanup_old_backups() {
 # Main execution
 main() {
     log_info "========================================"
-    log_info "Base Agent Database Backup"
+    log_info "Knowledge Graph Pydantic Agent Database Backup"
     log_info "Timestamp: $TIMESTAMP"
     log_info "Backup directory: $BACKUP_DIR"
     log_info "========================================"

@@ -1,0 +1,64 @@
+# CODEOWNERS
+#
+# This file defines code ownership for the Knowledge Graph Pydantic Agent project.
+# Each line is a file pattern followed by one or more owners.
+# Owners are notified when PRs modify files they own.
+#
+# Syntax:
+#   pattern   @owner1 @owner2
+#
+# Order matters - later patterns take precedence over earlier ones.
+
+# Default owner for everything
+*                                   @aiwithapex
+
+# Core Agent
+/src/agent/                         @aiwithapex
+
+# Agentic RAG System
+/src/agentic_rag/                   @aiwithapex
+/src/agentic_rag/graph/             @aiwithapex
+/src/agentic_rag/search/            @aiwithapex
+/src/agentic_rag/storage/           @aiwithapex
+
+# API Layer
+/src/api/                           @aiwithapex
+
+# Authentication
+/src/auth/                          @aiwithapex
+
+# Configuration
+/src/config/                        @aiwithapex
+
+# Tools
+/src/tools/                         @aiwithapex
+
+# UI Layer
+/src/ui/                            @aiwithapex
+/src/ui/components/                 @aiwithapex
+/src/ui/features/                   @aiwithapex
+
+# RAG Pipeline
+/src/rag_pipeline/                  @aiwithapex
+
+# Infrastructure
+/Makefile                           @aiwithapex
+/docker-compose*.yml                @aiwithapex
+/Dockerfile*                        @aiwithapex
+/.github/                           @aiwithapex
+
+# Documentation
+/docs/                              @aiwithapex
+/README.md                          @aiwithapex
+/CONTRIBUTING.md                    @aiwithapex
+/CLAUDE.md                          @aiwithapex
+
+# Security-sensitive files
+/.env.example                       @aiwithapex
+/config/auth_config.yaml            @aiwithapex
+
+# Tests
+/tests/                             @aiwithapex
+
+# SQL Migrations
+/sql/                               @aiwithapex

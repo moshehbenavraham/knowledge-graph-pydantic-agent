@@ -7,11 +7,11 @@
 
 ## Overview
 
-Deploy Luminari Agent with public HTTPS access via ngrok tunnel.
+Deploy Knowledge Graph Pydantic Agent with public HTTPS access via ngrok tunnel.
 
 **Security Architecture**:
 ```
-Internet -> ngrok (HTTP Basic Auth) -> Streamlit (Database Auth) -> Luminari Agent
+Internet -> ngrok (HTTP Basic Auth) -> Streamlit (Database Auth) -> Knowledge Graph Pydantic Agent
 ```
 
 **Features**:
@@ -54,7 +54,7 @@ make ngrok-status
 ## Prerequisites
 
 **Required**:
-- Luminari Agent v1.5.0+
+- Knowledge Graph Pydantic Agent v1.5.0+
 - Supabase account with project
 - Neo4j Aura account with database
 - ngrok account (free tier works)
@@ -102,7 +102,7 @@ Edit `~/.config/ngrok/ngrok.yml`:
 version: 2
 authtoken: YOUR_NGROK_AUTHTOKEN
 tunnels:
-  base-agent-ui:
+  kgpa-ui:
     proto: http
     addr: 8501
     domain: your-domain.ngrok.io  # Optional: Personal/Pro only
@@ -116,7 +116,7 @@ version: "3"
 agent:
   authtoken: YOUR_NGROK_AUTHTOKEN
 tunnels:
-  base-agent-ui:
+  kgpa-ui:
     proto: http
     addr: 8501
     domain: your-domain.ngrok.io  # Optional: Personal/Pro only
@@ -262,7 +262,7 @@ SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=your-email@gmail.com
 SMTP_PASSWORD=your_app_password  # Gmail: Use App Password with 2FA
-SMTP_FROM_EMAIL=noreply@luminariagent.local
+SMTP_FROM_EMAIL=noreply@kgpa.local
 PASSWORD_RESET_URL=https://your-domain.ngrok.io/reset-password
 VERIFICATION_URL=https://your-domain.ngrok.io
 ```
@@ -271,7 +271,7 @@ VERIFICATION_URL=https://your-domain.ngrok.io
 
 Add to `.env`:
 ```bash
-TOTP_ISSUER_NAME=Luminari Agent
+TOTP_ISSUER_NAME=Knowledge Graph Pydantic Agent
 BACKUP_CODE_COUNT=10
 BACKUP_CODE_EXPIRY_DAYS=90
 ```

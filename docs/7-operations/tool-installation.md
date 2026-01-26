@@ -242,16 +242,16 @@ If running on Windows WSL2:
 ### Docker
 ```bash
 # Build image
-docker build -f docker/Dockerfile.production -t base-agent:latest .
+docker build -f docker/Dockerfile.production -t knowledge-graph-pydantic-agent:latest .
 
 # Run container
-docker run -d --name base-agent base-agent:latest
+docker run -d --name kgpa-app knowledge-graph-pydantic-agent:latest
 
 # View logs
-docker logs base-agent
+docker logs kgpa-app
 
 # Stop container
-docker stop base-agent
+docker stop kgpa-app
 ```
 
 ### Docker Compose
@@ -269,22 +269,22 @@ docker-compose -f docker/docker-compose.prod.yml down
 ### Trivy
 ```bash
 # Scan image
-trivy image base-agent:latest
+trivy image knowledge-graph-pydantic-agent:latest
 
 # Scan with severity filter
-trivy image --severity HIGH,CRITICAL base-agent:latest
+trivy image --severity HIGH,CRITICAL knowledge-graph-pydantic-agent:latest
 
 # Generate report
-trivy image --format json --output report.json base-agent:latest
+trivy image --format json --output report.json knowledge-graph-pydantic-agent:latest
 ```
 
 ### Syft
 ```bash
 # Generate SBOM
-syft packages base-agent:latest -o spdx-json
+syft packages knowledge-graph-pydantic-agent:latest -o spdx-json
 
 # Save to file
-syft packages base-agent:latest -o cyclonedx-json > sbom.json
+syft packages knowledge-graph-pydantic-agent:latest -o cyclonedx-json > sbom.json
 ```
 
 ### Cosign
@@ -293,16 +293,16 @@ syft packages base-agent:latest -o cyclonedx-json > sbom.json
 cosign generate-key-pair
 
 # Sign image
-cosign sign --key cosign.key base-agent:latest
+cosign sign --key cosign.key knowledge-graph-pydantic-agent:latest
 
 # Verify signature
-cosign verify --key cosign.pub base-agent:latest
+cosign verify --key cosign.pub knowledge-graph-pydantic-agent:latest
 ```
 
 ### jq
 ```bash
 # Parse JSON
-echo '{"name": "base-agent", "version": "1.0"}' | jq '.name'
+echo '{"name": "kgpa", "version": "1.0"}' | jq '.name'
 
 # Pretty print
 cat report.json | jq .

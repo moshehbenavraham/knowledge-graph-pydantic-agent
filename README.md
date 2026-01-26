@@ -1,13 +1,13 @@
-# Luminari Agent
+# Knowledge Graph Pydantic Agent
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Pydantic AI](https://img.shields.io/badge/Pydantic-AI-blue)](https://ai.pydantic.dev/)
 
-**Version 1.4.0** | **API Version 0.8.0** | **Package:** `luminari-ai-agent`
+**Version 1.8.0** | **API Version 0.8.0** | **Package:** `knowledge-graph-pydantic-agent`
 
-Luminari Agent is a unified AI assistant built on [Pydantic-AI](https://github.com/pydantic/pydantic-ai)
+Knowledge Graph Pydantic Agent is an AI assistant built on [Pydantic-AI](https://github.com/pydantic/pydantic-ai)
 that combines retrieval augmented generation, knowledge graph search, long-term memory, and
 extensible tooling. The project ships with a Streamlit UI, a production-ready FastAPI service with
 streaming support, and supporting pipelines for ingestion and evaluation so the same agent logic
@@ -35,19 +35,13 @@ can run in multiple contexts.
 
 ## System Architecture
 
-**This is an Agentic Graph RAG system** - NOT just vector search. The system requires BOTH components:
+**This is an Agentic Graph RAG system** - which requires BOTH components:
 
 1. **PostgreSQL/Supabase** - Vector embeddings and document storage
 2. **Neo4j Aura** - Knowledge graph (entities, relationships, temporal facts)
 
-The graph component is **REQUIRED**, not optional. Without it, you lose:
-- Entity extraction and relationship discovery
-- Temporal reasoning and fact timelines
-- Graph-based search strategies
-- Hybrid search that combines vector + graph
-
 ## Highlights
-- **Single unified agent** (`src/agent/unified_agent.py`) with intent-aware tool orchestration - one agent to rule them all
+- **Agent** (`src/agent/unified_agent.py`) with intent-aware tool orchestration
 - **Agentic Graph RAG stack** with Supabase pgvector + Graphiti-powered Neo4j knowledge graph + intelligent hybrid routing (BOTH databases required)
 - **Advanced Query Engine (Phase 02)** - Multi-hop path traversal, temporal trend analysis, cross-entity comparison, and smart search integration with 80%+ cache hit rate
 - **Production-ready FastAPI** with versioned routes (`/api/v1`), SSE/WebSocket streaming, circuit breakers, and comprehensive middleware
@@ -72,7 +66,7 @@ Version 1.4.0 delivers **production-ready two-layer authentication** with defens
   - Configured in `~/.config/ngrok/ngrok.yml`
   - Verified with curl testing (401 without credentials)
 - **Layer 2 (Application)**: User account authentication with streamlit-authenticator
-  - Beautiful gradient login page with Luminari Agent branding
+  - Beautiful gradient login page with Knowledge Graph Pydantic Agent branding
   - Bcrypt password hashing (12 rounds, industry standard)
   - Session management with 30-day cookie + 30-minute idle timeout
   - Logout button in sidebar with session clearing
@@ -101,7 +95,7 @@ make run-ui
 
 # Remote deployment (two-layer auth)
 make deploy-ngrok
-# Step 1: ngrok credentials (admin / BaseAgent2025!Secure)
+# Step 1: ngrok credentials (admin / KGPA2025!Secure)
 # Step 2: Streamlit login (admin / Admin2025!Secure)
 ```
 
@@ -109,77 +103,6 @@ make deploy-ngrok
 - `docs/deployment/auth_deployment_guide.md` - Complete deployment guide (700+ lines)
 - `docs/deployment/auth_implementation_summary.md` - Technical implementation summary (350+ lines)
 - Security best practices, troubleshooting, rollback procedures
-
-**Default Credentials** (CHANGE IN PRODUCTION):
-- Layer 1 (ngrok): `admin / BaseAgent2025!Secure`
-- Layer 2 (Streamlit): `admin / Admin2025!Secure`
-
-**Implementation Efficiency**: 4 hours actual vs 6-9 hours estimated (33% faster than planned)
-
-See `docs/a-changelogs/current.md` for complete technical details.
-
-**Previous releases**: v1.3.0 (ngrok deployment), v1.2.3 (stability fixes), v1.2.2 (logging), v1.1.0 (analytics)
-
----
-
-## What's New in v1.1.0
-
-Version 1.1.0 introduced **foundational observability infrastructure** for comprehensive system monitoring and analytics.
-
-📈 **Persistent Analytics System** (Core Infrastructure)
-- **Always-on event logging** to PostgreSQL with async, non-blocking architecture (<5ms overhead)
-- **5 analytics tables** with monthly partitioning: search operations, tool usage, agent interactions, ingestion metrics, system health
-- **Batched writes** (100 events or 5 seconds) with automatic retry and error handling
-- **Materialized views** for dashboard-ready queries with pre-computed aggregations
-- **Automatic initialization** with connection manager - zero configuration needed
-- **Comprehensive monitoring**: latency tracking, cache hit rates, graph boost detection, error tracking
-- **Maintenance functions** for partition management and view refreshes
-- **Production-ready**: 30+ unit tests, complete documentation, graceful degradation
-
-**Key Features**:
-- Search analytics with intent detection and strategy usage
-- Tool execution metrics with error tracking
-- User-agent interaction logging with feedback
-- Document ingestion performance tracking
-- System health snapshots (database, cache, application metrics)
-
-See `docs/analytics_system.md` for complete documentation.
-
-**Previous Major Release: v0.9.0** - Unified agent architecture, centralized configuration, modular UI
-See `CHANGELOG.md` for complete release history.
-
-## Implementation Status (2025-12-30)
-
-**Agentic Graph RAG System: Phase 02 Complete**
-
-**Completed Phases:**
-- Phase 01: Knowledge Graph Improvements (6 sessions)
-- Phase 02: Advanced Query Engine (5 sessions)
-
-**Fully Operational Components:**
-- PostgreSQL/Supabase vector storage with dual embeddings (1536d + 768d)
-- Neo4j Aura knowledge graph with entity/fact storage
-- Entity extraction (LLM-powered) - extracting 50-100+ entities per document
-- Fact extraction (temporal reasoning) - 40-70+ facts per document
-- Document ingestion pipeline with full async support
-- Hybrid search combining vector + graph strategies
-- Intent analysis with 8-strategy routing (5 base + 3 Phase 02)
-- Circuit breakers, retry logic, and error handling
-
-**Phase 01 Capabilities (Complete):**
-- Cross-document entity queries via document_refs
-- Temporal metadata extraction (fiscal_quarter, fiscal_year)
-- Entity deduplication with canonical name resolution
-- Numeric fact extraction for financial queries
-- Dynamic relationship strength scoring
-- Entity type hierarchy for semantic grouping
-
-**Phase 02 Capabilities (Complete):**
-- Multi-hop query engine (1-3 hop path traversal)
-- Temporal trend analysis (QoQ/YoY comparisons)
-- Cross-entity comparison with ranking
-- Smart search integration with Phase 02 routing
-- TTL-based query caching (80%+ latency reduction)
 
 **Test Coverage:**
 - 1,100+ tests passing
@@ -191,8 +114,6 @@ See `CHANGELOG.md` for complete release history.
 - Temporal trend queries: < 1 second
 - Comparison queries: < 1.5 seconds
 - Cache hit latency: < 10ms
-
-See `.spec_system/PRD/PRD.md` for detailed requirements and roadmap.
 
 ## Architecture Overview
 - **Agent layer:** Single Pydantic-AI agent (`src/agent/unified_agent.py`) exposing async tools for RAG, SQL, web search, code execution, and image analysis
@@ -259,7 +180,7 @@ See `.spec_system/PRD/PRD.md` for detailed requirements and roadmap.
 1. **Clone and install**
    ```bash
    git clone <repository-url>
-   cd base_agent
+   cd knowledge-graph-pydantic-agent
    make setup
    ```
 2. **Create your environment configuration**
@@ -844,7 +765,7 @@ make redis-flush     # Flush Redis cache
 
 ## Project Layout
 ```
-base_agent/
+knowledge-graph-pydantic-agent/
 ├── src/
 │   ├── agent/                # Unified agent implementation
 │   ├── agentic_rag/          # Agentic RAG pipelines, search, storage
@@ -1015,8 +936,8 @@ We welcome contributions! Here's how to get started:
 
 1. **Fork and clone** the repository
    ```bash
-   git clone https://github.com/yourusername/base_agent.git
-   cd base_agent
+   git clone https://github.com/yourusername/knowledge-graph-pydantic-agent.git
+   cd knowledge-graph-pydantic-agent
    ```
 
 2. **Create a feature branch** using Conventional Commits naming

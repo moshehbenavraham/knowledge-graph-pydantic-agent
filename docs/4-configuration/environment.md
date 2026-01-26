@@ -1,6 +1,6 @@
 # Environment Variables Reference
 
-This document provides a complete reference for all environment variables used by Luminari Agent.
+This document provides a complete reference for all environment variables used by Knowledge Graph Pydantic Agent.
 
 ## Configuration Categories
 

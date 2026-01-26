@@ -9,8 +9,8 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
       target: runtime
-    image: base-agent:dev
-    container_name: base-agent-dev
+    image: knowledge-graph-pydantic-agent:dev
+    container_name: kgpa-dev
     ports:
       - "8502:8502"
       - "8058:8058"  # API port
@@ -42,7 +42,7 @@ services:
       - SEARXNG_BASE_URL=http://searxng:8080
 
       # ===== AGENT SETTINGS =====
-      - AGENT_NAME=${AGENT_NAME:-Luminari-Dev}
+      - AGENT_NAME=${AGENT_NAME:-KGPA-Dev}
       - AGENT_TEMPERATURE=${AGENT_TEMPERATURE:-0.7}
 
       # ===== NEO4J CONFIGURATION =====
@@ -103,8 +103,8 @@ services:
       context: ..
       dockerfile: docker/Dockerfile.production
       target: api
-    image: base-agent-api:dev
-    container_name: base-agent-api-dev
+    image: kgpa-api:dev
+    container_name: kgpa-api-dev
     ports:
       - "8059:8058"  # Separate port for API in dev
     environment:
@@ -203,5 +203,5 @@ volumes:
 
 networks:
   dev-network:
-    name: base-agent-dev-network
+    name: kgpa-dev-network
     driver: bridge

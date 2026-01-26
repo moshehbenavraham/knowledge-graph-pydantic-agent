@@ -78,7 +78,7 @@ echo "AUTH_COOKIE_KEY=$AUTH_COOKIE_KEY" >> "$OUTPUT_FILE"
 cat >> "$OUTPUT_FILE" << 'EOF'
 
 # Cookie Settings (adjust domain for your Coolify deployment)
-AUTH_COOKIE_NAME=base_agent_auth
+AUTH_COOKIE_NAME=kgpa_auth
 AUTH_COOKIE_EXPIRY_DAYS=30
 AUTH_COOKIE_DOMAIN=your-app.yourdomain.com
 AUTH_COOKIE_SECURE=true
@@ -96,7 +96,7 @@ SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=your-email@gmail.com
 SMTP_PASSWORD=your_app_password
-SMTP_FROM_EMAIL=noreply@baseagent.local
+SMTP_FROM_EMAIL=noreply@kgpa.local
 
 # ===== OAUTH AUTHENTICATION (OPTIONAL) =====
 

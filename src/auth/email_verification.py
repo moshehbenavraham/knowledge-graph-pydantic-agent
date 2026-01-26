@@ -177,7 +177,7 @@ async def send_verification_email_smtp(
     try:
         # Create message
         msg = MIMEMultipart("alternative")
-        msg["Subject"] = "Verify Your Email - Luminari Agent"
+        msg["Subject"] = "Verify Your Email - Knowledge Graph Pydantic Agent"
         msg["From"] = settings.smtp_from_email
         msg["To"] = email
 
@@ -190,10 +190,10 @@ async def send_verification_email_smtp(
           <head></head>
           <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
             <div style="max-width: 600px; margin: 0 auto; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px;">
-              <h1 style="color: white; text-align: center;">🤖 Luminari Agent</h1>
+              <h1 style="color: white; text-align: center;">🤖 Knowledge Graph Pydantic Agent</h1>
               <div style="background: white; padding: 30px; border-radius: 10px; margin-top: 20px;">
                 <h2 style="color: #333;">Welcome, {user_name}!</h2>
-                <p>Thank you for registering with Luminari Agent. To complete your registration and activate your account, please verify your email address.</p>
+                <p>Thank you for registering with Knowledge Graph Pydantic Agent. To complete your registration and activate your account, please verify your email address.</p>
 
                 <div style="text-align: center; margin: 30px 0;">
                   <a href="{verification_link}" style="background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">Verify Email Address</a>

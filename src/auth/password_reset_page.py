@@ -44,7 +44,7 @@ def render_password_reset_page() -> None:
         </style>
         <div class="reset-container">
             <div class="reset-title">🔑 Reset Password</div>
-            <div class="reset-subtitle">Luminari Agent Password Reset</div>
+            <div class="reset-subtitle">Knowledge Graph Pydantic Agent Password Reset</div>
         </div>
         """,
         unsafe_allow_html=True,

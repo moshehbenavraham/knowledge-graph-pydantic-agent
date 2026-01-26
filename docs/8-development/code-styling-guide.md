@@ -6,7 +6,7 @@
 
 ## Overview
 
-This guide defines the coding standards and style conventions for the Luminari Agent project. Following these guidelines ensures code consistency, maintainability, and quality across the codebase.
+This guide defines the coding standards and style conventions for the Knowledge Graph Pydantic Agent project. Following these guidelines ensures code consistency, maintainability, and quality across the codebase.
 
 **Philosophy:** Write code that is clear, maintainable, and secure. Favor explicitness over cleverness, and always prioritize readability.
 

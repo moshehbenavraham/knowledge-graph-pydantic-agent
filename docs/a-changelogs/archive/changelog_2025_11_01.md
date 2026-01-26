@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to the Luminari Agent project are documented in this file.
+All notable changes to the Knowledge Graph Pydantic Agent project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -1114,7 +1114,7 @@ Created (Tests):
 - SimpleChunker and SemanticChunker expect dict configuration
 - Fixed by updating test fixtures to use dicts
 
-**src/tools/code_execution.py** (`/home/aiwithapex/projects/base_agent/src/tools/code_execution.py`)
+**src/tools/code_execution.py** (`/home/aiwithapex/projects/knowledge-graph-pydantic-agent/src/tools/code_execution.py`)
 - Added `__build_class__` to safe_builtins for class definition support (line 108)
 - Added `__name__` to restricted_globals (line 124)
 - Added exception types: Exception, ValueError, TypeError, KeyError, IndexError, AttributeError, ZeroDivisionError, RuntimeError, NotImplementedError, StopIteration (lines 110-119)
@@ -1260,13 +1260,13 @@ Modified (Tests):
 
 #### Source Code Fixes
 
-**src/agentic_rag/search/ranker.py** (`/home/aiwithapex/projects/base_agent/src/agentic_rag/search/ranker.py`)
+**src/agentic_rag/search/ranker.py** (`/home/aiwithapex/projects/knowledge-graph-pydantic-agent/src/agentic_rag/search/ranker.py`)
 - Modified `_similarity_score()` to check `isinstance(chunk.similarity, (int, float))` (lines 242, 246)
 - Fixed diversity enforcement early return: `len(scored_chunks) <= limit` -> `< limit` (line 485)
 - Modified `rerank_with_feedback()` to add isinstance checks and use direct sorting (lines 556, 561, 567)
 - Total changes: 3 methods improved for Mock object handling and diversity logic
 
-**src/utils/cache.py** (`/home/aiwithapex/projects/base_agent/src/utils/cache.py`)
+**src/utils/cache.py** (`/home/aiwithapex/projects/knowledge-graph-pydantic-agent/src/utils/cache.py`)
 - Fixed `get()` to use fallback when Redis unavailable (lines 88-95)
 - Fixed `set()` to use fallback when Redis unavailable (lines 104-116)
 - Fixed `delete()` to use fallback when Redis unavailable (lines 123-130)
@@ -1499,27 +1499,27 @@ Modified (Tests):
 
 #### Source Code Fixes
 
-**src/api/main.py** (`/home/aiwithapex/projects/base_agent/src/api/main.py`)
+**src/api/main.py** (`/home/aiwithapex/projects/knowledge-graph-pydantic-agent/src/api/main.py`)
 - Added module-level imports: `check_database_health`, `get_cache_manager`, `get_api_settings`
 - Removed inline imports from `status()` endpoint (lines 86-88)
 - Removed inline import from `clear_cache()` endpoint (line 107)
 - Added conditional FastAPIInstrumentor import for test compatibility
 - Total changes: 3 import additions, 2 inline imports removed
 
-**src/api/health_endpoints.py** (`/home/aiwithapex/projects/base_agent/src/api/health_endpoints.py`)
+**src/api/health_endpoints.py** (`/home/aiwithapex/projects/knowledge-graph-pydantic-agent/src/api/health_endpoints.py`)
 - Fixed double-prefix bug: Changed `APIRouter(prefix="/health")` to `APIRouter()` (line 10)
 - Resolved path duplication: `/health/health/` -> `/health/`
 
-**src/api/middleware.py** (`/home/aiwithapex/projects/base_agent/src/api/middleware.py`)
+**src/api/middleware.py** (`/home/aiwithapex/projects/knowledge-graph-pydantic-agent/src/api/middleware.py`)
 - Added RequestLoggingNamespace class for test mocking support (lines 20-23)
 - Created `request_logging` instance for test compatibility
 
-**src/api/dependencies.py** (`/home/aiwithapex/projects/base_agent/src/api/dependencies.py`)
+**src/api/dependencies.py** (`/home/aiwithapex/projects/knowledge-graph-pydantic-agent/src/api/dependencies.py`)
 - Fixed `get_hybrid_search()` function signature (lines 140-144)
 - Changed from individual store dependencies to ConnectionManager
 - Aligned with HybridSearch constructor requirements
 
-**src/api/endpoints/documents.py** (`/home/aiwithapex/projects/base_agent/src/api/endpoints/documents.py`)
+**src/api/endpoints/documents.py** (`/home/aiwithapex/projects/knowledge-graph-pydantic-agent/src/api/endpoints/documents.py`)
 - Fixed IngestionResult attribute access bug (line 75)
 - Changed `result.get("relationships_extracted", 0)` to `result.relationships_extracted`
 - Fixed UUID serialization: Added `str()` conversion for document_id (line 72)

@@ -30,7 +30,7 @@ class TestOpenTelemetryConfig:
         """Test initialization with default values."""
         config = OpenTelemetryConfig()
 
-        assert config.service_name == "base-agent-api"
+        assert config.service_name == "kgpa-api"
         assert config.service_version == "1.0.0"
         assert config.otlp_endpoint is None
         assert config.enable_console_export is False

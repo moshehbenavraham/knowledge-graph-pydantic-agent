@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Luminari Agent uses a **centralized configuration system** built on Pydantic Settings, providing type safety, validation, and a single source of truth for all configuration values.
+The Knowledge Graph Pydantic Agent uses a **centralized configuration system** built on Pydantic Settings, providing type safety, validation, and a single source of truth for all configuration values.
 
 ## Configuration Architecture
 

@@ -1,6 +1,6 @@
 # Getting Started
 
-Welcome to Luminari Agent! This section provides everything you need to get up and running quickly.
+Welcome to Knowledge Graph Pydantic Agent! This section provides everything you need to get up and running quickly.
 
 ## Quick Start Paths
 
@@ -41,7 +41,7 @@ For customizing the system to your specific requirements.
 ```bash
 # 1. Clone and setup
 git clone <repository-url>
-cd base_agent
+cd knowledge-graph-pydantic-agent
 make setup
 
 # 2. Configure environment

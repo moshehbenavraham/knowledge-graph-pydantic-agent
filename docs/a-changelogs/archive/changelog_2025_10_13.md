@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to the Luminari Agent project are documented in this file.
+All notable changes to the Knowledge Graph Pydantic Agent project are documented in this file.
 
 Previous changelogs can be found in /docs/changelogs_previous/
 

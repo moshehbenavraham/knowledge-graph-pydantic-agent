@@ -1,6 +1,6 @@
-# Luminari AI Agent - Streamlit UI
+# Knowledge Graph Pydantic Agent - Streamlit UI
 
-This directory contains the Streamlit-based user interface for the Luminari AI Agent, providing an interactive chat experience with advanced AI capabilities including RAG, memory, web search, and multi-tool functionality.
+This directory contains the Streamlit-based user interface for the Knowledge Graph Pydantic Agent, providing an interactive chat experience with advanced AI capabilities including RAG, memory, web search, and multi-tool functionality.
 
 ## Available UI Components
 
@@ -43,7 +43,7 @@ This directory contains the Streamlit-based user interface for the Luminari AI A
 
 ```bash
 # From the project root directory
-cd /path/to/luminari-ai-agent
+cd /path/to/knowledge-graph-pydantic-agent
 
 # Install with development dependencies
 make setup

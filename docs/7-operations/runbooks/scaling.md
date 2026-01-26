@@ -2,7 +2,7 @@
 
 ## Overview
 
-This runbook covers horizontal and vertical scaling procedures for the Luminari Agent / Agentic RAG platform.
+This runbook covers horizontal and vertical scaling procedures for the Knowledge Graph Pydantic Agent / Agentic RAG platform.
 
 ## Scaling Triggers
 
@@ -62,7 +62,7 @@ make deploy-prod
 If using external load balancer (e.g., Nginx, Traefik):
 
 ```nginx
-# /etc/nginx/conf.d/base-agent.conf
+# /etc/nginx/conf.d/kgpa.conf
 upstream api_backend {
     least_conn;  # Use least connection algorithm
     server api-1:8058 max_fails=3 fail_timeout=30s;
@@ -101,7 +101,7 @@ services:
 docker-compose -f docker/docker-compose.prod.yml up -d --force-recreate api
 
 # Verify new limits
-docker inspect base-agent-api-prod | grep -A 10 "Memory\|NanoCpus"
+docker inspect kgpa-api-prod | grep -A 10 "Memory\|NanoCpus"
 ```
 
 ## Database Scaling
@@ -192,12 +192,12 @@ services:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: base-agent-api-hpa
+  name: kgpa-api-hpa
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: base-agent-api
+    name: kgpa-api
   minReplicas: 2
   maxReplicas: 10
   metrics:
@@ -371,7 +371,7 @@ curl http://localhost:8058/metrics | grep 'status="5'
 
 ### Grafana Dashboards
 
-- **Dashboard**: "Luminari Agent - Scaling View"
+- **Dashboard**: "Knowledge Graph Pydantic Agent - Scaling View"
 - **Panels**:
   - Container replica count
   - CPU/Memory per replica

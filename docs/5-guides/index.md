@@ -1,6 +1,6 @@
 # Guides
 
-Task-oriented documentation to help you accomplish specific goals with Luminari Agent.
+Task-oriented documentation to help you accomplish specific goals with Knowledge Graph Pydantic Agent.
 
 ## Available Guides
 

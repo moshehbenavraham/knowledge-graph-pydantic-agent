@@ -964,7 +964,7 @@ async def execute_comparison(
                 entity_names=query.entity_names,
                 cache_key=cache_key[:16],
             )
-            return cached_result  # type: ignore[no-any-return]
+            return cached_result
 
     # Build query
     builder = ComparisonQueryBuilder().from_query(query)

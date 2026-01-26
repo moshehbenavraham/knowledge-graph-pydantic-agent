@@ -48,8 +48,8 @@ Complete guide for setting up the Agentic GraphRAG development environment.
 ### 1. Clone Repository
 
 ```bash
-git clone https://github.com/your-org/base_agent.git
-cd base_agent
+git clone https://github.com/your-org/knowledge-graph-pydantic-agent.git
+cd knowledge-graph-pydantic-agent
 ```
 
 ### 2. Create Virtual Environment

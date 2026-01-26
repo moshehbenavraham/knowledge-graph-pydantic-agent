@@ -1,6 +1,6 @@
 # Deployment Guide
 
-This guide covers deploying the Luminari Agent AI assistant in various environments.
+This guide covers deploying the Knowledge Graph Pydantic Agent AI assistant in various environments.
 
 ## Table of Contents
 - [Prerequisites](#prerequisites)
@@ -31,7 +31,7 @@ This guide covers deploying the Luminari Agent AI assistant in various environme
 1. **Clone Repository**
 ```bash
 git clone <repository-url>
-cd base_agent
+cd knowledge-graph-pydantic-agent
 ```
 
 2. **Set Up Virtual Environment**
@@ -108,8 +108,8 @@ Access at: **http://localhost:8501**
 
 For WSL2 users, copy project to WSL filesystem for 10x speed improvement:
 ```bash
-cp -r /mnt/c/Projects/base_agent ~/base_agent
-cd ~/base_agent
+cp -r /mnt/c/Projects/knowledge-graph-pydantic-agent ~/knowledge-graph-pydantic-agent
+cd ~/knowledge-graph-pydantic-agent
 ```
 
 ## Docker Deployment
@@ -118,16 +118,16 @@ cd ~/base_agent
 
 1. **Build Image**
 ```bash
-docker build -f docker/Dockerfile -t base-agent .
+docker build -f docker/Dockerfile -t knowledge-graph-pydantic-agent .
 ```
 
 2. **Run Container**
 ```bash
 docker run -d \
-  --name base-agent \
+  --name knowledge-graph-pydantic-agent \
   -p 8501:8501 \
   --env-file .env \
-  base-agent
+  knowledge-graph-pydantic-agent
 ```
 
 ### Docker Compose (Recommended)
@@ -183,7 +183,7 @@ railway variables set LLM_API_KEY=your_key
 ```yaml
 services:
   - type: web
-    name: base-agent
+    name: knowledge-graph-pydantic-agent
     env: docker
     dockerfilePath: ./docker/Dockerfile
     envVars:
@@ -204,13 +204,13 @@ services:
 
 1. **Build and Push Image**
 ```bash
-gcloud builds submit --tag gcr.io/PROJECT_ID/base-agent
+gcloud builds submit --tag gcr.io/PROJECT_ID/knowledge-graph-pydantic-agent
 ```
 
 2. **Deploy to Cloud Run**
 ```bash
-gcloud run deploy base-agent \
-  --image gcr.io/PROJECT_ID/base-agent \
+gcloud run deploy knowledge-graph-pydantic-agent \
+  --image gcr.io/PROJECT_ID/knowledge-graph-pydantic-agent \
   --platform managed \
   --port 8501 \
   --set-env-vars "SUPABASE_URL=your_url,LLM_API_KEY=your_key"
@@ -221,17 +221,17 @@ gcloud run deploy base-agent \
 1. **Push to ECR**
 ```bash
 aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $ECR_URI
-docker tag base-agent:latest $ECR_URI/base-agent:latest
-docker push $ECR_URI/base-agent:latest
+docker tag knowledge-graph-pydantic-agent:latest $ECR_URI/knowledge-graph-pydantic-agent:latest
+docker push $ECR_URI/knowledge-graph-pydantic-agent:latest
 ```
 
 2. **Create Task Definition**
 ```json
 {
-  "family": "base-agent",
+  "family": "knowledge-graph-pydantic-agent",
   "containerDefinitions": [{
-    "name": "base-agent",
-    "image": "ECR_URI/base-agent:latest",
+    "name": "knowledge-graph-pydantic-agent",
+    "image": "ECR_URI/knowledge-graph-pydantic-agent:latest",
     "portMappings": [{
       "containerPort": 8501,
       "protocol": "tcp"
@@ -334,13 +334,13 @@ curl http://localhost:8000/health
 1. **View Logs**
 ```bash
 # Docker
-docker logs base-agent -f
+docker logs knowledge-graph-pydantic-agent -f
 
 # Systemd
-journalctl -u base-agent -f
+journalctl -u knowledge-graph-pydantic-agent -f
 
 # PM2
-pm2 logs base-agent
+pm2 logs knowledge-graph-pydantic-agent
 ```
 
 2. **Log Aggregation**
@@ -352,10 +352,10 @@ pm2 logs base-agent
 1. **Prometheus Metrics**
 ```yaml
 # Exposed at :8000/metrics
-- luminari_request_count
-- luminari_request_duration
-- luminari_llm_tokens_total
-- luminari_database_queries_total
+- kgpa_request_count
+- kgpa_request_duration
+- kgpa_llm_tokens_total
+- kgpa_database_queries_total
 ```
 
 2. **Grafana Dashboard**

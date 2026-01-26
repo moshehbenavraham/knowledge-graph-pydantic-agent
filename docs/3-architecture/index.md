@@ -1,6 +1,6 @@
 # Architecture Overview
 
-Comprehensive view of Luminari Agent's technical architecture, design principles, and system components.
+Comprehensive view of Knowledge Graph Pydantic Agent's technical architecture, design principles, and system components.
 
 ## System Overview
 

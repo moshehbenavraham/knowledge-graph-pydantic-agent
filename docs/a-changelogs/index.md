@@ -1,6 +1,6 @@
 # Changelogs
 
-Version history and release notes for Luminari Agent.
+Version history and release notes for Knowledge Graph Pydantic Agent.
 
 ## Current Version
 

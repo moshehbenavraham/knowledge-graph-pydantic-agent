@@ -10,7 +10,7 @@ services:
       context: ..
       dockerfile: docker/Dockerfile.production
       target: runtime
-    container_name: base-agent-coolify
+    container_name: kgpa-coolify
 
     ports:
       - "8502:8502"
@@ -45,7 +45,7 @@ services:
       # ===== AUTHENTICATION (REQUIRED FOR PRODUCTION) =====
       - USE_DATABASE_AUTH=${USE_DATABASE_AUTH:-true}
       - AUTH_COOKIE_KEY=${AUTH_COOKIE_KEY}
-      - AUTH_COOKIE_NAME=${AUTH_COOKIE_NAME:-base_agent_auth}
+      - AUTH_COOKIE_NAME=${AUTH_COOKIE_NAME:-kgpa_auth}
       - AUTH_COOKIE_EXPIRY_DAYS=${AUTH_COOKIE_EXPIRY_DAYS:-30}
       - AUTH_COOKIE_DOMAIN=${AUTH_COOKIE_DOMAIN}
       - AUTH_COOKIE_SECURE=${AUTH_COOKIE_SECURE:-true}
@@ -141,7 +141,7 @@ services:
   #     context: ..
   #     dockerfile: docker/Dockerfile.production
   #     target: api
-  #   container_name: base-agent-api-coolify
+  #   container_name: kgpa-api-coolify
   #
   #   ports:
   #     - "8058:8058"

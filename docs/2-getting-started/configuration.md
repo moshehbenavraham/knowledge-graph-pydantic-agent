@@ -1,6 +1,6 @@
 # Configuration Guide
 
-Configure Luminari Agent using the centralized Pydantic settings system with type safety and runtime validation.
+Configure Knowledge Graph Pydantic Agent using the centralized Pydantic settings system with type safety and runtime validation.
 
 ## Configuration Architecture
 
@@ -34,7 +34,7 @@ SUPABASE_SERVICE_KEY=your_service_role_key
 
 #### Direct PostgreSQL
 ```bash
-DATABASE_URL=postgresql://username:password@localhost:5432/luminari_db
+DATABASE_URL=postgresql://username:password@localhost:5432/kgpa_db
 ```
 
 **Requirements:** PostgreSQL 14+ with pgvector extension
@@ -322,4 +322,4 @@ print(client.complete('Hello'))
 
 ---
 
-**Configuration Complete!** Your Luminari Agent is now configured for your environment.
+**Configuration Complete!** Your Knowledge Graph Pydantic Agent is now configured for your environment.

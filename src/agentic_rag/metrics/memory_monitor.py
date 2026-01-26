@@ -37,12 +37,12 @@ def _get_or_create_gauge(
         for collector in list(registry._collector_to_names.keys()):
             collector_name = getattr(collector, "_name", None)
             if collector_name == name:
-                return collector  # type: ignore[no-any-return]
+                return collector
 
         if hasattr(registry, "_names_to_collectors"):
             for registered_name, collector in registry._names_to_collectors.items():
                 if registered_name == name:
-                    return collector  # type: ignore[no-any-return]
+                    return collector
     except (AttributeError, KeyError, RuntimeError):
         pass
 
@@ -52,7 +52,7 @@ def _get_or_create_gauge(
         if "Duplicated" in str(e):
             for collector in list(registry._collector_to_names.keys()):
                 if getattr(collector, "_name", None) == name:
-                    return collector  # type: ignore[no-any-return]
+                    return collector
         return None
 
 

@@ -1,6 +1,6 @@
-# Luminari Agent Documentation
+# Knowledge Graph Pydantic Agent Documentation
 
-**Enterprise-grade documentation for the Luminari Agent Agentic Graph RAG System**
+**Enterprise-grade documentation for the Knowledge Graph Pydantic Agent Agentic Graph RAG System**
 
 Version 1.8.0 | Last Updated: December 2025
 
@@ -11,7 +11,7 @@ Version 1.8.0 | Last Updated: December 2025
 ### Core Documentation (User Journey Flow)
 
 #### 1️⃣ [Overview](1-overview/index.md)
-**Start here** to understand what Luminari Agent is and what it can do.
+**Start here** to understand what Knowledge Graph Pydantic Agent is and what it can do.
 
 - [System Overview](1-overview/index.md) - Introduction and value proposition
 - [Key Features](1-overview/key-features.md) - Core capabilities and differentiators
@@ -20,7 +20,7 @@ Version 1.8.0 | Last Updated: December 2025
 ---
 
 #### 2️⃣ [Getting Started](2-getting-started/index.md)
-**Quick onboarding** to get Luminari Agent running in minutes.
+**Quick onboarding** to get Knowledge Graph Pydantic Agent running in minutes.
 
 - [Installation](2-getting-started/installation.md) - Setup and installation guide
 - [Quick Start](2-getting-started/quick-start.md) - 5-minute quickstart
@@ -72,7 +72,7 @@ Version 1.8.0 | Last Updated: December 2025
 ---
 
 #### 7️⃣ [Operations](7-operations/index.md)
-**Running and monitoring** Luminari Agent in production.
+**Running and monitoring** Knowledge Graph Pydantic Agent in production.
 
 **Day-to-Day Operations:**
 - [API Runbook](7-operations/api-runbook.md) - API operations procedures
@@ -95,7 +95,7 @@ Version 1.8.0 | Last Updated: December 2025
 ---
 
 #### 8️⃣ [Development](8-development/index.md)
-**Contributing and developing** Luminari Agent features.
+**Contributing and developing** Knowledge Graph Pydantic Agent features.
 
 - [Development Guide](8-development/index.md) - Development workflow overview
 - [Testing Guide](8-development/testing-guide.md) - Comprehensive testing documentation
@@ -206,7 +206,7 @@ Sample quarterly earnings PDFs (2022-2023) for AAPL, AMZN, INTC, MSFT, NVDA.
 - 🔧 [Troubleshooting](10-troubleshooting/index.md)
 
 ### External Resources
-- [GitHub Repository](https://github.com/yourusername/base_agent)
+- [GitHub Repository](https://github.com/yourusername/knowledge-graph-pydantic-agent)
 - [CONVENTIONS.md](../.spec_system/CONVENTIONS.md) - Project coding conventions
 - [Makefile](../Makefile) - All development commands
 
@@ -236,4 +236,4 @@ See [Development Guide](8-development/index.md) for contribution workflow.
 
 ---
 
-**Luminari Agent Documentation** | Unified AI Assistant with Agentic Graph RAG
+**Knowledge Graph Pydantic Agent Documentation** | Unified AI Assistant with Agentic Graph RAG

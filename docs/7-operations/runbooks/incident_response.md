@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This runbook provides step-by-step procedures for responding to incidents in the Luminari Agent / Agentic RAG platform.
+This runbook provides step-by-step procedures for responding to incidents in the Knowledge Graph Pydantic Agent / Agentic RAG platform.
 
 ## Incident Severity Levels
 
@@ -63,7 +63,7 @@ docker stats
 
 # Check metrics
 # Open Grafana: http://grafana.example.com
-# Dashboard: "Luminari Agent - Agentic RAG Platform"
+# Dashboard: "KGPA - Agentic RAG Platform"
 
 # Check recent deployments
 cat deploy/backups/production/current-deployment.txt
@@ -77,7 +77,7 @@ cat deploy/backups/production/current-deployment.txt
 
 ```bash
 # Search for errors in last 10 minutes
-docker logs base-agent-api-prod 2>&1 | grep -i error | tail -50
+docker logs kgpa-api-prod 2>&1 | grep -i error | tail -50
 
 # Check API response times
 curl -w "@curl-format.txt" -o /dev/null -s http://localhost:8058/health
@@ -225,10 +225,10 @@ Users should now be experiencing normal service.
 **Response**:
 ```bash
 # Check if containers are running
-docker ps -a | grep base-agent
+docker ps -a | grep kgpa
 
 # If stopped, check why
-docker logs base-agent-prod --tail 100
+docker logs kgpa-prod --tail 100
 
 # Restart services
 make deploy-prod
@@ -354,7 +354,7 @@ docker-compose -f docker/docker-compose.prod.yml restart {service}
 - **Grafana**: http://grafana.example.com (SSO)
 - **Prometheus**: http://prometheus.example.com (internal)
 - **PagerDuty**: https://example.pagerduty.com
-- **Slack**: #incidents, #base-agent-alerts
+- **Slack**: #incidents, #kgpa-alerts
 - **Deployment Access**: SSH key required, stored in 1Password
 - **Database Access**: Supabase dashboard, Neo4j Browser
 - **Runbook Repository**: `docs/operations/RUNBOOKS/`

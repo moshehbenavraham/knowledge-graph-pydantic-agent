@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **RAG Pipeline - Google Drive Integration**: Drive connector, document processor, file watching
 - **RAG Pipeline - Local Files**: Local file connector with file watching capabilities
 - **Database Setup**: Supabase client, document metadata table, document rows table, pgvector extension, similarity search
-- **Agent Core**: Base "Luminari" agent implementation, prompt templates, multi-provider LLM integration, local model support, conversation history
+- **Agent Core**: Base agent implementation, prompt templates, multi-provider LLM integration, local model support, conversation history
 - **Memory System**: Session management, memory extraction, vector storage, retrieval system, deduplication
 - **Document Tools**: Document listing, content retrieval, SQL query tool for tabular data
 - **Web Tools**: Brave API web search, content summarizer, image analysis with OpenAI

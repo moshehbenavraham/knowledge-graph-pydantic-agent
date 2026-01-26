@@ -110,7 +110,7 @@ def with_retry(
 
             for attempt in range(_max_attempts):
                 try:
-                    return await func(*args, **kwargs)  # type: ignore[misc,no-any-return]
+                    return await func(*args, **kwargs)  # type: ignore[misc]
                 except Exception as e:
                     last_exception = e
 
@@ -227,7 +227,7 @@ def with_circuit_breaker(
             if breaker is None:
                 breaker = get_circuit_breaker(service)
 
-            return await breaker.execute(func, *args, **kwargs)  # type: ignore[no-any-return]
+            return await breaker.execute(func, *args, **kwargs)
 
         return wrapper  # type: ignore[return-value]
 
@@ -316,7 +316,7 @@ def with_resilience(
                 try:
                     result = await func(*args, **kwargs)  # type: ignore[misc]
                     await breaker.record_success()
-                    return result  # type: ignore[no-any-return]
+                    return result
                 except Exception as e:
                     last_exception = e
 

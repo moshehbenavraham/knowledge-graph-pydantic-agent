@@ -1,10 +1,10 @@
 # Configuration Reference
 
-This section provides comprehensive documentation for all configuration options in Luminari Agent.
+This section provides comprehensive documentation for all configuration options in Knowledge Graph Pydantic Agent.
 
 ## Configuration System Overview
 
-Luminari Agent uses a **centralized Pydantic-based configuration system** that provides:
+Knowledge Graph Pydantic Agent uses a **centralized Pydantic-based configuration system** that provides:
 
 - **Type Safety**: Full validation with helpful error messages
 - **Environment Integration**: Automatic loading from `.env` files

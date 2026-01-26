@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to the Luminari Agent project are documented in this file.
+All notable changes to the Knowledge Graph Pydantic Agent project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -21,7 +21,7 @@ This release implements a comprehensive two-layer authentication system for the 
 
 **Defense-in-Depth Security Model**:
 ```
-Internet → ngrok (Layer 1: Basic Auth) → Streamlit (Layer 2: User Auth) → Luminari Agent App
+Internet → ngrok (Layer 1: Basic Auth) → Streamlit (Layer 2: User Auth) → KGPA App
 ```
 
 **Layer 1**: Network-level HTTP Basic Authentication (ngrok)
@@ -30,8 +30,8 @@ Internet → ngrok (Layer 1: Basic Auth) → Streamlit (Layer 2: User Auth) → 
 #### Layer 1: ngrok Basic Authentication
 
 **ngrok Configuration** (`~/.config/ngrok/ngrok.yml`):
-- Added `basic_auth` to `base-agent-ui` tunnel configuration
-- Credentials: `admin:BaseAgent2025!Secure` (CHANGE IN PRODUCTION)
+- Added `basic_auth` to `kgpa-ui` tunnel configuration
+- Credentials: `admin:KGPA2025!Secure` (CHANGE IN PRODUCTION)
 - HTTP 401 protection at tunnel ingress
 - Verified with curl testing (401 without auth, passes with credentials)
 
@@ -61,7 +61,7 @@ Internet → ngrok (Layer 1: Basic Auth) → Streamlit (Layer 2: User Auth) → 
 
 **`streamlit_auth.py`** (211 lines):
 - `require_authentication()` - Main authentication gate (called at app startup)
-- `render_login_page()` - Beautiful gradient login UI with Luminari Agent branding
+- `render_login_page()` - Beautiful gradient login UI with KGPA branding
 - `render_logout_button()` - Sidebar logout functionality
 - `load_auth_config()` - Configuration file loader with validation
 - `get_authenticator()` - Authenticator factory with proper initialization
@@ -88,7 +88,7 @@ Internet → ngrok (Layer 1: Basic Auth) → Streamlit (Layer 2: User Auth) → 
 - Automatic rerun on successful authentication
 
 **Login Page Features**:
-- Gradient background (purple/blue) matching Luminari Agent branding
+- Gradient background (purple/blue) matching KGPA branding
 - Clean, modern UI with centered form
 - Clear error messages for invalid credentials
 - User-friendly prompts and instructions
@@ -179,7 +179,7 @@ pip install -e .[auth]  # Install authentication dependencies
 
 **Layer 1 (ngrok)**:
 - Username: `admin`
-- Password: `BaseAgent2025!Secure`
+- Password: `KGPA2025!Secure`
 - Location: `~/.config/ngrok/ngrok.yml`
 
 **Layer 2 (Streamlit)**:
@@ -235,7 +235,7 @@ make deploy-ngrok
 make ngrok-status
 
 # 3. Access in browser
-# Step 1: Enter ngrok credentials (admin / BaseAgent2025!Secure)
+# Step 1: Enter ngrok credentials (admin / KGPA2025!Secure)
 # Step 2: Streamlit login (admin / Admin2025!Secure)
 ```
 
@@ -414,7 +414,7 @@ This release adds complete ngrok deployment infrastructure, enabling secure HTTP
 
 **ngrok v3 Configuration** (`~/.config/ngrok/ngrok.yml`):
 - Auto-configured authtoken from environment variables
-- Tunnel definition: `base-agent-ui` pointing to port 8501
+- Tunnel definition: `kgpa-ui` pointing to port 8501
 - Custom domain support: `aiwithapex.ngrok.io`
 - Inspection enabled for debugging tunnel traffic
 - Verified configuration with `ngrok config check`
@@ -453,7 +453,7 @@ This release adds complete ngrok deployment infrastructure, enabling secure HTTP
   - Advanced mode by default
   - Properly configured for ngrok environment
 - `make ngrok-start` - Start ngrok tunnel manually
-  - Uses `base-agent-ui` tunnel from config
+  - Uses `kgpa-ui` tunnel from config
 - `make ngrok-status` - Check tunnel status and public URL
   - Queries ngrok API at `localhost:4040`
   - JSON output with tunnel details
@@ -490,7 +490,7 @@ This release adds complete ngrok deployment infrastructure, enabling secure HTTP
 - Config file existence and valid YAML format
 - Version 3 format validation
 - Authtoken presence and configuration
-- `base-agent-ui` tunnel definition
+- `kgpa-ui` tunnel definition
 - Tunnel settings: HTTP protocol, port 8501, domain, inspection
 
 **TestStreamlitConfiguration** (5 tests):
@@ -577,7 +577,7 @@ make ngrok-logs
 **Configuration Flow**:
 1. User sets `NGROK_AUTHTOKEN` and `NGROK_DOMAIN` in `.env`
 2. `ngrok config add-authtoken` configures authentication
-3. `~/.config/ngrok/ngrok.yml` defines `base-agent-ui` tunnel
+3. `~/.config/ngrok/ngrok.yml` defines `kgpa-ui` tunnel
 4. `.streamlit/config.toml` optimizes Streamlit for ngrok environment
 5. `make deploy-ngrok` starts both services
 

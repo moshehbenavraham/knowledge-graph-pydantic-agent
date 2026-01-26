@@ -268,7 +268,7 @@ def render_oauth_account_management() -> None:
                 **Security Notes:**
                 - We only access basic profile information (name, email)
                 - You can unlink accounts at any time
-                - Unlinking an account won't delete your Luminari Agent account
+                - Unlinking an account won't delete your Knowledge Graph Pydantic Agent account
                 - We encrypt all OAuth tokens before storing them
                 """
             )

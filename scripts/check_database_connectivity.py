@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Database connectivity test script for Base Agent project.
+Database connectivity test script for Knowledge Graph Pydantic Agent project.
 Tests connections to Supabase/PostgreSQL and Neo4j.
 """
 

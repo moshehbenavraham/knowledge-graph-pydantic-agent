@@ -1,6 +1,6 @@
 # ===============================================
 # Multi-Stage Production Dockerfile
-# Luminari Agent - Agentic RAG Platform
+# Knowledge Graph Pydantic Agent - Agentic RAG Platform
 # ===============================================
 
 # -----------------------------------------------
@@ -43,7 +43,7 @@ FROM python:3.11-slim AS runtime
 LABEL maintainer="aiwithapex@example.com"
 LABEL version="1.0.0"
 LABEL description="Production-ready Agentic RAG Platform"
-LABEL org.opencontainers.image.source="https://github.com/aiwithapex/base_agent"
+LABEL org.opencontainers.image.source="https://github.com/aiwithapex/knowledge-graph-pydantic-agent"
 
 WORKDIR /app
 

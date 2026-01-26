@@ -1,4 +1,4 @@
-"""Authentication module for Luminari Agent.
+"""Authentication module for Knowledge Graph Pydantic Agent.
 
 This module provides user authentication, session management, and user account
 management functionality.

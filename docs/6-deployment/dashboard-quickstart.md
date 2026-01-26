@@ -14,7 +14,7 @@ The GraphRAG Analytics Dashboard provides real-time visualization and monitoring
 - **Python 3.11+** installed
 - **PostgreSQL/Supabase** configured and running
 - **Neo4j Aura** configured and running (for graph visualization)
-- **Luminari Agent** installed with dashboard dependencies
+- **Knowledge Graph Pydantic Agent** installed with dashboard dependencies
 
 ### Installation
 
@@ -405,4 +405,4 @@ To add new visualizations:
 
 **Last Updated:** 2025-10-16
 **Dashboard Version:** 1.0.2
-**Compatible with:** Luminari Agent v1.0.2+
+**Compatible with:** Knowledge Graph Pydantic Agent v1.0.2+

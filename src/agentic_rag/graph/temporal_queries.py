@@ -982,7 +982,7 @@ async def execute_temporal_query(
                 entity=query.entity,
                 cache_key=cache_key[:16],
             )
-            return cached_result  # type: ignore[no-any-return]
+            return cached_result
 
     # Build query
     builder = TemporalQueryBuilder().from_query(query)

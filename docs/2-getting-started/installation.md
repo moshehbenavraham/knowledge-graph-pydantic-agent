@@ -1,6 +1,6 @@
 # Complete Installation Guide
 
-Detailed setup instructions for Luminari Agent with all features enabled.
+Detailed setup instructions for Knowledge Graph Pydantic Agent with all features enabled.
 
 ## System Requirements
 
@@ -21,7 +21,7 @@ Detailed setup instructions for Luminari Agent with all features enabled.
 
 ```bash
 git clone <repository-url>
-cd base_agent
+cd knowledge-graph-pydantic-agent
 pip install -e .[dev,rag]  # Or: make setup
 ```
 
@@ -59,7 +59,7 @@ SUPABASE_SERVICE_KEY=your_service_role_key
 
 **Direct PostgreSQL:**
 ```bash
-DATABASE_URL=postgresql://user:password@localhost:5432/luminari
+DATABASE_URL=postgresql://user:password@localhost:5432/kgpa
 ```
 
 #### LLM Provider (Choose One)
@@ -273,7 +273,7 @@ make docker-run
 ```
 
 **What's included:**
-- Luminari Agent application container
+- Knowledge Graph Pydantic Agent application container
 - PostgreSQL database
 - Redis cache
 - Neo4j knowledge graph
@@ -283,7 +283,7 @@ make docker-run
 
 ```bash
 # Production build
-docker build -f docker/Dockerfile.production -t luminari-ai-agent:prod .
+docker build -f docker/Dockerfile.production -t kgpa-ai-agent:prod .
 
 # Run with docker-compose
 docker-compose -f docker/docker-compose.prod.yml up -d
@@ -329,4 +329,4 @@ pip install -e .[dev,rag] --force-reinstall
 
 **Installation Complete!** 🎉
 
-You now have a fully functional Luminari Agent with all features enabled.
+You now have a fully functional Knowledge Graph Pydantic Agent with all features enabled.

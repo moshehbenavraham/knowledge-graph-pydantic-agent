@@ -1,4 +1,4 @@
-# Luminari Agent - Technical Product Requirements Document
+# Knowledge Graph Pydantic Agent - Technical Product Requirements Document
 
 **Document Version:** 2.0
 **Last Updated:** December 2024
@@ -30,7 +30,7 @@
 
 ### Technical Description
 
-The Luminari Agent is a production-ready AI assistant platform featuring the **Unified Super Agent** - a single, powerful implementation that combines ALL capabilities. Built with Pydantic AI, it provides intelligent automation through comprehensive tooling including smart search, web intelligence, data analysis, and code execution.
+The Knowledge Graph Pydantic Agent is a production-ready AI assistant platform featuring the **Unified Super Agent** - a single, powerful implementation that combines ALL capabilities. Built with Pydantic AI, it provides intelligent automation through comprehensive tooling including smart search, web intelligence, data analysis, and code execution.
 
 ### Key Technical Capabilities (Unified Agent)
 
@@ -125,7 +125,7 @@ The Luminari Agent is a production-ready AI assistant platform featuring the **U
 ### Project Structure
 
 ```
-base_agent/
+knowledge-graph-pydantic-agent/
 ├── src/                        # Main source code
 │   ├── __init__.py            # Package initialization
 │   ├── __main__.py            # Main entry point
@@ -753,7 +753,7 @@ postgresql:
   primary:
     host: "localhost"
     port: 5432
-    database: "luminari_db"
+    database: "kgpa_db"
     connection_pool: 20
     timeout: 30
 
@@ -1124,22 +1124,22 @@ CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: luminari-agent
+  name: kgpa-agent
   labels:
-    app: luminari-agent
+    app: kgpa-agent
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: luminari-agent
+      app: kgpa-agent
   template:
     metadata:
       labels:
-        app: luminari-agent
+        app: kgpa-agent
     spec:
       containers:
       - name: agent
-        image: luminari/agent:latest
+        image: kgpa/agent:latest
         ports:
         - containerPort: 8000
         env:
@@ -1179,10 +1179,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: luminari-agent-service
+  name: kgpa-agent-service
 spec:
   selector:
-    app: luminari-agent
+    app: kgpa-agent
   ports:
   - protocol: TCP
     port: 80
@@ -1195,8 +1195,8 @@ spec:
 **Terraform Configuration:**
 ```hcl
 # main.tf
-resource "aws_ecs_cluster" "luminari_cluster" {
-  name = "luminari-agent"
+resource "aws_ecs_cluster" "kgpa_cluster" {
+  name = "kgpa-agent"
 
   setting {
     name  = "containerInsights"
@@ -1205,14 +1205,14 @@ resource "aws_ecs_cluster" "luminari_cluster" {
 }
 
 resource "aws_ecs_service" "agent_service" {
-  name            = "luminari-agent"
-  cluster         = aws_ecs_cluster.luminari_cluster.id
+  name            = "kgpa-agent"
+  cluster         = aws_ecs_cluster.kgpa_cluster.id
   task_definition = aws_ecs_task_definition.agent_task.arn
   desired_count   = 3
 
   load_balancer {
     target_group_arn = aws_lb_target_group.agent_tg.arn
-    container_name   = "luminari-agent"
+    container_name   = "kgpa-agent"
     container_port   = 8000
   }
 }
@@ -1263,11 +1263,11 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Build Docker image
-      run: docker build -t luminari/agent:${{ github.sha }} .
+      run: docker build -t kgpa/agent:${{ github.sha }} .
     - name: Push to registry
       run: |
         echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
-        docker push luminari/agent:${{ github.sha }}
+        docker push kgpa/agent:${{ github.sha }}
 
   deploy:
     needs: build
@@ -1276,7 +1276,7 @@ jobs:
     steps:
     - name: Deploy to staging
       run: |
-        kubectl set image deployment/luminari-agent agent=luminari/agent:${{ github.sha }}
+        kubectl set image deployment/kgpa-agent agent=kgpa/agent:${{ github.sha }}
 ```
 
 ---
@@ -1315,38 +1315,38 @@ from prometheus_client import Counter, Histogram, Gauge
 
 # Request metrics
 request_count = Counter(
-    'luminari_requests_total',
+    'kgpa_requests_total',
     'Total requests',
     ['method', 'endpoint', 'status']
 )
 
 response_time = Histogram(
-    'luminari_response_time_seconds',
+    'kgpa_response_time_seconds',
     'Response time',
     ['endpoint']
 )
 
 # LLM metrics
 llm_requests = Counter(
-    'luminari_llm_requests_total',
+    'kgpa_llm_requests_total',
     'LLM API requests',
     ['provider', 'model', 'status']
 )
 
 llm_tokens = Counter(
-    'luminari_llm_tokens_total',
+    'kgpa_llm_tokens_total',
     'LLM tokens used',
     ['provider', 'model', 'type']
 )
 
 # Business metrics
 active_sessions = Gauge(
-    'luminari_active_sessions',
+    'kgpa_active_sessions',
     'Active user sessions'
 )
 
 documents_processed = Counter(
-    'luminari_documents_processed_total',
+    'kgpa_documents_processed_total',
     'Documents processed',
     ['format', 'status']
 )
@@ -1452,10 +1452,10 @@ async def readiness_check():
 **Prometheus Alerting Rules:**
 ```yaml
 groups:
-- name: luminari_alerts
+- name: kgpa_alerts
   rules:
   - alert: HighResponseTime
-    expr: histogram_quantile(0.95, luminari_response_time_seconds) > 5
+    expr: histogram_quantile(0.95, kgpa_response_time_seconds) > 5
     for: 2m
     labels:
       severity: warning
@@ -1464,7 +1464,7 @@ groups:
       description: "95th percentile response time is {{ $value }}s"
 
   - alert: HighErrorRate
-    expr: rate(luminari_requests_total{status=~"5.."}[5m]) > 0.01
+    expr: rate(kgpa_requests_total{status=~"5.."}[5m]) > 0.01
     for: 1m
     labels:
       severity: critical
@@ -1577,4 +1577,4 @@ Closes #123
 
 ---
 
-This technical PRD provides comprehensive specifications for implementing the Luminari Agent system. The document focuses on technical architecture, implementation details, and engineering requirements while maintaining clarity for both development teams and technical stakeholders.
+This technical PRD provides comprehensive specifications for implementing the Knowledge Graph Pydantic Agent system. The document focuses on technical architecture, implementation details, and engineering requirements while maintaining clarity for both development teams and technical stakeholders.

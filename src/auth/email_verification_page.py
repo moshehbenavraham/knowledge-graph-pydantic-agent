@@ -42,7 +42,7 @@ def render_email_verification_page() -> None:
         </style>
         <div class="verify-container">
             <div class="verify-title">✉️ Verify Email</div>
-            <div class="verify-subtitle">Luminari Agent Email Verification</div>
+            <div class="verify-subtitle">Knowledge Graph Pydantic Agent Email Verification</div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -94,7 +94,7 @@ def render_email_verification_page() -> None:
 
                     st.markdown("---")
                     st.markdown("### 🚀 What's next?")
-                    st.markdown("- Log in to your account to start using Luminari Agent")
+                    st.markdown("- Log in to your account to start using Knowledge Graph Pydantic Agent")
                     st.markdown("- Explore the powerful RAG capabilities")
                     st.markdown("- Connect your data sources and knowledge bases")
 

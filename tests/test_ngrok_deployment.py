@@ -98,18 +98,18 @@ class TestNgrokConfiguration:
         assert config["agent"]["authtoken"], "authtoken must not be empty"
 
     def test_ngrok_config_has_tunnel(self, ngrok_config_path: Path) -> None:
-        """Test that ngrok config has base-agent-ui tunnel defined."""
+        """Test that ngrok config has kgpa-ui tunnel defined."""
         with open(ngrok_config_path) as f:
             config = yaml.safe_load(f)
         assert "tunnels" in config, "ngrok config must have tunnels section"
-        assert "base-agent-ui" in config["tunnels"], "Must have base-agent-ui tunnel"
+        assert "kgpa-ui" in config["tunnels"], "Must have kgpa-ui tunnel"
 
     def test_ngrok_tunnel_configuration(self, ngrok_config_path: Path) -> None:
-        """Test that base-agent-ui tunnel has correct configuration."""
+        """Test that kgpa-ui tunnel has correct configuration."""
         with open(ngrok_config_path) as f:
             config = yaml.safe_load(f)
 
-        tunnel = config["tunnels"]["base-agent-ui"]
+        tunnel = config["tunnels"]["kgpa-ui"]
         assert tunnel["proto"] == "http", "Tunnel protocol must be http"
         assert tunnel["addr"] == 8502, "Tunnel must point to port 8502"
         assert "domain" in tunnel, "Tunnel must have domain configured"
@@ -324,7 +324,7 @@ class TestMakefileConfiguration:
 
         deploy_content = deploy_match.group(0)
         assert "ngrok start" in deploy_content, "deploy-ngrok must start ngrok"
-        assert "base-agent-ui" in deploy_content, "deploy-ngrok must start base-agent-ui tunnel"
+        assert "kgpa-ui" in deploy_content, "deploy-ngrok must start kgpa-ui tunnel"
 
 
 # Documentation Tests
@@ -467,7 +467,7 @@ class TestDeploymentReadiness:
         if ngrok_config_path.exists():
             with open(ngrok_config_path) as f:
                 ngrok_config = yaml.safe_load(f)
-            checks.append("tunnels" in ngrok_config and "base-agent-ui" in ngrok_config["tunnels"])
+            checks.append("tunnels" in ngrok_config and "kgpa-ui" in ngrok_config["tunnels"])
 
         # Check Streamlit config
         if streamlit_config_path.exists():

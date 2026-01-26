@@ -338,7 +338,7 @@ server {
 # Scan commands
 make image-scan           # Basic scan
 make image-scan-full     # Detailed report
-trivy image --severity HIGH,CRITICAL base-agent:latest
+trivy image --severity HIGH,CRITICAL knowledge-graph-pydantic-agent:latest
 ```
 
 ### CIS Docker Benchmark
@@ -359,9 +359,9 @@ sudo sh docker-bench-security.sh
 Using Syft for comprehensive SBOM creation:
 ```bash
 make image-sbom  # Generate SBOM
-syft packages docker:base-agent:latest -o json > sbom.json
-syft packages docker:base-agent:latest -o spdx-json > sbom.spdx.json
-syft packages docker:base-agent:latest -o cyclonedx-json > sbom.cyclonedx.json
+syft packages docker:knowledge-graph-pydantic-agent:latest -o json > sbom.json
+syft packages docker:knowledge-graph-pydantic-agent:latest -o spdx-json > sbom.spdx.json
+syft packages docker:knowledge-graph-pydantic-agent:latest -o cyclonedx-json > sbom.cyclonedx.json
 ```
 
 #### SBOM Management
@@ -376,7 +376,7 @@ Digital signatures for container images:
 ```bash
 make image-sign    # Sign image
 make image-verify  # Verify signature
-cosign verify --key cosign.pub ghcr.io/aiwithapex/base-agent:latest
+cosign verify --key cosign.pub ghcr.io/aiwithapex/knowledge-graph-pydantic-agent:latest
 ```
 
 #### Signing Process
@@ -507,7 +507,7 @@ As of the latest scan:
 ### Incident Response
 
 1. **Vulnerability Disclosure**:
-   - Report to: security@baseagent.ai (example)
+   - Report to: security@kgpa.ai (example)
    - Expected response: 24-48 hours
    - Coordinated disclosure policy
 
@@ -597,13 +597,13 @@ def log_audit_event(
 ```bash
 # OWASP ZAP automated scanning
 docker run -t owasp/zap2docker-stable zap-baseline.py \
-  -t https://api.baseagent.com
+  -t https://api.kgpa.com
 
 # Nikto web vulnerability scanner
-nikto -h https://api.baseagent.com
+nikto -h https://api.kgpa.com
 
 # SQLMap for SQL injection testing (staging only)
-sqlmap -u "https://staging.baseagent.com/api/search?q=test" \
+sqlmap -u "https://staging.kgpa.com/api/search?q=test" \
   --batch --random-agent
 ```
 
@@ -689,7 +689,7 @@ sqlmap -u "https://staging.baseagent.com/api/search?q=test" \
 ### Vulnerability Disclosure Policy
 
 **Responsible Disclosure Process**:
-1. **Report Submission**: security@baseagent.ai
+1. **Report Submission**: security@kgpa.ai
 2. **Acknowledgment**: Within 24 hours
 3. **Initial Assessment**: Within 48 hours
 4. **Resolution Timeline**: Based on severity (24h to 30d)
@@ -706,7 +706,7 @@ sqlmap -u "https://staging.baseagent.com/api/search?q=test" \
 
 **Internal Communication**:
 - Slack: #security-incidents channel
-- Email: security-team@baseagent.ai
+- Email: security-team@kgpa.ai
 - Phone: Security hotline (24/7)
 
 **External Communication**:
@@ -755,9 +755,9 @@ sqlmap -u "https://staging.baseagent.com/api/search?q=test" \
 
 ## Security Contacts
 
-- **Security Team**: security@baseagent.ai (example)
-- **Bug Bounty**: bounty@baseagent.ai (example)
-- **Emergency**: security-emergency@baseagent.ai (example)
+- **Security Team**: security@kgpa.ai (example)
+- **Bug Bounty**: bounty@kgpa.ai (example)
+- **Emergency**: security-emergency@kgpa.ai (example)
 
 ---
 
@@ -809,4 +809,4 @@ sqlmap -u "https://staging.baseagent.com/api/search?q=test" \
 *Last Updated: 2025-10-31*
 *Version: 2.1.0*
 
-**Note**: This is the comprehensive security documentation for the Luminari Agent system, covering all aspects of security including development tooling, authentication, container hardening, supply chain security, compliance, and incident response.
+**Note**: This is the comprehensive security documentation for the Knowledge Graph Pydantic Agent system, covering all aspects of security including development tooling, authentication, container hardening, supply chain security, compliance, and incident response.

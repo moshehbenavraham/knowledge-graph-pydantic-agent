@@ -2,7 +2,7 @@
 
 ## Overview
 
-This guide covers deploying Base Agent to Coolify using external managed database services (Neo4j Aura + Supabase). This approach provides:
+This guide covers deploying Knowledge Graph Pydantic Agent (KGPA) to Coolify using external managed database services (Neo4j Aura + Supabase). This approach provides:
 
 - **Simplified infrastructure**: No need to manage database containers in Coolify
 - **Managed backups**: Both Neo4j Aura and Supabase provide automatic backups
@@ -14,7 +14,7 @@ This guide covers deploying Base Agent to Coolify using external managed databas
 
 ```
 Coolify Server
- Base Agent Container (Streamlit UI on 8501)
+ KGPA Container (Streamlit UI on 8501)
     Connects to -> Supabase PostgreSQL (vector embeddings + user data)
     Connects to -> Neo4j Aura (knowledge graph)
  Optional: FastAPI Container (API on 8058)
@@ -37,7 +37,7 @@ Coolify Server
 ### 2. Neo4j Aura Account
 - Sign up at https://neo4j.com/cloud/aura/
 - Create a free instance (or paid if production):
-  - Instance name: `baseagent-graph`
+  - Instance name: `kgpa-graph`
   - Region: Choose closest to your Coolify server
   - Database version: 5.13 or later
 - **Save credentials immediately** (only shown once):
@@ -49,7 +49,7 @@ Coolify Server
 ### 3. Supabase Account
 - Sign up at https://supabase.com
 - Create a new project:
-  - Project name: `baseagent`
+  - Project name: `kgpa`
   - Database password: **Strong password** (save securely)
   - Region: Choose closest to your Coolify server
 - Navigate to Project Settings -> Database
@@ -226,7 +226,7 @@ USE_DATABASE_AUTH=true
 AUTH_COOKIE_KEY=your_generated_32_char_key_from_step_3
 
 # Cookie Settings (adjust domain for your Coolify deployment)
-AUTH_COOKIE_NAME=base_agent_auth
+AUTH_COOKIE_NAME=kgpa_auth
 AUTH_COOKIE_EXPIRY_DAYS=30
 AUTH_COOKIE_DOMAIN=your-app.yourdomain.com
 AUTH_COOKIE_SECURE=true
@@ -244,7 +244,7 @@ SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=your-email@gmail.com
 SMTP_PASSWORD=your_app_password
-SMTP_FROM_EMAIL=noreply@baseagent.local
+SMTP_FROM_EMAIL=noreply@kgpa.local
 
 # === FEATURE FLAGS ===
 
@@ -318,9 +318,9 @@ API_RELOAD=false
 ### Step 2: Configure Resource
 
 **General Settings**:
-- **Name**: `base-agent-ui`
-- **Description**: `Base Agent - Agentic RAG System (Streamlit UI)`
-- **Domain**: Configure your domain (e.g., `baseagent.yourdomain.com`)
+- **Name**: `kgpa-ui`
+- **Description**: `Knowledge Graph Pydantic Agent - Agentic RAG System (Streamlit UI)`
+- **Domain**: Configure your domain (e.g., `kgpa.yourdomain.com`)
   - Enable HTTPS (Let's Encrypt automatic)
   - Enable Force HTTPS redirect
 
@@ -376,12 +376,12 @@ Click **Environment Variables** tab -> **Bulk Edit** -> Paste your `.env` conten
 If you want to persist logs or uploaded files:
 
 Click **Persistent Storage** tab -> **+ Add Volume**:
-- **Name**: `base-agent-logs`
+- **Name**: `kgpa-logs`
 - **Mount Path**: `/app/logs`
 - **Size**: `5GB`
 
 Add another volume for uploaded files:
-- **Name**: `base-agent-data`
+- **Name**: `kgpa-data`
 - **Mount Path**: `/app/data`
 - **Size**: `10GB`
 
@@ -403,7 +403,7 @@ Add another volume for uploaded files:
 ```
 Successfully built <image-id>
 Successfully tagged <image-name>
-Container started: base-agent-ui
+Container started: kgpa-ui
 ```
 
 **Check health status**:
@@ -411,8 +411,8 @@ Container started: base-agent-ui
 - If unhealthy, check logs for errors
 
 **Access application**:
-- Navigate to your configured domain: `https://baseagent.yourdomain.com`
-- You should see the Base Agent login page
+- Navigate to your configured domain: `https://kgpa.yourdomain.com`
+- You should see the KGPA login page
 
 ---
 
@@ -513,7 +513,7 @@ Neo4j initialization complete!
 
 **Prometheus Metrics**:
 1. Add another port in Coolify: `8000` -> `8000`
-2. Access metrics: `https://baseagent.yourdomain.com:8000/metrics`
+2. Access metrics: `https://kgpa.yourdomain.com:8000/metrics`
 3. Use with Grafana or other monitoring tools
 
 **Structured Logging**:
@@ -538,9 +538,9 @@ Neo4j initialization complete!
 ```bash
 # In Coolify, schedule backup task
 docker run --rm \
-  -v base-agent-data:/data \
+  -v kgpa-data:/data \
   -v /backup:/backup \
-  alpine tar czf /backup/base-agent-data-$(date +%Y%m%d).tar.gz /data
+  alpine tar czf /backup/kgpa-data-$(date +%Y%m%d).tar.gz /data
 ```
 
 ---
@@ -748,7 +748,7 @@ echo "Encryption: $OAUTH_ENCRYPTION_KEY"
 **Common issues**:
 1. **Redirect URI mismatch**:
    - Must match exactly in OAuth app settings
-   - Coolify: `https://baseagent.yourdomain.com` (no trailing slash)
+   - Coolify: `https://kgpa.yourdomain.com` (no trailing slash)
    - Update in Google Cloud Console or GitHub Settings
 
 2. **Encryption key not set**:
@@ -777,7 +777,7 @@ echo "Encryption: $OAUTH_ENCRYPTION_KEY"
 **Manual image update**:
 ```bash
 # If using external registry
-docker pull yourregistry/base-agent:latest
+docker pull yourregistry/knowledge-graph-pydantic-agent:latest
 # Coolify will detect and offer to redeploy
 ```
 
@@ -807,22 +807,22 @@ docker pull yourregistry/base-agent:latest
 ```bash
 # In Coolify terminal
 # Errors only
-docker logs base-agent-ui 2>&1 | grep '"level":"error"'
+docker logs kgpa-ui 2>&1 | grep '"level":"error"'
 
 # Specific component
-docker logs base-agent-ui 2>&1 | grep 'StreamingHandler'
+docker logs kgpa-ui 2>&1 | grep 'StreamingHandler'
 
 # Last 100 lines
-docker logs --tail 100 base-agent-ui
+docker logs --tail 100 kgpa-ui
 
 # Follow logs live
-docker logs -f base-agent-ui
+docker logs -f kgpa-ui
 ```
 
 **Export logs**:
 ```bash
 # Save last 24 hours to file
-docker logs --since 24h base-agent-ui > /tmp/base-agent-logs.txt
+docker logs --since 24h kgpa-ui > /tmp/kgpa-logs.txt
 ```
 
 ### Scaling
@@ -876,7 +876,7 @@ pg_dump $DATABASE_URL > backup-$(date +%Y%m%d).sql
 **Application data backup** (if using persistent volumes):
 ```bash
 # In Coolify terminal
-tar czf /tmp/base-agent-backup.tar.gz /app/data /app/logs
+tar czf /tmp/kgpa-backup.tar.gz /app/data /app/logs
 
 # Download from Coolify UI: Files tab
 ```
@@ -1014,7 +1014,7 @@ Before going live, verify:
 ## Additional Resources
 
 ### Documentation
-- **Base Agent Docs**: `/docs/` directory in repository
+- **KGPA Docs**: `/docs/` directory in repository
 - **Supabase Docs**: https://supabase.com/docs
 - **Neo4j Aura Docs**: https://neo4j.com/docs/aura/
 - **Coolify Docs**: https://coolify.io/docs

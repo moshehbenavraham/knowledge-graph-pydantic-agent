@@ -9,8 +9,8 @@ services:
       context: ..
       dockerfile: docker/Dockerfile.production
       target: runtime
-    image: ${REGISTRY:-ghcr.io}/base-agent:staging
-    container_name: base-agent-staging
+    image: ${REGISTRY:-ghcr.io}/knowledge-graph-pydantic-agent:staging
+    container_name: kgpa-staging
     ports:
       - "8502:8502"
     environment:
@@ -41,7 +41,7 @@ services:
       - SEARXNG_BASE_URL=http://searxng:8080
 
       # ===== AGENT SETTINGS =====
-      - AGENT_NAME=${AGENT_NAME:-Luminari-Staging}
+      - AGENT_NAME=${AGENT_NAME:-KGPA-Staging}
       - AGENT_TEMPERATURE=${AGENT_TEMPERATURE:-0.7}
 
       # ===== NEO4J CONFIGURATION =====
@@ -118,8 +118,8 @@ services:
       context: ..
       dockerfile: docker/Dockerfile.production
       target: api
-    image: ${REGISTRY:-ghcr.io}/base-agent-api:staging
-    container_name: base-agent-api-staging
+    image: ${REGISTRY:-ghcr.io}/kgpa-api:staging
+    container_name: kgpa-api-staging
     ports:
       - "8058:8058"
     environment:
@@ -277,5 +277,5 @@ volumes:
 
 networks:
   staging-network:
-    name: base-agent-staging-network
+    name: kgpa-staging-network
     driver: bridge

@@ -107,7 +107,7 @@ class UIConfig:
         """Get Streamlit page configuration."""
         logger.info("Getting page configuration", mode=self.mode.value)
         return {
-            "page_title": f"Luminari AI Agent - {self.mode.value.title()} Mode",
+            "page_title": f"Knowledge Graph Pydantic Agent - {self.mode.value.title()} Mode",
             "page_icon": "🤖",
             "layout": "wide" if self.is_advanced_mode else "centered",
             "initial_sidebar_state": "expanded" if self.is_advanced_mode else "auto",

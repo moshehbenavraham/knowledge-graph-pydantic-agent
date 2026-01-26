@@ -1,6 +1,6 @@
-# Luminari Agent Testing Guide
+# Knowledge Graph Pydantic Agent Testing Guide
 
-Comprehensive testing documentation for the Luminari Agent platform.
+Comprehensive testing documentation for the Knowledge Graph Pydantic Agent platform.
 
 ---
 

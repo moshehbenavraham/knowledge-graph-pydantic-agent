@@ -91,7 +91,7 @@ class BreachDetectionManager:
             ) as client:
                 response = await client.get(
                     self.HIBP_API_URL.format(hash_prefix=hash_prefix),
-                    headers={"User-Agent": "BaseAgent-PasswordBreachDetection"},
+                    headers={"User-Agent": "KGPA-PasswordBreachDetection"},
                 )
 
                 if response.status_code != 200:

@@ -96,7 +96,7 @@ async def test_basic_health_check_success(mock_get_settings, mock_settings):
     result = await basic_health_check()
 
     assert result["status"] == "healthy"
-    assert result["service"] == "luminari-ai-agent"
+    assert result["service"] == "knowledge-graph-pydantic-agent"
     assert result["version"] == "1.3.0"
     assert "timestamp" in result
 

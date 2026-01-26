@@ -6,7 +6,7 @@
 
 ## Overview
 
-This guide documents the complete deployment process for Luminari Agent on WSL2 Ubuntu, using cloud services for databases to minimize local infrastructure.
+This guide documents the complete deployment process for Knowledge Graph Pydantic Agent on WSL2 Ubuntu, using cloud services for databases to minimize local infrastructure.
 
 ## ⚠️ Resource Requirements
 
@@ -334,7 +334,7 @@ make run-api
 
 ### Performance Optimization
 
-✅ **Already optimized:** Project located in WSL2 native filesystem (`/home/aiwithapex/projects/base_agent`)
+✅ **Already optimized:** Project located in WSL2 native filesystem (`/home/aiwithapex/projects/knowledge-graph-pydantic-agent`)
 
 **Avoid:** Accessing Windows filesystem from WSL2 (`/mnt/c/...`) - 10x slower I/O
 
@@ -860,12 +860,12 @@ run-ui-simple:
 **Manual alternative** (if Makefile still fails):
 ```bash
 source .venv/bin/activate
-PYTHONPATH=/home/aiwithapex/projects/base_agent:$PYTHONPATH UI_MODE=simple streamlit run src/ui/streamlit_app.py
+PYTHONPATH=/home/aiwithapex/projects/knowledge-graph-pydantic-agent:$PYTHONPATH UI_MODE=simple streamlit run src/ui/streamlit_app.py
 ```
 
 ### Prometheus Metrics Duplicate Registration (Resolved)
 
-**Issue:** `ValueError: Duplicated timeseries in CollectorRegistry: {'luminari_requests', 'luminari_requests_created', 'luminari_requests_total'}`
+**Issue:** `ValueError: Duplicated timeseries in CollectorRegistry: {'kgpa_requests', 'kgpa_requests_created', 'kgpa_requests_total'}`
 
 **Root Cause:**
 - Streamlit reloads modules on each script run
@@ -1013,8 +1013,8 @@ docker-compose -f docker-compose.monitoring.yml up -d
 curl http://localhost:8000/metrics
 
 # Should see Prometheus format output like:
-# luminari_tool_executions_total{tool_name="web_search", status="success"} 42
-# luminari_llm_tokens_total{model="gpt-5-mini", type="input"} 15420
+# kgpa_tool_executions_total{tool_name="web_search", status="success"} 42
+# kgpa_llm_tokens_total{model="gpt-5-mini", type="input"} 15420
 ```
 
 **Additional Issues Found:**

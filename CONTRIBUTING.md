@@ -1,6 +1,6 @@
-# Contributing to Luminari Agent
+# Contributing to Knowledge Graph Pydantic Agent
 
-Thank you for your interest in contributing to Luminari Agent! This guide will help you get started with contributing to our production-ready AI assistant with Agentic RAG capabilities.
+Thank you for your interest in contributing to Knowledge Graph Pydantic Agent! This guide will help you get started with contributing to our production-ready AI assistant with Agentic RAG capabilities.
 
 ## 🤝 Code of Conduct
 
@@ -19,8 +19,8 @@ This project and everyone participating in it is governed by our [Code of Conduc
 1. **Fork and Clone**
    ```bash
    # Fork the repository on GitHub, then clone your fork
-   git clone https://github.com/YOUR_USERNAME/base_agent.git
-   cd base_agent
+   git clone https://github.com/YOUR_USERNAME/knowledge-graph-pydantic-agent.git
+   cd knowledge-graph-pydantic-agent
    ```
 
 2. **Set Up Development Environment**
@@ -379,4 +379,4 @@ If you need help:
 
 ---
 
-Thank you for contributing to Luminari Agent! Your efforts help make this project better for everyone. 🚀
+Thank you for contributing to Knowledge Graph Pydantic Agent! Your efforts help make this project better for everyone. 🚀

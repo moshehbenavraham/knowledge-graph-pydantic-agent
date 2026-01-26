@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the alerting strategy, alert definitions, severity levels, and response procedures for the Luminari Agent / Agentic RAG platform.
+This document describes the alerting strategy, alert definitions, severity levels, and response procedures for the Knowledge Graph Pydantic Agent / Agentic RAG platform.
 
 ## Alert Severity Levels
 
@@ -236,7 +236,7 @@ graph TD
 - For operator: Manages alerting rules
 
 ### Grafana
-- Dashboard: "Luminari Agent - Alerts"
+- Dashboard: "KGPA - Alerts"
 - Alert visualization
 - Annotation of deployment events
 
@@ -246,7 +246,7 @@ graph TD
 - Escalation policy: On-call rotation
 
 ### Slack
-- Channel: `#base-agent-alerts`
+- Channel: `#kgpa-alerts`
 - Medium/Low severity notifications
 - Alert thread discussions
 

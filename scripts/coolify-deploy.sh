@@ -2,7 +2,7 @@
 set -euo pipefail
 
 #######################################################################
-# Coolify API Deployment Script for Base Agent
+# Coolify API Deployment Script for Knowledge Graph Pydantic Agent
 #
 # This script automates deployment to Coolify via API:
 # 1. Discovers server/team UUIDs
@@ -53,10 +53,10 @@ fi
 # Configuration
 API_URL="${COOLIFY_API_URL}"
 API_TOKEN="${COOLIFY_API_TOKEN}"
-GITHUB_REPO="${GITHUB_REPO:-https://github.com/moshehbenavraham/base_agent}"
+GITHUB_REPO="${GITHUB_REPO:-https://github.com/aiwithapex/knowledge-graph-pydantic-agent}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-main}"
-APP_NAME="${APP_NAME:-base-agent-ui}"
-APP_DOMAIN="${APP_DOMAIN:-baseagent.aiwithapex.com}"
+APP_NAME="${APP_NAME:-kgpa-ui}"
+APP_DOMAIN="${APP_DOMAIN:-kgpa.aiwithapex.com}"
 DOCKERFILE_PATH="docker/Dockerfile.production"
 BUILD_TARGET="runtime"
 PORT_EXPOSES="8502"
@@ -93,7 +93,7 @@ api_call() {
 #######################################################################
 
 echo -e "${BLUE}======================================${NC}"
-echo -e "${BLUE}Coolify Deployment - Base Agent${NC}"
+echo -e "${BLUE}Coolify Deployment - Knowledge Graph Pydantic Agent${NC}"
 echo -e "${BLUE}======================================${NC}"
 echo ""
 

@@ -4,7 +4,7 @@
 
 - **Author**: System Analysis
 - **Date**: 2025-12-22
-- **Scope**: Full-depth analysis of Coolify integration in Base Agent
+- **Scope**: Full-depth analysis of Coolify integration in Knowledge Graph Pydantic Agent (KGPA)
 - **Verification Status**: Double-checked against codebase
 
 ---
@@ -26,7 +26,7 @@ Coolify is an open-source, self-hostable alternative to platforms like Heroku, N
 
 ## 2. Implementation Overview
 
-Base Agent uses Coolify as its **primary production deployment platform**. The integration is comprehensive, including:
+Knowledge Graph Pydantic Agent (KGPA) uses Coolify as its **primary production deployment platform**. The integration is comprehensive, including:
 
 | Component | Purpose |
 |-----------|---------|
@@ -100,7 +100,7 @@ Base Agent uses Coolify as its **primary production deployment platform**. The i
                              |
               +--------------v--------------+
               |    Running Container        |
-              |  base-agent-coolify         |
+              |  kgpa-coolify               |
               |  - Port 8502 (Streamlit)    |
               |  - Port 8058 (API optional) |
               +--------------+--------------+
@@ -178,10 +178,10 @@ Step 6: Post-Deployment Instructions
 ```bash
 COOLIFY_API_TOKEN    # Required: API token with write/deploy/read permissions
 COOLIFY_API_URL      # Required: Base URL (e.g., https://coolify.domain.com/api/v1)
-GITHUB_REPO          # Optional: Repository URL (default: moshehbenavraham/base_agent)
+GITHUB_REPO          # Optional: Repository URL (default: moshehbenavraham/knowledge-graph-pydantic-agent)
 GITHUB_BRANCH        # Optional: Branch to deploy (default: main)
-APP_NAME             # Optional: Application name (default: base-agent-ui)
-APP_DOMAIN           # Optional: Domain name (default: baseagent.aiwithapex.com)
+APP_NAME             # Optional: Application name (default: kgpa-ui)
+APP_DOMAIN           # Optional: Domain name (default: kgpa.aiwithapex.com)
 ```
 
 ---
@@ -297,7 +297,7 @@ services:
       context: ..
       dockerfile: docker/Dockerfile.production
       target: runtime
-    container_name: base-agent-coolify
+    container_name: kgpa-coolify
     ports:
       - "8502:8502"
 ```

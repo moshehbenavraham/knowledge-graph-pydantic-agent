@@ -152,14 +152,14 @@ jobs:
         target: runtime
         push: false
         load: true
-        tags: base-agent:latest
+        tags: knowledge-graph-pydantic-agent:latest
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
     - name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@master
       with:
-        image-ref: 'base-agent:latest'
+        image-ref: 'knowledge-graph-pydantic-agent:latest'
         format: 'sarif'
         output: 'trivy-image-results.sarif'
         severity: 'CRITICAL,HIGH,MEDIUM'
@@ -174,7 +174,7 @@ jobs:
     - name: Run Trivy JSON report
       uses: aquasecurity/trivy-action@master
       with:
-        image-ref: 'base-agent:latest'
+        image-ref: 'knowledge-graph-pydantic-agent:latest'
         format: 'json'
         output: 'trivy-image-report.json'
         severity: 'CRITICAL,HIGH,MEDIUM,LOW'
@@ -224,20 +224,20 @@ jobs:
         target: runtime
         push: false
         load: true
-        tags: base-agent:latest
+        tags: knowledge-graph-pydantic-agent:latest
         cache-from: type=gha
 
     - name: Generate SBOM with Syft
       uses: anchore/sbom-action@v0
       with:
-        image: base-agent:latest
+        image: knowledge-graph-pydantic-agent:latest
         format: spdx-json
         output-file: sbom.spdx.json
 
     - name: Generate CycloneDX SBOM
       uses: anchore/sbom-action@v0
       with:
-        image: base-agent:latest
+        image: knowledge-graph-pydantic-agent:latest
         format: cyclonedx-json
         output-file: sbom.cyclonedx.json
 

@@ -30,7 +30,7 @@ services:
       - SEARXNG_BASE_URL=${SEARXNG_BASE_URL:-http://searxng:8080}
 
       # ===== AGENT SETTINGS =====
-      - AGENT_NAME=${AGENT_NAME:-Luminari}
+      - AGENT_NAME=${AGENT_NAME:-KGPA}
       - AGENT_TEMPERATURE=${AGENT_TEMPERATURE:-0.7}
 
       # ===== NEO4J CONFIGURATION =====
@@ -159,4 +159,4 @@ volumes:
 
 networks:
   default:
-    name: luminari-network
+    name: kgpa-network

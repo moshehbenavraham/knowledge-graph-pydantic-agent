@@ -166,7 +166,7 @@ class HybridSearch:
                     query_preview=query[:50],
                     cache_key=cache_key[:16],
                 )
-                return cached_result  # type: ignore[no-any-return]
+                return cached_result
         searches_count = cast("int", self._stats["searches"])
         self._stats["searches"] = searches_count + 1
 

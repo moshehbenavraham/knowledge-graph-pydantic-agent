@@ -460,7 +460,7 @@ def with_cache(
             # Try cache first
             hit, cached_value = cache.get(cache_type, cache_key)
             if hit:
-                return cached_value  # type: ignore[no-any-return]
+                return cached_value
 
             # Execute function
             start_time = time.perf_counter()
@@ -477,7 +477,7 @@ def with_cache(
                 elapsed_ms=round(elapsed_ms, 2),
             )
 
-            return result  # type: ignore[no-any-return]
+            return result
 
         return wrapper  # type: ignore[return-value]
 
@@ -536,14 +536,14 @@ def timeout_wrapper(
         async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
             try:
                 async with asyncio.timeout(timeout_seconds):
-                    return await func(*args, **kwargs)  # type: ignore[misc, no-any-return]
+                    return await func(*args, **kwargs)  # type: ignore[misc]
             except TimeoutError:
                 logger.warning(
                     "Function timeout",
                     function=func.__name__,
                     timeout_seconds=timeout_seconds,
                 )
-                return fallback  # type: ignore[no-any-return]
+                return fallback
 
         return wrapper  # type: ignore[return-value]
 
