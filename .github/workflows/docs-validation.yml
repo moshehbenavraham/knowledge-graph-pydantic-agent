@@ -15,8 +15,8 @@ on:
       - 'scripts/validate_docs.py'
   workflow_dispatch:  # Allow manual triggering
   schedule:
-    # Run weekly on Monday at 9 AM UTC
-    - cron: '0 9 * * 1'
+    # Run bi-weekly on 1st and 15th
+    - cron: '0 0 1,15 * *'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

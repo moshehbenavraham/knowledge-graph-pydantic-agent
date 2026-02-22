@@ -2,8 +2,8 @@ name: Performance Tests
 
 on:
   schedule:
-    # Run weekly on Sunday at 3 AM UTC (was daily)
-    - cron: '0 3 * * 0'
+    # Run bi-weekly on 1st and 15th
+    - cron: '0 0 1,15 * *'
   workflow_dispatch:
     inputs:
       test_type:
