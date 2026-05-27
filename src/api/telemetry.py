@@ -169,7 +169,7 @@ async def metrics_middleware(
 ) -> Response:
     """Middleware to collect request metrics."""
     start_time = time.time()
-    path = request.url.path
+    path = str(request.scope.get("path", ""))
     method = request.method
 
     try:

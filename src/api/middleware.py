@@ -25,6 +25,10 @@ correlation_id_ctx: ContextVar[str] = ContextVar("correlation_id", default="")
 logger = structlog.get_logger()
 
 
+def _request_path(request: Request) -> str:
+    return str(request.scope.get("path", ""))
+
+
 # Create a namespace for request_logging (for test mocking)
 class RequestLoggingNamespace:
     logger = logger
@@ -98,7 +102,7 @@ class TimingMiddleware(BaseHTTPMiddleware):
         if process_time > 1000:
             logger.warning(
                 "slow_request",
-                path=request.url.path,
+                path=_request_path(request),
                 method=request.method,
                 duration_ms=process_time,
             )
@@ -124,7 +128,7 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
             # Log exception with context
             logger.exception(
                 "request_error",
-                path=request.url.path,
+                path=_request_path(request),
                 method=request.method,
                 error=str(exc),
             )
@@ -215,7 +219,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         logger.info(
             "request_started",
             method=request.method,
-            path=request.url.path,
+            path=_request_path(request),
             client=client_host,
             user_agent=request.headers.get("user-agent", "unknown"),
         )
@@ -227,7 +231,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         logger.info(
             "request_completed",
             method=request.method,
-            path=request.url.path,
+            path=_request_path(request),
             status_code=response.status_code,
         )
 
@@ -265,8 +269,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if os.getenv("TESTING") == "true" or os.getenv("TEST_MODE") == "true":
             return await call_next(request)
 
+        path = _request_path(request)
+
         # Skip rate limiting for health endpoints
-        if request.url.path.startswith("/health"):
+        if path.startswith("/health"):
             return await call_next(request)
 
         # Get client IP
@@ -283,7 +289,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             logger.warning(
                 "rate_limit_exceeded",
                 client=client_ip,
-                path=request.url.path,
+                path=path,
             )
 
             return JSONResponse(

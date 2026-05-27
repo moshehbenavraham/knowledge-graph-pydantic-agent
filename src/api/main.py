@@ -281,7 +281,7 @@ async def internal_error_handler(request: Request, exc: Exception) -> JSONRespon
     """Handle 500 Internal Server errors."""
     logger.error(
         "internal_server_error",
-        path=request.url.path,
+        path=str(request.scope.get("path", "")),
         error=str(exc),
     )
 
