@@ -291,8 +291,8 @@ def test_500_handler_simulation():
 # ====================
 
 
-def test_setup_tracing_with_jaeger():
-    """Test OpenTelemetry tracing setup with Jaeger."""
+def test_setup_tracing_ignores_legacy_jaeger_config():
+    """Legacy JAEGER_* settings no longer select Jaeger; OTLP is always used."""
     from src.api.main import _setup_tracing
 
     mock_app = Mock(spec=FastAPI)
@@ -301,18 +301,17 @@ def test_setup_tracing_with_jaeger():
         patch("src.api.main.api_config") as mock_config,
         patch("src.api.main.FastAPIInstrumentor") as mock_instrumentor,
     ):
+        # Legacy env may still be set; tracing must still use OTLP.
         mock_config._settings.jaeger_host = "localhost"
         mock_config.jaeger_host = "localhost"
         mock_config.jaeger_port = 6831
 
-        # Create proper mock modules with __path__ attribute
         mock_otlp_module = Mock()
         mock_otlp_module.__path__ = []
 
-        # Create mocked constructors that return proper mocks
         mock_tracer_provider = Mock()
         mock_batch_processor = Mock()
-        mock_jaeger_exporter = Mock()
+        mock_otlp_exporter = Mock()
         mock_resource = Mock()
 
         def mock_tracer_provider_init(**kwargs):
@@ -321,10 +320,9 @@ def test_setup_tracing_with_jaeger():
         def mock_batch_processor_init(exporter):
             return mock_batch_processor
 
-        def mock_jaeger_exporter_init(**kwargs):
-            return mock_jaeger_exporter
+        def mock_otlp_exporter_init(**kwargs):
+            return mock_otlp_exporter
 
-        # Mock the imports with proper structure
         with patch.dict(
             "sys.modules",
             {
@@ -337,14 +335,11 @@ def test_setup_tracing_with_jaeger():
                 "opentelemetry.sdk.resources": Mock(
                     Resource=Mock(create=Mock(return_value=mock_resource))
                 ),
-                "opentelemetry.exporter.jaeger.thrift": Mock(
-                    JaegerExporter=mock_jaeger_exporter_init
-                ),
                 "opentelemetry.exporter.otlp": mock_otlp_module,
                 "opentelemetry.exporter.otlp.proto": Mock(__path__=[]),
                 "opentelemetry.exporter.otlp.proto.grpc": Mock(__path__=[]),
                 "opentelemetry.exporter.otlp.proto.grpc.trace_exporter": Mock(
-                    OTLPSpanExporter=Mock
+                    OTLPSpanExporter=mock_otlp_exporter_init
                 ),
                 "opentelemetry.instrumentation.fastapi": Mock(
                     FastAPIInstrumentor=mock_instrumentor
@@ -353,7 +348,6 @@ def test_setup_tracing_with_jaeger():
         ):
             _setup_tracing(mock_app)
 
-            # Verify instrumentation was called
             mock_instrumentor.instrument_app.assert_called_once_with(mock_app)
 
 
