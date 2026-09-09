@@ -53,12 +53,12 @@ class APIConfig:
 
     @property
     def jaeger_host(self) -> str:
-        """Get Jaeger host."""
+        """DEPRECATED/IGNORED: legacy Jaeger host (OTLP is used for tracing)."""
         return get_settings().jaeger_host
 
     @property
     def jaeger_port(self) -> int:
-        """Get Jaeger port."""
+        """DEPRECATED/IGNORED: legacy Jaeger port (OTLP is used for tracing)."""
         return get_settings().jaeger_port
 
     @property

@@ -60,7 +60,7 @@ documentation root.
 - Start/stop/log helpers: `make monitoring-up`, `make monitoring-down`,
   `make monitoring-logs`, `make full-monitoring`.
 - FastAPI metrics emitting from `src/api/main.py`; OpenTelemetry tracing configured
-  with Jaeger exporter.
+  with the OTLP exporter (`OTEL_EXPORTER_OTLP_*`). Legacy `JAEGER_*` settings are ignored.
 - Default URLs when stack is running:
   - Prometheus: `http://localhost:9090`
   - Grafana: `http://localhost:3000` (admin/admin)
