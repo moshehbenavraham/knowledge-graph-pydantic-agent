@@ -6,7 +6,7 @@ requires-python = ">=3.11"
 dependencies = [
     "pydantic-ai>=0.1.2",
     "pydantic>=2.5.0",
-    "streamlit>=1.44.0",
+    "streamlit>=1.51.0",
     "python-dotenv>=1.0.0",
     "openai>=1.75.0",
     "anthropic>=0.49.0",
@@ -32,7 +32,7 @@ dependencies = [
     "pillow>=11.2.0",
     "pgvector>=0.3.0",
     "altair>=5.5.0",
-    "plotly>=6.7.0",
+    "plotly[express]>=6.7.0,<7",
     "networkx>=3.2.1",
     "pyvis>=0.3.2",
     "mcp>=1.6.0",

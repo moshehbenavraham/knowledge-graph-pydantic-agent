@@ -790,7 +790,7 @@ async def _render_dashboard_content(handler: DashboardHandler) -> None:
                 labels={"x": "Strategy", "y": "Count"},
                 title="Search Strategy Usage",
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
     except Exception as e:
         logger.exception("Error rendering search analytics")
@@ -847,7 +847,7 @@ async def _render_dashboard_content(handler: DashboardHandler) -> None:
                 },
             )
             fig.update_traces(mode="lines+markers")
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
             # Note about materialized views for 7d/30d windows
             if selected_window in ["7d", "30d"]:
@@ -879,7 +879,7 @@ async def _render_dashboard_content(handler: DashboardHandler) -> None:
                 hole=0.3,  # Donut chart style
             )
             fig.update_traces(textposition="inside", textinfo="percent+label")
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
         else:
             st.info("No intent data available yet. Run some searches to see intent distribution.")
 
@@ -1070,7 +1070,7 @@ async def _render_dashboard_content(handler: DashboardHandler) -> None:
                     labels={"x": "Component", "y": "Latency (ms)"},
                     title="Average Query Latency Breakdown",
                 )
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
 
             # Cache and database health
             col1, col2, col3 = st.columns(3)
@@ -1199,7 +1199,7 @@ async def _render_dashboard_content(handler: DashboardHandler) -> None:
                     title="User Feedback Distribution",
                     color_discrete_map={"Positive": "#4CAF50", "Negative": "#F44336"},
                 )
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
         else:
             st.info(
                 "📊 No agent interaction data available for the last 7 days. "
