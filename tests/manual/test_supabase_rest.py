@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Test Supabase REST API connectivity."""
+
 import os
 
 from dotenv import load_dotenv

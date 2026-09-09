@@ -430,15 +430,13 @@ def render_entity_detail_panel(
 
 def render_empty_selection_state() -> None:
     """Render placeholder when no entity is selected."""
-    st.markdown(
-        """
+    st.markdown("""
         ### Entity Details
 
         Click on a node in the graph to view its details.
 
         **Tip:** Use the search box to find specific entities.
-        """
-    )
+        """)
 
 
 def render_loading_state() -> None:

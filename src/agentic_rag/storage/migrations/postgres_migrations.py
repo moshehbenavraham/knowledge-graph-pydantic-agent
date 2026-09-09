@@ -27,8 +27,7 @@ class PostgreSQLMigration:
 
         try:
             # Create migration tracking table
-            await conn.execute(
-                """
+            await conn.execute("""
                 CREATE TABLE IF NOT EXISTS schema_migrations (
                     version TEXT PRIMARY KEY,
                     checksum TEXT NOT NULL,
@@ -37,8 +36,7 @@ class PostgreSQLMigration:
                     success BOOLEAN DEFAULT TRUE,
                     error_message TEXT
                 )
-            """
-            )
+            """)
 
             # Run migrations in order
             migrations = self._get_migration_files()
@@ -169,13 +167,11 @@ class PostgreSQLMigration:
 
         try:
             # Get current migrations
-            current_migrations = await conn.fetch(
-                """
+            current_migrations = await conn.fetch("""
                 SELECT version FROM schema_migrations
                 WHERE success = TRUE
                 ORDER BY executed_at DESC
-            """
-            )
+            """)
 
             if not current_migrations:
                 logger.info("No migrations to rollback")
@@ -211,13 +207,11 @@ class PostgreSQLMigration:
 
         try:
             # Get applied migrations
-            applied = await conn.fetch(
-                """
+            applied = await conn.fetch("""
                 SELECT version, checksum, executed_at, execution_time_ms, success
                 FROM schema_migrations
                 ORDER BY executed_at DESC
-            """
-            )
+            """)
 
             # Get pending migrations
             applied_versions = {row["version"] for row in applied}

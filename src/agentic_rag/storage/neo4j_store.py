@@ -600,34 +600,28 @@ class Neo4jStore:
 
             # Count nodes by label
             for label in ["Entity", "Episode", "Concept", "Event"]:
-                result = await session.run(
-                    f"""
+                result = await session.run(f"""
                     MATCH (n:{label})
                     RETURN count(n) as count
-                """
-                )
+                """)
                 record = await result.single()
                 stats[f"{label.lower()}_count"] = record["count"] if record else 0
 
             # Count relationships
-            result = await session.run(
-                """
+            result = await session.run("""
                 MATCH ()-[r:RELATED_TO]->()
                 RETURN count(r) as count
-            """
-            )
+            """)
             record = await result.single()
             stats["relationship_count"] = record["count"] if record else 0
 
             # Get top entities
-            result = await session.run(
-                """
+            result = await session.run("""
                 MATCH (e:Entity)
                 RETURN e.name as name, e.type as type, e.importance_score as score
                 ORDER BY e.importance_score DESC
                 LIMIT 10
-            """
-            )
+            """)
 
             top_entities = []
             async for record in result:
@@ -655,16 +649,14 @@ class Neo4jStore:
     async def cleanup_orphaned_entities(self) -> None:
         """Remove entities with no relationships or mentions."""
         async with self.connection_manager.get_neo4j_session() as session:
-            result = await session.run(
-                """
+            result = await session.run("""
                 MATCH (e:Entity)
                 WHERE NOT EXISTS((e)-[:RELATED_TO]-())
                   AND NOT EXISTS((e)-[:MENTIONED_IN]->())
                   AND e.mention_count = 0
                 DELETE e
                 RETURN count(e) as deleted_count
-            """
-            )
+            """)
 
             record = await result.single()
             if record and record["deleted_count"] > 0:

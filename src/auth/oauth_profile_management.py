@@ -258,8 +258,7 @@ def render_oauth_account_management() -> None:
 
         # Security notice
         with st.expander("🔒 Security Information"):
-            st.markdown(
-                """
+            st.markdown("""
                 **Why link OAuth accounts?**
                 - Sign in with your preferred provider (Google, GitHub, Microsoft, Apple)
                 - No need to remember additional passwords
@@ -270,8 +269,7 @@ def render_oauth_account_management() -> None:
                 - You can unlink accounts at any time
                 - Unlinking an account won't delete your Knowledge Graph Pydantic Agent account
                 - We encrypt all OAuth tokens before storing them
-                """
-            )
+                """)
 
     except Exception as e:
         logger.error(

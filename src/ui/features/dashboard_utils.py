@@ -540,8 +540,7 @@ def create_pyvis_graph(
 
     # Configure physics for natural, Neo4j-like behavior
     if layout == "force_directed":
-        net.set_options(
-            """
+        net.set_options("""
         {
             "physics": {
                 "enabled": true,
@@ -593,11 +592,9 @@ def create_pyvis_graph(
                 }
             }
         }
-        """
-        )
+        """)
     elif layout == "hierarchical":
-        net.set_options(
-            """
+        net.set_options("""
         {
             "layout": {
                 "hierarchical": {
@@ -617,8 +614,7 @@ def create_pyvis_graph(
                 "navigationButtons": true
             }
         }
-        """
-        )
+        """)
     else:  # circular or default
         net.toggle_physics(True)
 

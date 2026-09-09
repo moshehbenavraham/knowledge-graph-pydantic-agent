@@ -597,8 +597,7 @@ class TemporalQueryBuilder:
             params["end_q_num"] = quarter_to_int(self._end_quarter)
 
             # Handle same-year quarter ranges
-            clauses.append(
-                """
+            clauses.append("""
             (
                 (ep.fiscal_year > $start_year AND ep.fiscal_year < $end_year)
                 OR (ep.fiscal_year = $start_year AND CASE ep.fiscal_quarter
@@ -608,28 +607,23 @@ class TemporalQueryBuilder:
                     WHEN 'Q1' THEN 1 WHEN 'Q2' THEN 2
                     WHEN 'Q3' THEN 3 WHEN 'Q4' THEN 4 ELSE 0 END <= $end_q_num)
             )
-            """.strip()
-            )
+            """.strip())
         elif self._start_quarter:
             params["start_q_num"] = quarter_to_int(self._start_quarter)
-            clauses.append(
-                """
+            clauses.append("""
             (ep.fiscal_year > $start_year OR
              (ep.fiscal_year = $start_year AND CASE ep.fiscal_quarter
                 WHEN 'Q1' THEN 1 WHEN 'Q2' THEN 2
                 WHEN 'Q3' THEN 3 WHEN 'Q4' THEN 4 ELSE 0 END >= $start_q_num))
-            """.strip()
-            )
+            """.strip())
         elif self._end_quarter:
             params["end_q_num"] = quarter_to_int(self._end_quarter)
-            clauses.append(
-                """
+            clauses.append("""
             (ep.fiscal_year < $end_year OR
              (ep.fiscal_year = $end_year AND CASE ep.fiscal_quarter
                 WHEN 'Q1' THEN 1 WHEN 'Q2' THEN 2
                 WHEN 'Q3' THEN 3 WHEN 'Q4' THEN 4 ELSE 0 END <= $end_q_num))
-            """.strip()
-            )
+            """.strip())
 
         return clauses
 
