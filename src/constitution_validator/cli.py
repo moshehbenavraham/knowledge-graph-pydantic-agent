@@ -207,17 +207,20 @@ def cli() -> None:
     "--verbose",
     "-v",
     is_flag=True,
+    default=False,
     help="Show all checks performed, not just violations",
 )
 @click.option(
     "--quiet",
     "-q",
     is_flag=True,
+    default=False,
     help="Show only violation counts (suitable for CI/CD)",
 )
 @click.option(
     "--dry-run",
     is_flag=True,
+    default=False,
     help="Show what would be checked without full validation",
 )
 @click.option(
@@ -235,16 +238,19 @@ def cli() -> None:
 @click.option(
     "--skip-git",
     is_flag=True,
+    default=False,
     help="Skip git commit validation",
 )
 @click.option(
     "--skip-coverage",
     is_flag=True,
+    default=False,
     help="Skip test coverage validation",
 )
 @click.option(
     "--staged",
     is_flag=True,
+    default=False,
     help="Validate only staged files (git diff --cached) for pre-commit mode",
 )
 def validate(
