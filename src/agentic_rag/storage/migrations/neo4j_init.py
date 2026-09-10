@@ -114,13 +114,11 @@ class Neo4jInitializer:
             for index_name, label, properties in fulltext_indexes:
                 try:
                     props_str = ", ".join([f"n.{prop}" for prop in properties])
-                    await session.run(
-                        f"""
+                    await session.run(f"""
                         CREATE FULLTEXT INDEX {index_name} IF NOT EXISTS
                         FOR (n:{label})
                         ON EACH [{props_str}]
-                    """
-                    )
+                    """)
                     logger.info(f"Created fulltext index: {index_name}")
                 except Exception as e:
                     if "already exists" not in str(e).lower():

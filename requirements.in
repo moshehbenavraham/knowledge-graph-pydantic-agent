@@ -17,7 +17,7 @@ prometheus-client
 psutil
 fastapi
 uvicorn
-click
+click>=8.3.2
 httpx
 asyncpg
 numpy

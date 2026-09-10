@@ -94,7 +94,9 @@ def render_email_verification_page() -> None:
 
                     st.markdown("---")
                     st.markdown("### 🚀 What's next?")
-                    st.markdown("- Log in to your account to start using Knowledge Graph Pydantic Agent")
+                    st.markdown(
+                        "- Log in to your account to start using Knowledge Graph Pydantic Agent"
+                    )
                     st.markdown("- Explore the powerful RAG capabilities")
                     st.markdown("- Connect your data sources and knowledge bases")
 

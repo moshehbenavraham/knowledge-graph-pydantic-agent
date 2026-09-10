@@ -437,13 +437,11 @@ class PostgresStore:
     async def clean_expired_cache(self) -> None:
         """Clean expired search cache entries."""
         async with self.connection_manager.get_pg_connection() as conn:
-            deleted = await conn.fetchval(
-                """
+            deleted = await conn.fetchval("""
                 DELETE FROM search_cache
                 WHERE expires_at < NOW()
                 RETURNING COUNT(*)
-            """
-            )
+            """)
 
             if deleted:
                 logger.info(f"Cleaned {deleted} expired cache entries")
@@ -687,15 +685,12 @@ class PostgresStore:
             stats = {}
 
             # Document stats
-            stats["total_documents"] = await conn.fetchval(
-                """
+            stats["total_documents"] = await conn.fetchval("""
                 SELECT COUNT(*) FROM documents WHERE is_deleted = FALSE
-            """
-            )
+            """)
 
             # Chunk stats
-            chunk_stats = await conn.fetchrow(
-                """
+            chunk_stats = await conn.fetchrow("""
                 SELECT
                     COUNT(*) as total_chunks,
                     COUNT(DISTINCT document_id) as documents_with_chunks,
@@ -705,45 +700,38 @@ class PostgresStore:
                 FROM chunks c
                 JOIN documents d ON d.id = c.document_id
                 WHERE d.is_deleted = FALSE
-            """
-            )
+            """)
             stats.update(dict(chunk_stats))
 
             # Session stats
-            session_stats = await conn.fetchrow(
-                """
+            session_stats = await conn.fetchrow("""
                 SELECT
                     COUNT(DISTINCT s.id) as total_sessions,
                     COUNT(m.id) as total_messages
                 FROM sessions s
                 LEFT JOIN messages m ON m.session_id = s.id
-            """
-            )
+            """)
             stats.update(dict(session_stats))
 
             # Sync queue stats
-            sync_stats = await conn.fetchrow(
-                """
+            sync_stats = await conn.fetchrow("""
                 SELECT
                     COUNT(*) FILTER (WHERE status = 'pending') as pending_syncs,
                     COUNT(*) FILTER (WHERE status = 'failed') as failed_syncs,
                     COUNT(*) FILTER (WHERE status = 'completed') as completed_syncs
                 FROM graph_sync_queue
-            """
-            )
+            """)
             stats.update(dict(sync_stats))
 
             # Cache stats
-            cache_stats = await conn.fetchrow(
-                """
+            cache_stats = await conn.fetchrow("""
                 SELECT
                     COUNT(*) as cached_searches,
                     AVG(hit_count) as avg_cache_hits,
                     MAX(hit_count) as max_cache_hits
                 FROM search_cache
                 WHERE expires_at > NOW()
-            """
-            )
+            """)
             stats.update(dict(cache_stats))
 
             structlog_logger.info(

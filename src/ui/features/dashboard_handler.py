@@ -95,8 +95,7 @@ class DashboardHandler:
             async with self.connection_manager.get_pg_connection() as conn:
                 # Get overall summary from search_analytics table
                 # interval is from whitelist, not user input
-                summary = await conn.fetchrow(
-                    f"""
+                summary = await conn.fetchrow(f"""
                     SELECT
                         COUNT(*) AS total_searches,
                         AVG(total_latency_ms) AS avg_latency_ms,
@@ -109,24 +108,20 @@ class DashboardHandler:
                         AVG(relationships_found) AS avg_relationships_found
                     FROM search_analytics
                     WHERE created_at >= NOW() - INTERVAL '{interval}'
-                    """  # nosec B608
-                )
+                    """)  # nosec B608
 
                 # Get strategy distribution from materialized view or table
                 if window == "7d":
                     # Use materialized view for 7d window
-                    strategies = await conn.fetch(
-                        """
+                    strategies = await conn.fetch("""
                         SELECT strategy_used, search_count
                         FROM intent_distribution_7d
                         ORDER BY search_count DESC
-                        """
-                    )
+                        """)
                 else:
                     # Query directly for other windows
                     # interval is from whitelist, not user input
-                    strategies = await conn.fetch(
-                        f"""
+                    strategies = await conn.fetch(f"""
                         SELECT
                             strategy_used,
                             COUNT(*) as search_count
@@ -134,8 +129,7 @@ class DashboardHandler:
                         WHERE created_at >= NOW() - INTERVAL '{interval}'
                         GROUP BY strategy_used
                         ORDER BY search_count DESC
-                        """  # nosec B608
-                    )
+                        """)  # nosec B608
 
             # Process results
             total_searches = summary["total_searches"] or 0
@@ -201,8 +195,7 @@ class DashboardHandler:
             async with self.connection_manager.get_pg_connection() as conn:
                 # Use materialized view for 7d, direct query otherwise
                 if window == "7d":
-                    rows = await conn.fetch(
-                        """
+                    rows = await conn.fetch("""
                         SELECT
                             detected_intent,
                             search_count,
@@ -210,14 +203,12 @@ class DashboardHandler:
                             avg_chunks_returned
                         FROM intent_distribution_7d
                         ORDER BY search_count DESC
-                        """
-                    )
+                        """)
                 else:
                     interval_map = {"24h": "24 hours", "30d": "30 days"}
                     interval = interval_map.get(window, "7 days")
                     # interval is from whitelist, not user input
-                    rows = await conn.fetch(
-                        f"""
+                    rows = await conn.fetch(f"""
                         SELECT
                             detected_intent,
                             COUNT(*) as search_count,
@@ -227,8 +218,7 @@ class DashboardHandler:
                         WHERE created_at >= NOW() - INTERVAL '{interval}'
                         GROUP BY detected_intent
                         ORDER BY search_count DESC
-                        """  # nosec B608
-                    )
+                        """)  # nosec B608
 
             # Calculate percentages
             total = sum(row["search_count"] for row in rows) or 1
@@ -413,8 +403,7 @@ class DashboardHandler:
             async with self.connection_manager.get_pg_connection() as conn:
                 # Query performance metrics with percentiles
                 # interval is from validated whitelist (24h/7d/30d), not user input
-                metrics_row = await conn.fetchrow(
-                    f"""
+                metrics_row = await conn.fetchrow(f"""
                     SELECT
                         AVG(vector_latency_ms) AS avg_vector_latency_ms,
                         AVG(graph_latency_ms) AS avg_graph_latency_ms,
@@ -427,12 +416,10 @@ class DashboardHandler:
                         COUNT(*) AS total_searches
                     FROM search_analytics
                     WHERE created_at >= NOW() - INTERVAL '{interval}'
-                    """  # nosec B608
-                )
+                    """)  # nosec B608
 
                 # Get latest system metrics if available (inside same connection context)
-                system_metrics = await conn.fetchrow(
-                    """
+                system_metrics = await conn.fetchrow("""
                     SELECT
                         pg_active_connections,
                         pg_idle_connections,
@@ -441,8 +428,7 @@ class DashboardHandler:
                     FROM system_metrics
                     ORDER BY created_at DESC
                     LIMIT 1
-                    """
-                )
+                    """)
 
             # Get connection pool metrics from connection manager
             pg_metrics = self.connection_manager.pg_metrics
@@ -571,8 +557,7 @@ class DashboardHandler:
                         )
                         # Fallback: Query search_analytics directly with daily aggregation
                         # nosec B608
-                        rows = await conn.fetch(
-                            f"""
+                        rows = await conn.fetch(f"""
                             SELECT
                                 DATE(created_at) AS timestamp,
                                 COUNT(*) AS searches,
@@ -583,12 +568,10 @@ class DashboardHandler:
                             WHERE created_at >= NOW() - INTERVAL '{interval}'
                             GROUP BY DATE(created_at)
                             ORDER BY timestamp ASC
-                            """  # nosec B608
-                        )
+                            """)  # nosec B608
                 else:
                     # For 24h window, use hourly aggregation
-                    rows = await conn.fetch(
-                        """
+                    rows = await conn.fetch("""
                         SELECT
                             DATE_TRUNC('hour', created_at) AS timestamp,
                             COUNT(*) AS searches,
@@ -599,8 +582,7 @@ class DashboardHandler:
                         WHERE created_at >= NOW() - INTERVAL '24 hours'
                         GROUP BY DATE_TRUNC('hour', created_at)
                         ORDER BY timestamp ASC
-                        """
-                    )
+                        """)
 
             # Format results
             result = [
@@ -635,18 +617,15 @@ class DashboardHandler:
             async with self.connection_manager.get_pg_connection() as conn:
                 # Use materialized view for 7d window
                 if window == "7d":
-                    summary = await conn.fetchrow(
-                        """
+                    summary = await conn.fetchrow("""
                         SELECT
                             SUM(total_calls) AS total_calls,
                             COUNT(DISTINCT tool_name) AS unique_tools,
                             AVG(success_rate) AS avg_success_rate
                         FROM tool_performance_7d
-                        """
-                    )
+                        """)
 
-                    tools = await conn.fetch(
-                        """
+                    tools = await conn.fetch("""
                         SELECT
                             tool_name,
                             total_calls,
@@ -656,28 +635,24 @@ class DashboardHandler:
                         FROM tool_performance_7d
                         ORDER BY total_calls DESC
                         LIMIT 20
-                        """
-                    )
+                        """)
                 else:
                     # Direct query for other windows
                     interval_map = {"24h": "24 hours", "30d": "30 days"}
                     interval = interval_map.get(window, "7 days")
 
                     # interval is from validated whitelist (24h/30d), not user input
-                    summary = await conn.fetchrow(
-                        f"""
+                    summary = await conn.fetchrow(f"""
                         SELECT
                             COUNT(*) AS total_calls,
                             COUNT(DISTINCT tool_name) AS unique_tools,
                             COUNT(*) FILTER (WHERE success = true)::float / NULLIF(COUNT(*), 0) AS avg_success_rate
                         FROM tool_usage_analytics
                         WHERE created_at >= NOW() - INTERVAL '{interval}'
-                        """  # nosec B608
-                    )
+                        """)  # nosec B608
 
                     # interval is from validated whitelist (24h/30d), not user input
-                    tools = await conn.fetch(
-                        f"""
+                    tools = await conn.fetch(f"""
                         SELECT
                             tool_name,
                             COUNT(*) as total_calls,
@@ -689,8 +664,7 @@ class DashboardHandler:
                         GROUP BY tool_name
                         ORDER BY total_calls DESC
                         LIMIT 20
-                        """  # nosec B608
-                    )
+                        """)  # nosec B608
 
             return {
                 "total_calls": int(summary["total_calls"] or 0),
@@ -731,8 +705,7 @@ class DashboardHandler:
 
             async with self.connection_manager.get_pg_connection() as conn:
                 # interval is from validated whitelist (24h/7d/30d), not user input
-                stats = await conn.fetchrow(
-                    f"""
+                stats = await conn.fetchrow(f"""
                     SELECT
                         COUNT(*) AS total_interactions,
                         COUNT(DISTINCT session_id) AS unique_sessions,
@@ -743,8 +716,7 @@ class DashboardHandler:
                         COUNT(*) FILTER (WHERE user_feedback IS NOT NULL) / NULLIF(COUNT(*), 0)::float AS feedback_rate
                     FROM agent_interactions
                     WHERE created_at >= NOW() - INTERVAL '{interval}'
-                    """  # nosec B608
-                )
+                    """)  # nosec B608
 
             return {
                 "total_interactions": int(stats["total_interactions"] or 0),
