@@ -228,9 +228,10 @@ print(f"LLM model: {agent_config.llm_model}")
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `ENABLE_TRACING` | Boolean | `false` | Enable OpenTelemetry tracing |
-| `JAEGER_HOST` | String | `localhost` | Jaeger agent host |
-| `JAEGER_PORT` | Integer | `6831` | Jaeger agent port |
+| `ENABLE_TRACING` | Boolean | `false` | Enable OpenTelemetry tracing (OTLP exporter) |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | String | *(SDK default)* | OTLP collector endpoint (e.g. `http://localhost:4317`) |
+| `JAEGER_HOST` | String | `localhost` | **DEPRECATED/IGNORED** — legacy Jaeger agent host; use OTLP |
+| `JAEGER_PORT` | Integer | `6831` | **DEPRECATED/IGNORED** — legacy Jaeger agent port; use OTLP |
 
 ## Advanced Usage
 

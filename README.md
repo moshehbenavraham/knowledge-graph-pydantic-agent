@@ -277,7 +277,7 @@ All configuration is managed through type-safe Pydantic models in `src/config/` 
 ### Application Settings
 - **UI:** `UI_MODE` (simple/standard/advanced)
 - **API:** `API_HOST`, `API_PORT`, `CORS_ORIGINS`
-- **Observability:** `ENABLE_METRICS`, `PROMETHEUS_PORT`, `ENABLE_TRACING`, `JAEGER_ENDPOINT`
+- **Observability:** `ENABLE_METRICS`, `PROMETHEUS_PORT`, `ENABLE_TRACING`, `OTEL_EXPORTER_OTLP_ENDPOINT` (legacy `JAEGER_*` ignored)
 - **Performance:** `MAX_CONCURRENT_REQUESTS`, `REQUEST_TIMEOUT`, `RATE_LIMIT_PER_MINUTE`
 
 **Important:** Updates to `.env` are automatically validated and reflected across all modules through the centralized Pydantic configuration system in `src/config/`.
@@ -432,12 +432,14 @@ All 68 configuration fields with types, defaults, and validation rules:
 | `CIRCUIT_BREAKER_RECOVERY_TIMEOUT` | `int` | `60` | ≥ 10 | Recovery timeout (seconds) |
 | `CIRCUIT_BREAKER_HALF_OPEN_REQUESTS` | `int` | `3` | ≥ 1 | Requests allowed in half-open state |
 
-#### Tracing Configuration (2 fields)
+#### Tracing Configuration (legacy Jaeger fields retained but ignored)
 
 | Variable | Type | Default | Validation | Description |
 |----------|------|---------|------------|-------------|
-| `JAEGER_HOST` | `str` | `localhost` | - | Jaeger agent host |
-| `JAEGER_PORT` | `int` | `6831` | - | Jaeger agent port |
+| `JAEGER_HOST` | `str` | `localhost` | - | **DEPRECATED/IGNORED** — use `OTEL_EXPORTER_OTLP_ENDPOINT` |
+| `JAEGER_PORT` | `int` | `6831` | - | **DEPRECATED/IGNORED** — use `OTEL_EXPORTER_OTLP_ENDPOINT` |
+
+Tracing uses the OTLP exporter only (`opentelemetry-exporter-otlp`). Configure the collector via standard `OTEL_EXPORTER_OTLP_*` environment variables (e.g. `OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317`).
 
 **Total: 68 configuration fields** organized in 17 categories. See `.env.example` for complete examples.
 
@@ -794,7 +796,7 @@ knowledge-graph-pydantic-agent/
   - Usage: `make run-ui | grep "keyword"` or `LOG_LEVEL=DEBUG make run-ui`
 - **Analytics System (v1.1.0)**: Persistent event logging to PostgreSQL with search metrics, tool usage, agent interactions, and system health tracking. Dashboard-ready materialized views for performance analysis.
 - **Metrics & Monitoring**: Prometheus metrics (`/metrics`) for API usage, latency, cache hits, and LLM utilisation.
-- **Tracing**: Optional OpenTelemetry tracing with Jaeger integration (`ENABLE_TRACING=true`).
+- **Tracing**: Optional OpenTelemetry tracing via OTLP (`ENABLE_TRACING=true`; set `OTEL_EXPORTER_OTLP_ENDPOINT`. Legacy `JAEGER_*` settings are ignored).
 - **Monitoring**: Use Coolify dashboard or external monitoring services for production observability.
 - **Resilience**: Rate limiting, caching, circuit breaker helpers in `src/utils/`.
 

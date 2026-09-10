@@ -136,7 +136,8 @@ ENABLE_STRUCTURED_LOGGING=true
 ENABLE_METRICS=true
 PROMETHEUS_PORT=8000
 ENABLE_TRACING=true
-JAEGER_ENDPOINT=http://localhost:14268/api/traces
+# OTLP (preferred); JAEGER_* env vars are ignored/deprecated
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
 ```
 
 ### Security Settings

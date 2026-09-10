@@ -336,18 +336,9 @@ def _setup_tracing(app: FastAPI) -> None:
         provider = TracerProvider(resource=resource)
         trace.set_tracer_provider(provider)
 
-        # Setup OTLP exporter (or Jaeger)
-        if api_config.jaeger_host:
-            # Use Jaeger if configured
-            from opentelemetry.exporter.jaeger.thrift import JaegerExporter
-
-            exporter = JaegerExporter(
-                agent_host_name=api_config.jaeger_host,
-                agent_port=api_config.jaeger_port,
-            )
-        else:
-            # Use OTLP
-            exporter = OTLPSpanExporter()
+        # Setup OTLP exporter (Jaeger thrift exporter is legacy / unmaintained
+        # past 1.21.0 and cannot coinstall with the 1.41+/0.62b0 train).
+        exporter = OTLPSpanExporter()
 
         provider.add_span_processor(BatchSpanProcessor(exporter))
 
@@ -356,7 +347,7 @@ def _setup_tracing(app: FastAPI) -> None:
 
         logger.info(
             "tracing_enabled",
-            exporter="jaeger" if api_config.jaeger_host else "otlp",
+            exporter="otlp",
         )
 
     except ImportError as e:

@@ -508,14 +508,24 @@ class Settings(BaseSettings):
         description="Enable fallback to vector-only search when graph unavailable",
     )
 
-    # Tracing Configuration (Jaeger)
+    # Tracing Configuration (legacy Jaeger settings — ignored)
+    # Tracing uses the OTLP exporter only (see OTEL_EXPORTER_OTLP_* / OTLPSpanExporter).
+    # These fields are retained so existing .env files still load; they have no effect.
     jaeger_host: str = Field(
         default="localhost",
-        description="Jaeger agent host",
+        description=(
+            "DEPRECATED/IGNORED: legacy Jaeger agent host. Tracing exports via OTLP; "
+            "set OTEL_EXPORTER_OTLP_ENDPOINT (default http://localhost:4317)."
+        ),
+        deprecated=True,
     )
     jaeger_port: int = Field(
         default=6831,
-        description="Jaeger agent port",
+        description=(
+            "DEPRECATED/IGNORED: legacy Jaeger agent port. Tracing exports via OTLP; "
+            "set OTEL_EXPORTER_OTLP_ENDPOINT instead."
+        ),
+        deprecated=True,
     )
 
     # Performance Monitoring Configuration (Phase 03)
