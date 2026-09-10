@@ -191,7 +191,7 @@ def render_oauth_analytics_dashboard() -> None:
             height=400,
         )
 
-        st.plotly_chart(fig_providers, use_container_width=True)
+        st.plotly_chart(fig_providers, width="stretch")
 
         # Provider details table
         with st.expander("📋 Provider Details"):
@@ -268,7 +268,7 @@ def render_oauth_analytics_dashboard() -> None:
             color_discrete_sequence=px.colors.qualitative.Set3,
         )
 
-        st.plotly_chart(fig_pie, use_container_width=True)
+        st.plotly_chart(fig_pie, width="stretch")
 
     st.markdown("---")
 
@@ -308,7 +308,7 @@ def render_oauth_analytics_dashboard() -> None:
             height=400,
         )
 
-        st.plotly_chart(fig_logins, use_container_width=True)
+        st.plotly_chart(fig_logins, width="stretch")
 
         # Summary stats
         total_logins = df_logins.groupby("provider")["users_logged_in"].sum().reset_index()
@@ -332,7 +332,7 @@ def render_oauth_analytics_dashboard() -> None:
                 title="Total Logins by Provider",
                 color="provider",
             )
-            st.plotly_chart(fig_bar, use_container_width=True)
+            st.plotly_chart(fig_bar, width="stretch")
 
     else:
         st.info(f"No login activity data for the last {time_range} days.")
@@ -367,7 +367,7 @@ def render_oauth_analytics_dashboard() -> None:
             height=400,
         )
 
-        st.plotly_chart(fig_growth, use_container_width=True)
+        st.plotly_chart(fig_growth, width="stretch")
 
         # Daily growth chart
         fig_daily = px.bar(
@@ -385,7 +385,7 @@ def render_oauth_analytics_dashboard() -> None:
             barmode="stack",
         )
 
-        st.plotly_chart(fig_daily, use_container_width=True)
+        st.plotly_chart(fig_daily, width="stretch")
 
     else:
         st.info(f"No account growth data for the last {time_range} days.")
@@ -423,7 +423,7 @@ def render_oauth_analytics_dashboard() -> None:
             text="Users",
         )
 
-        st.plotly_chart(fig_multi, use_container_width=True)
+        st.plotly_chart(fig_multi, width="stretch")
 
     else:
         st.info("No users have linked multiple OAuth providers yet.")
