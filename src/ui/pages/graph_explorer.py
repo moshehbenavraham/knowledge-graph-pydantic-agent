@@ -325,8 +325,7 @@ def render_graph_view(handler: VisualizationHandler, filters: GraphFilterState) 
 
     else:
         # Placeholder
-        st.markdown(
-            """
+        st.markdown("""
             ### Welcome to Graph Explorer
 
             Use the search box in the sidebar to find entities, then click on one
@@ -343,8 +342,7 @@ def render_graph_view(handler: VisualizationHandler, filters: GraphFilterState) 
             - Drag nodes to reposition them
             - Scroll to zoom in/out
             - Click a node to view its details
-            """
-        )
+            """)
 
 
 def _make_entity_click_handler(

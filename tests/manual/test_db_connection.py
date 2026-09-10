@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Test database connection and schema."""
+
 import asyncio
 import sys
 
@@ -20,19 +21,15 @@ async def main():
 
         print("Testing database connection...")
         async with conn_mgr.pg_pool.acquire() as conn:
-            docs_exists = await conn.fetchval(
-                """
+            docs_exists = await conn.fetchval("""
                 SELECT EXISTS (SELECT FROM information_schema.tables
                 WHERE table_schema = 'public' AND table_name = 'documents');
-            """
-            )
+            """)
 
-            chunks_exists = await conn.fetchval(
-                """
+            chunks_exists = await conn.fetchval("""
                 SELECT EXISTS (SELECT FROM information_schema.tables
                 WHERE table_schema = 'public' AND table_name = 'chunks');
-            """
-            )
+            """)
 
             if docs_exists and chunks_exists:
                 print("\n✅ Database connection successful!")

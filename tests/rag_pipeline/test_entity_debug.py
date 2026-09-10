@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 """Debug entity extraction issue."""
+
 import asyncio
 import logging
 import sys

@@ -101,7 +101,9 @@ class TOTPManager:
         decrypted_bytes = self.cipher.decrypt(encrypted_bytes)
         return decrypted_bytes.decode()
 
-    def generate_qr_code(self, secret: str, username: str, issuer: str = "Knowledge Graph Pydantic Agent") -> str:
+    def generate_qr_code(
+        self, secret: str, username: str, issuer: str = "Knowledge Graph Pydantic Agent"
+    ) -> str:
         """
         Generate QR code for authenticator app setup.
 

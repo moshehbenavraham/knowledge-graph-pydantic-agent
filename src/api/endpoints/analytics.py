@@ -286,16 +286,14 @@ async def analytics_health(
 
         # Check if analytics tables exist
         async with conn_manager.get_pg_connection() as conn:
-            tables_exist = await conn.fetchval(
-                """
+            tables_exist = await conn.fetchval("""
                 SELECT COUNT(*) = 5 FROM information_schema.tables
                 WHERE table_schema = 'public'
                 AND table_name IN (
                     'search_analytics', 'tool_usage_analytics',
                     'agent_interactions', 'ingestion_analytics', 'system_metrics'
                 )
-                """
-            )
+                """)
 
         return {
             "status": "healthy" if (db_healthy and tables_exist) else "degraded",
