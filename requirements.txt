@@ -30,7 +30,7 @@ RestrictedPython>=6.0
 pillow>=11.2.0
 pgvector>=0.3.0
 altair>=5.5.0
-plotly[express]>=6.7.0,<7
+plotly[express]>=6.7.0,<8
 mcp>=1.6.0
 anyio>=4.9.0
 
