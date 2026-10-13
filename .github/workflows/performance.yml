@@ -213,7 +213,7 @@ jobs:
           fi
 
       - name: Upload performance report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: performance-report-${{ github.event.inputs.test_type || 'load' }}-${{ github.run_number }}
