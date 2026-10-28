@@ -71,7 +71,7 @@ dev = [
     "pytest-benchmark>=4.0.0",
     "pytest-timeout>=2.2.0",
     "hypothesis>=6.100.0",
-    "tox>=4.11.0",
+    "tox>=4.52.1",
     "vulture>=2.10",
     "radon>=6.0.1",
     "interrogate>=1.5.0",  # Note: pulls in py==1.11.0 with CVE-2022-42969 (disputed, SVN-only, accepted risk)
